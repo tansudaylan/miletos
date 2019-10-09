@@ -264,8 +264,65 @@ def retr_mask(time, flag, strgmask):
     return indx
 
 
-def main(strgtarg):
+def main( \
+         strgtarg, \
+         boolphascurv=False, \
+         listlimttimemask=None, \
+        ):
     
+#    
+#    if 'SPOC' in liststrgdata:
+#        
+#        # download data
+#        obsTable = astroquery.mast.Observations.query_criteria(target_name=tici, \
+#                                                               obs_collection='TESS', \
+#                                                               dataproduct_type='timeseries', \
+#                                               )
+#        listpath = []
+#        for k in range(len(obsTable)):
+#            dataProducts = astroquery.mast.Observations.get_product_list(obsTable[k])
+#            want = (dataProducts['obs_collection'] == 'TESS') * (dataProducts['dataproduct_type'] == 'timeseries')
+#            for k in range(len(dataProducts['productFilename'])):
+#                if not dataProducts['productFilename'][k].endswith('_lc.fits'):
+#                    want[k] = 0
+#            listpath.append(pathtarg + dataProducts[want]['productFilename'].data[0]) 
+#            manifest = astroquery.mast.Observations.download_products(dataProducts[want], download_dir=pathtarg)
+#        
+#        if len(obsTable) == 0:
+#            return
+#        else:
+#            print('Found TESS SPOC data.')
+#    elif 'QLOP' in liststrgdata:
+#        print('Reading the QLP data on the target...')
+#        catalogData = astroquery.mast.Catalogs.query_object(tici, catalog="TIC")
+#        rasc = catalogData[0]['ra']
+#        decl = catalogData[0]['dec']
+#        sector_table = astroquery.mast.Tesscut.get_sectors(SkyCoord(rasc, decl, unit="deg"))
+#        listisec = sector_table['sector'].data
+#        listicam = sector_table['camera'].data
+#        listiccd = sector_table['ccd'].data
+#        for m, sect in enumerate(listisec):
+#            path = '/pdo/qlp-data/orbit-%d/ffi/cam%d/ccd%d/LC/' % (listisec[m], listicam[m], strgiccd[m])
+#            pathqlop = path + str(tici) + '.h5'
+#            time, flux, stdvflux = read_qlop(pathqlop)
+#
+#    # read the files to make the CSV file
+#    if 'SPOC' in liststrgdata:
+#        pathdown = pathtarg + 'mastDownload/TESS/'
+#        arry = read_tesskplr_fold(pathdown, pathalle)
+#        pathoutp = '%sTESS.csv' % pathalle
+#        np.savetxt(pathoutp, arry, delimiter=',')
+#    
+#    # construct target folder structure
+#    pathalle = pathtarg + 'allesfit'
+#    if strgalleextn is not None:
+#        pathalle += '_' + strgalleextn
+#    pathalle += '/'
+#    cmnd = 'mkdir -p %s %s' % (pathtarg, pathalle)
+#    os.system(cmnd)
+#    
+
+
     gdat = tdpy.util.gdatstrt()
     
     pathbase = os.environ['TESSTOII_DATA_PATH'] + '/'
@@ -274,6 +331,7 @@ def main(strgtarg):
     pathimag = pathbase + 'imag/'
 
     gdat.strgtarg = strgtarg
+    gdat.boolphascurv = boolphascurv
 
     gdat.pathbase = os.environ['TESSTOII_DATA_PATH'] + '/'
     gdat.pathobjt = gdat.pathbase + '%s/' % gdat.strgtarg
@@ -286,22 +344,101 @@ def main(strgtarg):
     print('gdat.pathobjt')
     print(gdat.pathobjt)
     
-    print('HACKING')
-    pathlcur = gdat.pathobjt + 'tess2019198215352-s0014-0000000016740101-0150-s_lc.fits'
+    pathlcur = gdat.pathobjt + 'mastDownload/TESS/'
+    pathlcur += os.listdir(pathlcur)[0] + '/'
+    pathlcur += os.listdir(pathlcur)[0]
     if not os.path.exists(pathlcur):
         pathdown = tesstarg.util.down_spoclcur(gdat.strgtarg, gdat.pathobjt)
         
-    # extract SPOC data
-    extract_SPOC_data([pathlcur], 
-                      outdir=gdat.pathobjt+'TESS_SAP', PDC=False, auto_correct_dil=True, extract_centd=True, extract_dil=True)
+    # temp
+    boolextrmine = False
+    if boolextrmine:
+        arry = tesstarg.util.read_tesskplr_file(pathlcur, typeinst='tess', strgtype='PDCSAP_FLUX', boolmask=True)
+    else:
+        # extract SPOC data
+        extract_SPOC_data([pathlcur], 
+                          outdir=gdat.pathobjt+'TESS_SAP', PDC=False, auto_correct_dil=True, extract_centd=True, extract_dil=True)
+        
+        extract_SPOC_data([pathlcur], 
+                          outdir=gdat.pathobjt+'TESS_PDCSAP', PDC=True, auto_correct_dil=True, extract_centd=True, extract_dil=True)
+        
+        # read the file
+        gdat.timepdcc, lcurpdcc, stdvlcurpdcc = np.genfromtxt(gdat.pathobjt + 'TESS_PDCSAP/TESS.csv', delimiter=',', unpack=True)
+        gdat.timesapp, lcursapp, stdvlcursapp = np.genfromtxt(gdat.pathobjt + 'TESS_SAP/TESS.csv', delimiter=',', unpack=True)
+        arry = np.empty((gdat.timepdcc.size, 3))
+        arry[:, 0] = gdat.timepdcc
+        arry[:, 1] = lcurpdcc
+        arry[:, 2] = stdvlcurpdcc
+
+    time = arry[:, 0]
+    numbtime = time.size
+    indxtime = np.arange(numbtime)
+
+    if listlimttimemask is not None:
+        # mask the data
+        print('Masking the data...')
+        arryumsk = np.copy(arry)
+        numbmask = listlimttimemask.shape[0]
+        listindxtimemask = []
+        for k in range(numbmask):
+            indxtimemask = np.where((arry[:, 0] < listlimttimemask[k, 1]) & (arry[:, 0] > listlimttimemask[k, 0]))[0]
+            listindxtimemask.append(indxtimemask)
+        listindxtimemask = np.concatenate(listindxtimemask)
+        listindxtimegood = np.setdiff1d(indxtime, listindxtimemask)
+        arry = arry[listindxtimegood, :]
+        np.savetxt(gdat.pathobjt + 'allesfit/TESS.csv', arry, delimiter=',', header='time,flux,flux_err')
     
-    extract_SPOC_data([pathlcur], 
-                      outdir=gdat.pathobjt+'TESS_PDCSAP', PDC=True, auto_correct_dil=True, extract_centd=True, extract_dil=True)
+    gdat.time = arry[:, 0]
+    gdat.lcur = arry[:, 1]
+    gdat.stdvlcur = arry[:, 2]
     
-    # read the file
-    arry = tesstarg.util.read_tesskplr_file(pathlcur, typeinst='tess', strgtype='PDCSAP_FLUX', boolmask=True)
+    gdat.pathalle = gdat.pathobjt + 'allesfit/'
+
+    pathalleinit = gdat.pathalle + 'results/initial_guess_b.pdf'
+    if not os.path.exists(pathalleinit):
+        allesfitter.show_initial_guess(gdat.pathalle)
+    
+    #pathmcmcprio = gdat.pathalle + 'priors/'
+    #if not os.path.exists(pathmcmcprio):
+    #    print('Doing the baseline prior run.')
+    #    allesfitter.estimate_noise(gdat.pathalle)
+    #else:
+    #    print('Reading the previous baseline prior run.')
     
     
+    # start the background run
+    os.system('mkdir -p %sallesfit_back' % gdat.pathobjt)
+    
+    epoc = 2458724.930827547
+    peri = 6.134271796958897
+    duramask = 0.5
+    indxtimetran = tesstarg.util.retr_indxtimetran(gdat.time, epoc, peri, duramask)
+    indxtimeback = np.setdiff1d(np.arange(gdat.time.size), indxtimetran)
+    arryback = arry[indxtimeback, :]
+    np.savetxt('%sallesfit_back/TESS.csv' % gdat.pathobjt, arryback, delimiter=',', header='time,flux,flux_err')
+    
+    os.system('cp ')
+    pathlcurdetr = gdat.pathalle + 'priors/TESS/TESS_flux_gp_decor_mcmc_ydetr.csv'
+    arryflat = np.loadtxt(pathlcurdetr, delimiter=',')
+    timeflat = arryflat[:, 0]
+    lcurflat = arryflat[:, 1]
+    print('arryflat')
+    summgene(arryflat)
+    print
+
+    cmnd = 'cp %s %s' % (pathlcurdetr, gdat.pathalle + 'TESS.csv')
+    print('cmnd')
+    print(cmnd)
+    os.system(cmnd)
+    
+    pathmcmcsave = gdat.pathalle + 'results/mcmc_save.h5'
+    if not os.path.exists(pathmcmcsave):
+        allesfitter.mcmc_fit(gdat.pathalle)
+
+    pathmcmcsave = gdat.pathalle + 'results/mcmc_corner.pdf'
+    if not os.path.exists(pathmcmcsave):
+        allesfitter.mcmc_output(gdat.pathalle)
+
     # plotting
     gdat.figrsize = np.empty((5, 2))
     gdat.figrsize[0, :] = np.array([12., 4.])
@@ -375,18 +512,28 @@ def main(strgtarg):
     print(deptelli)
 
     # plot PDCSAP and SAP light curves
-    gdat.timepdcc, lcurpdcc, stdvlcurpdcc = np.genfromtxt(gdat.pathobjt + 'TESS_PDCSAP/TESS.csv', delimiter=',', unpack=True)
-    gdat.timesapp, lcursapp, stdvlcursapp = np.genfromtxt(gdat.pathobjt + 'TESS_SAP/TESS.csv', delimiter=',', unpack=True)
+    numbframlcur = 3
+    figr, axis = plt.subplots(numbframlcur, 1, figsize=gdat.figrsize[1, :])
+    axis[0].plot(gdat.timesapp - gdat.timetess, lcursapp, color='grey', marker='.', ls='')
+    axis[1].plot(gdat.timepdcc - gdat.timetess, lcurpdcc, color='grey', marker='.', ls='')
+    axis[2].plot(timeflat - gdat.timetess, lcurflat, color='grey', marker='.', ls='')
     
-    figr, axis = plt.subplots(2, 1, figsize=gdat.figrsize[1, :])
-    axis[0].plot(gdat.timepdcc - gdat.timetess, lcurpdcc, 'k.')
-    axis[1].plot(gdat.timesapp - gdat.timetess, lcursapp, '.', color='k')
-    for a in range(2):
-        axis[a].set_ylabel('Relative Flux')
+    axis[0].plot(gdat.timesapp[listindxtimegood] - gdat.timetess, lcursapp[listindxtimegood], color='k', marker='.', ls='')
+    axis[1].plot(gdat.timepdcc[listindxtimegood] - gdat.timetess, lcurpdcc[listindxtimegood], color='k', marker='.', ls='')
+    
     #axis[0].set_xticklabels([])
-    axis[1].set_xlabel('Time [BJD - 2457000]')
-    path = gdat.pathobjt + 'lcur.pdf'
+    
+    axis[0].text(.97, .97, 'SAP', transform=axis[0].transAxes, size=20, color='r', ha='right', va='top')
+    axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
+    axis[2].text(.97, .97, 'Flattened', transform=axis[2].transAxes, size=20, color='r', ha='right', va='top')
+    
+    axis[numbframlcur-1].set_xlabel('Time [BJD - 2457000]')
+    for a in range(numbframlcur):
+        axis[a].minorticks_on()
+        axis[a].set_ylabel('Relative Flux')
     plt.subplots_adjust(hspace=0.)
+    path = gdat.pathobjt + 'lcur.pdf'
+    print('Writing to %s...' % path)
     plt.savefig(path)
     plt.close()
     
@@ -533,81 +680,82 @@ def main(strgtarg):
     # read the allesfitter posterior
     companion = 'b'
     strginst = 'TESS'
-    pathalle = gdat.pathobjt + 'allesfits/allesfit_%s/' % strgalletype
     alles = allesfitter.allesclass(pathalle)
     allesfitter.config.init(pathalle)
-    numbsamp = alles.posterior_params['b_geom_albedo_TESS'].size
+    
+    numbsamp = alles.posterior_params[list(alles.posterior_params.keys())[0]].size
 
     if 'b_rr' in alles.posterior_params.keys():
         listfracradi = alles.posterior_params['b_rr']
     else:
         listfracradi = np.zeros(numbsamp) + allesfitter.config.BASEMENT.params['b_rr']
+    
     if 'b_rsuma' in alles.posterior_params.keys():
         listrsma = alles.posterior_params['b_rsuma']
     else:
         listrsma = np.zeros(numbsamp) + allesfitter.config.BASEMENT.params['b_rsuma']
-    if strgalletype == 'ther':
-        listphasshft = 360. * alles.posterior_params['b_thermal_emission_timeshift_TESS'] / alles.posterior_params['b_period']
-        
-        prnt_list(listphasshft, 'Phase shift')
-        return
-
-    else:
-        listalbgalle = alles.posterior_params['b_geom_albedo_TESS']
-        listdeptnigh = alles.posterior_params['b_sbratio_TESS'] * listfracradi**2
     
-    numbsamp = listrsma.size
-
     listfracradi = listfracradi[int(numbsamp/4):]
-    listalbgalle = listalbgalle[int(numbsamp/4):]
-    listdeptnigh = listdeptnigh[int(numbsamp/4):]
     listrsma = listrsma[int(numbsamp/4):]
-    numbsamp = listrsma.size
     
-    # calculate nightside, secondary and planetary modulation from allesfitter output
-    ## what allesfitter calls 'geometric albedo' is not the actual geometric albedo
-    listdeptpmod = listalbgalle * (listfracradi * listrsma / (1. + listfracradi))**2
-    print('listalbgalle')
-    summgene(listalbgalle)
-    print('listfracradi')
-    summgene(listfracradi)
-    print('listrsma')
-    summgene(listrsma)
-    listsamp = np.empty((numbsamp, 6))
-    listsamp[:, 0] = listdeptnigh
-    listsamp[:, 1] = listdeptnigh + listdeptpmod
-    listsamp[:, 2] = listdeptpmod
-    listsamp[:, 3] = listdeptpmod * np.random.rand(listdeptpmod.size)
-    listsamp[:, 4] = listdeptpmod - listsamp[:, 3]
-    listsamp[:, 5] = listsamp[:, 4] * (1. + listfracradi)**2 / listrsma**2 / listfracradi**2
-    listalbgtess = listsamp[:, 5]
-    listlabl = ['Nightside [ppm]', 'Secondary [ppm]', 'Modulation [ppm]', 'Thermal [ppm]', 'Reflected [ppm]', 'Geometric Albedo']
-    #tdpy.mcmc.plot_grid(pathimag, 'post_alle', listsamp, listlabl, plotsize=2.5)
-    
-    listdeptseco = listsamp[:, 1]
-    medideptseco = np.median(listsamp[:, 1])
-    stdvdeptseco = np.std(listsamp[:, 1])
-    medideptnigh = np.median(listsamp[:, 0])
-    stdvdeptnigh = np.std(listsamp[:, 0])
-    
-    prnt_list(listalbgtess, 'Albedo TESS only')
-    prnt_list(listdeptseco * 1e6, 'Secondary depth [ppm]')
-    prnt_list(listdeptnigh * 1e6, 'Nightside depth [ppm]')
-    
-    gdat.time = gdat.timepdcc
+    if gdat.boolphascurv:
+        if strgalletype == 'ther':
+            listphasshft = 360. * alles.posterior_params['b_thermal_emission_timeshift_TESS'] / alles.posterior_params['b_period']
+            
+            prnt_list(listphasshft, 'Phase shift')
+            return
 
-    if False:
-        path = pathdata + 'PC-Solar-NEW-OPA-TiO-LR.dat'
-        arryvivi = np.loadtxt(path, delimiter=',')
-        phasvivi = (arryvivi[:, 0] / 360. + 0.75) % 1. - 0.25
-        deptvivi = arryvivi[:, 4]
-        indxphasvivisort = np.argsort(phasvivi)
-        phasvivi = phasvivi[indxphasvivisort]
-        deptvivi = deptvivi[indxphasvivisort]
-        path = pathdata + 'PC-Solar-NEW-OPA-TiO-LR-AllK.dat'
-        arryvivi = np.loadtxt(path, delimiter=',')
-        wlenvivi = arryvivi[:, 1]
-        specvivi = arryvivi[:, 2]
+        else:
+            listalbgalle = alles.posterior_params['b_geom_albedo_TESS']
+            listdeptnigh = alles.posterior_params['b_sbratio_TESS'] * listfracradi**2
+    
+        listalbgalle = listalbgalle[int(numbsamp/4):]
+        listdeptnigh = listdeptnigh[int(numbsamp/4):]
+    
+        # calculate nightside, secondary and planetary modulation from allesfitter output
+        ## what allesfitter calls 'geometric albedo' is not the actual geometric albedo
+        listdeptpmod = listalbgalle * (listfracradi * listrsma / (1. + listfracradi))**2
+        print('listalbgalle')
+        summgene(listalbgalle)
+        print('listfracradi')
+        summgene(listfracradi)
+        print('listrsma')
+        summgene(listrsma)
+        listsamp = np.empty((numbsamp, 6))
+        listsamp[:, 0] = listdeptnigh
+        listsamp[:, 1] = listdeptnigh + listdeptpmod
+        listsamp[:, 2] = listdeptpmod
+        listsamp[:, 3] = listdeptpmod * np.random.rand(listdeptpmod.size)
+        listsamp[:, 4] = listdeptpmod - listsamp[:, 3]
+        listsamp[:, 5] = listsamp[:, 4] * (1. + listfracradi)**2 / listrsma**2 / listfracradi**2
+        listalbgtess = listsamp[:, 5]
+        listlabl = ['Nightside [ppm]', 'Secondary [ppm]', 'Modulation [ppm]', 'Thermal [ppm]', 'Reflected [ppm]', 'Geometric Albedo']
+        #tdpy.mcmc.plot_grid(pathimag, 'post_alle', listsamp, listlabl, plotsize=2.5)
+        
+        listdeptseco = listsamp[:, 1]
+        medideptseco = np.median(listsamp[:, 1])
+        stdvdeptseco = np.std(listsamp[:, 1])
+        medideptnigh = np.median(listsamp[:, 0])
+        stdvdeptnigh = np.std(listsamp[:, 0])
+        
+        prnt_list(listalbgtess, 'Albedo TESS only')
+        prnt_list(listdeptseco * 1e6, 'Secondary depth [ppm]')
+        prnt_list(listdeptnigh * 1e6, 'Nightside depth [ppm]')
+    
+        if False:
+            path = pathdata + 'PC-Solar-NEW-OPA-TiO-LR.dat'
+            arryvivi = np.loadtxt(path, delimiter=',')
+            phasvivi = (arryvivi[:, 0] / 360. + 0.75) % 1. - 0.25
+            deptvivi = arryvivi[:, 4]
+            indxphasvivisort = np.argsort(phasvivi)
+            phasvivi = phasvivi[indxphasvivisort]
+            deptvivi = deptvivi[indxphasvivisort]
+            path = pathdata + 'PC-Solar-NEW-OPA-TiO-LR-AllK.dat'
+            arryvivi = np.loadtxt(path, delimiter=',')
+            wlenvivi = arryvivi[:, 1]
+            specvivi = arryvivi[:, 2]
+
+    gdat.time = gdat.timepdcc
 
     # plot a lightcurve from the posteriors
     gdat.lcurmodl = alles.get_posterior_median_model(strginst, 'flux', xx=gdat.time)
@@ -1455,10 +1603,26 @@ def cnfg_kelt0009():
 
 def cnfg_HD118203():
 
-    strgtarg = 'HD 118203'
+    strgtarg = 'HD118203'
+    
+    listlimttimemask = np.array([ \
+                                [0, 1712], \
+                                [1724.5, 1725.5], \
+                                ])
+    listlimttimemask += 2457000
+    main( \
+         strgtarg=strgtarg, \
+         listlimttimemask=listlimttimemask, \
+        )
+
+
+def cnfg_WASP0121():
+
+    strgtarg = 'WASP-121'
 
     main( \
          strgtarg=strgtarg, \
+         boolphascurv=True, \
         )
 
 
