@@ -345,10 +345,10 @@ def main( \
     print(gdat.pathobjt)
     
     pathlcur = gdat.pathobjt + 'mastDownload/TESS/'
-    pathlcur += os.listdir(pathlcur)[0] + '/'
-    pathlcur += os.listdir(pathlcur)[0]
     if not os.path.exists(pathlcur):
         pathdown = tesstarg.util.down_spoclcur(gdat.strgtarg, gdat.pathobjt)
+    pathlcur += os.listdir(pathlcur)[0] + '/'
+    pathlcur += os.listdir(pathlcur)[0]
         
     # temp
     boolextrmine = False
@@ -1626,5 +1626,11 @@ def cnfg_WASP0121():
         )
 
 
+def cnfg_toii1233():
+    
+    main( \
+         strgtarg='260647166', \
+        )
+    
 globals().get(sys.argv[1])(*sys.argv[2:])
 
