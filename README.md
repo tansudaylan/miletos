@@ -13,7 +13,7 @@ Here is an example usage of PEXO for analyzing the TESS data on an ultra-hot Jup
 def cnfg_WASP0121():
     
     # a string that will appear as the base of the file names
-    strgtarg = 'WASP-121'
+    strgtarg = 'wasp0121'
     
     # a string that will be used to search for data on MAST 
     strgmast = 'WASP-121'
@@ -22,7 +22,7 @@ def cnfg_WASP0121():
     labltarg = strgmast
     
     # a string indicating the TOI number for querying initial conditions
-    strgtoii = '495'
+    strgtoii = '495.01'
     
     # also do a phase curve analysis
     boolphascurv = True
