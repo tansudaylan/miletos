@@ -443,7 +443,7 @@ def main( \
     gdat.strgtimestmp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
     # paths
-    gdat.pathbase = os.environ['TESSTOII_DATA_PATH'] + '/'
+    gdat.pathbase = os.environ['PEXO_DATA_PATH'] + '/'
     gdat.pathexop = gdat.pathbase + 'exofop/'
     gdat.pathobjt = gdat.pathbase + '%s/' % gdat.strgtarg
     gdat.pathdata = gdat.pathobjt + 'data/'
@@ -743,7 +743,7 @@ def main( \
         gdat.arrylcurdetr = gdat.arrylcur
         
     ## phase-fold and save the detrended light curve
-    numbbins = 400
+    numbbins = 2000
     gdat.arrylcurdetrbind = tesstarg.util.rebn_lcur(gdat.arrylcurdetr, numbbins)
     
     path = gdat.pathobjt + 'arrylcurdetrbind.csv'
@@ -881,6 +881,8 @@ def main( \
     path = gdat.pathalleorbt + 'results/initial_guess_b.pdf'
     if not os.path.exists(path):
         allesfitter.show_initial_guess(gdat.pathalleorbt)
+    
+    raise Exception('')
     
     ## do the run
     path = gdat.pathalleorbt + 'results/mcmc_save.h5'
@@ -1963,6 +1965,7 @@ def cnfg_WD1856():
 
     epocprio = np.array([2458708.978112])
     periprio = np.array([1.4079342])
+    duraprio = np.array([1. / 24. / 6.])
     strgtarg = 'WD1856'
     ticitarg = 267574918
     strgmast = '267574918'
@@ -1974,8 +1977,10 @@ def cnfg_WD1856():
          labltarg=labltarg, \
          strgmast=strgmast, \
          ticitarg=ticitarg, \
+         datatype='tcat', \
          epocprio=epocprio, \
          periprio=periprio, \
+         duraprio=duraprio, \
         )
 
 
