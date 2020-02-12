@@ -363,6 +363,8 @@ def evol_file(gdat, namefile, pathalle, strgtype, lineadde=None):
         objtfile.write('%s' % lineneww)
     objtfile.close()
 
+    
+
 
 def retr_exarcomp(strgtarg=None):
     
@@ -1012,7 +1014,99 @@ def main( \
         print('Writing to %s...' % path)
         plt.savefig(path)
         plt.close()
+
+    # atmospheric plot
+    dictexarcomp = pexo.main.retr_exarcomp()
     
+    esmm = tesstarg.util.retr_esmm(dictexarcomp['tmptplanequb'], dictexarcomp['tmptstar'], dictexarcomp['radiplan'], dictexarcomp['radistar'], \
+                                                                                                        dictexarcomp['kmag'])
+    
+    tsmm = tesstarg.util.retr_tsmm(dictexarcomp['radiplan'], dictexarcomp['tmptplanequb'], dictexarcomp['massplan'], dictexarcomp['radistar'], \
+                                                                                                        dictexarcomp['jmag'])
+    
+    
+    tmptplanequb = dictexarcomp['tmptplanequb']
+    radiplan = dictexarcomp['radiplan'] * 11.2 # R_E
+    
+    indxesmmgood = np.where(np.isfinite(esmm))[0]
+    print('indxesmmgood')
+    summgene(indxesmmgood)
+    indxradiplangood = np.where(np.isfinite(radiplan))[0]
+    print('indxradiplangood')
+    summgene(indxradiplangood)
+    indxtmptplanequbgood = np.where(np.isfinite(tmptplanequb))[0]
+    print('indxtmptplanequbgood')
+    summgene(indxtmptplanequbgood)
+    
+    numbtext = 20
+    liststrgmetr = ['tsmm', 'esmm']
+    liststrgzoom = ['totl', 'rb24']
+    for strgmetr in liststrgmetr:
+        
+        print('strgmetr')
+        print(strgmetr)
+    
+        if strgmetr == 'tsmm':
+            metr = tsmm
+            lablmetr = 'TSM'
+        else:
+            metr = esmm
+            lablmetr = 'ESM'
+        
+        for strgzoom in liststrgzoom:
+            if strgzoom == 'totl':
+                indx = np.where(np.isfinite(radiplan) & np.isfinite(tmptplanequb) & np.isfinite(metr))[0]
+            if strgzoom == 'rb24':
+                indx = np.where((radiplan < 4.) & (radiplan > 2.) & np.isfinite(radiplan) & np.isfinite(tmptplanequb) \
+                                                                            & np.isfinite(metr) & dictexarcomp['booltran'] == 1.)[0]
+    
+            print('metr[indx]')
+            summgene(metr[indx])
+            
+            # normalize
+            metr /= np.amax(metr[indx])
+            metr *= 100.
+    
+            # sort
+            indxsort = np.argsort(metr[indx])[::-1]
+            
+            figr, axis = plt.subplots(figsize=(12, 6))
+            #axis.scatter(tmptplanequb[indx], radiplan[indx], s=metr[indx])
+            axis.scatter(radiplan[indx], tmptplanequb[indx], s=metr[indx])
+            for k in indxsort[:numbtext]:
+                axis.text(radiplan[indx[k]], tmptplanequb[indx[k]], '%s' % dictexarcomp['nameplan'][indx[k]])
+                #axis.text(tmptplanequb[indx[k]], radiplan[indx[k]], '%s' % dictexarcomp['nameplan'][indx[k]])
+            if strgzoom == 'rb24':
+                axis.set_xlim([1.9, 4.1])
+                #axis.set_ylim([1.9, 4.1])
+            axis.set_ylabel(r'Planet Equilibrium Temperature [K]')
+            axis.set_xlabel('Radius [$R_E$]')
+            #axis.set_yscale('log')
+            plt.tight_layout()
+            path = pathimag + 'radiplan_tmptplanequb_%s_%s_targ.pdf' % (strgmetr, strgzoom)
+            print('Writing to %s...' % path)
+            plt.savefig(path)
+            plt.close()
+        
+            figr, axis = plt.subplots(figsize=(12, 6))
+            axis.scatter(radiplan[indx], metr[indx], s=metr[indx])
+            for k in indxsort[:numbtext]:
+                axis.text(radiplan[indx[k]], metr[indx[k]], '%s' % dictexarcomp['nameplan'][indx[k]])
+            axis.set_xlim([1.9, 4.1])
+            #axis.set_ylim([1.9, 4.1])
+            axis.set_ylabel(lablmetr)
+            axis.set_xlabel('Radius [$R_E$]')
+            #axis.set_yscale('log')
+            plt.tight_layout()
+            path = pathimag + '%s_radiplan_%s_targ.pdf' % (strgmetr, strgzoom)
+            print('Writing to %s...' % path)
+            plt.savefig(path)
+            plt.close()
+    
+
+
+
+
     if gdat.infetype == 'alle':
         gdat.pathalle = gdat.pathobjt + 'allesfits/'
         gdat.pathalleorbt = gdat.pathalle + 'allesfit_orbt/'
