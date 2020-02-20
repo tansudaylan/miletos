@@ -450,9 +450,11 @@ def main( \
          boolcontrati=False, \
 
          boolallebkgdgaus=False, \
+        
+         liststrgplan=['b'], \
 
          # Boolean flag to perform TLS
-         booltlss=False, \
+         booltlss=True, \
 
          booldiagmode=True, \
          
@@ -1088,7 +1090,7 @@ def main( \
                 timetlssmeta = gdat.arrylcurdetr[:, 0]
                 lcurtlssmeta = gdat.arrylcurdetr[:, 1]
             else:
-                indxtimetran = tesstarg.util.retr_indxtimetran(timetlssmeta, gdat.epocprio[j-1], gdat.periprio[j-1], gdat.duramask[j-1])
+                indxtimetran = np.where(abs(timetlssmeta - results.transit_times) < results.duration / 2.)[0]
                 indxtimegood = np.setdiff1d(np.arange(timetlssmeta.size), indxtimetran)
                 timetlssmeta = timetlssmeta[indxtimegood]
                 lcurtlssmeta = lcurtlssmeta[indxtimegood]
@@ -1097,7 +1099,7 @@ def main( \
             objtmodltlss = transitleastsquares.transitleastsquares(timetlssmeta, lcurtlssmeta)
             results = objtmodltlss.power(u=ab)
             
-            print('Period', format(results.period, '.5f'), 'd at T0=', results.T0)
+            print('')
             print('Period', format(results.period, '.5f'), 'd at T0=', results.T0)
             print('results.transit_times')
             print(results.transit_times)
@@ -1308,11 +1310,11 @@ def main( \
         
         # update the transit duration for fastfit
         lineadde = [ \
-                    ['fast_fit_width*', 'fast_fit_width,%.3g' % np.amax(gdat.duramask)], \
+                    ['fast_fit_width*', 'fast_fit_width,%.3g\n' % np.amax(gdat.duramask)], \
                    ]
         linetemp = 'companions_phot,'
         for j in gdat.indxplan:
-            linetemp += ' %s' % gdat.liststrgplan[j]
+            linetemp += ' %s\n' % gdat.liststrgplan[j]
         lineadde.extend([ \
                         ['companions_phot,b', linetemp] \
                         ])
