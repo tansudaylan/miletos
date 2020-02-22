@@ -434,6 +434,9 @@ def main( \
         
          maxmnumbstartcat=1, \
         
+         # star properties
+         jmag=None, \
+
          dilucorr=None, \
 
          epocprio=None, \
@@ -510,7 +513,13 @@ def main( \
 
     dictexarcomp = retr_exarcomp(gdat.strgmast)
     gdat.boolexar = dictexarcomp is not None
+    
+    print('dictexarcomp')
+    print(dictexarcomp)
     if dictexarcomp is not None:
+        # stellar properties
+        gdat.jmag = dictexarcomp['jmag']
+        
         gdat.periprio = dictexarcomp['peri']
         gdat.radiplanprio = dictexarcomp['radiplan']
         gdat.radistarprio = dictexarcomp['radistar']
@@ -1087,6 +1096,8 @@ def main( \
             
             # mask
             if j == 0:
+                print('gdat.arrylcurdetr')
+                summgene(gdat.arrylcurdetr)
                 timetlssmeta = gdat.arrylcurdetr[:, 0]
                 lcurtlssmeta = gdat.arrylcurdetr[:, 1]
             else:
