@@ -5,7 +5,7 @@ import tdpy.util
 import tdpy.mcmc
 from tdpy.util import prnt_list
 from tdpy.util import summgene
-import pandora.main
+import lygos.main
 
 import pickle
 
@@ -179,7 +179,7 @@ def retr_reso(listperi, maxmordr=10):
             else:
                 listratiperi[:, j, jj] = rati
 
-            minmdiff = 1e12
+            minmdiff = 1e100
             for a in range(1, maxmordr):
                 for aa in range(1, maxmordr):
                     diff = abs(float(a) / aa - listratiperi[:, j, jj])
@@ -260,18 +260,130 @@ def evol_file(gdat, namefile, pathalle, lineadde, verbtype=1):
     objtfile.close()
 
 
+def retr_exof(gdat, strgtoii=None):
+    
+    path = gdat.pathbase + 'data/TOI_augmented.csv'
+    if os.path.exists(path):
+        print('Reading from %s...' % path)
+        objtexof = pd.read_csv(path, skiprows=0)
+        dictexof = objtexof.to_dict('list')
+        for attr, varb in dictexof.items():
+            dictexof[attr] = np.array(varb)
+    else:
+    
+        pathexof = gdat.pathbase + 'data/exofop_toilists_20200916.csv'
+        print('Reading from %s...' % pathexof)
+        objtexof = pd.read_csv(pathexof, skiprows=0)
+        if strgtoii is None:
+            indx = np.arange(objtexof['TOI'].size)
+        else:
+            indx = np.where(objtexof['TOI'] == strgtarg)[0]
+        print('strgtoii')
+        print(strgtoii)
+            
+        if indx.size == 0:
+            print('The planet name, %s, was not found in the NASA Exoplanet Archive composite table.' % strgtarg)
+            return None
+        else:
+            dictexof = {}
+            dictexof['toii'] = objtexof['TOI'][indx].values
+            numbplan = dictexof['toii'].size
+            indxplan = np.arange(numbplan)
+            dictexof['namestar'] = np.empty(numbplan, dtype=object)
+            dictexof['nameplan'] = np.empty(numbplan, dtype=object)
+            for k in indxplan:
+                dictexof['nameplan'][k] = 'TOI ' + str(dictexof['toii'][k])
+                dictexof['namestar'][k] = 'TOI ' + str(dictexof['toii'][k])[:-3]
+            dictexof['rrat'] = np.sqrt(objtexof['Depth (ppm)'][indx].values * 1e-6)
+            dictexof['radistar'] = objtexof['Stellar Radius (R_Sun)'][indx].values / gdat.factrsrj
+            dictexof['radiplan'] = dictexof['rrat'] * dictexof['radistar']
+            
+            dictexof['stdvradiplan'] = objtexof['Planet Radius (R_Earth) err'][indx].values * gdat.factrjre
+            dictexof['peri'] = objtexof['Period (days)'][indx].values
+            dictexof['epoc'] = objtexof['Epoch (BJD)'][indx].values
+            
+            dictexof['stdvradistar'] = objtexof['Stellar Radius (R_Sun) err'][indx].values / gdat.factrsrj
+            dictexof['tmptstar'] = objtexof['Stellar Radius (R_Sun)'][indx].values
+            dictexof['stdvtmptstar'] = objtexof['Stellar Radius (R_Sun) err'][indx].values
+            dictexof['loggstar'] = objtexof['Stellar log(g) (cm/s^2)'][indx].values
+            dictexof['stdvloggstar'] = objtexof['Stellar log(g) (cm/s^2) err'][indx].values
+            
+            dictexof['vmagstar'] = np.zeros(numbplan)
+            dictexof['jmagstar'] = np.zeros(numbplan)
+            dictexof['hmagstar'] = np.zeros(numbplan)
+            dictexof['kmagstar'] = np.zeros(numbplan)
+            dictexof['boolfrst'] = np.zeros(numbplan)
+            dictexof['numbplanstar'] = np.zeros(numbplan)
+            for k in indxplan:
+                tici = objtexof['TIC ID'].values[k]
+                strgmast = 'TIC %d' % tici
+                catalogData = astroquery.mast.Catalogs.query_object(strgmast, catalog='TIC', radius='1s')
+                if catalogData[0]['dstArcSec'] > 0.1:
+                    print('The nearest source is more than 0.1 arcsec away from the target!')
+                
+                #dictexof['namestar'] = 'TOI ' + str(tici)
+                #dictexof['radistar'] = catalogData[0]['rad'] * gdat.factrsrj
+                #dictexof['stdvradistar'] = catalogData[0]['e_rad'] * gdat.factrsrj
+                #dictexof['massstar'] = catalogData[0]['mass'] * gdat.factmsmj
+                #dictexof['stdvmassstar'] = catalogData[0]['e_mass'] * gdat.factmsmj
+                #dictexof['tmptstar'] = catalogData[0]['Teff']
+                #dictexof['stdvtmptstar'] = catalogData[0]['e_Teff']
+                
+                print('k')
+                print(k)
+                dictexof['vmagstar'][k] = catalogData[0]['Vmag']
+                dictexof['jmagstar'][k] = catalogData[0]['Jmag']
+                dictexof['hmagstar'][k] = catalogData[0]['Hmag']
+                dictexof['kmagstar'][k] = catalogData[0]['Kmag']
+                #if k == 5:
+                #    break
+            
+            # augment
+            dictexof['numbplanstar'] = np.empty(numbplan)
+            dictexof['boolfrst'] = np.zeros(numbplan, dtype=bool)
+            for k in indxplan:
+                indxplanthis = np.where(dictexof['namestar'][k] == dictexof['namestar'])[0]
+                if k == indxplanthis[0]:
+                    dictexof['boolfrst'][k] = True
+                dictexof['numbplanstar'][k] = indxplanthis.size
+            
+            dictexof['numbplantranstar'] = dictexof['numbplanstar']
+            dictexof['lumistar'] = dictexof['radistar']**2 * (dictexof['tmptstar'] / 5778.)**4
+            dictexof['massstar'] = dictexof['loggstar'] * dictexof['radistar']**2
+            dictexof['smax'] = (dictexof['peri']**2)**(1. / 3.) * dictexof['massstar']
+            dictexof['smaxasun'] = dictexof['smax'] / gdat.factaurj
+            dictexof['inso'] = dictexof['lumistar'] / dictexof['smaxasun']**2
+            dictexof['tmptplan'] = dictexof['tmptstar'] * np.sqrt(dictexof['radistar'] / dictexof['smax'] / 2.)
+            # temp check if factor of 2 is right
+            dictexof['stdvtmptplan'] = np.sqrt(dictexof['stdvtmptstar']**2 + 0.5 * dictexof['stdvradistar']**2) / np.sqrt(2.)
+            print('dictexof[radiplan]')
+            summgene(dictexof['radiplan'])
+            dictexof['massplan'] = np.ones_like(dictexof['radiplan']) + np.nan
+            indx = np.isfinite(dictexof['radiplan'])
+            dictexof['massplan'][indx] = tesstarg.util.retr_massfromradi(dictexof['radiplan'][indx])
+            # temp
+            dictexof['stdvmassplan'] = dictexof['massplan'] * 0.3
+            dictexof['densplan'] = dictexof['massplan'] / dictexof['radiplan']**3
+            dictexof['vesc'] = tesstarg.util.retr_vesc(dictexof['massplan'], dictexof['radiplan'])
+            dictexof['booltran'] = np.ones_like(dictexof['toii'])
+            
+        df = pd.DataFrame.from_dict(dictexof)#)orient="namestar")
+        print('Writing to %s...' % path)
+        df.to_csv(path)
+    
+    return dictexof
+
+
 def retr_exarcomp(gdat, strgtarg=None):
     
-    pathbase = os.environ['PEXO_DATA_PATH'] + '/'
-
     # get NASA Exoplanet Archive data
-    path = pathbase + 'data/compositepars_2020.01.23_16.22.13.csv'
+    path = gdat.pathbase + 'data/PSCompPars_2020.09.15_17.22.26.csv'
     print('Reading %s...' % path)
-    objtexarcomp = pd.read_csv(path, skiprows=124)
+    objtexarcomp = pd.read_csv(path, skiprows=330)
     if strgtarg is None:
-        indx = np.arange(objtexarcomp['fpl_hostname'].size)
+        indx = np.arange(objtexarcomp['hostname'].size)
     else:
-        indx = np.where(objtexarcomp['fpl_hostname'] == strgtarg)[0]
+        indx = np.where(objtexarcomp['hostname'] == strgtarg)[0]
     print('strgtarg')
     print(strgtarg)
     
@@ -280,35 +392,38 @@ def retr_exarcomp(gdat, strgtarg=None):
         return None
     else:
         dictexarcomp = {}
-        dictexarcomp['namestar'] = objtexarcomp['fpl_hostname'][indx].values
+        dictexarcomp['namestar'] = objtexarcomp['hostname'][indx].values
         
-        dictexarcomp['radistar'] = objtexarcomp['fst_rad'][indx].values * gdat.factrsrj # [R_J]
-        dictexarcomp['radistarstd1'] = objtexarcomp['fst_raderr1'][indx].values * gdat.factrsrj # [R_J]
-        dictexarcomp['radistarstd2'] = objtexarcomp['fst_raderr2'][indx].values * gdat.factrsrj # [R_J]
-        dictexarcomp['radistarstdv'] = (dictexarcomp['radistarstd1'] + dictexarcomp['radistarstd2']) / 2.
-        dictexarcomp['massstar'] = objtexarcomp['fst_mass'][indx].values * gdat.factmsmj # [M_J]
-        dictexarcomp['massstarstd1'] = objtexarcomp['fst_masserr1'][indx].values * gdat.factmsmj # [M_J]
-        dictexarcomp['massstarstd2'] = objtexarcomp['fst_masserr2'][indx].values * gdat.factmsmj # [M_J]
-        dictexarcomp['massstarstdv'] = (dictexarcomp['massstarstd1'] + dictexarcomp['massstarstd2']) / 2.
-        dictexarcomp['tmptstar'] = objtexarcomp['fst_teff'][indx].values # [K]
-        dictexarcomp['tmptstarstd1'] = objtexarcomp['fst_tefferr1'][indx].values # [K]
-        dictexarcomp['tmptstarstd2'] = objtexarcomp['fst_tefferr2'][indx].values # [K]
-        dictexarcomp['tmptstarstdv'] = (dictexarcomp['tmptstarstd1'] + dictexarcomp['tmptstarstd2']) / 2.
+        dictexarcomp['radistar'] = objtexarcomp['st_rad'][indx].values * gdat.factrsrj # [R_J]
+        radistarstd1 = objtexarcomp['st_raderr1'][indx].values * gdat.factrsrj # [R_J]
+        radistarstd2 = objtexarcomp['st_raderr2'][indx].values * gdat.factrsrj # [R_J]
+        dictexarcomp['stdvradistar'] = (radistarstd1 + radistarstd2) / 2.
+        dictexarcomp['massstar'] = objtexarcomp['st_mass'][indx].values * gdat.factmsmj # [M_J]
+        massstarstd1 = objtexarcomp['st_masserr1'][indx].values * gdat.factmsmj # [M_J]
+        massstarstd2 = objtexarcomp['st_masserr2'][indx].values * gdat.factmsmj # [M_J]
+        dictexarcomp['stdvmassstar'] = (massstarstd1 + massstarstd2) / 2.
+        dictexarcomp['tmptstar'] = objtexarcomp['st_teff'][indx].values # [K]
+        tmptstarstd1 = objtexarcomp['st_tefferr1'][indx].values # [K]
+        tmptstarstd2 = objtexarcomp['st_tefferr2'][indx].values # [K]
+        dictexarcomp['stdvtmptstar'] = (tmptstarstd1 + tmptstarstd2) / 2.
         
-        dictexarcomp['nameplan'] = objtexarcomp['fpl_name'][indx].values
-        dictexarcomp['peri'] = objtexarcomp['fpl_orbper'][indx].values # [days]
-        dictexarcomp['radiplan'] = objtexarcomp['fpl_radj'][indx].values # [R_J]
-        dictexarcomp['smax'] = objtexarcomp['fpl_smax'][indx].values # [AU]
-        dictexarcomp['massplan'] = objtexarcomp['fpl_bmassj'][indx].values # [M_J]
-        dictexarcomp['stdvradiplan'] = np.maximum(objtexarcomp['fpl_radjerr1'][indx].values, objtexarcomp['fpl_radjerr2'][indx].values) # [R_J]
-        dictexarcomp['stdvmassplan'] = np.maximum(objtexarcomp['fpl_bmassjerr1'][indx].values, objtexarcomp['fpl_bmassjerr2'][indx].values) # [M_J]
-        dictexarcomp['tmptplan'] = objtexarcomp['fpl_eqt'][indx].values # [K]
-        dictexarcomp['omagstar'] = objtexarcomp['fst_optmag'][indx].values
-        dictexarcomp['booltran'] = objtexarcomp['fpl_tranflag'][indx].values # [K]
+        dictexarcomp['inso'] = objtexarcomp['pl_insol'][indx].values
+        dictexarcomp['nameplan'] = objtexarcomp['pl_name'][indx].values
+        dictexarcomp['peri'] = objtexarcomp['pl_orbper'][indx].values # [days]
+        dictexarcomp['radiplan'] = objtexarcomp['pl_radj'][indx].values # [R_J]
+        dictexarcomp['smax'] = objtexarcomp['pl_orbsmax'][indx].values # [AU]
+        dictexarcomp['massplan'] = objtexarcomp['pl_bmassj'][indx].values # [M_J]
+        dictexarcomp['stdvradiplan'] = np.maximum(objtexarcomp['pl_radjerr1'][indx].values, objtexarcomp['pl_radjerr2'][indx].values) # [R_J]
+        dictexarcomp['stdvmassplan'] = np.maximum(objtexarcomp['pl_bmassjerr1'][indx].values, objtexarcomp['pl_bmassjerr2'][indx].values) # [M_J]
+        dictexarcomp['tmptplan'] = objtexarcomp['pl_eqt'][indx].values # [K]
+        dictexarcomp['stdvtmptplan'] = (objtexarcomp['pl_eqterr1'][indx].values + objtexarcomp['pl_eqterr2'][indx].values) # [K]
+        dictexarcomp['booltran'] = objtexarcomp['tran_flag'][indx].values # [K]
         dictexarcomp['booltran'] = dictexarcomp['booltran'].astype(bool)
-        # temp
-        dictexarcomp['kmagstar'] = objtexarcomp['fst_nirmag'][indx].values # [K]
-        dictexarcomp['imagstar'] = objtexarcomp['fst_nirmag'][indx].values # [K]
+        dictexarcomp['vmagstar'] = objtexarcomp['sy_vmag'][indx].values
+        dictexarcomp['jmagstar'] = objtexarcomp['sy_jmag'][indx].values # [K]
+        dictexarcomp['hmagstar'] = objtexarcomp['sy_hmag'][indx].values # [K]
+        dictexarcomp['kmagstar'] = objtexarcomp['sy_kmag'][indx].values # [K]
+        dictexarcomp['densplan'] = objtexarcomp['pl_dens'][indx].values / 5.51 # [d_E]
         
         numbplanexar = len(dictexarcomp['nameplan'])
         print('numbplanexar')
@@ -316,7 +431,6 @@ def retr_exarcomp(gdat, strgtarg=None):
         
         dictexarcomp['numbplanstar'] = np.empty(numbplanexar)
         dictexarcomp['numbplantranstar'] = np.empty(numbplanexar)
-        # 
         dictexarcomp['boolfrst'] = np.zeros(numbplanexar, dtype=bool)
         dictexarcomp['booltrantotl'] = np.empty(numbplanexar, dtype=bool)
         for k, namestar in enumerate(dictexarcomp['namestar']):
@@ -468,7 +582,7 @@ def plot_pcur(gdat, strgpdfn):
                 axis[gdat.numbplan-1].set_xlabel('Phase')
                 
                 plt.subplots_adjust(hspace=0., bottom=0.2)
-                path = gdat.pathimag + 'pcur_%s_%d.%s' % (strgpdfn, a, gdat.strgplotextn)
+                path = gdat.pathimag + 'pcur_%s_%s_%d.%s' % (gdat.liststrginst[p], strgpdfn, a, gdat.strgplotextn)
                 print('Writing to %s...' % path)
                 plt.savefig(path)
                 plt.close()
@@ -481,229 +595,16 @@ def retr_albg(amplplanrefl, radiplan, smax):
     return albg
 
 
-def proc_alle(gdat, strgalle):
-    
-    # allesfit run folder
-    gdat.pathalle[strgalle] = gdat.pathallebase + 'allesfit_%s/' % strgalle
-    
-    # make sure the folder exists
-    cmnd = 'mkdir -p %s' % gdat.pathalle[strgalle]
-    os.system(cmnd)
-    
-    # write the input data file
-    for p in gdat.indxinst:
-        path = gdat.pathalle[strgalle] + gdat.liststrginst[p] + '.csv'
-        indxchuninst = gdat.listindxchuninst[p]
-        print('indxchuninst')
-        summgene(indxchuninst)
-        print(indxchuninst)
-        listarrylcurbdtrtemp = []
-        for y in gdat.indxchun[p]:
-            listarrylcurbdtrtemp.append(gdat.listarrylcurbdtr[p][y])
-        listarrylcurbdtrtemp = np.concatenate(listarrylcurbdtrtemp)
-        indx = np.argsort(listarrylcurbdtrtemp[:, 0])
-        listarrylcurbdtrtemp = listarrylcurbdtrtemp[indx, :]
-        print('listarrylcurbdtrtemp[0, :]')
-        summgene(listarrylcurbdtrtemp[0, :])
-        print('listarrylcurbdtrtemp[1, :]')
-        summgene(listarrylcurbdtrtemp[1, :])
-        print('listarrylcurbdtrtemp[2, :]')
-        summgene(listarrylcurbdtrtemp[2, :])
-        print('Writing to %s...' % path)
-        np.savetxt(path, listarrylcurbdtrtemp, delimiter=',', header='time,flux,flux_err')
-    
-    if gdat.peristdvprio is None:
-        gdat.peristdvprio = 0.01
+def calc_prop(gdat, strgpdfn, typeparacalc):
 
-    if gdat.epocstdvprio is None:
-        gdat.epocstdvprio = 0.5
-
-    if strgalle == 'orbt':
-        pass
-    pathpara = gdat.pathalle[strgalle] + 'params.csv'
-    if not os.path.exists(pathpara):
-        cmnd = 'touch %s' % (pathpara)
-        print(cmnd)
-        os.system(cmnd)
-    
-        lineadde = []
-        lineadde.extend([ \
-                        ['', '#name,value,fit,bounds,label,unit\n'], \
-                        ])
-        for j in gdat.indxplan:
-            strgrrat = '%s_rr' % gdat.liststrgplan[j]
-            strgrsma = '%s_rsuma' % gdat.liststrgplan[j]
-            strgcosi = '%s_cosi' % gdat.liststrgplan[j]
-            strgepoc = '%s_epoch' % gdat.liststrgplan[j]
-            strgperi = '%s_period' % gdat.liststrgplan[j]
-            strgecos = '%s_f_c' % gdat.liststrgplan[j]
-            strgesin = '%s_f_s' % gdat.liststrgplan[j]
-            lineadde.extend([ \
-                        ['', '%s,%f,1,uniform %f %f,$R_{%s} / R_\star$,\n' % \
-                             (strgrrat, gdat.rratprio[j], 0, 2 * gdat.rratprio[j], gdat.liststrgplan[j])], \
-                        ['', '%s,%f,1,uniform %f %f,$(R_\star + R_{%s}) / a_{%s}$,\n' % \
-                             (strgrsma, gdat.rsmaprio[j], 0, 2 * gdat.rsmaprio[j], gdat.liststrgplan[j], gdat.liststrgplan[j])], \
-                        ['', '%s,%f,1,uniform %f %f,$\cos{i_{%s}}$,\n' % \
-                             (strgcosi, gdat.cosiprio[j], 0, max(0.1, gdat.cosiprio[j] * 2), gdat.liststrgplan[j])], \
-                        ['', '%s,%f,1,uniform %f %f,$T_{0;%s}$,$\mathrm{BJD}$\n' % \
-                             (strgepoc, gdat.epocprio[j], gdat.epocprio[j] - gdat.epocstdvprio, gdat.epocprio[j] + gdat.epocstdvprio, \
-                                                                                                                            gdat.liststrgplan[j])], \
-                        ['', '%s,%f,1,uniform %f %f,$P_{%s}$,days\n' % \
-                             (strgperi, gdat.periprio[j], gdat.periprio[j] - gdat.peristdvprio, gdat.periprio[j] + gdat.peristdvprio, \
-                                                                                                                            gdat.liststrgplan[j])], \
-                        #['', '%s,%f,1,uniform %f %f,$\sqrt{e_b} \cos{\omega_b}$,\n' % \
-                        #     (strgecos, gdat.ecosprio[j], -0.9, 0.9, gdat.liststrgplan[j])], \
-                        #['', '%s,%f,1,uniform %f %f,$\sqrt{e_b} \sin{\omega_b}$,\n' % \
-                        #     (strgesin, gdat.esinprio[j], -0.9, 0.9, gdat.liststrgplan[j])], \
-                       ])
-            if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
-                for p in gdat.indxinst:
-                    strgsbrt = '%s_sbratio_' % gdat.liststrgplan[j] + gdat.liststrginst[p]
-                    lineadde.extend([ \
-                            ['', '%s_sbratio_%s,1e-3,1,uniform 0 1,$J_{%s; \mathrm{%s}}$,\n' % (gdat.liststrgplan[j], \
-                                                                                    gdat.liststrginst[p], gdat.liststrgplan[j]), gdat.listlablinst[p]], \
-                            ['', '%s_phase_curve_beaming_%s,0,1,uniform 0 10,$A_\mathrm{b}$,\n' % gdat.liststrgplan[j], gdat.liststrginst[p]], \
-                            ['', '%s_phase_curve_atmospheric_%s,0,1,uniform 0 10,$A_\mathrm{p}$,\n' % gdat.liststrgplan[j], gdat.liststrginst[p]], \
-                            ['', '%s_phase_curve_ellipsoidal_%s,0,1,uniform 0 10,$A_\mathrm{e}$,\n' % gdat.liststrgplan[j], gdat.liststrginst[p]], \
-                           ])
-
-        for p in gdat.indxinst:
-            strgldc1 = 'host_ldc_q1_%s' % gdat.liststrginst[p]
-            strgldc2 = 'host_ldc_q2_%s' % gdat.liststrginst[p]
-            strgscal = 'ln_err_flux_%s' % gdat.liststrginst[p]
-            strgbaseoffs = 'baseline_offset_flux_%s' % gdat.liststrginst[p]
-            strggprosigm = 'baseline_gp_matern32_lnsigma_flux_%s' % gdat.liststrginst[p]
-            strggprorhoo = 'baseline_gp_matern32_lnrho_flux_%s' % gdat.liststrginst[p]
-            lineadde.extend([ \
-                        ['', '%s,0.5,1,uniform 0 1,$q_{1; \mathrm{%s}}$,\n' % \
-                             (strgldc1, gdat.listlablinst[p])], \
-                        ['', '%s,0.5,1,uniform 0 1,$q_{2; \mathrm{%s}}$,\n' % \
-                             (strgldc2, gdat.listlablinst[p])], \
-                        ['', '%s,%f,1,uniform %f %f,$\ln{\sigma_\mathrm{%s}}$,\n' % \
-                             (strgscal, -8, -12, 0, gdat.listlablinst[p])], \
-                       ])
-            lineadde.extend([ \
-                        ['', '%s,%f,1,uniform %f %f,$O_{\mathrm{%s}}$,\n' % \
-                             (strgbaseoffs, 0, -1, 1, gdat.listlablinst[p])], \
-                       ])
-            #lineadde.extend([ \
-            #            ['', '%s,%f,1,uniform %f %f,$\ln{\sigma_{GP;\mathrm{TESS}}}$,\n' % \
-            #                 (strggprosigm, -6, -12, 12)], \
-            #            ['', '%s,%f,1,uniform %f %f,$\ln{\\rho_{GP;\mathrm{TESS}}}$,\n' % \
-            #                 (strggprorhoo, -2, -12, 12)], \
-            #           ])
-            
-            evol_file(gdat, 'params.csv', gdat.pathalle[strgalle], lineadde)
-    
-    pathsett = gdat.pathalle[strgalle] + 'settings.csv'
-    if not os.path.exists(pathsett):
-        cmnd = 'touch %s' % (pathsett)
-        print(cmnd)
-        os.system(cmnd)
-        
-        lineadde = []
-        # add user-defined settings.csv inputs
-        for strg, varb in gdat.dictsettalle.items():
-            lineadde.extend([ \
-                            ['', '%s,%s\n' % (strg, varb)] \
-                            ])
-
-        if not 'fast_fit' in [lineadde[k][1].split(',')[0] for k in range(len(lineadde))]:
-            lineadde = [ \
-                         ['', 'fast_fit,True\n'], \
-                       ]
-        lineadde += [ \
-                     ['', 'fast_fit_width,%.3g\n' % np.amax(gdat.duramask)], \
-                     ['', 'multiprocess,True\n'], \
-                     ['', 'multiprocess_cores,all\n'], \
-                     ['', 'mcmc_nwalkers,100\n'], \
-                     ['', 'mcmc_total_steps,400000\n'], \
-                     ['', 'mcmc_burn_steps,10000\n'], \
-                     ['', 'mcmc_thin_by,100\n'], \
-                   ]
-        for p in gdat.indxinst:
-            lineadde += [ \
-                         ['', 'inst_phot,%s\n' % gdat.liststrginst[p]], \
-                         ['', 'host_ld_law_%s,quad\n' % gdat.liststrginst[p]], \
-                         ['', 'host_grid_%s,very_sparse\n' % gdat.liststrginst[p]], \
-                         ['', 'baseline_flux_%s,sample_offset\n' % gdat.liststrginst[p]], \
-                         ['', 'use_host_density_prior,False\n'], \
-                        ]
-        
-        if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
-            lineadde.extend([ \
-                            ['', 'phase_curve,True\n'], \
-                            ['', 'phase_curve_style,sine_physical\n'], \
-                            ])
-        
-        for p in gdat.indxinst:
-            for j in gdat.indxplan:
-                lineadde.extend([ \
-                                ['', '%s_grid_%s,very_sparse\n' % (gdat.liststrgplan[j], gdat.liststrginst[p])], \
-                                ])
-        linetemp = 'companions_phot,'
-        for j in gdat.indxplan:
-            if j != 0:
-                linetemp += ' '
-            linetemp += '%s' % gdat.liststrgplan[j]
-        linetemp += '\n'
-        lineadde.extend([ \
-                        ['', linetemp] \
-                        ])
-        
-        evol_file(gdat, 'settings.csv', gdat.pathalle[strgalle], lineadde)
-    
-    ## initial plot
-    path = gdat.pathalle[strgalle] + 'results/initial_guess_b.pdf'
-    if not os.path.exists(path):
-        allesfitter.show_initial_guess(gdat.pathalle[strgalle])
-    
-    ## do the run
-    path = gdat.pathalle[strgalle] + 'results/mcmc_save.h5'
-    if not os.path.exists(path):
-        allesfitter.mcmc_fit(gdat.pathalle[strgalle])
-    else:
-        print('%s exists... Skipping the orbit run.' % path)
-
-    ## make the final plots
-    path = gdat.pathalle[strgalle] + 'results/mcmc_corner.pdf'
-    if not os.path.exists(path):
-        allesfitter.mcmc_output(gdat.pathalle[strgalle])
-        
-    # read the allesfitter posterior
-    print('Reading from %s...' % gdat.pathalle[strgalle])
-    gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathalle[strgalle])
-    
-    gdat.numbsampalle = allesfitter.config.BASEMENT.settings['mcmc_total_steps']
-    numbwalkalle = allesfitter.config.BASEMENT.settings['mcmc_nwalkers']
-    gdat.numbsampalleburn = allesfitter.config.BASEMENT.settings['mcmc_burn_steps']
-    gdat.numbsampallethin = allesfitter.config.BASEMENT.settings['mcmc_thin_by']
-
-    print('numbwalkalle')
-    print(numbwalkalle)
-    print('gdat.numbsampalle')
-    print(gdat.numbsampalle)
-    print('gdat.numbsampalleburn')
-    print(gdat.numbsampalleburn)
-    print('gdat.numbsampallethin')
-    print(gdat.numbsampallethin)
-
-    gdat.numbsamp = gdat.objtalle[strgalle].posterior_params[list(gdat.objtalle[strgalle].posterior_params.keys())[0]].size
-    
-    if gdat.numbsamp > 10000:
-        print('Thinning down the allesfitter chain!')
-        gdat.indxsamp = np.random.choice(np.arange(gdat.numbsamp), size=10000, replace=False)
-        gdat.numbsamp = 10000
-    else:
-        gdat.indxsamp = np.arange(gdat.numbsamp)
-
-    gdat.liststrgfeat = ['epoc', 'peri', 'rrat', 'rsma', 'cosi', 'ecce', 'smax']
-    if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
+    gdat.liststrgfeat = ['epoc', 'peri', 'rrat', 'rsma', 'cosi', 'ecos', 'esin', 'rvsa']
+    if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
         gdat.liststrgfeat += ['sbrtrati', 'amplelli']
-    if strgalle == '0003' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0006':
         gdat.liststrgfeat += ['amplplan', 'timeshftplan']
-    if strgalle == '0004':
+    if typeparacalc == '0004':
         gdat.liststrgfeat += ['amplplanther', 'amplplanrefl', 'timeshftplanther', 'timeshftplanrefl']
+    
     gdat.dictlist = {}
     gdat.dictpost = {}
     gdat.dicterrr = {}
@@ -722,17 +623,17 @@ def proc_alle(gdat, strgalle):
             if strgfeat == 'cosi':
                 strg = '%s_cosi' % gdat.liststrgplan[j]
     
-            if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
+            if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
                 if strgfeat == 'sbrtrati':
                     strg = '%s_sbratio_TESS' % gdat.liststrgplan[j]
                 if strgfeat == 'amplelli':
                     strg = '%s_phase_curve_ellipsoidal_TESS' % gdat.liststrgplan[j]
-            if strgalle == '0003' or strgalle == '0006':
+            if typeparacalc == '0003' or typeparacalc == '0006':
                 if strgfeat == 'amplplan':
                     strg = '%s_phase_curve_atmospheric_TESS' % gdat.liststrgplan[j]
                 if strgfeat == 'timeshftplan':
                     strg = '%s_phase_curve_atmospheric_shift_TESS' % gdat.liststrgplan[j]
-            if strgalle == '0004':
+            if typeparacalc == '0004':
                 if strgfeat == 'amplplanther':
                     strg = '%s_phase_curve_atmospheric_thermal_TESS' % gdat.liststrgplan[j]
                 if strgfeat == 'amplplanrefl':
@@ -742,11 +643,13 @@ def proc_alle(gdat, strgalle):
                 if strgfeat == 'timeshftplanrefl':
                     strg = '%s_phase_curve_atmospheric_reflected_shift_TESS' % gdat.liststrgplan[j]
             
-            if strg in gdat.objtalle[strgalle].posterior_params.keys():
-                gdat.dictlist[strgfeat][:, j] = gdat.objtalle[strgalle].posterior_params[strg][gdat.indxsamp]
+            if strgpdfn == 'prio':
+                gdat.dictlist[strgfeat][:, j] = getattr(gdat, strgfeat + 'prio')[j] + np.random.randn(gdat.numbsamp) * getattr(gdat, strgfeat + 'stdvprio')[j]
             else:
-                gdat.dictlist[strgfeat][:, j] = np.zeros(gdat.numbsamp) + allesfitter.config.BASEMENT.params[strg]
-    
+                if strg in gdat.objtalle[typeparacalc].posterior_params.keys():
+                    gdat.dictlist[strgfeat][:, j] = gdat.objtalle[typeparacalc].posterior_params[strg][gdat.indxsamp]
+                else:
+                    gdat.dictlist[strgfeat][:, j] = np.zeros(gdat.numbsamp) + allesfitter.config.BASEMENT.params[strg]
 
     # allesfitter phase curve depths are in ppt
     for strgfeat in gdat.liststrgfeat:
@@ -756,21 +659,24 @@ def proc_alle(gdat, strgalle):
     print('Calculating derived variables...')
     # derived variables
     ## get samples from the star's variables
-    gdat.listradistar = np.random.randn(gdat.numbsamp) * gdat.radistarstdv + gdat.radistar
-    gdat.listmassstar = np.random.randn(gdat.numbsamp) * gdat.massstarstdv + gdat.massstar
-    gdat.listtmptstar = np.random.randn(gdat.numbsamp) * gdat.tmptstarstdv + gdat.tmptstar
-    print('gdat.listradistar')
-    summgene(gdat.listradistar)
-    print('gdat.listmassstar')
-    summgene(gdat.listmassstar)
-    print('gdat.listtmptstar')
-    summgene(gdat.listtmptstar)
+    gdat.dictlist['radistar'] = np.random.randn(gdat.numbsamp) * gdat.stdvradistar + gdat.radistar
+    gdat.dictlist['massstar'] = np.random.randn(gdat.numbsamp) * gdat.stdvmassstar + gdat.massstar
+    gdat.dictlist['tmptstar'] = np.random.randn(gdat.numbsamp) * gdat.stdvtmptstar + gdat.tmptstar
+    gdat.dictlist['radistar'] = np.vstack([gdat.dictlist['radistar']] * gdat.numbplan).T
+    gdat.dictlist['massstar'] = np.vstack([gdat.dictlist['massstar']] * gdat.numbplan).T
+    gdat.dictlist['tmptstar'] = np.vstack([gdat.dictlist['tmptstar']] * gdat.numbplan).T
+    print('gdat.dictlist[radistar]')
+    summgene(gdat.dictlist['radistar'])
+    print('gdat.dictlist[massstar]')
+    summgene(gdat.dictlist['massstar'])
+    print('gdat.dictlist[tmptstar]')
+    summgene(gdat.dictlist['tmptstar'])
     
-    if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
         gdat.dictlist['amplnigh'] = gdat.dictlist['sbrtrati'] * gdat.dictlist['rrat']**2
-    if strgalle == '0003' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0006':
         gdat.dictlist['phasshftplan'] = gdat.dictlist['timeshftplan'] * 360. / gdat.dictlist['peri']
-    if strgalle == '0004':
+    if typeparacalc == '0004':
         gdat.dictlist['phasshftplanther'] = gdat.dictlist['timeshftplanther'] * 360. / gdat.dictlist['peri']
         gdat.dictlist['phasshftplanrefl'] = gdat.dictlist['timeshftplanrefl'] * 360. / gdat.dictlist['peri']
 
@@ -779,16 +685,22 @@ def proc_alle(gdat, strgalle):
     gdat.dictlist['incl'] = np.arccos(gdat.dictlist['cosi']) * 180. / np.pi
     
     # radius of the planets
-    gdat.dictlist['radiplan'] = gdat.listradistar[:, None] * gdat.dictlist['rrat']
+    gdat.dictlist['radiplan'] = gdat.dictlist['radistar'] * gdat.dictlist['rrat']
     gdat.dictlist['radiplaneart'] = gdat.dictlist['radiplan'] * gdat.factrjre
     
     # semi-major axis
-    gdat.dictlist['smax'] = (gdat.dictlist['radiplan'] + gdat.listradistar[:, None]) / gdat.dictlist['rsma']
+    gdat.dictlist['smax'] = (gdat.dictlist['radiplan'] + gdat.dictlist['radistar']) / gdat.dictlist['rsma']
     gdat.dictlist['smaxasun'] = gdat.dictlist['smax'] / gdat.factaurj
     
     print('Calculating equilibrium temperatures...')
     # planet equilibrium temperature
-    gdat.dictlist['tmptplan'] = gdat.listtmptstar[:, None] * np.sqrt(gdat.listradistar[:, None] / 2. / gdat.dictlist['smax'])
+    gdat.dictlist['tmptplan'] = gdat.dictlist['tmptstar'] * np.sqrt(gdat.dictlist['radistar'] / 2. / gdat.dictlist['smax'])
+    
+    # stellar luminosity
+    gdat.dictlist['lumistar'] = (gdat.dictlist['radistar'] / gdat.factrsrj)**2 * (gdat.dictlist['tmptstar'] / 5778.)**4
+    
+    # insolation
+    gdat.dictlist['inso'] = gdat.dictlist['lumistar'] / gdat.dictlist['smaxasun']**2
     
     # predicted planet mass
     print('Calculating predicted masses...')
@@ -805,6 +717,24 @@ def proc_alle(gdat, strgalle):
     gdat.dictlist['massplanpredeartchen'] = gdat.dictlist['massplanpredchen'] * gdat.factmjme
     gdat.dictlist['massplanpredeartwolf'] = gdat.dictlist['massplanpredwolf'] * gdat.factmjme
     
+    # mass used for later calculations
+    gdat.dictlist['massplanused'] = np.empty_like(gdat.dictlist['massplanpredchen'])
+    
+    # temp
+    gdat.dictlist['massplan'] = np.empty_like(gdat.dictlist['esin']) + np.nan
+    gdat.dictlist['massplanused'] = gdat.dictlist['massplanpredchen']
+    #for j in gdat.indxplan:
+    #    if 
+    #        gdat.dictlist['massplanused'][:, j] = 
+    #    else:
+    #        gdat.dictlist['massplanused'][:, j] = 
+            
+    # density of the planet
+    gdat.dictlist['densplan'] = gdat.dictlist['massplanused'] / gdat.dictlist['radiplan']**3
+
+    # escape velocity
+    gdat.dictlist['vesc'] = tesstarg.util.retr_vesc(gdat.dictlist['massplanused'], gdat.dictlist['radiplan'])
+    
     print('Calculating radius and period ratios...')
     for j in gdat.indxplan:
         strgratiperi = 'ratiperipla%d' % j
@@ -812,31 +742,29 @@ def proc_alle(gdat, strgalle):
         for jj in gdat.indxplan:
             gdat.dictlist[strgratiperi] = gdat.dictlist['peri'][:, j] / gdat.dictlist['peri'][:, jj]
             gdat.dictlist[strgratiradi] = gdat.dictlist['radiplan'][:, j] / gdat.dictlist['radiplan'][:, jj]
-        
+    
+    gdat.dictlist['ecce'] = gdat.dictlist['esin']**2 + gdat.dictlist['ecos']**2
     print('Calculating RV semi-amplitudes...')
     # RV semi-amplitude
     gdat.dictlist['rvsapred'] = tesstarg.util.retr_radvsema(gdat.dictlist['peri'], gdat.dictlist['massplanpred'], \
-                                                                                            gdat.listmassstar[:, None] / gdat.factmsmj, \
+                                                                                            gdat.dictlist['massstar'] / gdat.factmsmj, \
                                                                                                 gdat.dictlist['incl'], gdat.dictlist['ecce'])
     
     print('Calculating TSMs...')
     # TSM
     gdat.dictlist['tsmm'] = tesstarg.util.retr_tsmm(gdat.dictlist['radiplan'], gdat.dictlist['tmptplan'], \
-                                                                                gdat.dictlist['massplanpred'], gdat.listradistar[:, None], gdat.imagstar)
+                                                                                gdat.dictlist['massplanused'], gdat.dictlist['radistar'], gdat.jmagstar)
     
     # ESM
-    gdat.dictlist['esmm'] = tesstarg.util.retr_esmm(gdat.dictlist['tmptplan'], gdat.listtmptstar[:, None], \
-                                                                                gdat.dictlist['radiplan'], gdat.listradistar[:, None], gdat.imagstar)
+    gdat.dictlist['esmm'] = tesstarg.util.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
+                                                                                gdat.dictlist['radiplan'], gdat.dictlist['radistar'], gdat.kmagstar)
         
     gdat.dictlist['ltsm'] = np.log(gdat.dictlist['tsmm']) 
     gdat.dictlist['lesm'] = np.log(gdat.dictlist['esmm']) 
 
     # temp
-    gdat.dictlist['fsin'] = np.zeros_like(gdat.dictlist['rrat'])
-    gdat.dictlist['fcos'] = np.zeros_like(gdat.dictlist['rrat'])
     gdat.dictlist['sini'] = np.sqrt(1. - gdat.dictlist['cosi']**2)
-    gdat.dictlist['ecce'] = gdat.dictlist['fsin']**2 + gdat.dictlist['fcos']**2
-    gdat.dictlist['omeg'] = 180. / np.pi * np.mod(np.arctan2(gdat.dictlist['fsin'], gdat.dictlist['fcos']), 2 * np.pi)
+    gdat.dictlist['omeg'] = 180. / np.pi * np.mod(np.arctan2(gdat.dictlist['esin'], gdat.dictlist['ecos']), 2 * np.pi)
     gdat.dictlist['rs2a'] = gdat.dictlist['rsma'] / (1. + gdat.dictlist['rrat'])
     gdat.dictlist['dept'] = gdat.dictlist['rrat']**2
     gdat.dictlist['sinw'] = np.sin(np.pi / 180. * gdat.dictlist['omeg'])
@@ -858,25 +786,25 @@ def proc_alle(gdat, strgalle):
     # 0003 single component, offset
     # 0004 double component, offset
     # 0006 single component, GP
-    if strgalle == '0003' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0006':
         frac = np.random.rand(gdat.dictlist['amplplan'].size).reshape(gdat.dictlist['amplplan'].shape)
         gdat.dictlist['amplplanther'] = gdat.dictlist['amplplan'] * frac
         gdat.dictlist['amplplanrefl'] = gdat.dictlist['amplplan'] * (1. - frac)
     
-    if strgalle == '0004':
+    if typeparacalc == '0004':
         # temp -- this does not work for two component (thermal + reflected)
         gdat.dictlist['amplseco'] = gdat.dictlist['amplnigh'] + gdat.dictlist['amplplanther'] + gdat.dictlist['amplplanrefl']
-    if strgalle == '0003' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0006':
         # temp -- this does not work when phase shift is nonzero
         gdat.dictlist['amplseco'] = gdat.dictlist['amplnigh'] + gdat.dictlist['amplplan']
     
-    if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
         gdat.dictlist['albg'] = retr_albg(gdat.dictlist['amplplanrefl'], gdat.dictlist['radiplan'], gdat.dictlist['smax'])
 
     print('Calculating the equilibrium temperature of the planets...')
-    gdat.dictlist['tmptequi'] = gdat.listtmptstar[:, None] * np.sqrt(gdat.listradistar[:, None] / gdat.dictlist['smax'] / 2.)
+    gdat.dictlist['tmptequi'] = gdat.dictlist['tmptstar'] * np.sqrt(gdat.dictlist['radistar'] / gdat.dictlist['smax'] / 2.)
     
-    if gdat.labltarg == 'WASP-121':# and strgalle == '0003':
+    if gdat.labltarg == 'WASP-121':# and typeparacalc == '0003':
         # read and parse ATMO posterior
         ## get secondary depth data from Tom
         path = gdat.pathdata + 'ascii_output/EmissionDataArray.txt'
@@ -1020,15 +948,231 @@ def proc_alle(gdat, strgalle):
         gdat.dicterrr[strgfeat][0, ...] = gdat.dictpost[strgfeat][1, ...]
         gdat.dicterrr[strgfeat][1, ...] = gdat.dictpost[strgfeat][1, ...] - gdat.dictpost[strgfeat][0, ...]
         gdat.dicterrr[strgfeat][2, ...] = gdat.dictpost[strgfeat][2, ...] - gdat.dictpost[strgfeat][1, ...]
-        print('gdat.dicterrr[strgfeat]')
-        print(gdat.dicterrr[strgfeat])
-        print('')
+
+
+def proc_alle(gdat, typeparacalc):
+    
+    # allesfit run folder
+    gdat.pathalle[typeparacalc] = gdat.pathallebase + 'allesfit_%s/' % typeparacalc
+    
+    # make sure the folder exists
+    cmnd = 'mkdir -p %s' % gdat.pathalle[typeparacalc]
+    os.system(cmnd)
+    
+    # write the input data file
+    for p in gdat.indxinst:
+        path = gdat.pathalle[typeparacalc] + gdat.liststrginst[p] + '.csv'
+        indxchuninst = gdat.listindxchuninst[p]
+        print('indxchuninst')
+        summgene(indxchuninst)
+        print(indxchuninst)
+        listarrylcurbdtrtemp = []
+        for y in gdat.indxchun[p]:
+            listarrylcurbdtrtemp.append(gdat.listarrylcurbdtr[p][y])
+        listarrylcurbdtrtemp = np.concatenate(listarrylcurbdtrtemp)
+        indx = np.argsort(listarrylcurbdtrtemp[:, 0])
+        listarrylcurbdtrtemp = listarrylcurbdtrtemp[indx, :]
+        print('listarrylcurbdtrtemp[0, :]')
+        summgene(listarrylcurbdtrtemp[0, :])
+        print('listarrylcurbdtrtemp[1, :]')
+        summgene(listarrylcurbdtrtemp[1, :])
+        print('listarrylcurbdtrtemp[2, :]')
+        summgene(listarrylcurbdtrtemp[2, :])
+        print('Writing to %s...' % path)
+        np.savetxt(path, listarrylcurbdtrtemp, delimiter=',', header='time,flux,flux_err')
+    
+    if gdat.peristdvprio is None:
+        gdat.peristdvprio = 0.01
+
+    if gdat.epocstdvprio is None:
+        gdat.epocstdvprio = 0.5
+
+    if typeparacalc == 'orbt':
+        pass
+    pathpara = gdat.pathalle[typeparacalc] + 'params.csv'
+    if not os.path.exists(pathpara):
+        cmnd = 'touch %s' % (pathpara)
+        print(cmnd)
+        os.system(cmnd)
+    
+        lineadde = []
+        lineadde.extend([ \
+                        ['', '#name,value,fit,bounds,label,unit\n'], \
+                        ])
+        for j in gdat.indxplan:
+            strgrrat = '%s_rr' % gdat.liststrgplan[j]
+            strgrsma = '%s_rsuma' % gdat.liststrgplan[j]
+            strgcosi = '%s_cosi' % gdat.liststrgplan[j]
+            strgepoc = '%s_epoch' % gdat.liststrgplan[j]
+            strgperi = '%s_period' % gdat.liststrgplan[j]
+            strgecos = '%s_f_c' % gdat.liststrgplan[j]
+            strgesin = '%s_f_s' % gdat.liststrgplan[j]
+            lineadde.extend([ \
+                        ['', '%s,%f,1,uniform %f %f,$R_{%s} / R_\star$,\n' % \
+                             (strgrrat, gdat.rratprio[j], 0, 2 * gdat.rratprio[j], gdat.liststrgplan[j])], \
+                        ['', '%s,%f,1,uniform %f %f,$(R_\star + R_{%s}) / a_{%s}$,\n' % \
+                             (strgrsma, gdat.rsmaprio[j], 0, 2 * gdat.rsmaprio[j], gdat.liststrgplan[j], gdat.liststrgplan[j])], \
+                        ['', '%s,%f,1,uniform %f %f,$\cos{i_{%s}}$,\n' % \
+                             (strgcosi, gdat.cosiprio[j], 0, max(0.1, gdat.cosiprio[j] * 2), gdat.liststrgplan[j])], \
+                        ['', '%s,%f,1,uniform %f %f,$T_{0;%s}$,$\mathrm{BJD}$\n' % \
+                             (strgepoc, gdat.epocprio[j], gdat.epocprio[j] - gdat.epocstdvprio, gdat.epocprio[j] + gdat.epocstdvprio, \
+                                                                                                                            gdat.liststrgplan[j])], \
+                        ['', '%s,%f,1,uniform %f %f,$P_{%s}$,days\n' % \
+                             (strgperi, gdat.periprio[j], gdat.periprio[j] - gdat.peristdvprio, gdat.periprio[j] + gdat.peristdvprio, \
+                                                                                                                            gdat.liststrgplan[j])], \
+                        #['', '%s,%f,1,uniform %f %f,$\sqrt{e_b} \cos{\omega_b}$,\n' % \
+                        #     (strgecos, gdat.ecosprio[j], -0.9, 0.9, gdat.liststrgplan[j])], \
+                        #['', '%s,%f,1,uniform %f %f,$\sqrt{e_b} \sin{\omega_b}$,\n' % \
+                        #     (strgesin, gdat.esinprio[j], -0.9, 0.9, gdat.liststrgplan[j])], \
+                       ])
+            if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
+                for p in gdat.indxinst:
+                    strgsbrt = '%s_sbratio_' % gdat.liststrgplan[j] + gdat.liststrginst[p]
+                    lineadde.extend([ \
+                            ['', '%s_sbratio_%s,1e-3,1,uniform 0 1,$J_{%s; \mathrm{%s}}$,\n' % (gdat.liststrgplan[j], \
+                                                                                    gdat.liststrginst[p], gdat.liststrgplan[j]), gdat.listlablinst[p]], \
+                            ['', '%s_phase_curve_beaming_%s,0,1,uniform 0 10,$A_\mathrm{b}$,\n' % gdat.liststrgplan[j], gdat.liststrginst[p]], \
+                            ['', '%s_phase_curve_atmospheric_%s,0,1,uniform 0 10,$A_\mathrm{p}$,\n' % gdat.liststrgplan[j], gdat.liststrginst[p]], \
+                            ['', '%s_phase_curve_ellipsoidal_%s,0,1,uniform 0 10,$A_\mathrm{e}$,\n' % gdat.liststrgplan[j], gdat.liststrginst[p]], \
+                           ])
+
+        for p in gdat.indxinst:
+            strgldc1 = 'host_ldc_q1_%s' % gdat.liststrginst[p]
+            strgldc2 = 'host_ldc_q2_%s' % gdat.liststrginst[p]
+            strgscal = 'ln_err_flux_%s' % gdat.liststrginst[p]
+            strgbaseoffs = 'baseline_offset_flux_%s' % gdat.liststrginst[p]
+            strggprosigm = 'baseline_gp_matern32_lnsigma_flux_%s' % gdat.liststrginst[p]
+            strggprorhoo = 'baseline_gp_matern32_lnrho_flux_%s' % gdat.liststrginst[p]
+            lineadde.extend([ \
+                        ['', '%s,0.5,1,uniform 0 1,$q_{1; \mathrm{%s}}$,\n' % \
+                             (strgldc1, gdat.listlablinst[p])], \
+                        ['', '%s,0.5,1,uniform 0 1,$q_{2; \mathrm{%s}}$,\n' % \
+                             (strgldc2, gdat.listlablinst[p])], \
+                        ['', '%s,%f,1,uniform %f %f,$\ln{\sigma_\mathrm{%s}}$,\n' % \
+                             (strgscal, -8, -12, 0, gdat.listlablinst[p])], \
+                       ])
+            lineadde.extend([ \
+                        ['', '%s,%f,1,uniform %f %f,$O_{\mathrm{%s}}$,\n' % \
+                             (strgbaseoffs, 0, -1, 1, gdat.listlablinst[p])], \
+                       ])
+            #lineadde.extend([ \
+            #            ['', '%s,%f,1,uniform %f %f,$\ln{\sigma_{GP;\mathrm{TESS}}}$,\n' % \
+            #                 (strggprosigm, -6, -12, 12)], \
+            #            ['', '%s,%f,1,uniform %f %f,$\ln{\\rho_{GP;\mathrm{TESS}}}$,\n' % \
+            #                 (strggprorhoo, -2, -12, 12)], \
+            #           ])
+            
+            evol_file(gdat, 'params.csv', gdat.pathalle[typeparacalc], lineadde)
+    
+    pathsett = gdat.pathalle[typeparacalc] + 'settings.csv'
+    if not os.path.exists(pathsett):
+        cmnd = 'touch %s' % (pathsett)
+        print(cmnd)
+        os.system(cmnd)
+        
+        lineadde = []
+        # add user-defined settings.csv inputs
+        for strg, varb in gdat.dictsettalle.items():
+            lineadde.extend([ \
+                            ['', '%s,%s\n' % (strg, varb)] \
+                            ])
+
+        if not 'fast_fit' in [lineadde[k][1].split(',')[0] for k in range(len(lineadde))]:
+            lineadde = [ \
+                         ['', 'fast_fit,True\n'], \
+                       ]
+        lineadde += [ \
+                     ['', 'fast_fit_width,%.3g\n' % np.amax(gdat.duramask)], \
+                     ['', 'multiprocess,True\n'], \
+                     ['', 'multiprocess_cores,all\n'], \
+                     ['', 'mcmc_nwalkers,100\n'], \
+                     ['', 'mcmc_total_steps,400000\n'], \
+                     ['', 'mcmc_burn_steps,10000\n'], \
+                     ['', 'mcmc_thin_by,100\n'], \
+                   ]
+        for p in gdat.indxinst:
+            lineadde += [ \
+                         ['', 'inst_phot,%s\n' % gdat.liststrginst[p]], \
+                         ['', 'host_ld_law_%s,quad\n' % gdat.liststrginst[p]], \
+                         ['', 'host_grid_%s,very_sparse\n' % gdat.liststrginst[p]], \
+                         ['', 'baseline_flux_%s,sample_offset\n' % gdat.liststrginst[p]], \
+                         ['', 'use_host_density_prior,False\n'], \
+                        ]
+        
+        if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
+            lineadde.extend([ \
+                            ['', 'phase_curve,True\n'], \
+                            ['', 'phase_curve_style,sine_physical\n'], \
+                            ])
+        
+        for p in gdat.indxinst:
+            for j in gdat.indxplan:
+                lineadde.extend([ \
+                                ['', '%s_grid_%s,very_sparse\n' % (gdat.liststrgplan[j], gdat.liststrginst[p])], \
+                                ])
+        linetemp = 'companions_phot,'
+        for j in gdat.indxplan:
+            if j != 0:
+                linetemp += ' '
+            linetemp += '%s' % gdat.liststrgplan[j]
+        linetemp += '\n'
+        lineadde.extend([ \
+                        ['', linetemp] \
+                        ])
+        
+        evol_file(gdat, 'settings.csv', gdat.pathalle[typeparacalc], lineadde)
+    
+    ## initial plot
+    path = gdat.pathalle[typeparacalc] + 'results/initial_guess_b.pdf'
+    if not os.path.exists(path):
+        allesfitter.show_initial_guess(gdat.pathalle[typeparacalc])
+    
+    ## do the run
+    path = gdat.pathalle[typeparacalc] + 'results/mcmc_save.h5'
+    if not os.path.exists(path):
+        allesfitter.mcmc_fit(gdat.pathalle[typeparacalc])
+    else:
+        print('%s exists... Skipping the orbit run.' % path)
+
+    ## make the final plots
+    path = gdat.pathalle[typeparacalc] + 'results/mcmc_corner.pdf'
+    if not os.path.exists(path):
+        allesfitter.mcmc_output(gdat.pathalle[typeparacalc])
+        
+    # read the allesfitter posterior
+    print('Reading from %s...' % gdat.pathalle[typeparacalc])
+    gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathalle[typeparacalc])
+    
+    gdat.numbsampalle = allesfitter.config.BASEMENT.settings['mcmc_total_steps']
+    numbwalkalle = allesfitter.config.BASEMENT.settings['mcmc_nwalkers']
+    gdat.numbsampalleburn = allesfitter.config.BASEMENT.settings['mcmc_burn_steps']
+    gdat.numbsampallethin = allesfitter.config.BASEMENT.settings['mcmc_thin_by']
+
+    print('numbwalkalle')
+    print(numbwalkalle)
+    print('gdat.numbsampalle')
+    print(gdat.numbsampalle)
+    print('gdat.numbsampalleburn')
+    print(gdat.numbsampalleburn)
+    print('gdat.numbsampallethin')
+    print(gdat.numbsampallethin)
+
+    gdat.numbsamp = gdat.objtalle[typeparacalc].posterior_params[list(gdat.objtalle[typeparacalc].posterior_params.keys())[0]].size
+    
+    if gdat.numbsamp > 10000:
+        print('Thinning down the allesfitter chain!')
+        gdat.indxsamp = np.random.choice(np.arange(gdat.numbsamp), size=10000, replace=False)
+        gdat.numbsamp = 10000
+    else:
+        gdat.indxsamp = np.arange(gdat.numbsamp)
+
+    calc_prop(gdat, 'post', typeparacalc)
 
     gdat.arrylcurmodl = [[[] for p in gdat.liststrginst] for p in gdat.indxinst]
     for p, strginst in enumerate(gdat.liststrginst):
         gdat.arrylcurmodl[p] = np.empty((gdat.time[p].size, 3))
         gdat.arrylcurmodl[p][:, 0] = gdat.time[p]
-        gdat.arrylcurmodl[p][:, 1] = gdat.objtalle[strgalle].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
+        gdat.arrylcurmodl[p][:, 1] = gdat.objtalle[typeparacalc].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
         gdat.arrylcurmodl[p][:, 2] = 0.
 
     # write the model to file
@@ -1048,10 +1192,6 @@ def proc_alle(gdat, strgalle):
             gdat.listpcurquadmodl[p][j] = np.empty((gdat.numbsampplot, gdat.numbtime[p]))
         gdat.arrylcurmodl[p] = np.zeros((gdat.time[p].size, 3))
         gdat.arrylcurmodl[p][:, 0] = gdat.time[p]
-    
-        print('gdat.time[p]')
-        summgene(gdat.time[p])
-        print('')
     gdat.arrypcurprimmodl = [[[] for j in gdat.indxplan] for p in gdat.liststrginst]
     gdat.arrypcurquadmodl = [[[] for j in gdat.indxplan] for p in gdat.liststrginst]
     gdat.arrypcurprimadtr = [[[] for j in gdat.indxplan] for p in gdat.liststrginst]
@@ -1063,7 +1203,7 @@ def proc_alle(gdat, strgalle):
     for p, strginst in enumerate(gdat.liststrginst):
         for ii, i in enumerate(gdat.indxsampplot):
             # this is only the physical model and excludes the baseline, which is available separately via get_one_posterior_baseline()
-            gdat.listlcurmodl[ii, :] = gdat.objtalle[strgalle].get_one_posterior_model(strginst, 'flux', xx=gdat.time[p], sample_id=i)
+            gdat.listlcurmodl[ii, :] = gdat.objtalle[typeparacalc].get_one_posterior_model(strginst, 'flux', xx=gdat.time[p], sample_id=i)
             print('gdat.arrylcurmodl[p]')
             summgene(gdat.arrylcurmodl[p])
             gdat.arrylcurmodl[p][:, 1] = gdat.listlcurmodl[ii, :]
@@ -1073,7 +1213,7 @@ def proc_alle(gdat, strgalle):
                                                                                 gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)[:, 1]
 
         # get allesfitter baseline model
-        gdat.lcurbasealle = gdat.objtalle[strgalle].get_posterior_median_baseline(strginst, 'flux', xx=gdat.time[p])
+        gdat.lcurbasealle = gdat.objtalle[typeparacalc].get_posterior_median_baseline(strginst, 'flux', xx=gdat.time[p])
         # get allesfitter-detrended data
         gdat.lcuradtr = gdat.arrylcurbdtr[p][:, 1] - gdat.lcurbasealle
         gdat.arrylcuradtr = np.copy(gdat.arrylcurbdtr[p])
@@ -1093,524 +1233,12 @@ def proc_alle(gdat, strgalle):
             gdat.arrypcurquadadtrbind[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurquadadtr[p][j], gdat.numbbinspcur)
             gdat.arrypcurquadadtrbindfine[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurquadadtr[p][j], gdat.numbbinspcurfine)
     
-    # plot GP-detrended phase curves
+    # plots
+    ## plot GP-detrended phase curves
     plot_pcur(gdat, 'post')
     
-    # pretty orbit plot
-    fact = 50.
-    factstar = 5.
-    # plot the orbit
-    figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
-    
-    ## star 1
-    w1 = mpl.patches.Wedge((0, 0), gdat.radistar/gdat.factaurj*factstar, 270, 360, fc='k', zorder=1, edgecolor='k')
-    axis.add_artist(w1)
-        
-    for jj, j in enumerate(gdat.indxplan):
-        
-        xposmaxm = gdat.dicterrr['smaxasun'][0, j]
-        yposmaxm = 0.3 * xposmaxm
+    plot_prop(gdat, 'post')
 
-        yposelli = yposmaxm * np.concatenate([np.linspace(0., -1., 100), np.linspace(1., 0., 100)])
-        xposelli = xposmaxm * np.sqrt(1. - (yposelli / yposmaxm)**2)
-        objt = retr_objtlinefade(xposelli, yposelli, color=gdat.listcolrplan[j], alpha_initial=1., alpha_final=0.)
-        axis.add_collection(objt)
-
-        # temperature contours?
-        #for tmpt in [500., 700,]:
-        #    smaj = tmpt
-        #    axis.axvline(smaj, ls='--')
-        
-        # planet
-        w1 = mpl.patches.Circle((gdat.dicterrr['smaxasun'][0, j], 0), \
-                                            radius=gdat.dicterrr['radiplan'][0, j]/gdat.factaurj*fact, color=gdat.listcolrplan[j], zorder=3)
-        axis.add_artist(w1)
-        axis.text(.15 + 0.02 * jj, -0.03, gdat.liststrgplan[j], color=gdat.listcolrplan[j])
-    
-    # add Mercury
-    axis.text(.387, 0.01, 'Mercury', color='grey', ha='right')
-    w1 = mpl.patches.Circle((0.387, 0), radius=0.0349/gdat.factaurj*fact, color='grey')
-    axis.add_artist(w1)
-
-    ##axistwin.set_xlim(axis.get_xlim())
-    #xpostemp = axistwin.get_xticks()
-    ##axistwin.set_xticks(xpostemp[1:])
-    #axistwin.set_xticklabels(['%f' % tmpt for tmpt in listtmpt])
-    
-    ## star 2
-    w1 = mpl.patches.Wedge((0, 0), gdat.radistar/gdat.factaurj*factstar, 0, 90, fc='k', zorder=4, edgecolor='k')
-    axis.add_artist(w1)
-    
-    #axistwin = axis.twiny()
-        
-    axis.get_yaxis().set_visible(False)
-    axis.set_aspect('equal')
-    axis.set_xlim([0, 0.4])
-    axis.set_ylim([-0.05, 0.05])
-    # centerline
-    axis.set_xlabel('Distance from the star [AU]')
-    plt.subplots_adjust()
-    #axis.legend()
-    path = gdat.pathimag + 'orbt.%s' % gdat.strgplotextn
-    print('Writing to %s...' % path)
-    plt.savefig(path)
-    plt.close()
-   
-    # plot all exoplanets and overplot this one
-    dictexarcomp = retr_exarcomp(gdat)
-    
-    numbplanexar = dictexarcomp['radiplan'].size
-    indxplanexar = np.arange(numbplanexar)
-    
-    # optical magnitude vs number of planets
-    gdat.pathimagmagt = gdat.pathimag + 'magt/'
-    os.system('mkdir -p %s' % gdat.pathimagmagt)
-    for b in range(4):
-        if b == 0:
-            strgvarbmagt = 'omag'
-            lablxaxi = 'V Magnitude'
-            varbtarg = gdat.omagstar
-            varb = dictexarcomp['omagstar']
-        if b == 1:
-            strgvarbmagt = 'imag'
-            lablxaxi = 'J Magnitude'
-            varbtarg = gdat.imagstar
-            varb = dictexarcomp['imagstar']
-        if b == 2:
-            strgvarbmagt = 'msnromag'
-            lablxaxi = 'Relative mass SNR in the V band'
-            varbtarg = np.sqrt(10**(-gdat.omagstar / 2.5)) / gdat.massstar**(2. / 3.)
-            varb = np.sqrt(10**(-dictexarcomp['omagstar'] / 2.5)) / dictexarcomp['massstar']**(2. / 3.)
-        if b == 3:
-            strgvarbmagt = 'msnrimag'
-            lablxaxi = 'Relative mass SNR in the J band'
-            varbtarg = np.sqrt(10**(-gdat.omagstar / 2.5)) / gdat.massstar**(2. / 3.)
-            varb = np.sqrt(10**(-dictexarcomp['imagstar'] / 2.5)) / dictexarcomp['massstar']**(2. / 3.)
-        for a in range(3):
-            figr, axis = plt.subplots(figsize=gdat.figrsize)
-            if a == 0:
-                indx = np.where(dictexarcomp['boolfrst'])[0]
-            if a == 1:
-                indx = np.where(dictexarcomp['boolfrst'] & (dictexarcomp['numbplanstar'] > 3))[0]
-            if a == 2:
-                indx = np.where(dictexarcomp['boolfrst'] & (dictexarcomp['numbplantranstar'] > 3))[0]
-            
-            if b == 2 or b == 3:
-                normfact = max(varbtarg, np.amax(varb[indx]))
-            else:
-                normfact = 1.
-            varbtargnorm = varbtarg / normfact
-            varbnorm = varb[indx] / normfact
-            
-            axis.scatter(varbnorm, dictexarcomp['numbplanstar'][indx], s=1, color='black')
-                
-            indxsort = np.argsort(varbnorm)
-            if b == 2 or b == 3:
-                indxsort = indxsort[::-1]
-
-            listnameaddd = []
-            cntr = 0
-            while True:
-                k = indxsort[cntr]
-                nameadd = dictexarcomp['namestar'][indx][k]
-                if not nameadd in listnameaddd:
-                    axis.text(varbnorm[k], dictexarcomp['numbplanstar'][indx][k] + 0.5, nameadd, size=6, \
-                                                                                            va='center', ha='right', rotation=45)
-                    listnameaddd.append(nameadd)
-                cntr += 1
-                if len(listnameaddd) == 5: 
-                    break
-            axis.scatter(varbtargnorm, gdat.numbplan, s=5, color='black', marker='x')
-            axis.text(varbtargnorm, gdat.numbplan + 0.5, gdat.labltarg, size=8, color='black', \
-                                                                                            va='center', ha='center', rotation=45)
-            axis.set_ylabel(r'Number of transiting planets')
-            axis.set_xlabel(lablxaxi)
-            plt.subplots_adjust(bottom=0.2)
-            path = gdat.pathimagmagt + '%snumb_%d.%s' % (strgvarbmagt, a, gdat.strgplotextn)
-            print('Writing to %s...' % path)
-            plt.savefig(path)
-            plt.close()
-
-            figr, axis = plt.subplots(figsize=gdat.figrsize)
-            axis.hist(varbnorm, 50)
-            axis.axvline(varbtargnorm, color='black', ls='--')
-            #ypos = axis.get_ylim()[0] + (axis.get_ylim()[1] - axis.get_ylim()[0]) * 0.8
-            
-            axis.text(0.9, 0.9, gdat.labltarg, size=8, color='black', transform=axis.transAxes, va='center', ha='center')
-            axis.set_ylabel(r'Number of systems')
-            axis.set_xlabel(lablxaxi)
-            plt.subplots_adjust(bottom=0.2)
-            path = gdat.pathimagmagt + 'hist%s_%d.%s' % (strgvarbmagt, a, gdat.strgplotextn)
-            print('Writing to %s...' % path)
-            plt.savefig(path)
-            plt.close()
-
-    gdat.liststrgzoom = ['allr']
-    if np.where((gdat.dicterrr['radiplan'][0, :] * gdat.factrjre > 2.) & (gdat.dicterrr['radiplan'][0, :] * gdat.factrjre < 4.))[0].size > 0:
-        gdat.liststrgzoom.append('rb24')
-    if np.where((gdat.dicterrr['radiplan'][0, :] * gdat.factrjre > 1.5) & (gdat.dicterrr['radiplan'][0, :] * gdat.factrjre < 4.))[0].size > 0:
-        gdat.liststrgzoom.append('rb14')
-        
-    # mass radius
-    for strgzoom in gdat.liststrgzoom:
-        
-        figr, axis = plt.subplots(figsize=gdat.figrsize)
-        indx = np.where(np.isfinite(dictexarcomp['stdvmassplan']) & np.isfinite(dictexarcomp['stdvradiplan']))[0]
-        
-        xerr = dictexarcomp['stdvmassplan'][indx] * gdat.factmjme
-        yerr = dictexarcomp['stdvradiplan'][indx] * gdat.factrjre
-        # temp
-        xerr = None
-        yerr = None
-        axis.errorbar(dictexarcomp['massplan'][indx] * gdat.factmjme, dictexarcomp['radiplan'][indx] * gdat.factrjre, lw=1, ls='', ms=1, marker='o', \
-                                                                                            xerr=xerr, yerr=yerr, color='black')
-        
-        gdat.listlabldenscomp = ['Earth-like', 'Pure Water', 'Pure Iron']
-        listdenscomp = [1., 0.1813, 1.428]
-        listposicomp = [[13., 2.6], [4.7, 3.5], [13., 1.9]]
-        gdat.numbdenscomp = len(gdat.listlabldenscomp)
-        gdat.indxdenscomp = np.arange(gdat.numbdenscomp)
-        masscompdens = np.linspace(0.5, 16.) # M_E
-        for i in gdat.indxdenscomp:
-            radicompdens = (masscompdens / listdenscomp[i])**(1. / 3.)
-            axis.plot(masscompdens, radicompdens, color='grey')
-        for i in gdat.indxdenscomp:
-            axis.text(listposicomp[i][0], listposicomp[i][1], gdat.listlabldenscomp[i])
-        for jj, j in enumerate(gdat.indxplan):
-            xerr = gdat.dicterrr['massplanpred'][1:3, j, None] * gdat.factmjme
-            yerr = gdat.dicterrr['radiplan'][1:3, j, None] * gdat.factrjre
-            axis.errorbar(gdat.dicterrr['massplanpred'][0, j, None] * gdat.factmjme, gdat.dicterrr['radiplan'][0, j, None] * gdat.factrjre, marker='o', \
-                                                   xerr=xerr, ls='', yerr=yerr, lw=1, color=gdat.listcolrplan[j])
-            axis.text(0.1, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
-                                                                                        va='center', ha='center', transform=axis.transAxes)
-        
-        axis.set_ylabel(r'Radius [$R_E$]')
-        axis.set_xlabel(r'Mass [$M_E$]')
-        if strgzoom == 'rb14':
-            axis.set_xlim([1.5, 16])
-            axis.set_ylim([1.5, 4.])
-        if strgzoom == 'rb24':
-            axis.set_xlim([2., 16])
-            axis.set_ylim([2., 4.])
-        
-        plt.subplots_adjust(bottom=0.2)
-        path = gdat.pathimag + 'massradii_%s.%s' % (strgzoom, gdat.strgplotextn)
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
-
-    if gdat.numbplan > 1:
-        # period ratios
-        figr, axis = plt.subplots(figsize=gdat.figrsize)
-        ## all 
-        
-        gdat.listratiperi = []
-        gdat.intgreso = []
-        
-        liststrgstarcomp = []
-        for m in indxplanexar:
-            strgstar = dictexarcomp['namestar'][m]
-            if not strgstar in liststrgstarcomp:
-                indxexarstar = np.where(dictexarcomp['namestar'] == strgstar)[0]
-                if indxexarstar[0] != m:
-                    raise Exception('')
-                
-                listperi = dictexarcomp['peri'][None, indxexarstar]
-                if not np.isfinite(listperi).all():
-                    liststrgstarcomp.append(strgstar)
-                    continue
-                intgreso, ratiperi = retr_reso(listperi)
-                
-                numbplan = indxexarstar.size
-                
-                #print('strgstar')
-                #print(strgstar)
-                #if (ratiperi[0, :, :][np.tril_indices(numbplan, k=-1)] == 0).any():
-                #    print('listperi')
-                #    summgene(listperi)
-                #    print('gdat.numbplan')
-                #    print(gdat.numbplan)
-                #    print('ratiperi')
-                #    print(ratiperi)
-                #    print('np.triu_indices(numbplan, k=1)')
-                #    print(np.triu_indices(numbplan, k=1))
-                #    print('ratiperi[0, :, :]')
-                #    print(ratiperi[0, :, :])
-                #    print('ratiperi[0, :, :][np.tril_indices(numbplan, k=-1)]')
-                #    print(ratiperi[0, :, :][np.tril_indices(numbplan, k=-1)])
-                #    print('ratiperi[0, :, :][np.triu_indices(numbplan, k=1)]')
-                #    print(ratiperi[0, :, :][np.triu_indices(numbplan, k=1)])
-                #print('')
-                gdat.listratiperi.append(ratiperi[0, :, :][np.triu_indices(numbplan, k=1)])
-                gdat.intgreso.append(intgreso)
-                
-                liststrgstarcomp.append(strgstar)
-        
-        gdat.listratiperi = np.concatenate(gdat.listratiperi)
-        bins = np.linspace(1., 10., 200)
-        axis.hist(gdat.listratiperi, bins=bins)
-        
-        ## this system
-        for j in gdat.indxplan:
-            for jj in gdat.indxplan:
-                if gdat.dicterrr['peri'][0, j] > gdat.dicterrr['peri'][0, jj]:
-                    ratiperi = gdat.dicterrr['peri'][0, j] / gdat.dicterrr['peri'][0, jj]
-                    axis.axvline(ratiperi, color='k')
-        ## resonances
-        for perifrst, periseco in [[2., 1.], [3., 2.], [4., 3.], [5., 4.], [5., 3.], [5., 2.]]:
-            axis.axvline(perifrst / periseco, color='grey', ls='--', alpha=0.5)
-        #axis.set_xscale('log')
-        axis.set_xlim([0.9, 2.7])
-        axis.set_xlabel('Period ratio')
-        plt.subplots_adjust()
-        path = gdat.pathimag + 'ratiperi.%s' % gdat.strgplotextn
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
-
-    # radius histogram
-    path = gdat.pathbase + 'data/Fulton+2017/Means.csv'
-    data = np.loadtxt(path, delimiter=',')
-    timeoccu = data[:, 0]
-    occumean = data[:, 1]
-    path = gdat.pathbase + 'data/Fulton+2017/Lower.csv'
-    occulowr = np.loadtxt(path, delimiter=',')
-    occulowr = occulowr[:, 1]
-    path = gdat.pathbase + 'data/Fulton+2017/Upper.csv'
-    occuuppr = np.loadtxt(path, delimiter=',')
-    occuuppr = occuuppr[:, 1]
-    occuyerr = np.empty((2, occumean.size))
-    occuyerr[0, :] = occuuppr - occumean
-    occuyerr[1, :] = occumean - occulowr
-    
-    #listradickss = []
-    ##path = gdat.pathbase + 'data/cks.txt'
-    #objtfile = open(path, 'r')
-    #cntr = 0
-    #for line in objtfile:
-    #    if cntr > 75:
-    #        strgtemp = line.split('|')[8]
-    #        try:
-    #            listradickss.append(float(line.split('|')[8]))
-    #        except:
-    #            pass
-    #    cntr += 1
-    #listradickss = np.array(listradickss) # [R_E]
-    
-    print('Plotting the radii...')
-    for strgzoom in gdat.liststrgzoom:
-        figr, axis = plt.subplots(figsize=gdat.figrsize)
-        
-        # NASA Exoplanet Archive
-        #temp = dictexarcomp['radiplan'] * gdat.factrjre
-        
-        # CKS sample
-        xerr = (timeoccu[1:] - timeoccu[:-1]) / 2.
-        xerr = np.concatenate([xerr[0, None], xerr])
-        axis.errorbar(timeoccu, occumean, yerr=occuyerr, xerr=xerr, color='black', ls='', marker='o', lw=1)
-        #temp = listradickss
-        #indx = np.where(np.isfinite(temp))[0]
-        #if strgzoom == 'rb14':
-        #    binsradi = np.linspace(1.5, 4., 40)
-        #elif strgzoom == 'rb24':
-        #    binsradi = np.linspace(2., 4., 40)
-        #else:
-        #    radi = temp[indx]
-        #    binsradi = np.linspace(np.amin(radi), np.amax(radi), 40)
-        #meanradi = (binsradi[1:] + binsradi[:-1]) / 2.
-        #deltradi = binsradi[1] - binsradi[0]
-        #axis.bar(meanradi, np.histogram(temp[indx], bins=binsradi)[0], width=deltradi, color='grey')
-        
-        # this system
-        for jj, j in enumerate(gdat.indxplan):
-            xposlowr = gdat.factrjre *  gdat.dictpost['radiplan'][0, j]
-            xposuppr = gdat.factrjre *  gdat.dictpost['radiplan'][2, j]
-            axis.axvspan(xposlowr, xposuppr, alpha=0.5, color=gdat.listcolrplan[j])
-            print('jj, j')
-            print(jj, j)
-            print('gdat.factrjre * gdat.dicterrr[radiplan][0, j]')
-            print(gdat.factrjre * gdat.dicterrr['radiplan'][0, j])
-            print('')
-            axis.axvline(gdat.factrjre * gdat.dicterrr['radiplan'][0, j], color=gdat.listcolrplan[j], ls='--', label=gdat.liststrgplan[j])
-            axis.text(0.7, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
-                                                                                        va='center', ha='center', transform=axis.transAxes)
-        axis.set_xlabel('Radius [$R_E$]')
-        axis.set_ylabel('Occurrence rate of planets per star')
-        plt.subplots_adjust(bottom=0.2)
-        path = gdat.pathimag + 'histradi%s.%s' % (strgzoom, gdat.strgplotextn)
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
-   
-        # radius vs period
-        #figr, axis = plt.subplots(figsize=gdat.figrsize)
-        #axis.errorbar(dictexarcomp['peri'][indx], temp[indx], ls='', lw=1)
-        #for j in gdat.indxplan:
-        #    xerr = gdat.dicterrr['peri'][1:3, j, None]
-        #    yerr = gdat.factrjre * gdat.dicterrr['radiplan'][1:3, j, None]
-        #    axis.errorbar(gdat.dicterrr['peri'][0, j, None], gdat.factrjre * gdat.dicterrr['radiplan'][0, j, None], color=gdat.listcolrplan[j], \
-        #                                    lw=1, xerr=xerr, yerr=yerr, ls='', marker='o')
-        #axis.set_xlabel('Period [days]')
-        #axis.set_ylabel('Radius [$R_E$]')
-        #if strgzoom == 'rb14':
-        #    axis.set_ylim([1.5, 4.])
-        #if strgzoom == 'rb24':
-        #    axis.set_ylim([2., 4.])
-        #axis.set_xlim([None, 100.])
-        #plt.subplots_adjust(bottom=0.2)
-        #path = gdat.pathimag + 'radiperi%s.%s' % (strgzoom, gdat.strgplotextn)
-        #print('Writing to %s...' % path)
-        #plt.savefig(path)
-        #plt.close()
-    
-    tmptplan = dictexarcomp['tmptplan']
-    radiplan = dictexarcomp['radiplan'] * gdat.factrjre # R_E
-    
-    # known planets
-    ## ESM
-    esmm = tesstarg.util.retr_esmm(dictexarcomp['tmptplan'], dictexarcomp['tmptstar'], dictexarcomp['radiplan'], dictexarcomp['radistar'], \
-                                                                                                        dictexarcomp['kmagstar'])
-    
-    ## TSM
-    tsmm = tesstarg.util.retr_tsmm(dictexarcomp['radiplan'], dictexarcomp['tmptplan'], dictexarcomp['massplan'], dictexarcomp['radistar'], \
-                                                                                                        dictexarcomp['imagstar'])
-    numbtext = 30
-    liststrgmetr = ['tsmm']
-    if np.isfinite(gdat.tmptstar):
-        liststrgmetr.append('esmm')
-    
-    liststrglimt = ['allm', 'gmas']
-    
-    for strgmetr in liststrgmetr:
-        
-        if strgmetr == 'tsmm':
-            metr = np.log(tsmm)
-            lablmetr = '$\log$ TSM'
-            metrthis = gdat.dicterrr['ltsm'][0, :]
-            errrmetrthis = gdat.dicterrr['ltsm']
-        else:
-            metr = np.log(esmm)
-            lablmetr = '$\log$ ESM'
-            metrthis = gdat.dicterrr['lesm'][0, :]
-            errrmetrthis = gdat.dicterrr['lesm']
-        for strgzoom in gdat.liststrgzoom:
-            if strgzoom == 'allr':
-                indxzoom = np.where(np.isfinite(radiplan) & np.isfinite(tmptplan) \
-                                                                            & np.isfinite(metr) & (dictexarcomp['booltran'] == 1.))[0]
-            if strgzoom == 'rb14':
-                indxzoom = np.where((radiplan < 4) & (radiplan > 1.5) & np.isfinite(radiplan) & np.isfinite(tmptplan) \
-                                                                            & np.isfinite(metr) & (dictexarcomp['booltran'] == 1.))[0]
-            if strgzoom == 'rb24':
-                indxzoom = np.where((radiplan < 4) & (radiplan > 2.) & np.isfinite(radiplan) & np.isfinite(tmptplan) \
-                                                                            & np.isfinite(metr) & (dictexarcomp['booltran'] == 1.))[0]
-    
-            for strglimt in liststrglimt:
-                if strglimt == 'gmas':
-                    indxlimt = np.where(dictexarcomp['stdvmassplan'] / dictexarcomp['massplan'] < 0.4)[0]
-                if strglimt == 'allm':
-                    indxlimt = np.arange(esmm.size)
-                
-                indx = np.intersect1d(indxzoom, indxlimt)
-                
-                maxmmetr = max(np.amax(metrthis), np.amax(metr[indx]))
-                minmmetr = min(np.amin(metrthis), np.amin(metr[indx]))
-                
-                metr -= minmmetr
-                metrthis -= minmmetr
-                
-                # sort
-                indxsort = np.argsort(metr[indx])[::-1]
-                
-                if strgmetr == 'tsmm' and strgzoom == 'rb24' and strglimt == 'gmas':
-                    print('strgmetr')
-                    print(strgmetr)
-                    print('strgzoom')
-                    print(strgzoom)
-                    print('strglimt')
-                    print(strglimt)
-                    listname = []
-                    listmetrtemp = np.copy(metr[indx])
-                    listnametemp = np.copy(dictexarcomp['nameplan'][indx])
-                    listmetrtemp = np.concatenate((listmetrtemp, metrthis))
-                    listnametemp = np.concatenate((listnametemp, gdat.liststrgplan))
-                    print('listmetrtemp')
-                    summgene(listmetrtemp)
-                    print('listnametemp')
-                    summgene(listnametemp)
-                    indxsorttemp = np.argsort(listmetrtemp)[::-1]
-                    print('')
-                    for k in indxsorttemp:
-                        print('%s: %g' % (listnametemp[k], listmetrtemp[k]))
-                    print('')
-
-                # repeat, one without text, one with text
-                for b in range(2):
-                    # radius vs equilibrium temperature
-                    figr, axis = plt.subplots(figsize=gdat.figrsize)
-                    
-                    ## known planets
-                    axis.errorbar(radiplan[indx], tmptplan[indx], ms=1, ls='', marker='o', color='black')
-                    if b == 1:
-                        for k in indxsort[:numbtext]:
-                            objttext = axis.text(radiplan[indx[k]], tmptplan[indx[k]], '%s' % dictexarcomp['nameplan'][indx[k]], size=1, \
-                                                                                                                               ha='center', va='center')
-                    
-                    ## this system
-                    for j in gdat.indxplan:
-                        xerr = gdat.factrjre * gdat.dicterrr['radiplan'][1:3, j, None]
-                        yerr = gdat.dicterrr['tmptplan'][1:3, j, None]
-                        axis.errorbar(gdat.dicterrr['radiplan'][0, j, None] * gdat.factrjre, gdat.dicterrr['tmptplan'][0, j, None], ls='', \
-                                    ms=6, lw=1, xerr=xerr, yerr=yerr, marker='o', \
-                                                                                                color=gdat.listcolrplan[j])
-                        for jj, j in enumerate(gdat.indxplan):
-                            axis.text(0.85, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
-                                                                                    va='center', ha='center', transform=axis.transAxes)
-
-                    if strgzoom == 'rb14':
-                        axis.set_xlim([1.5, 4.])
-                    if strgzoom == 'rb24':
-                        axis.set_xlim([2., 4.])
-                    
-                    axis.set_ylabel(r'Planet Equilibrium Temperature [K]')
-                    axis.set_xlabel('Radius [$R_E$]')
-                    plt.tight_layout()
-                    path = gdat.pathimag + 'radiplan_tmptplan_%s_%s_targ_%d.%s' % (strgzoom, strglimt, b, gdat.strgplotextn)
-                    print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
-        
-                    # metric vs radius
-                    figr, axis = plt.subplots(figsize=gdat.figrsize)
-                    
-                    ## known planets
-                    axis.errorbar(radiplan[indx], metr[indx], ms=1, ls='', marker='o', color='black')
-                    if b == 1:
-                        for k in indxsort[:numbtext]:
-                            axis.text(radiplan[indx[k]], metr[indx[k]], '%s' % dictexarcomp['nameplan'][indx[k]], ha='center', va='center', size=1)
-                    
-                    ## this system
-                    for jj, j in enumerate(gdat.indxplan):
-                        xerr = gdat.factrjre * gdat.dicterrr['radiplan'][1:3, j, None]
-                        axis.errorbar(gdat.dicterrr['radiplan'][0, j, None] * gdat.factrjre, \
-                                                metrthis[j, None], lw=1, ms=6, ls='', marker='o', \
-                                xerr=xerr, yerr=errrmetrthis[1:3, j, None], color=gdat.listcolrplan[j])
-                        if not (strgzoom == 'rb24' and gdat.dicterrr['radiplan'][0, j, None] * gdat.factrjre < 2):
-                            axis.text(0.85, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
-                                                                                        va='center', ha='center', transform=axis.transAxes)
-                    
-                    if strgzoom == 'rb14':
-                        axis.set_xlim([1.5, 4.])
-                    if strgzoom == 'rb24':
-                        axis.set_xlim([2., 4.])
-                    axis.set_ylabel(lablmetr)
-                    axis.set_xlabel('Radius [$R_E$]')
-                    #axis.set_yscale('log')
-                    plt.tight_layout()
-                    path = gdat.pathimag + '%s_radiplan_%s_%s_targ_%d.%s' % (strgmetr, strgzoom, strglimt, b, gdat.strgplotextn)
-                    print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
-        
     # print out transit times
     for j in gdat.indxplan:
         print(gdat.liststrgplan[j])
@@ -1623,16 +1251,16 @@ def proc_alle(gdat, strgalle):
             if time[n] > 2458788 and time[n] < 2458788 + 200:
                 print('%f, %s' % (time[n], listtimelabl[n]))
 
-    if strgalle == '0003' or strgalle == '0004' or strgalle == '0006':
+    if typeparacalc == '0003' or typeparacalc == '0004' or typeparacalc == '0006':
         gdat.arrylcurmodlcomp = [[] for p in gdat.indxinst]
         gdat.arrypcurquadmodlcomp = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
         for p in gdat.indxinst:
-            if strgalle == '0003' or strgalle == '0006': 
+            if typeparacalc == '0003' or typeparacalc == '0006': 
                 listlablpara = [['Nightside', 'ppm'], ['Secondary', 'ppm'], ['Planetary Modulation', 'ppm'], ['Thermal', 'ppm'], \
                                                                 ['Reflected', 'ppm'], ['Phase shift', 'deg'], ['Geometric Albedo', '']]
             else:
                 listlablpara = [['Nightside', 'ppm'], ['Secondary', 'ppm'], ['Thermal', 'ppm'], \
-                                                ['Reflected', 'ppm'], ['Thermal Phase shift', 'deg'], ['Reflected Phase shift', 'deg'], ['Geometric Albedo', '']]
+                                          ['Reflected', 'ppm'], ['Thermal Phase shift', 'deg'], ['Reflected Phase shift', 'deg'], ['Geometric Albedo', '']]
             numbpara = len(listlablpara)
             indxpara = np.arange(numbpara)
             listpost = np.empty((gdat.numbsamp, numbpara))
@@ -1640,7 +1268,7 @@ def proc_alle(gdat, strgalle):
             for j in gdat.indxplan:
                 listpost[:, 0] = gdat.dictlist['amplnigh'][:, j] * 1e6 # [ppm]
                 listpost[:, 1] = gdat.dictlist['amplseco'][:, j] * 1e6 # [ppm]
-                if strgalle == '0003' or strgalle == '0006': 
+                if typeparacalc == '0003' or typeparacalc == '0006': 
                     listpost[:, 2] = gdat.dictlist['amplplan'][:, j] * 1e6 # [ppm]
                     listpost[:, 3] = gdat.dictlist['amplplanther'][:, j] * 1e6 # [ppm]
                     listpost[:, 4] = gdat.dictlist['amplplanrefl'][:, j] * 1e6 # [ppm]
@@ -1654,7 +1282,7 @@ def proc_alle(gdat, strgalle):
                     listpost[:, 6] = gdat.dictlist['albg'][:, j]
                 print('gdat.pathimagpcur')
                 print(gdat.pathimagpcur)
-                tdpy.mcmc.plot_grid(gdat.pathimagpcur, 'pcur_%s' % strgalle, listpost, listlablpara, plotsize=2.5)
+                tdpy.mcmc.plot_grid(gdat.pathimagpcur, 'pcur_%s' % typeparacalc, listpost, listlablpara, plotsize=2.5)
 
             # plot phase curve
             ## determine data gaps for overplotting model without the data gaps
@@ -1733,15 +1361,15 @@ def proc_alle(gdat, strgalle):
             arrylcurmodltemp = np.copy(gdat.arrylcurmodl[p])
             
             ### stellar baseline
-            gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathalle[strgalle])
-            gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-            if strgalle == '0003' or strgalle == '0006':
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-            if strgalle == '0004':
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-            gdat.objtalle[strgalle].posterior_params_median['b_sbratio_TESS'] = 0
-            arrylcurmodltemp[:, 1] = gdat.objtalle[strgalle].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
+            gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathalle[typeparacalc])
+            gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
+            if typeparacalc == '0003' or typeparacalc == '0006':
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+            if typeparacalc == '0004':
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+            gdat.objtalle[typeparacalc].posterior_params_median['b_sbratio_TESS'] = 0
+            arrylcurmodltemp[:, 1] = gdat.objtalle[typeparacalc].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
             gdat.arrypcurquadmodlcomp[p][j]['stel'] = tesstarg.util.fold_lcur(arrylcurmodltemp, \
                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)
             xdat = gdat.arrypcurquadmodlcomp[p][j]['stel'][:, 0]
@@ -1749,14 +1377,14 @@ def proc_alle(gdat, strgalle):
             axis[2].plot(xdat, ydat, lw=2, color='orange', label='Stellar baseline', ls='--', zorder=11)
             
             ### EV
-            gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathalle[strgalle])
-            gdat.objtalle[strgalle].posterior_params_median['b_sbratio_TESS'] = 0
-            if strgalle == '0003' or strgalle == '0006':
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-            if strgalle == '0004':
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-            arrylcurmodltemp[:, 1] = gdat.objtalle[strgalle].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
+            gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathalle[typeparacalc])
+            gdat.objtalle[typeparacalc].posterior_params_median['b_sbratio_TESS'] = 0
+            if typeparacalc == '0003' or typeparacalc == '0006':
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+            if typeparacalc == '0004':
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+            arrylcurmodltemp[:, 1] = gdat.objtalle[typeparacalc].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
             gdat.arrypcurquadmodlcomp[p][j]['elli'] = tesstarg.util.fold_lcur(arrylcurmodltemp, \
                                                                       gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)
             gdat.arrypcurquadmodlcomp[p][j]['elli'][:, 1] -= gdat.arrypcurquadmodlcomp[p][j]['stel'][:, 1]
@@ -1765,9 +1393,9 @@ def proc_alle(gdat, strgalle):
             axis[2].plot(xdat, ydat, lw=2, color='r', ls='--', label='Ellipsoidal variation')
             
             # planetary
-            gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathalle[strgalle])
-            gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-            arrylcurmodltemp[:, 1] = gdat.objtalle[strgalle].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
+            gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathalle[typeparacalc])
+            gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
+            arrylcurmodltemp[:, 1] = gdat.objtalle[typeparacalc].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
             gdat.arrypcurquadmodlcomp[p][j]['plan'] = tesstarg.util.fold_lcur(arrylcurmodltemp, \
                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)
             gdat.arrypcurquadmodlcomp[p][j]['plan'] += gdat.dicterrr['amplnigh'][0, 0]
@@ -1778,14 +1406,14 @@ def proc_alle(gdat, strgalle):
             axis[2].plot(xdat, ydat, lw=2, color='g', label='Planetary', ls='--')
     
             # planetary nightside
-            gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathalle[strgalle])
-            gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-            if strgalle == '0003' or strgalle == '0006':
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-            if strgalle == '0004':
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                gdat.objtalle[strgalle].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-            arrylcurmodltemp[:, 1] = gdat.objtalle[strgalle].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
+            gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathalle[typeparacalc])
+            gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
+            if typeparacalc == '0003' or typeparacalc == '0006':
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+            if typeparacalc == '0004':
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                gdat.objtalle[typeparacalc].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+            arrylcurmodltemp[:, 1] = gdat.objtalle[typeparacalc].get_posterior_median_model(strginst, 'flux', xx=gdat.time[p])
             gdat.arrypcurquadmodlcomp[p][j]['nigh'] = tesstarg.util.fold_lcur(arrylcurmodltemp, \
                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)
             gdat.arrypcurquadmodlcomp[p][j]['nigh'] += gdat.dicterrr['amplnigh'][0, 0]
@@ -1804,7 +1432,7 @@ def proc_alle(gdat, strgalle):
             ## legend
             axis[2].legend(ncol=3)
             
-            path = gdat.pathimagpcur + 'pcur_grid_%s.%s' % (strgalle, gdat.strgplotextn)
+            path = gdat.pathimagpcur + 'pcur_grid_%s.%s' % (typeparacalc, gdat.strgplotextn)
             print('Writing to %s...' % path)
             plt.savefig(path)
             plt.close()
@@ -1856,7 +1484,7 @@ def proc_alle(gdat, strgalle):
             axis.set_xlabel('Phase')
             axis.legend(ncol=3)
             plt.tight_layout()
-            path = gdat.pathimagpcur + 'pcur_comp_%s.%s' % (strgalle, gdat.strgplotextn)
+            path = gdat.pathimagpcur + 'pcur_comp_%s.%s' % (typeparacalc, gdat.strgplotextn)
             print('Writing to %s...' % path)
             plt.savefig(path)
             plt.close()
@@ -1872,7 +1500,7 @@ def proc_alle(gdat, strgalle):
             axis.set_xlabel('Phase')
             axis.set_ylim(ylimpcur)
             plt.tight_layout()
-            path = gdat.pathimagpcur + 'pcur_samp_%s.%s' % (strgalle, gdat.strgplotextn)
+            path = gdat.pathimagpcur + 'pcur_samp_%s.%s' % (typeparacalc, gdat.strgplotextn)
             print('Writing to %s...' % path)
             plt.savefig(path)
             plt.close()
@@ -1889,13 +1517,13 @@ def proc_alle(gdat, strgalle):
             #axis.set_ylabel('Relative Flux - 1 [ppm]')
             #axis.set_xlabel('Phase')
             #plt.tight_layout()
-            #path = gdat.pathimagpcur + 'pcur_resi_%s.%s' % (strgalle, gdat.strgplotextn)
+            #path = gdat.pathimagpcur + 'pcur_resi_%s.%s' % (typeparacalc, gdat.strgplotextn)
             #print('Writing to %s...' % path)
             #plt.savefig(path)
             #plt.close()
 
             # write to text file
-            fileoutp = open(gdat.pathdatapcur + 'post_pcur_%s_tabl.csv' % (strgalle), 'w')
+            fileoutp = open(gdat.pathdatapcur + 'post_pcur_%s_tabl.csv' % (typeparacalc), 'w')
             for strgfeat in gdat.dictlist:
                 if gdat.dictlist[strgfeat].ndim == 2:
                     for j in gdat.indxplan:
@@ -1907,7 +1535,7 @@ def proc_alle(gdat, strgalle):
                 #fileoutp.write('\\\\\n')
             fileoutp.close()
             
-            fileoutp = open(gdat.pathdatapcur + 'post_pcur_%s_cmnd.csv' % (strgalle), 'w')
+            fileoutp = open(gdat.pathdatapcur + 'post_pcur_%s_cmnd.csv' % (typeparacalc), 'w')
             for strgfeat in gdat.dictlist:
                 if gdat.dictlist[strgfeat].ndim == 2:
                     for j in gdat.indxplan:
@@ -1919,7 +1547,7 @@ def proc_alle(gdat, strgalle):
                 #fileoutp.write('\\\\\n')
             fileoutp.close()
 
-            if gdat.labltarg == 'WASP-121' and strgalle == '0003':
+            if gdat.labltarg == 'WASP-121' and typeparacalc == '0003':
                 
                 # wavelength axis
                 gdat.conswlentmpt = 0.0143877735e6 # [um K]
@@ -2233,6 +1861,578 @@ def proc_alle(gdat, strgalle):
                 plt.close()
   
     
+def plot_prop(gdat, strgpdfn):
+    
+    if gdat.boolobjt:
+        # pretty orbit plot
+        fact = 50.
+        factstar = 5.
+        figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
+        ## star 1
+        w1 = mpl.patches.Wedge((0, 0), gdat.radistar/gdat.factaurj*factstar, 270, 360, fc='k', zorder=1, edgecolor='k')
+        axis.add_artist(w1)
+        for jj, j in enumerate(gdat.indxplan):
+            xposmaxm = gdat.dicterrr['smaxasun'][0, j]
+            yposmaxm = 0.3 * xposmaxm
+            yposelli = yposmaxm * np.concatenate([np.linspace(0., -1., 100), np.linspace(1., 0., 100)])
+            xposelli = xposmaxm * np.sqrt(1. - (yposelli / yposmaxm)**2)
+            objt = retr_objtlinefade(xposelli, yposelli, color=gdat.listcolrplan[j], alpha_initial=1., alpha_final=0.)
+            axis.add_collection(objt)
+            # temperature contours?
+            #for tmpt in [500., 700,]:
+            #    smaj = tmpt
+            #    axis.axvline(smaj, ls='--')
+            # planet
+            w1 = mpl.patches.Circle((gdat.dicterrr['smaxasun'][0, j], 0), \
+                                                radius=gdat.dicterrr['radiplan'][0, j]/gdat.factaurj*fact, color=gdat.listcolrplan[j], zorder=3)
+            axis.add_artist(w1)
+            axis.text(.15 + 0.02 * jj, -0.03, gdat.liststrgplan[j], color=gdat.listcolrplan[j])
+        ## add Mercury
+        axis.text(.387, 0.01, 'Mercury', color='grey', ha='right')
+        w1 = mpl.patches.Circle((0.387, 0), radius=0.0349/gdat.factaurj*fact, color='grey')
+        axis.add_artist(w1)
+        ##axistwin.set_xlim(axis.get_xlim())
+        #xpostemp = axistwin.get_xticks()
+        ##axistwin.set_xticks(xpostemp[1:])
+        #axistwin.set_xticklabels(['%f' % tmpt for tmpt in listtmpt])
+        ## star 2
+        w1 = mpl.patches.Wedge((0, 0), gdat.radistar/gdat.factaurj*factstar, 0, 90, fc='k', zorder=4, edgecolor='k')
+        axis.add_artist(w1)
+        #axistwin = axis.twiny()
+        axis.get_yaxis().set_visible(False)
+        axis.set_aspect('equal')
+        axis.set_xlim([0, 0.4])
+        axis.set_ylim([-0.05, 0.05])
+        ## centerline
+        axis.set_xlabel('Distance from the star [AU]')
+        plt.subplots_adjust()
+        #axis.legend()
+        path = gdat.pathimag + 'orbt_%s.%s' % (strgpdfn, gdat.strgplotextn)
+        print('Writing to %s...' % path)
+        plt.savefig(path)
+        plt.close()
+   
+    ## occurence rate as a function of planet radius with highlighted radii of the system's planets
+    ### get the CKS occurence rate as a function of planet radius
+    path = gdat.pathbase + 'data/Fulton+2017/Means.csv'
+    data = np.loadtxt(path, delimiter=',')
+    timeoccu = data[:, 0]
+    occumean = data[:, 1]
+    path = gdat.pathbase + 'data/Fulton+2017/Lower.csv'
+    occulowr = np.loadtxt(path, delimiter=',')
+    occulowr = occulowr[:, 1]
+    path = gdat.pathbase + 'data/Fulton+2017/Upper.csv'
+    occuuppr = np.loadtxt(path, delimiter=',')
+    occuuppr = occuuppr[:, 1]
+    occuyerr = np.empty((2, occumean.size))
+    occuyerr[0, :] = occuuppr - occumean
+    occuyerr[1, :] = occumean - occulowr
+    
+    figr, axis = plt.subplots(figsize=gdat.figrsize)
+    
+    xerr = (timeoccu[1:] - timeoccu[:-1]) / 2.
+    xerr = np.concatenate([xerr[0, None], xerr])
+    axis.errorbar(timeoccu, occumean, yerr=occuyerr, xerr=xerr, color='black', ls='', marker='o', lw=1)
+    if gdat.boolobjt:
+        # this system
+        for jj, j in enumerate(gdat.indxplan):
+            xposlowr = gdat.factrjre * gdat.dictpost['radiplan'][0, j]
+            xposuppr = gdat.factrjre * gdat.dictpost['radiplan'][2, j]
+            axis.axvspan(xposlowr, xposuppr, alpha=0.5, color=gdat.listcolrplan[j])
+            axis.axvline(gdat.factrjre * gdat.dicterrr['radiplan'][0, j], color=gdat.listcolrplan[j], ls='--', label=gdat.liststrgplan[j])
+            axis.text(0.7, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
+                                                                                        va='center', ha='center', transform=axis.transAxes)
+    axis.set_xlabel('Radius [$R_E$]')
+    axis.set_ylabel('Occurrence rate of planets per star')
+    plt.subplots_adjust(bottom=0.2)
+    path = gdat.pathimag + 'occuradi_%s.%s' % (strgpdfn, gdat.strgplotextn)
+    print('Writing to %s...' % path)
+    plt.savefig(path)
+    plt.close()
+   
+    for strgpopl in gdat.liststrgpopl:
+        
+        if strgpopl == 'exarcomp':
+            dictpopl = gdat.dictexarcomp
+        else:
+            dictpopl = gdat.dictexof
+        
+        print('strgpopl')
+        print(strgpopl)
+        
+        ## augment
+        ### radii
+        dictpopl['radistarsunn'] = dictpopl['radistar'] / gdat.factrsrj # R_S
+        dictpopl['radiplaneart'] = dictpopl['radiplan'] * gdat.factrjre # R_E
+        dictpopl['massplaneart'] = dictpopl['massplan'] * gdat.factmjme # M_E
+        
+        ### ESM
+        dictpopl['tsmm'] = tesstarg.util.retr_esmm(dictpopl['tmptplan'], dictpopl['tmptstar'], dictpopl['radiplan'], \
+                                                                                                    dictpopl['radistar'], dictpopl['kmagstar'])
+        
+        numbsamppopl = 100
+        listradiplan = dictpopl['radiplan'][None, :] + np.random.randn(numbsamppopl)[:, None] * dictpopl['stdvradiplan'][None, :]
+        listtmptplan = dictpopl['tmptplan'][None, :] + np.random.randn(numbsamppopl)[:, None] * dictpopl['stdvtmptplan'][None, :]
+        listmassplan = dictpopl['massplan'][None, :] + np.random.randn(numbsamppopl)[:, None] * dictpopl['stdvmassplan'][None, :]
+        listradistar = dictpopl['radistar'][None, :] + np.random.randn(numbsamppopl)[:, None] * dictpopl['stdvradistar'][None, :]
+        listjmagstar = dictpopl['jmagstar'][None, :] + np.random.randn(numbsamppopl)[:, None] * 0.
+        
+        ### TSM
+        listtsmm = tesstarg.util.retr_tsmm(listradiplan, listtmptplan, listmassplan, listradistar, listjmagstar)
+       
+        dictpopl['stdvtsmm'] = np.std(listtsmm, 0)
+        dictpopl['tsmm'] = np.median(listtsmm, 0)
+
+        numbtargpopl = dictpopl['radiplan'].size
+        indxtargpopl = np.arange(numbtargpopl)
+        
+        indxpoplcuttradi = dict()
+        indxpoplcuttradi['allr'] = indxtargpopl
+        indxpoplcuttradi['rb04'] = np.where((dictpopl['radiplaneart'] < 4))[0]
+        indxpoplcuttradi['rb24'] = np.where((dictpopl['radiplaneart'] < 4) & (dictpopl['radiplaneart'] > 2.))[0]
+        indxpoplcuttmass = dict()
+        indxpoplcuttmass['allm'] = indxtargpopl
+        indxpoplcuttmass['gmas'] = np.where(dictpopl['stdvmassplan'] / dictpopl['massplan'] < 0.4)[0]
+    
+        liststrgcuttradi = ['allr', 'rb24', 'rb04']
+        
+        # period ratios
+        figr, axis = plt.subplots(figsize=gdat.figrsize)
+        ## all 
+        gdat.listratiperi = []
+        gdat.intgreso = []
+        liststrgstarcomp = []
+        for m in gdat.indxplanexar:
+            strgstar = dictpopl['namestar'][m]
+            if not strgstar in liststrgstarcomp:
+                indxexarstar = np.where(dictpopl['namestar'] == strgstar)[0]
+                if indxexarstar[0] != m:
+                    raise Exception('')
+                
+                listperi = dictpopl['peri'][None, indxexarstar]
+                if not np.isfinite(listperi).all():
+                    liststrgstarcomp.append(strgstar)
+                    continue
+                intgreso, ratiperi = retr_reso(listperi)
+                
+                numbplan = indxexarstar.size
+                
+                gdat.listratiperi.append(ratiperi[0, :, :][np.triu_indices(numbplan, k=1)])
+                gdat.intgreso.append(intgreso)
+                
+                liststrgstarcomp.append(strgstar)
+        
+        gdat.listratiperi = np.concatenate(gdat.listratiperi)
+        bins = np.linspace(1., 10., 400)
+        axis.hist(gdat.listratiperi, bins=bins)
+        if gdat.boolobjt and gdat.numbplan > 1:
+            ## this system
+            for j in gdat.indxplan:
+                for jj in gdat.indxplan:
+                    if gdat.dicterrr['peri'][0, j] > gdat.dicterrr['peri'][0, jj]:
+                        ratiperi = gdat.dicterrr['peri'][0, j] / gdat.dicterrr['peri'][0, jj]
+                        axis.axvline(ratiperi, color='k')
+        ## resonances
+        for perifrst, periseco in [[2., 1.], [3., 2.], [4., 3.], [5., 4.], [5., 3.], [5., 2.]]:
+            axis.axvline(perifrst / periseco, color='grey', ls='--', alpha=0.5)
+        #axis.set_xscale('log')
+        axis.set_xlim([0.9, 2.7])
+        axis.set_xlabel('Period ratio')
+        #plt.subplots_adjust()
+        path = gdat.pathimag + 'histratiperi_%s_%s.%s' % (strgpdfn, strgpopl, gdat.strgplotextn)
+        print('Writing to %s...' % path)
+        plt.savefig(path)
+        plt.close()
+        
+        numbtext = min(5, numbtargpopl)
+        liststrgcuttmass = ['allm', 'gmas']
+        liststrgtext = ['notx', 'text']
+        
+        liststrgvarb = ['peri', 'inso', 'tmptplan', 'vesc', 'massplan', 'tmptstar', 'radistarsunn', 'tsmm', 'esmm', 'radiplan', 'radiplaneart']
+        listlablvarb = [['P', 'days'], ['F', '$F_E$'], ['$T_p$', 'K'], ['$v_{esc}$', 'kms$^{-1}$'], ['$M_p$', '$M_E$'], \
+                                                 ['$T_s$', '$T_{eff}$'], ['$R_s$', '$R_S$'], ['TSM', ''], ['ESM', ''], ['R', '$R_J$'], ['R', '$R_E$']] 
+        liststrgvarb.append('esmm')
+        listlablvarb.append(['ESM', ''])
+        
+        numbvarb = len(liststrgvarb)
+        indxvarb = np.arange(numbvarb)
+        listlablvarbtotl = []
+        print('listlablvarb')
+        print(listlablvarb)
+        for k in indxvarb:
+            if listlablvarb[k][1] == '':
+                listlablvarbtotl.append('%s' % (listlablvarb[k][0]))
+            else:
+                listlablvarbtotl.append('%s [%s]' % (listlablvarb[k][0], listlablvarb[k][1]))
+                
+        listscalvarb = ['self'] * numbvarb
+       
+        if gdat.boolobjt:
+            # metastable helium absorption
+            path = gdat.pathbase + '/data/wasp107b_transmission_spectrum.dat'
+            print('Reading from %s...' % path)
+            arry = np.loadtxt(path, delimiter=',', skiprows=1)
+            wlenwasp0107 = arry[:, 0]
+            deptwasp0107 = arry[:, 1]
+            deptstdvwasp0107 = arry[:, 2]
+            
+            print('')
+            print('')
+            print('')
+            stdvnirs = 0.24e-2
+            print('gdat.dicterrr[radiplan]')
+            print(gdat.dicterrr['radiplan'])
+            summgene(gdat.dicterrr['radiplan'])
+            for a in range(2):
+                duratranplanwasp0107 = 2.74 / 24.
+                jmagstarwasp0107 = 9.4
+                if a == 1:
+                    radiplan = gdat.dicterrr['radiplan'][0, :]
+                    massplan = gdat.dicterrr['massplanused'][0, :]
+                    tmptplan = gdat.dicterrr['tmptplan'][0, :]
+                    duratranplan = gdat.dicterrr['duratotl'][0, :]
+                    radistar = gdat.radistar
+                    jmagstar = gdat.jmagstar
+                else:
+                    print('WASP-107')
+                    radiplan = 0.924
+                    massplan = 0.119
+                    tmptplan = 736
+                    radistar = 0.66 * gdat.factrsrj
+                    jmagstar = jmagstarwasp0107
+                    duratranplan = duratranplanwasp0107
+                scalheig = tesstarg.util.retr_scalheig(tmptplan, massplan, radiplan)
+            
+                print('radiplan')
+                print(radiplan)
+                print('massplan')
+                print(massplan)
+                print('duratranplan')
+                print(duratranplan)
+                print('tmptplan')
+                print(tmptplan)
+                print('jmagstar')
+                print(jmagstar)
+                print('jmagstarwasp0107')
+                print(jmagstarwasp0107)
+                print('10**((-jmagstarwasp0107 + jmagstar) / 2.5)')
+                print(10**((-jmagstarwasp0107 + jmagstar) / 2.5))
+                print('duratranplan / duratranplanwasp0107')
+                print('duratranplan / duratranplanwasp0107')
+                print('scalheig [R_J]')
+                print(scalheig)
+                print('scalheig [km]')
+                print(scalheig * 71398)
+                deptscal = 2. * radiplan * scalheig / radistar**2
+                print('deptscal')
+                print(deptscal)
+                dept = 80. * deptscal
+                print('dept')
+                print(dept)
+                factstdv = np.sqrt(10**((-jmagstarwasp0107 + jmagstar) / 2.5) * duratranplanwasp0107 / duratranplan)
+                print('factstdv')
+                print(factstdv)
+                stdvnirsthis = factstdv * stdvnirs
+                print('stdvnirsthis')
+                print(stdvnirsthis)
+                for b in np.arange(1, 6):
+                    print('With %d transits:' % b)
+                    stdvnirsscal = stdvnirsthis / np.sqrt(float(b))
+                    print('stdvnirsscal')
+                    print(stdvnirsscal)
+                    sigm = dept / stdvnirsscal
+                    print('sigm')
+                    print(sigm)
+                print('')
+            print('James WASP107b scale height: 855 km')
+            print('James WASP107b scale height: %g [R_J]' % (855. / 71398))
+            print('James WASP107b depth per scale height: 5e-4')
+            fact = deptscal / 500e-6
+            print('ampltide rattio fact: deptthis / 500e-6')
+            print(fact)
+            # 2 A * Rp * H / Rs**2
+            figr, axis = plt.subplots(figsize=(8, 6))
+            #axis.errorbar(wlenwasp0107, deptwasp0107, yerr=deptstdvwasp0107, ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
+            axis.errorbar(wlenwasp0107-10833, deptwasp0107*fact[0], yerr=deptstdvwasp0107*factstdv[0], ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
+            axis.set_xlabel(r'Wavelength - 10,833 [$\AA$]')
+            axis.set_ylabel('Depth [\%]')
+            plt.subplots_adjust(bottom=0.2, left=0.2)
+            path = gdat.pathimag + 'heli_%s.%s' % (strgpdfn, gdat.strgplotextn)
+            print('Writing to %s...' % path)
+            plt.savefig(path)
+            plt.close()
+
+        # optical magnitude vs number of planets
+        if gdat.boolplot:
+            gdat.pathimagmagt = gdat.pathimag + 'magt/'
+            os.system('mkdir -p %s' % gdat.pathimagmagt)
+            for b in range(4):
+                if b == 0:
+                    strgvarbmagt = 'vmag'
+                    lablxaxi = 'V Magnitude'
+                    if gdat.boolobjt:
+                        varbtarg = gdat.vmagstar
+                    varb = dictpopl['vmagstar']
+                if b == 1:
+                    strgvarbmagt = 'jmag'
+                    lablxaxi = 'J Magnitude'
+                    if gdat.boolobjt:
+                        varbtarg = gdat.jmagstar
+                    varb = dictpopl['jmagstar']
+                if b == 2:
+                    strgvarbmagt = 'msnrvmag'
+                    lablxaxi = 'Relative mass SNR in the V band'
+                    if gdat.boolobjt:
+                        varbtarg = np.sqrt(10**(-gdat.vmagstar / 2.5)) / gdat.massstar**(2. / 3.)
+                    varb = np.sqrt(10**(-dictpopl['vmagstar'] / 2.5)) / dictpopl['massstar']**(2. / 3.)
+                if b == 3:
+                    strgvarbmagt = 'msnrjmag'
+                    lablxaxi = 'Relative mass SNR in the J band'
+                    if gdat.boolobjt:
+                        varbtarg = np.sqrt(10**(-gdat.vmagstar / 2.5)) / gdat.massstar**(2. / 3.)
+                    varb = np.sqrt(10**(-dictpopl['jmagstar'] / 2.5)) / dictpopl['massstar']**(2. / 3.)
+                for a in range(3):
+                    figr, axis = plt.subplots(figsize=gdat.figrsize)
+                    if a == 0:
+                        indx = np.where(dictpopl['boolfrst'])[0]
+                    if a == 1:
+                        indx = np.where(dictpopl['boolfrst'] & (dictpopl['numbplanstar'] > 3))[0]
+                    if a == 2:
+                        indx = np.where(dictpopl['boolfrst'] & (dictpopl['numbplantranstar'] > 3))[0]
+                    
+                    if gdat.boolobjt and (b == 2 or b == 3):
+                        normfact = max(varbtarg, np.amax(varb[indx]))
+                    else:
+                        normfact = 1.
+                    if gdat.boolobjt:
+                        varbtargnorm = varbtarg / normfact
+                    varbnorm = varb[indx] / normfact
+                    
+                    axis.scatter(varbnorm, dictpopl['numbplanstar'][indx], s=1, color='black')
+                    
+                    indxsort = np.argsort(varbnorm)
+                    if b == 2 or b == 3:
+                        indxsort = indxsort[::-1]
+
+                    listnameaddd = []
+                    cntr = 0
+                    maxmnumbname = min(5, varbnorm.size)
+                    while True:
+                        k = indxsort[cntr]
+                        nameadd = dictpopl['namestar'][indx][k]
+                        if not nameadd in listnameaddd:
+                            axis.text(varbnorm[k], dictpopl['numbplanstar'][indx][k] + 0.5, nameadd, size=6, \
+                                                                                                    va='center', ha='right', rotation=45)
+                            listnameaddd.append(nameadd)
+                        cntr += 1
+                        if len(listnameaddd) == maxmnumbname: 
+                            break
+                    if gdat.boolobjt:
+                        axis.scatter(varbtargnorm, gdat.numbplan, s=5, color='black', marker='x')
+                        axis.text(varbtargnorm, gdat.numbplan + 0.5, gdat.labltarg, size=8, color='black', \
+                                                                                                    va='center', ha='center', rotation=45)
+                    axis.set_ylabel(r'Number of transiting planets')
+                    axis.set_xlabel(lablxaxi)
+                    plt.subplots_adjust(bottom=0.2)
+                    path = gdat.pathimagmagt + '%snumb_%d_%s_%s.%s' % (strgvarbmagt, a, strgpopl, strgpdfn, gdat.strgplotextn)
+                    print('Writing to %s...' % path)
+                    plt.savefig(path)
+                    plt.close()
+
+                    figr, axis = plt.subplots(figsize=gdat.figrsize)
+                    axis.hist(varbnorm, 50)
+                    if gdat.boolobjt:
+                        axis.axvline(varbtargnorm, color='black', ls='--')
+                        axis.text(0.9, 0.9, gdat.labltarg, size=8, color='black', transform=axis.transAxes, va='center', ha='center')
+                    axis.set_ylabel(r'Number of systems')
+                    axis.set_xlabel(lablxaxi)
+                    plt.subplots_adjust(bottom=0.2)
+                    path = gdat.pathimagmagt + 'hist%s_%d_%s_%s.%s' % (strgvarbmagt, a, strgpopl, strgpdfn, gdat.strgplotextn)
+                    print('Writing to %s...' % path)
+                    plt.savefig(path)
+                    plt.close()
+                
+        indxinit = np.where(dictpopl['peri'] < 100)[0]
+            
+        # distribution plots
+        for k, strgxaxi in enumerate(liststrgvarb):
+            for m, strgyaxi in enumerate(liststrgvarb):
+                if k >= m:
+                    continue
+                
+                # temp
+                #if not (strgxaxi == 'tsmm' or strgyaxi == 'tsmm'):
+                #    continue
+                # temp
+                if not (strgxaxi == 'peri' and strgyaxi == 'inso'):
+                    continue
+                # temp
+                #if not (strgxaxi == 'radistarsunn' and strgyaxi == 'radiplan' or strgxaxi == 'tmptplan' and strgyaxi == 'radistarsunn'):
+                #    continue
+
+                if gdat.boolobjt:
+                    varbxaxithis = gdat.dicterrr[strgxaxi][0, :]
+                    varbyaxithis = gdat.dicterrr[strgyaxi][0, :]
+                    errrxaxithis = gdat.dicterrr[strgxaxi]
+                    errryaxithis = gdat.dicterrr[strgyaxi]
+                
+                # finiteness cut
+                #indxinit = np.where(np.isfinite(dictpopl[strgxaxi]) & np.isfinite(dictpopl[strgyaxi]))[0]
+                
+                for strgcuttradi in liststrgcuttradi:
+                    
+                    #if (strgcuttradi == 'rb04' or strgcuttradi == 'rb24') and (strgxaxi == 'radiplan' or strgyaxi == 'radiplan'):
+                    #    continue
+
+                    # ensure allr plots do not come with R_E units
+                    if strgcuttradi == 'allr' and (strgxaxi == 'radiplaneart' or strgyaxi == 'radiplaneart'):
+                        continue
+
+                    for strgcuttmass in liststrgcuttmass:
+                        
+                        # impose radius cut
+                        indx = np.intersect1d(indxpoplcuttradi[strgcuttradi], indxpoplcuttmass[strgcuttmass])
+                        indx = np.intersect1d(indx, indxinit)
+                        
+                        # write out
+                        if (k == 0 and m == 1) and strgcuttmass == 'allm':
+                            
+                            for y in range(1):
+                                
+                                if y == 0:
+                                    strgstrgsort = 'tsmm'
+                                else:
+                                    strgstrgsort = 'esmm'
+                                print('strgcuttradi')
+                                print(strgcuttradi)
+                                print('strgcuttmass')
+                                print(strgcuttmass)
+                                print('strgstrgsort')
+                                print(strgstrgsort)
+                                # sort
+                                dicttemp = dict()
+                                
+                                for strgfeat, valu in dictpopl.items():
+                                    if strgfeat.startswith('stdv'):
+                                        continue
+                                    if gdat.boolobjt:
+                                        if strgfeat in gdat.dictfeatobjt.keys():
+                                            print('strgfeat')
+                                            print(strgfeat)
+                                            print('dictpopl[strgfeat][indx]')
+                                            summgene(dictpopl[strgfeat][indx])
+                                            print('gdat.dictfeatobjt[strgfeat]')
+                                            summgene(gdat.dictfeatobjt[strgfeat])
+                                            print('')
+                                            dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indx], gdat.dictfeatobjt[strgfeat]])
+                                        else:
+                                            dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indx], gdat.dicterrr[strgfeat][0, :]])
+                                            #dicttemp[strgfeat] = np.concatenate([dictpopl['stdv' + strgfeat][indx], \
+                                            #                                                            np.mean(gdat.dicterrr[strgfeat][1:3, :], 0)])
+                                    else:
+                                        dicttemp[strgfeat] = np.copy(dictpopl[strgfeat][indx])
+                                indxgood = np.where(np.isfinite(dicttemp[strgstrgsort]))[0]
+                                indxsort = np.argsort(dicttemp[strgstrgsort][indxgood])[::-1]
+                                
+                                path = gdat.pathdata + '%s_%s_%s_%s.csv' % (strgpopl, strgcuttradi, strgcuttmass, strgstrgsort)
+                                objtfile = open(path, 'w')
+
+
+                                #print('%20s, %12s, %12s, %12s, %12s, %12s, %12s, %12s, %12s' % \
+                                
+                                #('Name', 'TSM', 'e_TSM', 'e_TSM [%]', 'R [R_J]', 'M [M_J]', 'e_M [M_J]', 'T_p [K]', 'Jmag'))
+                                strghead = '%20s, %12s, %12s, %12s, %12s, %12s, %12s, %12s, %12s\n' % \
+                                            ('Name', 'TSM', 'e_TSM', 'e_TSM [%]', 'R [R_J]', 'M [M_J]', 'e_M [M_J]', 'T_p [K]', 'Jmag')
+                                objtfile.write(strghead)
+                                for l in indxgood[indxsort]:
+                                    strgline = '%20s, %12.3f, %12.3f, %12.3f, %12.3f, %12.3f, %12.3f, %12.3f, %12.3f\n' % (dicttemp['nameplan'][l], dicttemp[strgstrgsort][l], \
+                                    dicttemp['stdv' + strgstrgsort][l], 100. * dicttemp['stdv' + strgstrgsort][l] / dicttemp[strgstrgsort][l], \
+                                    dicttemp['radiplan'][l], dicttemp['massplan'][l], dicttemp['stdvmassplan'][l], \
+                                                    dicttemp['tmptplan'][l], dicttemp['jmagstar'][l])
+                                    objtfile.write(strgline)
+                                print('Writing to %s...' % path)
+                                objtfile.close()
+
+                        if gdat.boolplot:
+                            # repeat, one without text, one with text
+                            for b, strgtext in enumerate(liststrgtext):
+                                if gdat.boolplot:
+                                    figr, axis = plt.subplots(figsize=gdat.figrsize)
+                                    
+                                    ## population
+                                    axis.errorbar(dictpopl[strgxaxi][indx], dictpopl[strgyaxi][indx], ls='', ms=1, lw=1, marker='o', color='k', alpha=0.5)
+                                    if gdat.boolobjt:
+                                        ## this system
+                                        for j in gdat.indxplan:
+                                            xdat = gdat.dicterrr[strgxaxi][0, j, None]
+                                            ydat = gdat.dicterrr[strgyaxi][0, j, None]
+                                            xerr = gdat.dicterrr[strgxaxi][1:3, j, None]
+                                            yerr = gdat.dicterrr[strgyaxi][1:3, j, None]
+                                            axis.errorbar(xdat, ydat, color=gdat.listcolrplan[j], lw=1, xerr=xerr, yerr=yerr, ls='', marker='o', ms=6)
+                                            axis.text(0.85, 0.9 - j * 0.08, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
+                                                                                                        va='center', ha='center', transform=axis.transAxes)
+                                    
+                                    # include text
+                                    if b == 1:
+                                        indxsortxaxi = np.argsort(dictpopl[strgxaxi][indx])
+                                        indxsortyaxi = np.argsort(dictpopl[strgyaxi][indx])
+                                        print('indxsortxaxi[:numbtext]')
+                                        print(indxsortxaxi[:numbtext])
+                                        print('indxsortxaxi[-numbtext:]')
+                                        print(indxsortxaxi[-numbtext:])
+                                        print('indxsortyaxi[:numbtext]')
+                                        print(indxsortyaxi[:numbtext])
+                                        print('indxsortyaxi[-numbtext:]')
+                                        print(indxsortyaxi[-numbtext:])
+                                        indxextr = np.concatenate([indxsortxaxi[:numbtext], indxsortxaxi[-numbtext:], \
+                                                                            indxsortyaxi[:numbtext], indxsortyaxi[-numbtext:]])
+                                        indxextr = np.unique(indxextr)
+                                        print('indxextr')
+                                        summgene(indxextr)
+                                        for l in indxextr:
+                                            objttext = axis.text(dictpopl[strgxaxi][indx][l], dictpopl[strgyaxi][indx][l], \
+                                                                    '%s, R=%g, M=%g' % (dictpopl['nameplan'][indx][l], dictpopl['radiplan'][indx][l], \
+                                                                        dictpopl['massplan'][indx][l]), size=1, ha='center', va='center')
+                                    
+                                    if strgxaxi == 'tmptplan' and strgyaxi == 'vesc':
+                                        xlim = axis.get_xlim()
+                                        arrytmptplan = np.linspace(xlim[0], xlim[1], 1000)
+                                        #h20 = 2+16=18
+                                        #nh3 = 14
+                                        #ch4 = 12
+                                        cons = [2., 4., 18]
+                                        for i in range(len(cons)):
+                                            arryyaxi = (2. * arrytmptplan / 2000. / cons[i])**0.5 * 50.
+                                            axis.plot(arrytmptplan, arryyaxi, color='grey', alpha=0.5)
+                                        axis.set_xlim(xlim)
+
+                                    if strgxaxi == 'radiplan' and strgyaxi == 'massplan':
+                                        gdat.listlabldenscomp = ['Earth-like', 'Pure Water', 'Pure Iron']
+                                        listdenscomp = [1., 0.1813, 1.428]
+                                        listposicomp = [[13., 2.6], [4.7, 3.5], [13., 1.9]]
+                                        gdat.numbdenscomp = len(gdat.listlabldenscomp)
+                                        gdat.indxdenscomp = np.arange(gdat.numbdenscomp)
+                                        masscompdens = np.linspace(0.5, 16.) # M_E
+                                        for i in gdat.indxdenscomp:
+                                            radicompdens = (masscompdens / listdenscomp[i])**(1. / 3.)
+                                            axis.plot(masscompdens, radicompdens, color='grey')
+                                        for i in gdat.indxdenscomp:
+                                            axis.text(listposicomp[i][0], listposicomp[i][1], gdat.listlabldenscomp[i])
+                                    
+                                    if strgyaxi == 'vesc':
+                                        axis.set_ylim([0., 60.])
+
+                                    axis.set_xlabel(listlablvarbtotl[k])
+                                    axis.set_ylabel(listlablvarbtotl[m])
+                                    plt.subplots_adjust(left=0.2)
+                                    plt.subplots_adjust(bottom=0.2)
+                                    path = gdat.pathimag + 'feat_%s_%s_%s_%s_%s_%s_%s.%s' % \
+                                                    (strgxaxi, strgyaxi, strgcuttradi, strgcuttmass, strgpopl, strgtext, strgpdfn, gdat.strgplotextn)
+                                    print('Writing to %s...' % path)
+                                    plt.savefig(path)
+                                    plt.close()
+
+   
 def bdtr_wrap(gdat, epocmask, perimask, duramask):
     
     gdat.listobjtspln = [[[] for y in gdat.indxchun[p]] for p in gdat.indxinst]
@@ -2247,16 +2447,15 @@ def bdtr_wrap(gdat, epocmask, perimask, duramask):
                 gdat.lcurbdtrregi, gdat.listindxtimeregi[p][y], gdat.indxtimeregioutt[p][y], gdat.listobjtspln[p][y], timeedge = \
                                  tesstarg.util.bdtr_lcur(gdat.listarrylcur[p][y][:, 0], gdat.listarrylcur[p][y][:, 1], weigsplnbdtr=gdat.weigsplnbdtr, \
                                                             epocmask=epocmask, perimask=perimask, duramask=duramask, \
-                                                            verbtype=gdat.verbtype, durabrek=gdat.durabrek, ordrspln=gdat.ordrspln)
+                                                            verbtype=gdat.verbtype, durabrek=gdat.durabrek, ordrspln=gdat.ordrspln, bdtrtype=gdat.bdtrtype)
                 gdat.listarrylcurbdtr[p][y] = np.copy(gdat.listarrylcur[p][y])
                 gdat.listarrylcurbdtr[p][y][:, 1] = np.concatenate(gdat.lcurbdtrregi)
                 numbsplnregi = len(gdat.lcurbdtrregi)
                 gdat.indxsplnregi[p][y] = np.arange(numbsplnregi)
             else:
                 gdat.listarrylcurbdtr[p][y] = gdat.listarrylcur[p][y]
-
         # merge chuncks
-        gdat.arrylcurbdtr[p] = np.concatenate(gdat.listarrylcurbdtr[p])
+        gdat.arrylcurbdtr[p] = np.concatenate(gdat.listarrylcurbdtr[p], axis=0)
 
 
 def init( \
@@ -2269,32 +2468,57 @@ def init( \
          
          # a string for the folder name and file name extensions
          strgtarg=None, \
-        
-         boolforcoffl=False, \
-
-         boolphascurv=False, \
-        
-         boolclip=False, \
-
-         # type of light curve to be used for analysis
-         ## pdcc, sapp, pand
-         datatype=None, \
-                    
-         boolexar=None, \
-        
-         maxmnumbstarpand=1, \
          
-         # whether to mask bad data
-         boolmaskqual=True, \
+         # mode of operation
+         booldatatser=True, \
+         
+         boolplot=False, \
 
-         dilucorr=None, \
+         # input
+         boolforcoffl=False, \
+         listpathdatainpt=None, \
+         ## type of light curve to be used for analysis: pdcc, sapp, lygo
+         datatype=None, \
+         ## maximum number of stars to fit in lygos
+         maxmnumbstarlygo=1, \
+         # list of strings indicating instruments
+         liststrginst=['TESS'], \
+         # list of labels indicating instruments
+         listlablinst=['TESS'], \
+         # list of strings indicating chunks
+         liststrgchun=None, \
+         # list of chunk indices for each instrument
+         listindxchuninst=None, \
 
-         # type of priors used for allesfitter
-         priotype=None, \
-    
+         # preprocessing
+         boolclip=False, \
+         ## dilution: None (no correction), 'lygo' for estimation via lygos, or float value
+         dilu=None, \
+         ## baseline detrending
          durabrek=1., \
          ordrspln=3, \
+         bdtrtype='spln', \
+         weigsplnbdtr=1., \
+         durakernbdtrmedi=1., \
+         ## Boolean flag to mask bad data
+         boolmaskqual=True, \
+         ## time limits to mask
+         listlimttimemask=None, \
+    
+         # planet search
+         ## maximum number of planets for TLS
+         maxmnumbplantlss=None, \
+         
+         liststrgplan=None, \
+         
+         # include the ExoFOP catalog in the comparisons to exoplanet population
+         boolexof=True, \
 
+         # model
+         # priors
+         ## type of priors used for allesfitter
+         priotype=None, \
+         ## prior values
          rratprio=None, \
          rsmaprio=None, \
          epocprio=None, \
@@ -2303,54 +2527,48 @@ def init( \
          ecosprio=None, \
          esinprio=None, \
          rvsaprio=None, \
+         #massplanprio=None, \
+         #ecceprio=None, \
+         
+         rratstdvprio=None, \
+         rsmastdvprio=None, \
          epocstdvprio=None, \
          peristdvprio=None, \
+         cosistdvprio=None, \
+         ecosstdvprio=None, \
+         esinstdvprio=None, \
+         rvsastdvprio=None, \
+         #massplanstdvprio=None, \
+         #eccestdvprio=None, \
 
-         radistarstdv=None, \
-
-         listpathdatainpt=None, \
-        
          radistar=None, \
          massstar=None, \
          tmptstar=None, \
+         stdvradistar=None, \
     
-         liststrgchun=None, \
-         liststrginst=['TESS'], \
-         listlablinst=['TESS'], \
-         listindxchuninst=None, \
-
+         boolphascurv=False, \
+         
          # type of inference, alle for allesfitter, trap for trapezoidal fit
          infetype='alle', \
 
-         boolcontrati=False, \
+         # allesfitter settings
+         boolallebkgdgaus=False, \
+         boolalleorbt=True, \
+         ## allesfitter analysis type
+         typeparacalctype = 'ther', \
         
-         makeprioplot=True, \
+         # output
          boolwritplan=True, \
-
-         # list of offsets for the planet annotations in the TSM/ESM plot
+         ## plotting
+         makeprioplot=True, \
+         ### list of offsets for the planet annotations in the TSM/ESM plot
          offstextatmoraditmpt=None, \
          offstextatmoradimetr=None, \
 
-         ## baseline
-         bdtrtype='spln', \
-         weigsplnbdtr=1., \
-         durakernbdtrmedi=1., \
-         
-         boolallebkgdgaus=False, \
-         boolalleorbt=True, \
-
-         maxmnumbplantlss=None, \
-
-         liststrgplan=None, \
-
          booldiagmode=True, \
          
-         # allesfitter analysis type
-         strgalletype = 'ther', \
-        
          verbtype=1, \
 
-         listlimttimemask=None, \
          **args \
         ):
     
@@ -2373,26 +2591,33 @@ def init( \
     # paths
     gdat.pathbase = os.environ['PEXO_DATA_PATH'] + '/'
 
-    # settings
-    ## plotting
-    gdat.timetess = 2457000.
-    
     print('PEXO initialized at %s...' % gdat.strgtimestmp)
     
+    # parse inpt
+    ## determine whether pexo will work on a specific target
     if gdat.ticitarg is None and gdat.strgmast is None and gdat.toiitarg is None:
-        raise Exception('')
-    if gdat.ticitarg is not None and gdat.strgmast is not None:
-        raise Exception('')
-    if gdat.ticitarg is not None and gdat.toiitarg is not None:
-        raise Exception('')
-    if gdat.strgmast is not None and gdat.toiitarg is not None:
-        raise Exception('')
-    if gdat.ticitarg is not None:
-        gdat.inpttype = 'tici'
-    if gdat.strgmast is not None:
-        gdat.inpttype = 'mast'
-    if gdat.toiitarg is not None:
-        gdat.inpttype = 'toii'
+        gdat.boolobjt = False
+    else:
+        gdat.boolobjt = True
+    
+    # settings
+    ## plotting
+    if gdat.boolobjt:
+        if gdat.booldatatser:
+            gdat.timetess = 2457000.
+    
+        if gdat.ticitarg is not None and gdat.strgmast is not None:
+            raise Exception('')
+        if gdat.ticitarg is not None and gdat.toiitarg is not None:
+            raise Exception('')
+        if gdat.strgmast is not None and gdat.toiitarg is not None:
+            raise Exception('')
+        if gdat.ticitarg is not None:
+            gdat.inpttype = 'tici'
+        if gdat.strgmast is not None:
+            gdat.inpttype = 'mast'
+        if gdat.toiitarg is not None:
+            gdat.inpttype = 'toii'
 
     # plotting
     gdat.strgplotextn = 'pdf'
@@ -2422,784 +2647,850 @@ def init( \
     print('toiitarg')
     print(toiitarg)
     
-    dictexartarg = retr_exarcomp(gdat, strgtarg=gdat.strgmast)
-    gdat.boolexar = gdat.strgmast is not None and dictexartarg is not None
+    gdat.liststrgpopl = ['exarcomp']
+    if gdat.boolexof:
+        gdat.liststrgpopl += ['exof']
+    gdat.numbpopl = len(gdat.liststrgpopl)
     
-    # determine the type of prior to be fed into allesfitter
-    if gdat.priotype is None:
-        if gdat.inpttype == 'toii':
-            gdat.priotype = 'exof'
-        elif gdat.boolexar:
-            gdat.priotype = 'exar'
-    print('gdat.priotype')
-    print(gdat.priotype)
+    if gdat.boolobjt:
+        dictexartarg = retr_exarcomp(gdat, strgtarg=gdat.strgmast)
+        gdat.boolexar = gdat.strgmast is not None and dictexartarg is not None
     
-    if gdat.boolexar:
-        print('The planet name was found in the NASA Exoplanet Archive "composite" table.')
-        # stellar properties
-        
-        if gdat.periprio is None:
-            gdat.periprio = dictexartarg['peri']
-        gdat.smaxprio = dictexartarg['smax']
-        gdat.massplanprio = dictexartarg['massplan']
-        
-        #gdat.radistar = dictexartarg['radistar']
-        #gdat.massstar = dictexartarg['massstar']
-        #gdat.tmptstar = dictexartarg['tmptstar']
-        #gdat.radistarstdv = dictexartarg['radistarstdv']
-        #gdat.massstarstdv = dictexartarg['massstarstdv']
-        #gdat.tmptstarstdv = dictexartarg['tmptstarstdv']
-        
-    else:
-        print('The planet name was *not* found in the Exoplanet Archive "composite" table.')
+        # determine the type of prior to be fed into allesfitter
+        if gdat.priotype is None:
+            if gdat.inpttype == 'toii':
+                gdat.priotype = 'exof'
+            elif gdat.boolexar:
+                gdat.priotype = 'exar'
+        print('gdat.priotype')
+        print(gdat.priotype)
     
-    gdat.numbinst = len(gdat.liststrginst)
-    gdat.indxinst = np.arange(gdat.numbinst)
-
-    #if len(gdat.radistar) > 0:
-    #    raise Exception('')
-
-    # read the NASA Exoplanet Archive planets
-    path = gdat.pathbase + 'data/planets_2020.01.23_16.21.55.csv'
-    print('Reading %s...' % path)
-    objtexarplan = pd.read_csv(path, skiprows=359, low_memory=False)
-    indx = np.where(objtexarplan['pl_hostname'].values == gdat.strgmast)[0]
-    if indx.size == 0:
-        print('The planet name was *not* found in the NASA Exoplanet Archive "planets" table.')
-        gdat.boolexar = False
-    else:
-        gdat.deptprio = objtexarplan['pl_trandep'][indx].values
-        if gdat.cosiprio is None:
-            gdat.cosiprio = np.cos(objtexarplan['pl_orbincl'][indx].values / 180. * np.pi)
-        if gdat.epocprio is None:
-            gdat.epocprio = objtexarplan['pl_tranmid'][indx].values # [days]
-        gdat.duraprio = objtexarplan['pl_trandur'][indx].values # [days]
-    
-    if gdat.inpttype == 'toii':
-        print('A TOI number is provided. Retreiving the TCE attributes from ExoFOP-TESS...')
-        # read ExoFOP-TESS
-        path = gdat.pathbase + 'data/exofop_toilists.csv'
-        print('Reading from %s...' % path)
-        objtexof = pd.read_csv(path, skiprows=0)
-        indx = []
-        gdat.strgtoiibase = str(gdat.toiitarg)
-        for k, strg in enumerate(objtexof['TOI']):
-            if str(strg).split('.')[0] == gdat.strgtoiibase:
-                indx.append(k)
-        indx = np.array(indx)
-        if indx.size == 0:
-            print('Did not find the TOI in the ExoFOP-TESS TOI list.')
-            raise Exception('')
-        
-        if gdat.ticitarg is not None:
-            raise Exception('')
+        if gdat.boolexar:
+            print('The planet name was found in the NASA Exoplanet Archive "composite" table.')
+            # stellar properties
+            
+            if gdat.periprio is None:
+                gdat.periprio = dictexartarg['peri']
+            gdat.smaxprio = dictexartarg['smax']
+            gdat.massplanprio = dictexartarg['massplan']
+            
         else:
-            gdat.ticitarg = objtexof['TIC ID'].values[indx[0]]
-        gdat.strgmast  = 'TIC %d' % gdat.ticitarg
-        if gdat.epocprio is None:
-            gdat.epocprio = objtexof['Epoch (BJD)'].values[indx]
-        if gdat.periprio is None:
-            gdat.periprio = objtexof['Period (days)'].values[indx]
-        gdat.deptprio = objtexof['Depth (ppm)'].values[indx] * 1e-6
-        gdat.duraprio = objtexof['Duration (hours)'].values[indx] / 24. # [days]
-        if gdat.cosiprio is None:
-            gdat.cosiprio = np.zeros_like(gdat.epocprio)
-        
-        if gdat.strgtarg is None:
-            gdat.strgtarg = 'TOI' + gdat.strgtoiibase
-        if gdat.labltarg is None:
-            gdat.labltarg = 'TOI ' + gdat.strgtoiibase
-    if gdat.strgmast is not None:
-        if gdat.strgtarg is None:
-            gdat.strgtarg = ''
-            strgtargsplt = gdat.strgmast.split(' ')
-            for strgtemp in strgtargsplt:
-                gdat.strgtarg += strgtemp
-        if gdat.labltarg is None:
-            gdat.labltarg = gdat.strgmast
-    if gdat.ticitarg is not None:
-        if gdat.strgtarg is None:
-            gdat.strgtarg = 'TIC%d' % gdat.ticitarg
-        if gdat.labltarg is None:
-            gdat.labltarg = 'TIC %d' % gdat.ticitarg
-    print('gdat.strgtarg')
-    print(gdat.strgtarg)
-    print('gdat.labltarg')
-    print(gdat.labltarg)
-    if gdat.priotype == 'inpt':
-        if gdat.rratprio is None:
-            gdat.rratprio = 0.1 + np.zeros(gdat.numbplan)
-        if gdat.rsmaprio is None:
-            gdat.rsmaprio = 0.1 + np.zeros(gdat.numbplan)
-        if gdat.cosiprio is None:
-            gdat.cosiprio = np.zeros(gdat.numbplan)
-        gdat.duraprio = tesstarg.util.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
-        gdat.deptprio = gdat.rratprio**2
+            print('The planet name was *not* found in the Exoplanet Archive "composite" table.')
     
-    if gdat.ecosprio is None:
-        gdat.ecosprio = np.zeros_like(gdat.periprio)
-    if gdat.esinprio is None:
-        gdat.esinprio = np.zeros_like(gdat.periprio)
-    if gdat.rvsaprio is None:
-        gdat.rvsaprio = np.zeros_like(gdat.periprio)
+        if gdat.booldatatser:
+            gdat.numbinst = len(gdat.liststrginst)
+            gdat.indxinst = np.arange(gdat.numbinst)
+
+        # read the NASA Exoplanet Archive planets
+        path = gdat.pathbase + 'data/PS_2020.09.15_17.21.46.csv'
+        print('Reading %s...' % path)
+        objtexarplan = pd.read_csv(path, skiprows=302, low_memory=False)
+        indx = np.where(objtexarplan['hostname'].values == gdat.strgmast)[0]
+        if indx.size == 0:
+            print('The planet name was *not* found in the NASA Exoplanet Archive "planets" table.')
+            gdat.boolexar = False
+        else:
+            gdat.deptprio = objtexarplan['pl_trandep'][indx].values
+            if gdat.cosiprio is None:
+                gdat.cosiprio = np.cos(objtexarplan['pl_orbincl'][indx].values / 180. * np.pi)
+            if gdat.epocprio is None:
+                gdat.epocprio = objtexarplan['pl_tranmid'][indx].values # [days]
+            gdat.duraprio = objtexarplan['pl_trandur'][indx].values # [days]
     
-    gdat.numbplan = None
-    
-    # check MAST
-    print('gdat.strgmast')
-    print(gdat.strgmast)
-    if gdat.strgmast is None:
-        print('gdat.strgmast was not provided as input. Using the TIC ID to construct gdat.strgmast.')
-        gdat.strgmast = 'TIC %d' % gdat.ticitarg
-    
-    if not gdat.boolforcoffl:
-        catalogData = astroquery.mast.Catalogs.query_object(gdat.strgmast, catalog='TIC', radius='40s')
-        if catalogData[0]['dstArcSec'] > 0.1:
-            print('The nearest source is more than 0.1 arcsec away from the target!')
-        print('Found the target on MAST!')
-        rasc = catalogData[0]['ra']
-        decl = catalogData[0]['dec']
-        if gdat.radistar is None:
-            print('Setting the stellar radius from the TIC.')
-            gdat.radistar = catalogData[0]['rad'] * gdat.factrsrj
-            gdat.radistarstdv = catalogData[0]['e_rad'] * gdat.factrsrj
-            if not np.isfinite(gdat.radistar):
-                raise Exception('TIC stellar radius is not finite.')
-            if not np.isfinite(gdat.radistar):
-                raise Exception('TIC stellar radius uncertainty is not finite.')
-        if gdat.massstar is None:
-            print('Setting the stellar mass from the TIC.')
-            gdat.massstar = catalogData[0]['mass'] * gdat.factmsmj
-            gdat.massstarstdv = catalogData[0]['e_mass'] * gdat.factmsmj
-            if not np.isfinite(gdat.massstar):
-                raise Exception('TIC stellar mass is not finite.')
-            if not np.isfinite(gdat.massstar):
-                raise Exception('TIC stellar mass uncertainty is not finite.')
-        if gdat.tmptstar is None:
-            print('Setting the stellar temperature from the TIC.')
-            gdat.tmptstar = catalogData[0]['Teff']
-            gdat.tmptstarstdv = catalogData[0]['e_Teff']
-            if not np.isfinite(gdat.tmptstar):
-                raise Exception('TIC stellar temperature is not finite.')
-            if not np.isfinite(gdat.tmptstar):
-                raise Exception('TIC stellar temperature uncertainty is not finite.')
-        gdat.imagstar = catalogData[0]['Jmag']
-        gdat.omagstar = catalogData[0]['Vmag']
-        print('rasc')
-        print(rasc)
-        print('decl')
-        print(decl)
-        
-        # check that the closest TIC to a given TIC is itself
-        if gdat.inpttype == 'tici' and gdat.ticitarg is not None:
-            strgtici = '%s' % catalogData[0]['ID']
-            if strgtici != str(gdat.ticitarg):
-                print('strgtici')
-                print(strgtici)
-                print('gdat.ticitarg')
-                print(gdat.ticitarg)
+        if gdat.inpttype == 'toii':
+            print('A TOI number is provided. Retreiving the TCE attributes from ExoFOP-TESS...')
+            
+            # find the indices of the target in the TOI catalog
+            path = gdat.pathbase + 'data/exofop_toilists_20200916.csv'
+            print('Reading from %s...' % path)
+            objtexof = pd.read_csv(path, skiprows=0)
+            gdat.strgtoiibase = str(gdat.toiitarg)
+            indx = []
+            for k, strg in enumerate(objtexof['TOI']):
+                if str(strg).split('.')[0] == gdat.strgtoiibase:
+                    indx.append(k)
+            indx = np.array(indx)
+            if indx.size == 0:
+                print('Did not find the TOI in the ExoFOP-TESS TOI list.')
                 raise Exception('')
-    
-    gdat.pathobjt = gdat.pathbase + '%s/' % gdat.strgtarg
+            
+            if gdat.ticitarg is not None:
+                raise Exception('')
+            else:
+                gdat.ticitarg = objtexof['TIC ID'].values[indx[0]]
+            gdat.strgmast  = 'TIC %d' % gdat.ticitarg
+            if gdat.epocprio is None:
+                gdat.epocprio = objtexof['Epoch (BJD)'].values[indx]
+            if gdat.periprio is None:
+                gdat.periprio = objtexof['Period (days)'].values[indx]
+            gdat.deptprio = objtexof['Depth (ppm)'].values[indx] * 1e-6
+            gdat.duraprio = objtexof['Duration (hours)'].values[indx] / 24. # [days]
+            if gdat.cosiprio is None:
+                gdat.cosiprio = np.zeros_like(gdat.epocprio)
+            
+            if gdat.strgtarg is None:
+                gdat.strgtarg = 'TOI' + gdat.strgtoiibase
+            if gdat.labltarg is None:
+                gdat.labltarg = 'TOI ' + gdat.strgtoiibase
+        if gdat.strgmast is not None:
+            if gdat.strgtarg is None:
+                gdat.strgtarg = ''
+                strgtargsplt = gdat.strgmast.split(' ')
+                for strgtemp in strgtargsplt:
+                    gdat.strgtarg += strgtemp
+            if gdat.labltarg is None:
+                gdat.labltarg = gdat.strgmast
+        if gdat.ticitarg is not None:
+            if gdat.strgtarg is None:
+                gdat.strgtarg = 'TIC%d' % gdat.ticitarg
+            if gdat.labltarg is None:
+                gdat.labltarg = 'TIC %d' % gdat.ticitarg
+        print('gdat.strgtarg')
+        print(gdat.strgtarg)
+        print('gdat.labltarg')
+        print(gdat.labltarg)
+        if gdat.priotype == 'inpt':
+            if gdat.rratprio is None:
+                gdat.rratprio = 0.1 + np.zeros(gdat.numbplan)
+            if gdat.rsmaprio is None:
+                gdat.rsmaprio = 0.1 + np.zeros(gdat.numbplan)
+            if gdat.cosiprio is None:
+                gdat.cosiprio = np.zeros(gdat.numbplan)
+            gdat.duraprio = tesstarg.util.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
+            gdat.deptprio = gdat.rratprio**2
+        
+        gdat.numbplan = None
+        
+        # check MAST
+        print('gdat.strgmast')
+        print(gdat.strgmast)
+        if gdat.strgmast is None:
+            print('gdat.strgmast was not provided as input. Using the TIC ID to construct gdat.strgmast.')
+            gdat.strgmast = 'TIC %d' % gdat.ticitarg
+        
+        if not gdat.boolforcoffl:
+            catalogData = astroquery.mast.Catalogs.query_object(gdat.strgmast, catalog='TIC', radius='40s')
+            if catalogData[0]['dstArcSec'] > 0.1:
+                print('The nearest source is more than 0.1 arcsec away from the target!')
+            print('Found the target on MAST!')
+            rasc = catalogData[0]['ra']
+            decl = catalogData[0]['dec']
+            if gdat.radistar is None:
+                print('Setting the stellar radius from the TIC.')
+                gdat.radistar = catalogData[0]['rad'] * gdat.factrsrj
+                gdat.stdvradistar = catalogData[0]['e_rad'] * gdat.factrsrj
+                if not np.isfinite(gdat.radistar):
+                    raise Exception('TIC stellar radius is not finite.')
+                if not np.isfinite(gdat.radistar):
+                    raise Exception('TIC stellar radius uncertainty is not finite.')
+            if gdat.massstar is None:
+                print('Setting the stellar mass from the TIC.')
+                gdat.massstar = catalogData[0]['mass'] * gdat.factmsmj
+                gdat.stdvmassstar = catalogData[0]['e_mass'] * gdat.factmsmj
+                if not np.isfinite(gdat.massstar):
+                    raise Exception('TIC stellar mass is not finite.')
+                if not np.isfinite(gdat.massstar):
+                    raise Exception('TIC stellar mass uncertainty is not finite.')
+            if gdat.tmptstar is None:
+                print('Setting the stellar temperature from the TIC.')
+                gdat.tmptstar = catalogData[0]['Teff']
+                gdat.stdvtmptstar = catalogData[0]['e_Teff']
+                if not np.isfinite(gdat.tmptstar):
+                    raise Exception('TIC stellar temperature is not finite.')
+                if not np.isfinite(gdat.tmptstar):
+                    raise Exception('TIC stellar temperature uncertainty is not finite.')
+            gdat.jmagstar = catalogData[0]['Jmag']
+            gdat.hmagstar = catalogData[0]['Hmag']
+            gdat.kmagstar = catalogData[0]['Kmag']
+            gdat.vmagstar = catalogData[0]['Vmag']
+            print('rasc')
+            print(rasc)
+            print('decl')
+            print(decl)
+            
+            # check that the closest TIC to a given TIC is itself
+            if gdat.inpttype == 'tici' and gdat.ticitarg is not None:
+                strgtici = '%s' % catalogData[0]['ID']
+                if strgtici != str(gdat.ticitarg):
+                    print('strgtici')
+                    print(strgtici)
+                    print('gdat.ticitarg')
+                    print(gdat.ticitarg)
+                    raise Exception('')
+        gdat.pathobjt = gdat.pathbase + '%s/' % gdat.strgtarg
+    else:
+        gdat.pathobjt = gdat.pathbase + 'gene/'
     gdat.pathdata = gdat.pathobjt + 'data/'
     gdat.pathimag = gdat.pathobjt + 'imag/'
     os.system('mkdir -p %s' % gdat.pathdata)
     os.system('mkdir -p %s' % gdat.pathimag)
 
-    print('gdat.datatype')
-    print(gdat.datatype)
-    if gdat.listpathdatainpt is None:
-        gdat.arrylcur = [[]]
-        gdat.listarrylcur = [[]]
-        gdat.datatype, gdat.arrylcur[0], gdat.arrylcursapp, gdat.arrylcurpdcc, gdat.listarrylcur[0], gdat.listarrylcursapp, \
-                                   gdat.listarrylcurpdcc, gdat.listisec, gdat.listicam, gdat.listiccd = \
-                                        tesstarg.util.retr_data(gdat.datatype, gdat.strgmast, gdat.pathobjt, boolmaskqual=gdat.boolmaskqual, \
-                                        labltarg=gdat.labltarg, strgtarg=gdat.strgtarg, ticitarg=gdat.ticitarg, maxmnumbstarpand=gdat.maxmnumbstarpand)
-        gdat.numbchun = np.array([len(gdat.listarrylcur)])
-    
-    else:
-        gdat.datatype = 'inpt'
-        gdat.arrylcur = [[] for p in gdat.indxinst]
-        gdat.numbchun = np.empty(gdat.numbinst, dtype=int)
+    if gdat.boolobjt and gdat.booldatatser:
+        print('gdat.datatype')
+        print(gdat.datatype)
+        if gdat.listpathdatainpt is None:
+            gdat.arrylcur = [[]]
+            gdat.arrylcursapp = [[]]
+            gdat.arrylcurpdcc = [[]]
+            gdat.listarrylcur = [[]]
+            gdat.listarrylcursapp = [[]]
+            gdat.listarrylcurpdcc = [[]]
+            gdat.datatype, gdat.arrylcur[0], gdat.arrylcursapp[0], gdat.arrylcurpdcc[0], gdat.listarrylcur[0], gdat.listarrylcursapp[0], \
+                                       gdat.listarrylcurpdcc[0], gdat.listisec, gdat.listicam, gdat.listiccd = \
+                                            tesstarg.util.retr_data(gdat.datatype, gdat.strgmast, gdat.pathobjt, boolmaskqual=gdat.boolmaskqual, \
+                                            labltarg=gdat.labltarg, strgtarg=gdat.strgtarg, ticitarg=gdat.ticitarg, maxmnumbstarlygo=gdat.maxmnumbstarlygo)
+            gdat.numbchun = np.array([len(gdat.listarrylcur[0])])
+        
+        else:
+            gdat.datatype = 'inpt'
+            gdat.arrylcur = [[] for p in gdat.indxinst]
+            gdat.numbchun = np.empty(gdat.numbinst, dtype=int)
+            for p in gdat.indxinst:
+                gdat.numbchun[p] = len(gdat.listpathdatainpt[p])
+        print('gdat.numbchun')
+        print(gdat.numbchun)
+        print('gdat.datatype')
+        print(gdat.datatype)
+        
+        # determine whether to baseline-detrend
+        gdat.boolbdtr = gdat.datatype != 'pdcc'
+            
+        gdat.indxchun = [[] for p in gdat.indxinst]
         for p in gdat.indxinst:
-            gdat.numbchun[p] = len(gdat.listpathdatainpt[p])
-    print('gdat.datatype')
-    print(gdat.datatype)
-    
-    # determine whether to baseline-detrend
-    gdat.boolbdtr = gdat.datatype != 'pdcc'
-        
-    gdat.indxchun = [[] for p in gdat.indxinst]
-    for p in gdat.indxinst:
-        gdat.indxchun[p] = np.arange(gdat.numbchun[p], dtype=int)
+            gdat.indxchun[p] = np.arange(gdat.numbchun[p], dtype=int)
 
-    if gdat.listpathdatainpt is not None:
-        gdat.listarrylcur = [[[] for y in gdat.indxchun[p]] for p in gdat.indxinst]
-        for p in gdat.indxinst:
-            for y in gdat.indxchun[p]:
-                print('gdat.listpathdatainpt[p][y]')
-                print(gdat.listpathdatainpt[p][y])
-                arry = np.loadtxt(gdat.listpathdatainpt[p][y], delimiter=',', skiprows=1)
-                gdat.listarrylcur[p][y] = np.empty((arry.shape[0], 3))
-                gdat.listarrylcur[p][y][:, 0:2] = arry[:, 0:2]
-                gdat.listarrylcur[p][y][:, 2] = 1e-4 * arry[:, 1]
-                indx = np.argsort(gdat.listarrylcur[p][y][:, 0])
-                gdat.listarrylcur[p][y] = gdat.listarrylcur[p][y][indx, :]
-                indx = np.where(gdat.listarrylcur[p][y][:, 1] < 1e6)[0]
-                gdat.listarrylcur[p][y] = gdat.listarrylcur[p][y][indx, :]
-                gdat.listisec = None
-            gdat.arrylcur[p] = np.concatenate(gdat.listarrylcur[p])
-    if gdat.listindxchuninst is None:
-        gdat.listindxchuninst = [gdat.indxchun]
-
-    if gdat.liststrgchun is None:
-        gdat.liststrgchun = []
-        for p in gdat.indxinst:
-            for o in gdat.indxchun[p]:
-                strgchun = 'chu%d' % o
-                gdat.liststrgchun.append(strgchun)
-
-    for p in gdat.indxinst:
-        for y in gdat.indxchun[p]:
-            # plot raw light curve
-            figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydobskin)
-            axis.plot(gdat.listarrylcur[p][y][:, 0] - gdat.timetess, gdat.listarrylcur[p][y][:, 1], color='grey', marker='.', ls='', ms=1)
-            axis.set_xlabel('Time [BJD - 2457000]')
-            axis.set_ylabel('Relative Flux')
-            plt.subplots_adjust(bottom=0.2)
-            path = gdat.pathimag + 'lcurraww%s%s.%s' % (gdat.liststrginst[p], gdat.liststrgchun[y], gdat.strgplotextn)
-            print('Writing to %s...' % path)
-            plt.savefig(path)
-            plt.close()
-
-    gdat.arrylcurtotl = np.concatenate(gdat.arrylcur, axis=0)
-    listperilspe = tesstarg.util.plot_lspe(gdat.pathimag, gdat.arrylcurtotl)
-    print('listperilspe')
-    print(listperilspe)
-
-    if gdat.priotype == 'tlss':
-        epocmask = None
-        perimask = None
-        duramask = None
-        bdtr_wrap(gdat, epocmask, perimask, duramask)
-        dicttlss = tesstarg.util.exec_tlss(gdat.arrylcurbdtrtotl, gdat.pathimag, maxmnumbplantlss=gdat.maxmnumbplantlss, \
-                                        strgplotextn=gdat.strgplotextn, figrsize=gdat.figrsizeydob, figrsizeydobskin=gdat.figrsizeydobskin)
-        if gdat.epocprio is None:
-            gdat.epocprio = dicttlss['epoc']
-        if gdat.periprio is None:
-            gdat.periprio = dicttlss['peri']
-        gdat.deptprio = dicttlss['dept']
-        gdat.duraprio = dicttlss['dura']
-        
-        gdat.rratprio = np.sqrt(gdat.deptprio)
-        gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio)
-    
-    # determine the baseline-detrend mask
-    if gdat.duraprio is not None:
-        gdat.epocmask = gdat.epocprio
-        gdat.perimask = gdat.periprio
-        gdat.duramask = 2. * gdat.duraprio
-    else:
-        print('Did not find any transit-like features in the light curve...')
-        return
-        gdat.epocmask = None
-        gdat.perimask = None
-        gdat.duramask = None
-    print('gdat.duramask')
-    print(gdat.duramask)
-    
-    # baseline-detrend with the ephemeris prior
-    bdtr_wrap(gdat, gdat.epocmask, gdat.perimask, gdat.duramask)
-    
-    # sigma-clip the light curve
-    # temp -- this does not work properly!
-    for p in gdat.indxinst:
-        for y in gdat.indxchun[p]:
-            if gdat.boolclip:
-                lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrylcurbdtr[p][y][:, 1], low=5., high=5.)
-                print('Clipping the light curve at %g and %g...' % (lcurcliplowr, lcurclipuppr))
-                indx = np.where((gdat.listarrylcurbdtr[p][y][:, 1] < lcurclipuppr) & (gdat.listarrylcurbdtr[p][y][:, 1] > lcurcliplowr))[0]
-                gdat.listarrylcurbdtr[p][y] = gdat.listarrylcurbdtr[p][y][indx, :]
-    
-            path = gdat.pathdata + 'arrylcurbdtr%s%s.csv' % (gdat.liststrginst[p], gdat.liststrgchun[y])
-            print('Writing to %s...' % path)
-            np.savetxt(path, gdat.listarrylcurbdtr[p][y], delimiter=',', header='time,flux,flux_err')
-    
-    # write baseline-detrended light curve
-    for p in gdat.indxinst:
-        path = gdat.pathdata + 'arrylcurbdtr%s.csv' % (gdat.liststrginst[p])
-        print('Writing to %s...' % path)
-        np.savetxt(path, gdat.arrylcurbdtr[p], delimiter=',', header='time,flux,flux_err')
-    
-    gdat.time = [[] for p in gdat.indxinst]
-    gdat.indxtime = [[] for p in gdat.indxinst]
-    gdat.numbtime = np.empty(gdat.numbinst, dtype=int)
-    for p in gdat.indxinst:
-        gdat.time[p] = gdat.arrylcurbdtr[p][:, 0]
-        gdat.numbtime[p] = gdat.time[p].size
-        gdat.indxtime[p] = np.arange(gdat.numbtime[p])
-    
-    print('gdat.duraprio')
-    print(gdat.duraprio)
-    if not np.isfinite(gdat.duraprio).all():
-        gdat.duraprio = tesstarg.util.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
-    print('gdat.duraprio')
-    print(gdat.duraprio)
-    
-    if gdat.rratprio is None:
-        gdat.rratprio = np.sqrt(gdat.deptprio)
-
-    if gdat.rsmaprio is None:
-        gdat.rsmaprio = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.periprio)**2 + gdat.cosiprio**2)
-        
-    # plot raw data
-    if gdat.datatype == 'pdcc' or gdat.datatype == 'sapp':
-        path = gdat.pathdata + gdat.liststrgchun[y] + '_SAP.csv'
-        print('Writing to %s...' % path)
-        np.savetxt(path, gdat.arrylcursapp, delimiter=',', header='time,flux,flux_err')
-        path = gdat.pathdata + gdat.liststrgchun[y] + '_PDCSAP.csv'
-        print('Writing to %s...' % path)
-        np.savetxt(path, gdat.arrylcurpdcc, delimiter=',', header='time,flux,flux_err')
-        
-        # plot PDCSAP and SAP light curves
-        figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
-        axis[0].plot(gdat.arrylcursapp[:, 0] - gdat.timetess, gdat.arrylcursapp[:, 1], color='k', marker='.', ls='', ms=1)
-        if listlimttimemask is not None:
-            axis[0].plot(gdat.arrylcursapp[listindxtimegood, 0] - gdat.timetess, gdat.arrylcursapp[listindxtimegood, 1], color='k', marker='.', ls='', ms=1)
-        axis[1].plot(gdat.arrylcurpdcc[:, 0] - gdat.timetess, gdat.arrylcurpdcc[:, 1], color='k', marker='.', ls='', ms=1)
-        if listlimttimemask is not None:
-            axis[1].plot(gdat.arrylcurpdcc[listindxtimegood, 0] - gdat.timetess, gdat.arrylcurpdcc[listindxtimegood, 1], color='k', marker='.', ls='', ms=1)
-        #axis[0].text(.97, .97, 'SAP', transform=axis[0].transAxes, size=20, color='r', ha='right', va='top')
-        #axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
-        axis[1].set_xlabel('Time [BJD - 2457000]')
-        for a in range(2):
-            axis[a].set_ylabel('Relative Flux')
-        
-        #for j in gdat.indxplan:
-        #    colr = gdat.listcolrplan[j]
-        #    axis[1].plot(gdat.arrylcurpdcc[gdat.listindxtimetran[j], 0] - gdat.timetess, gdat.arrylcurpdcc[gdat.listindxtimetran[j], 1], \
-        #                                                                                                         color=colr, marker='.', ls='', ms=1)
-        plt.subplots_adjust(hspace=0.)
-        path = gdat.pathimag + 'lcurspoc.%s' % gdat.strgplotextn
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
-    
-    # injection recovery test
-    #periods = [1,2,3,4,5] #list of injection periods in days
-    #rplanets = [1,2,3,4,5] #list of injection rplanets in Rearth
-    #logfname = 'injection_recovery_test.csv'
-    
-    print('gdat.radistar')
-    print(gdat.radistar)
-    print('gdat.radistarstdv')
-    print(gdat.radistarstdv)
-    print('gdat.radistar [R_S]')
-    print(gdat.radistar / gdat.factrsrj)
-    print('gdat.radistarstdv [R_S]')
-    print(gdat.radistarstdv / gdat.factrsrj)
-    print('gdat.massstar')
-    print(gdat.massstar)
-    print('gdat.massstarstdv')
-    print(gdat.massstarstdv)
-    print('gdat.massstar [M_S]')
-    print(gdat.massstar / gdat.factmsmj)
-    print('gdat.massstarstdv [M_S]')
-    print(gdat.massstarstdv / gdat.factmsmj)
-    print('gdat.tmptstar')
-    print(gdat.tmptstar)
-    print('gdat.tmptstarstdv')
-    print(gdat.tmptstarstdv)
-    
-    print('gdat.deptprio')
-    print(gdat.deptprio)
-    print('gdat.duraprio')
-    print(gdat.duraprio)
-    
-    print('gdat.rratprio')
-    print(gdat.rratprio)
-    print('gdat.rsmaprio')
-    print(gdat.rsmaprio)
-    print('gdat.epocprio')
-    print(gdat.epocprio)
-    print('gdat.periprio')
-    print(gdat.periprio)
-    print('gdat.cosiprio')
-    print(gdat.cosiprio)
-    print('gdat.ecosprio')
-    print(gdat.ecosprio)
-    print('gdat.esinprio')
-    print(gdat.esinprio)
-    print('gdat.rvsaprio')
-    print(gdat.rvsaprio)
-    
-    #gdat.massplanprio = np.zeros_like(gdat.epocprio)
-    gdat.massplanprio = None
-    
-    gdat.ecceprio = np.zeros_like(gdat.epocprio)
-    print('gdat.ecceprio')
-    print(gdat.ecceprio)
-    
-
-    if not np.isfinite(gdat.rratprio).all() or \
-           not np.isfinite(gdat.rsmaprio).all() or \
-           not np.isfinite(gdat.epocprio).all() or \
-           not np.isfinite(gdat.periprio).all() or \
-           not np.isfinite(gdat.cosiprio).all() or \
-           not np.isfinite(gdat.ecosprio).all() or \
-           not np.isfinite(gdat.esinprio).all() or \
-           not np.isfinite(gdat.rvsaprio).all():
-            raise Exception('')
-    
-    # settings
-    gdat.numbplan = gdat.epocprio.size
-    gdat.indxplan = np.arange(gdat.numbplan)
-    if gdat.liststrgplan is None:
-        gdat.liststrgplan = ['b', 'c', 'd', 'e', 'f', 'g'][:gdat.numbplan]
-    print('Planet letters: ')
-    print(gdat.liststrgplan)
-    if ''.join(gdat.liststrgplan) != ''.join(sorted(gdat.liststrgplan)):
-        print('Provided planet letters are not in order. Changing the TCE order to respect the letter order in plots (b, c, d, e)...')
-        gdat.indxplan = np.argsort(np.array(gdat.liststrgplan))
-    print('gdat.indxplan') 
-    print(gdat.indxplan)
-
-    gdat.liststrgplanfull = np.empty(gdat.numbplan, dtype='object')
-    print('gdat.liststrgplan')
-    print(gdat.liststrgplan)
-    print('gdat.numbplan')
-    print(gdat.numbplan)
-    for j in gdat.indxplan:
-        gdat.liststrgplanfull[j] = gdat.labltarg + ' ' + gdat.liststrgplan[j]
-
-    gdat.listcolrplan = ['red', 'green', 'orange', 'magenta', 'yellow', 'cyan']
-    
-    if gdat.dilucorr is not None and gdat.boolcontrati:
-        print('Calculating the contamination ratio...')
-        tmagfrst = catalogData[0]['Tmag']
-        frstflux = 10**(-tmagfrst)
-        totlflux = 0.
-        for k in range(1, len(catalogData)):
-            dist = np.sqrt((catalogData[k]['ra'] - rasc)**2 + (catalogData[k]['dec'] - decl)**2) * 3600.
-            tmag = catalogData[k]['Tmag']
-            totlfluxtemp = 10**(-tmag) * np.exp(-(dist / 13.)**2)
-            totlflux += totlfluxtemp
-        gdat.contrati = totlflux / frstflux
-
-    if gdat.boolexar:
-        ## expected ellipsoidal variation (EV) and Doppler beaming (DB)
-        print('Predicting the ellipsoidal variation and Doppler beaming amplitudes...')
-        ### EV
-        #### limb and gravity darkening coefficients from Claret2017
-        
-        if gdat.massplanprio is not None:
-            u = 0.4
-            g = 0.2
-            alphelli = 0.15 * (15 + u) * (1 + g) / (3 - u)
-            deptelli = alphelli * gdat.massplanprio * np.sin(gdat.inclprio / 180. * np.pi)**2 / gdat.massstar * (gdat.radistar / gdat.smaxprio)**3
-            ### DB
-            kkrv = 181. # [m/s]
-            binswlenbeam = np.linspace(0.6, 1., 101)
-            meanwlenbeam = (binswlenbeam[1:] + binswlenbeam[:-1]) / 2.
-            diffwlenbeam = (binswlenbeam[1:] - binswlenbeam[:-1]) / 2.
-            x = 2.248 / meanwlenbeam
-            f = .25 * x * np.exp(x) / (np.exp(x) - 1.)
-            deptbeam = 4. * kkrv / 3e8 * np.sum(diffwlenbeam * f)
-            
-            print('Expected Doppler beaming amplitude:')
-            print(deptbeam)
-            print('Expected EV amplitude:')
-            print(deptelli)
-    
-    for p in gdat.indxinst:
-        for y in gdat.indxchun[p]:
-            if listlimttimemask is not None:
-                # mask the data
-                print('Masking the data...')
-                numbmask = listlimttimemask.shape[0]
-                listindxtimemask = []
-                for k in range(numbmask):
-                    indxtimemask = np.where((gdat.listarrylcurbdtr[p][y][:, 0] < listlimttimemask[k, 1]) & (gdat.listarrylcurbdtr[p][y][:, 0] > listlimttimemask[k, 0]))[0]
-                    listindxtimemask.append(indxtimemask)
-                listindxtimemask = np.concatenate(listindxtimemask)
-                listindxtimegood = np.setdiff1d(gdat.indxtime, listindxtimemask)
-                gdat.listarrylcurbdtr[p][y] = gdat.listarrylcurbdtr[p][y][listindxtimegood, :]
-    
-    # correct for dilution
-    #print('Correcting for dilution!')
-    #if gdat.dilucorr is not None or gdat.boolcontrati:
-    #    gdat.arrylcurdilu = np.copy(gdat.listarrylcurbdtr[p][y])
-    #if gdat.dilucorr is not None:
-    #    gdat.arrylcurdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrylcurbdtr[p][y][:, 1])
-    #if gdat.boolcontrati:
-    #    gdat.arrylcurdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrylcurbdtr[p][y][:, 1])
-    #if gdat.dilucorr is not None or gdat.boolcontrati:
-    #    gdat.listarrylcurbdtr[p][y] = np.copy(gdat.arrylcurdilu) 
-    #    figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydob)
-    #    axis.plot(gdat.arrylcurdilu[:, 0] - gdat.timetess, gdat.arrylcurdilu[:, 1], color='grey', marker='.', ls='', ms=1)
-    #    for j in gdat.indxplan:
-    #        colr = gdat.listcolrplan[j]
-    #        axis.plot(gdat.arrylcurdilu[gdat.listindxtimetran[j], 0] - gdat.timetess, gdat.arrylcurdilu[gdat.listindxtimetran[j], 1], \
-    #                                                                                                color=colr, marker='.', ls='', ms=1)
-    #    axis.set_xlabel('Time [BJD - 2457000]')
-    #    axis.set_ylabel('Relative Flux')
-    #    plt.subplots_adjust(hspace=0.)
-    #    path = gdat.pathimag + 'lcurdilu.%s' % (gdat.strgplotextn)
-    #    print('Writing to %s...' % path)
-    #    plt.savefig(path)
-    #    plt.close()
-        
-    gdat.numbbinspcurfine = 1000
-    gdat.numbbinspcur = 100
-    gdat.numbbinslcur = 1000
-        
-    ## bin the light curve
-    gdat.listarrylcurbdtrbind = [[[] for y in gdat.indxchun[p]] for p in gdat.indxinst]
-    for p in gdat.indxinst:
-        for y in gdat.indxchun[p]:
-            gdat.listarrylcurbdtrbind[p][y] = tesstarg.util.rebn_lcur(gdat.listarrylcurbdtr[p][y], gdat.numbbinslcur)
-            
-            path = gdat.pathdata + 'arrylcurbdtrbind%s%s.csv' % (gdat.liststrginst[p], gdat.liststrgchun[y])
-            print('Writing to %s' % path)
-            np.savetxt(path, gdat.listarrylcurbdtrbind[p][y], delimiter=',', header='time,flux,flux_err')
-            
-    ## phase-fold and save the baseline-detrended light curve
-    gdat.arrypcurprimbdtr = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
-    gdat.arrypcurprimbdtrbind = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
-    gdat.arrypcurprimbdtrbindfine = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
-    gdat.arrypcurquadbdtr = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
-    gdat.arrypcurquadbdtrbind = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
-    gdat.arrypcurquadbdtrbindfine = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
-    for p in gdat.indxinst:
-        for j in gdat.indxplan:
-            gdat.arrypcurprimbdtr[p][j] = tesstarg.util.fold_lcur(gdat.listarrylcurbdtr[p][y], gdat.epocprio[j], gdat.periprio[j])
-            gdat.arrypcurprimbdtrbind[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurprimbdtr[p][j], gdat.numbbinspcur)
-            gdat.arrypcurprimbdtrbindfine[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurprimbdtr[p][j], gdat.numbbinspcurfine)
-            gdat.arrypcurquadbdtr[p][j] = tesstarg.util.fold_lcur(gdat.listarrylcurbdtr[p][y], gdat.epocprio[j], gdat.periprio[j], phasshft=0.25)
-            gdat.arrypcurquadbdtrbind[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurquadbdtr[p][j], gdat.numbbinspcur)
-            gdat.arrypcurquadbdtrbindfine[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurquadbdtr[p][j], gdat.numbbinspcurfine)
-            
-            # write (good for Vespa)
-            path = gdat.pathdata + 'arrypcurprimbdtrbindpla%d%s.csv' % (j, gdat.liststrginst[p])
-            print('Writing to %s...' % path)
-            temp = np.copy(gdat.arrypcurprimbdtrbind[p][j])
-            temp[:, 0] *= gdat.periprio[j]
-            np.savetxt(path, temp, delimiter=',')
-        
-        # determine time mask
-        gdat.listindxtimeoutt = [[[] for p in gdat.indxinst] for j in gdat.indxplan]
-        gdat.listindxtimetran = [[[] for p in gdat.indxinst] for j in gdat.indxplan]
-        gdat.listindxtimetranchun = [[[[] for y in gdat.indxchun[p]] for p in gdat.indxinst] for j in gdat.indxplan]
-        for j in gdat.indxplan:
-            if gdat.booldiagmode:
-                if not np.isfinite(gdat.duramask[j]):
-                    raise Exception('')
+        if gdat.listpathdatainpt is not None:
+            gdat.listarrylcur = [[[] for y in gdat.indxchun[p]] for p in gdat.indxinst]
             for p in gdat.indxinst:
                 for y in gdat.indxchun[p]:
-                    gdat.listindxtimetranchun[j][p][y] = tesstarg.util.retr_indxtimetran(gdat.listarrylcur[p][y][:, 0], gdat.epocprio[j], \
-                                                                                                                gdat.periprio[j], gdat.duramask[j])
-                gdat.listindxtimetran[j][p] = tesstarg.util.retr_indxtimetran(gdat.arrylcurbdtr[p][:, 0], \
-                                                                                                gdat.epocprio[j], gdat.periprio[j], gdat.duramask[j])
-                gdat.listindxtimeoutt[j][p] = np.setdiff1d(np.arange(gdat.arrylcurbdtr[p].shape[0]), gdat.listindxtimetran[j][p])
-        
-        # clean times for each planet
-        gdat.listindxtimeclen = [[[] for p in gdat.indxinst] for j in gdat.indxplan]
-        for j in gdat.indxplan:
-            listindxtimetemp = []
-            for jj in gdat.indxplan:
-                for p in gdat.indxinst:
-                    if jj == j:
-                        continue
-                    listindxtimetemp.append(gdat.listindxtimetran[jj][p])
-            if len(listindxtimetemp) > 0:
-                listindxtimetemp = np.concatenate(listindxtimetemp)
-                listindxtimetemp = np.unique(listindxtimetemp)
-            else:
-                listindxtimetemp = np.array([])
-            gdat.listindxtimeclen[j][p] = np.setdiff1d(np.arange(gdat.arrylcurbdtr[p].shape[0]), listindxtimetemp)
-    
+                    print('gdat.listpathdatainpt[p][y]')
+                    print(gdat.listpathdatainpt[p][y])
+                    arry = np.loadtxt(gdat.listpathdatainpt[p][y], delimiter=',', skiprows=1)
+                    gdat.listarrylcur[p][y] = np.empty((arry.shape[0], 3))
+                    gdat.listarrylcur[p][y][:, 0:2] = arry[:, 0:2]
+                    gdat.listarrylcur[p][y][:, 2] = 1e-4 * arry[:, 1]
+                    indx = np.argsort(gdat.listarrylcur[p][y][:, 0])
+                    gdat.listarrylcur[p][y] = gdat.listarrylcur[p][y][indx, :]
+                    indx = np.where(gdat.listarrylcur[p][y][:, 1] < 1e6)[0]
+                    gdat.listarrylcur[p][y] = gdat.listarrylcur[p][y][indx, :]
+                    gdat.listisec = None
+                gdat.arrylcur[p] = np.concatenate(gdat.listarrylcur[p])
+        if gdat.listindxchuninst is None:
+            gdat.listindxchuninst = [gdat.indxchun]
+
+        if gdat.liststrgchun is None:
+            gdat.liststrgchun = []
+            for p in gdat.indxinst:
+                for o in gdat.indxchun[p]:
+                    strgchun = 'chu%d' % o
+                    gdat.liststrgchun.append(strgchun)
+
         for p in gdat.indxinst:
-        
-            if not np.isfinite(gdat.arrylcurbdtr[p]).all():
-                raise Exception('')
-        
-            figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydobskin)
-            axis.plot(gdat.arrylcurbdtr[p][:, 0] - gdat.timetess, gdat.arrylcurbdtr[p][:, 1], color='grey', marker='.', ls='', ms=1)
-            if listlimttimemask is not None:
-                axis.plot(gdat.arrylcurbdtr[p][listindxtimegood, 0] - gdat.timetess, \
-                                                        gdat.arrylcurbdtr[p][listindxtimegood, 1], color='k', marker='.', ls='', ms=1)
-            for j in gdat.indxplan:
-                colr = gdat.listcolrplan[j]
-                axis.plot(gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 0] - gdat.timetess, gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 1], \
-                                                                                                     color=colr, marker='.', ls='', ms=1)
-            axis.set_xlabel('Time [BJD - 2457000]')
-            for a in range(2):
+            for y in gdat.indxchun[p]:
+                # plot raw light curve
+                figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydobskin)
+                axis.plot(gdat.listarrylcur[p][y][:, 0] - gdat.timetess, gdat.listarrylcur[p][y][:, 1], color='grey', marker='.', ls='', ms=1)
+                axis.set_xlabel('Time [BJD - 2457000]')
                 axis.set_ylabel('Relative Flux')
-            plt.subplots_adjust(bottom=0.2)
-            path = gdat.pathimag + 'lcur%s.%s' % (gdat.liststrginst[p], gdat.strgplotextn)
-            print('Writing to %s...' % path)
-            plt.savefig(path)
-            plt.close()
-   
-            if gdat.numbplan > 1:
-                figr, axis = plt.subplots(gdat.numbplan, 1, figsize=gdat.figrsizeydobskin)
-                for jj, j in enumerate(gdat.indxplan):
-                    axis[jj].plot(gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 0] - gdat.timetess, \
-                                                                                        gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 1], \
-                                                                                                      color=gdat.listcolrplan[j], marker='o', ls='', ms=0.2)
-                    axis[jj].set_ylabel('Relative Flux')
-                axis[-1].set_xlabel('Time [BJD - 2457000]')
                 plt.subplots_adjust(bottom=0.2)
-                path = gdat.pathimag + 'lcurplanmask%s.%s' % (gdat.liststrginst[p], gdat.strgplotextn)
+                path = gdat.pathimag + 'lcurraww%s%s.%s' % (gdat.liststrginst[p], gdat.liststrgchun[y], gdat.strgplotextn)
+                print('Writing to %s...' % path)
+                plt.savefig(path)
+                plt.close()
+
+        gdat.arrylcurtotl = np.concatenate(gdat.arrylcur, axis=0)
+        listperilspe = tesstarg.util.plot_lspe(gdat.pathimag, gdat.arrylcurtotl)
+        print('listperilspe')
+        print(listperilspe)
+
+        if gdat.priotype == 'tlss':
+            epocmask = None
+            perimask = None
+            duramask = None
+            bdtr_wrap(gdat, epocmask, perimask, duramask)
+            dicttlss = tesstarg.util.exec_tlss(gdat.arrylcurbdtrtotl, gdat.pathimag, maxmnumbplantlss=gdat.maxmnumbplantlss, \
+                                            strgplotextn=gdat.strgplotextn, figrsize=gdat.figrsizeydob, figrsizeydobskin=gdat.figrsizeydobskin)
+            if gdat.epocprio is None:
+                gdat.epocprio = dicttlss['epoc']
+            if gdat.periprio is None:
+                gdat.periprio = dicttlss['peri']
+            gdat.deptprio = dicttlss['dept']
+            gdat.duraprio = dicttlss['dura']
+            
+            gdat.rratprio = np.sqrt(gdat.deptprio)
+            gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio)
+        
+        # determine the baseline-detrend mask
+        if gdat.duraprio is not None:
+            gdat.epocmask = gdat.epocprio
+            gdat.perimask = gdat.periprio
+            gdat.duramask = 2. * gdat.duraprio
+        else:
+            print('Did not find any transit-like features in the light curve...')
+            return
+            gdat.epocmask = None
+            gdat.perimask = None
+            gdat.duramask = None
+        print('gdat.duramask')
+        print(gdat.duramask)
+        
+        # baseline-detrend with the ephemeris prior
+        bdtr_wrap(gdat, gdat.epocmask, gdat.perimask, gdat.duramask)
+        
+        # sigma-clip the light curve
+        # temp -- this does not work properly!
+        for p in gdat.indxinst:
+            for y in gdat.indxchun[p]:
+                if gdat.boolclip:
+                    lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrylcurbdtr[p][y][:, 1], low=5., high=5.)
+                    print('Clipping the light curve at %g and %g...' % (lcurcliplowr, lcurclipuppr))
+                    indx = np.where((gdat.listarrylcurbdtr[p][y][:, 1] < lcurclipuppr) & (gdat.listarrylcurbdtr[p][y][:, 1] > lcurcliplowr))[0]
+                    gdat.listarrylcurbdtr[p][y] = gdat.listarrylcurbdtr[p][y][indx, :]
+        
+                path = gdat.pathdata + 'arrylcurbdtr%s%s.csv' % (gdat.liststrginst[p], gdat.liststrgchun[y])
+                print('Writing to %s...' % path)
+                np.savetxt(path, gdat.listarrylcurbdtr[p][y], delimiter=',', header='time,flux,flux_err')
+        
+        # write baseline-detrended light curve
+        for p in gdat.indxinst:
+            path = gdat.pathdata + 'arrylcurbdtr%s.csv' % (gdat.liststrginst[p])
+            print('Writing to %s...' % path)
+            np.savetxt(path, gdat.arrylcurbdtr[p], delimiter=',', header='time,flux,flux_err')
+        
+        gdat.time = [[] for p in gdat.indxinst]
+        gdat.indxtime = [[] for p in gdat.indxinst]
+        gdat.numbtime = np.empty(gdat.numbinst, dtype=int)
+        for p in gdat.indxinst:
+            gdat.time[p] = gdat.arrylcurbdtr[p][:, 0]
+            gdat.numbtime[p] = gdat.time[p].size
+            gdat.indxtime[p] = np.arange(gdat.numbtime[p])
+    
+    if gdat.boolobjt:
+        #if gdat.duraprio is None:
+        #    gdat.duraprio = tesstarg.util.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
+        
+        if gdat.rratprio is None:
+            gdat.rratprio = np.sqrt(gdat.deptprio)
+
+        if gdat.rsmaprio is None:
+            gdat.rsmaprio = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.periprio)**2 + gdat.cosiprio**2)
+            
+        if gdat.booldatatser:
+            # plot raw data
+            if gdat.datatype == 'pdcc' or gdat.datatype == 'sapp':
+                for y in gdat.indxchun[0]:
+                    path = gdat.pathdata + gdat.liststrgchun[y] + '_SAP.csv'
+                    print('Writing to %s...' % path)
+                    np.savetxt(path, gdat.arrylcursapp[0], delimiter=',', header='time,flux,flux_err')
+                    path = gdat.pathdata + gdat.liststrgchun[y] + '_PDCSAP.csv'
+                    print('Writing to %s...' % path)
+                    np.savetxt(path, gdat.arrylcurpdcc[0], delimiter=',', header='time,flux,flux_err')
+                
+                # plot PDCSAP and SAP light curves
+                figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
+                axis[0].plot(gdat.arrylcursapp[0][:, 0] - gdat.timetess, gdat.arrylcursapp[0][:, 1], color='k', marker='.', ls='', ms=1)
+                if listlimttimemask is not None:
+                    axis[0].plot(gdat.arrylcursapp[0][listindxtimegood, 0] - gdat.timetess, \
+                                                    gdat.arrylcursapp[0][listindxtimegood, 1], color='k', marker='.', ls='', ms=1)
+                axis[1].plot(gdat.arrylcurpdcc[0][:, 0] - gdat.timetess, gdat.arrylcurpdcc[0][:, 1], color='k', marker='.', ls='', ms=1)
+                if listlimttimemask is not None:
+                    axis[1].plot(gdat.arrylcurpdcc[0][listindxtimegood, 0] - gdat.timetess, \
+                                                    gdat.arrylcurpdcc[0][listindxtimegood, 1], color='k', marker='.', ls='', ms=1)
+                #axis[0].text(.97, .97, 'SAP', transform=axis[0].transAxes, size=20, color='r', ha='right', va='top')
+                #axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
+                axis[1].set_xlabel('Time [BJD - 2457000]')
+                for a in range(2):
+                    axis[a].set_ylabel('Relative Flux')
+                
+                #for j in gdat.indxplan:
+                #    colr = gdat.listcolrplan[j]
+                #    axis[1].plot(gdat.arrylcurpdcc[0][gdat.listindxtimetran[j], 0] - gdat.timetess, gdat.arrylcurpdcc[0][gdat.listindxtimetran[j], 1], \
+                #                                                                                                         color=colr, marker='.', ls='', ms=1)
+                plt.subplots_adjust(hspace=0.)
+                path = gdat.pathimag + 'lcurspoc.%s' % gdat.strgplotextn
                 print('Writing to %s...' % path)
                 plt.savefig(path)
                 plt.close()
             
-            if gdat.numbchun[p] > 1:
+            # injection recovery test
+        
+        print('gdat.radistar')
+        print(gdat.radistar)
+        print('gdat.stdvradistar')
+        print(gdat.stdvradistar)
+        print('gdat.radistar [R_S]')
+        print(gdat.radistar / gdat.factrsrj)
+        print('gdat.stdvradistar [R_S]')
+        print(gdat.stdvradistar / gdat.factrsrj)
+        print('gdat.massstar')
+        print(gdat.massstar)
+        print('gdat.stdvmassstar')
+        print(gdat.stdvmassstar)
+        print('gdat.massstar [M_S]')
+        print(gdat.massstar / gdat.factmsmj)
+        print('gdat.stdvmassstar [M_S]')
+        print(gdat.stdvmassstar / gdat.factmsmj)
+        print('gdat.tmptstar')
+        print(gdat.tmptstar)
+        print('gdat.stdvtmptstar')
+        print(gdat.stdvtmptstar)
+        
+        gdat.numbplan = gdat.epocprio.size
+        gdat.indxplan = np.arange(gdat.numbplan)
+        
+        if gdat.ecosprio is None:
+            gdat.ecosprio = np.zeros(gdat.numbplan)
+        if gdat.esinprio is None:
+            gdat.esinprio = np.zeros(gdat.numbplan)
+        if gdat.rvsaprio is None:
+            gdat.rvsaprio = np.zeros(gdat.numbplan)
+        #if gdat.massplanprio is None:
+        #    gdat.massplanprio = np.zeros(gdat.numbplan)
+        #if gdat.ecceprio is None:
+        #    gdat.ecceprio = np.zeros(gdat.numbplan)
+        
+        if gdat.rratstdvprio is None:
+            gdat.rratstdvprio = np.zeros(gdat.numbplan)
+        if gdat.rsmastdvprio is None:
+            gdat.rsmastdvprio = np.zeros(gdat.numbplan)
+        if gdat.epocstdvprio is None:
+            gdat.epocstdvprio = np.zeros(gdat.numbplan)
+        if gdat.peristdvprio is None:
+            gdat.peristdvprio = np.zeros(gdat.numbplan)
+        if gdat.cosistdvprio is None:
+            gdat.cosistdvprio = np.zeros(gdat.numbplan)
+        if gdat.ecosstdvprio is None:
+            gdat.ecosstdvprio = np.zeros(gdat.numbplan)
+        if gdat.esinstdvprio is None:
+            gdat.esinstdvprio = np.zeros(gdat.numbplan)
+        if gdat.rvsastdvprio is None:
+            gdat.rvsastdvprio = np.zeros(gdat.numbplan)
+        #if gdat.massplanprio is None:
+        #    gdat.massplanprio = np.zeros_like(gdat.epocprio)
+        #if gdat.ecceprio is None:
+        #    gdat.ecceprio = np.zeros_like(gdat.epocprio)
+        
+        print('gdat.rratprio')
+        print(gdat.rratprio)
+        print('gdat.rsmaprio')
+        print(gdat.rsmaprio)
+        print('gdat.epocprio')
+        print(gdat.epocprio)
+        print('gdat.periprio')
+        print(gdat.periprio)
+        print('gdat.cosiprio')
+        print(gdat.cosiprio)
+        print('gdat.ecosprio')
+        print(gdat.ecosprio)
+        print('gdat.esinprio')
+        print(gdat.esinprio)
+        print('gdat.rvsaprio')
+        print(gdat.rvsaprio)
+        #print('gdat.massplanprio')
+        #print(gdat.massplanprio)
+        #print('gdat.ecceprio')
+        #print(gdat.ecceprio)
+        #print('gdat.deptprio')
+        #print(gdat.deptprio)
+        #print('gdat.duraprio')
+        #print(gdat.duraprio)
+        
+
+        if not np.isfinite(gdat.rratprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.rsmaprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.epocprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.periprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.cosiprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.ecosprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.esinprio).all():
+            raise Exception('')
+        if not np.isfinite(gdat.rvsaprio).all():
+            raise Exception('')
+    
+    # grab all exoplanet properties
+    ## ExoFOP
+    if gdat.boolexof:
+        gdat.dictexof = retr_exof(gdat)
+    ## NASA Exoplanet Archive
+    gdat.dictexarcomp = retr_exarcomp(gdat)
+    numbplanexar = gdat.dictexarcomp['radiplan'].size
+    gdat.indxplanexar = np.arange(numbplanexar)
+    ### augment the catalog
+    gdat.dictexarcomp['vesc'] = tesstarg.util.retr_vesc(gdat.dictexarcomp['massplan'], gdat.dictexarcomp['radiplan'])
+    
+    if gdat.boolobjt:
+        # settings
+        if gdat.liststrgplan is None:
+            gdat.liststrgplan = ['b', 'c', 'd', 'e', 'f', 'g'][:gdat.numbplan]
+        print('Planet letters: ')
+        print(gdat.liststrgplan)
+        if ''.join(gdat.liststrgplan) != ''.join(sorted(gdat.liststrgplan)):
+            print('Provided planet letters are not in order. Changing the TCE order to respect the letter order in plots (b, c, d, e)...')
+            gdat.indxplan = np.argsort(np.array(gdat.liststrgplan))
+        print('gdat.indxplan') 
+        print(gdat.indxplan)
+
+        gdat.liststrgplanfull = np.empty(gdat.numbplan, dtype='object')
+        print('gdat.liststrgplan')
+        print(gdat.liststrgplan)
+        print('gdat.numbplan')
+        print(gdat.numbplan)
+        for j in gdat.indxplan:
+            gdat.liststrgplanfull[j] = gdat.labltarg + ' ' + gdat.liststrgplan[j]
+
+        gdat.listcolrplan = ['red', 'green', 'orange', 'magenta', 'yellow', 'cyan']
+        
+        if gdat.booldatatser:
+            if gdat.dilu == 'lygo':
+                print('Calculating the contamination ratio...')
+                gdat.contrati = lygos.calc_contrati()
+
+        if gdat.boolexar:
+            ## expected ellipsoidal variation (EV) and Doppler beaming (DB)
+            print('Predicting the ellipsoidal variation and Doppler beaming amplitudes...')
+            ### EV
+            #### limb and gravity darkening coefficients from Claret2017
+            
+            if gdat.massplanprio is not None:
+                u = 0.4
+                g = 0.2
+                alphelli = 0.15 * (15 + u) * (1 + g) / (3 - u)
+                deptelli = alphelli * gdat.massplanprio * np.sin(gdat.inclprio / 180. * np.pi)**2 / gdat.massstar * (gdat.radistar / gdat.smaxprio)**3
+                ### DB
+                kkrv = 181. # [m/s]
+                binswlenbeam = np.linspace(0.6, 1., 101)
+                meanwlenbeam = (binswlenbeam[1:] + binswlenbeam[:-1]) / 2.
+                diffwlenbeam = (binswlenbeam[1:] - binswlenbeam[:-1]) / 2.
+                x = 2.248 / meanwlenbeam
+                f = .25 * x * np.exp(x) / (np.exp(x) - 1.)
+                deptbeam = 4. * kkrv / 3e8 * np.sum(diffwlenbeam * f)
+                
+                print('Expected Doppler beaming amplitude:')
+                print(deptbeam)
+                print('Expected EV amplitude:')
+                print(deptelli)
+        
+        if gdat.booldatatser:
+            for p in gdat.indxinst:
                 for y in gdat.indxchun[p]:
-                    figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydobskin)
-                    
-                    axis.plot(gdat.listarrylcur[p][y][:, 0] - gdat.timetess, gdat.listarrylcur[p][y][:, 1], \
-                                                                                    color='grey', marker='.', ls='', ms=1, rasterized=True)
-                    
                     if listlimttimemask is not None:
-                        axis.plot(gdat.listarrylcur[p][y][listindxtimegood, 0] - gdat.timetess, \
-                                                    gdat.listarrylcur[p][y][listindxtimegood, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
+                        # mask the data
+                        print('Masking the data...')
+                        numbmask = listlimttimemask.shape[0]
+                        listindxtimemask = []
+                        for k in range(numbmask):
+                            indxtimemask = np.where((gdat.listarrylcurbdtr[p][y][:, 0] < listlimttimemask[k, 1]) & (gdat.listarrylcurbdtr[p][y][:, 0] > listlimttimemask[k, 0]))[0]
+                            listindxtimemask.append(indxtimemask)
+                        listindxtimemask = np.concatenate(listindxtimemask)
+                        listindxtimegood = np.setdiff1d(gdat.indxtime, listindxtimemask)
+                        gdat.listarrylcurbdtr[p][y] = gdat.listarrylcurbdtr[p][y][listindxtimegood, :]
+            
+            # correct for dilution
+            #print('Correcting for dilution!')
+            #if gdat.dilucorr is not None:
+            #    gdat.arrylcurdilu = np.copy(gdat.listarrylcurbdtr[p][y])
+            #if gdat.dilucorr is not None:
+            #    gdat.arrylcurdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrylcurbdtr[p][y][:, 1])
+            #gdat.arrylcurdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrylcurbdtr[p][y][:, 1])
+            #if gdat.dilucorr is not NoneL
+            #    gdat.listarrylcurbdtr[p][y] = np.copy(gdat.arrylcurdilu) 
+            #    figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydob)
+            #    axis.plot(gdat.arrylcurdilu[:, 0] - gdat.timetess, gdat.arrylcurdilu[:, 1], color='grey', marker='.', ls='', ms=1)
+            #    for j in gdat.indxplan:
+            #        colr = gdat.listcolrplan[j]
+            #        axis.plot(gdat.arrylcurdilu[gdat.listindxtimetran[j], 0] - gdat.timetess, gdat.arrylcurdilu[gdat.listindxtimetran[j], 1], \
+            #                                                                                                color=colr, marker='.', ls='', ms=1)
+            #    axis.set_xlabel('Time [BJD - 2457000]')
+            #    axis.set_ylabel('Relative Flux')
+            #    plt.subplots_adjust(hspace=0.)
+            #    path = gdat.pathimag + 'lcurdilu.%s' % (gdat.strgplotextn)
+            #    print('Writing to %s...' % path)
+            #    plt.savefig(path)
+            #    plt.close()
+                
+            gdat.numbbinspcurfine = 1000
+            gdat.numbbinspcur = 100
+            gdat.numbbinslcur = 1000
+                
+            ## bin the light curve
+            gdat.listarrylcurbdtrbind = [[[] for y in gdat.indxchun[p]] for p in gdat.indxinst]
+            for p in gdat.indxinst:
+                for y in gdat.indxchun[p]:
+                    gdat.listarrylcurbdtrbind[p][y] = tesstarg.util.rebn_lcur(gdat.listarrylcurbdtr[p][y], gdat.numbbinslcur)
                     
-                    ylim = axis.get_ylim()
-                    # draw planet names
-                    xlim = axis.get_xlim()
-                    listtimetext = []
+                    path = gdat.pathdata + 'arrylcurbdtrbind%s%s.csv' % (gdat.liststrginst[p], gdat.liststrgchun[y])
+                    print('Writing to %s' % path)
+                    np.savetxt(path, gdat.listarrylcurbdtrbind[p][y], delimiter=',', header='time,flux,flux_err')
+                    
+            ## phase-fold and save the baseline-detrended light curve
+            gdat.arrypcurprimbdtr = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
+            gdat.arrypcurprimbdtrbind = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
+            gdat.arrypcurprimbdtrbindfine = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
+            gdat.arrypcurquadbdtr = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
+            gdat.arrypcurquadbdtrbind = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
+            gdat.arrypcurquadbdtrbindfine = [[[] for j in gdat.indxplan] for p in gdat.indxinst]
+            for p in gdat.indxinst:
+                for j in gdat.indxplan:
+                    gdat.arrypcurprimbdtr[p][j] = tesstarg.util.fold_lcur(gdat.listarrylcurbdtr[p][y], gdat.epocprio[j], gdat.periprio[j])
+                    gdat.arrypcurprimbdtrbind[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurprimbdtr[p][j], gdat.numbbinspcur)
+                    gdat.arrypcurprimbdtrbindfine[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurprimbdtr[p][j], gdat.numbbinspcurfine)
+                    gdat.arrypcurquadbdtr[p][j] = tesstarg.util.fold_lcur(gdat.listarrylcurbdtr[p][y], gdat.epocprio[j], gdat.periprio[j], phasshft=0.25)
+                    gdat.arrypcurquadbdtrbind[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurquadbdtr[p][j], gdat.numbbinspcur)
+                    gdat.arrypcurquadbdtrbindfine[p][j] = tesstarg.util.rebn_lcur(gdat.arrypcurquadbdtr[p][j], gdat.numbbinspcurfine)
+                    
+                    # write (good for Vespa)
+                    path = gdat.pathdata + 'arrypcurprimbdtrbindpla%d%s.csv' % (j, gdat.liststrginst[p])
+                    print('Writing to %s...' % path)
+                    temp = np.copy(gdat.arrypcurprimbdtrbind[p][j])
+                    temp[:, 0] *= gdat.periprio[j]
+                    np.savetxt(path, temp, delimiter=',')
+                
+                # determine time mask
+                gdat.listindxtimeoutt = [[[] for p in gdat.indxinst] for j in gdat.indxplan]
+                gdat.listindxtimetran = [[[] for p in gdat.indxinst] for j in gdat.indxplan]
+                gdat.listindxtimetranchun = [[[[] for y in gdat.indxchun[p]] for p in gdat.indxinst] for j in gdat.indxplan]
+                for j in gdat.indxplan:
+                    if gdat.booldiagmode:
+                        if not np.isfinite(gdat.duramask[j]):
+                            raise Exception('')
+                    for p in gdat.indxinst:
+                        for y in gdat.indxchun[p]:
+                            gdat.listindxtimetranchun[j][p][y] = tesstarg.util.retr_indxtimetran(gdat.listarrylcur[p][y][:, 0], gdat.epocprio[j], \
+                                                                                                                        gdat.periprio[j], gdat.duramask[j])
+                        gdat.listindxtimetran[j][p] = tesstarg.util.retr_indxtimetran(gdat.arrylcurbdtr[p][:, 0], \
+                                                                                                        gdat.epocprio[j], gdat.periprio[j], gdat.duramask[j])
+                        gdat.listindxtimeoutt[j][p] = np.setdiff1d(np.arange(gdat.arrylcurbdtr[p].shape[0]), gdat.listindxtimetran[j][p])
+                
+                # clean times for each planet
+                gdat.listindxtimeclen = [[[] for p in gdat.indxinst] for j in gdat.indxplan]
+                for j in gdat.indxplan:
+                    listindxtimetemp = []
+                    for jj in gdat.indxplan:
+                        for p in gdat.indxinst:
+                            if jj == j:
+                                continue
+                            listindxtimetemp.append(gdat.listindxtimetran[jj][p])
+                    if len(listindxtimetemp) > 0:
+                        listindxtimetemp = np.concatenate(listindxtimetemp)
+                        listindxtimetemp = np.unique(listindxtimetemp)
+                    else:
+                        listindxtimetemp = np.array([])
+                    gdat.listindxtimeclen[j][p] = np.setdiff1d(np.arange(gdat.arrylcurbdtr[p].shape[0]), listindxtimetemp)
+            
+                for p in gdat.indxinst:
+                
+                    if not np.isfinite(gdat.arrylcurbdtr[p]).all():
+                        raise Exception('')
+                
+                    figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydobskin)
+                    axis.plot(gdat.arrylcurbdtr[p][:, 0] - gdat.timetess, gdat.arrylcurbdtr[p][:, 1], color='grey', marker='.', ls='', ms=1)
+                    if listlimttimemask is not None:
+                        axis.plot(gdat.arrylcurbdtr[p][listindxtimegood, 0] - gdat.timetess, \
+                                                                gdat.arrylcurbdtr[p][listindxtimegood, 1], color='k', marker='.', ls='', ms=1)
                     for j in gdat.indxplan:
                         colr = gdat.listcolrplan[j]
-                        axis.plot(gdat.listarrylcur[p][y][gdat.listindxtimetranchun[j][p][y], 0] - gdat.timetess, \
-                                                                                   gdat.listarrylcur[p][y][gdat.listindxtimetranchun[j][p][y], 1], \
-                                                                                                  color=colr, marker='.', ls='', ms=1, rasterized=True)
-                        for n in np.linspace(-30, 30, 61):
-                            time = gdat.epocprio[j] + n * gdat.periprio[j] - gdat.timetess
-                            if np.where(abs(gdat.listarrylcur[p][y][:, 0] - gdat.timetess - time) < 0.1)[0].size > 0:
-                                
-                                # add a vertical offset if overlapping
-                                if np.where(abs(np.array(listtimetext) - time) < 0.5)[0].size > 0:
-                                    ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.95
-                                else:
-                                    ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.9
-
-                                # draw the planet letter
-                                axis.text(time, ypostemp, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], va='center', ha='center')
-                                listtimetext.append(time)
-                    axis.set_xlim(xlim)
-
+                        axis.plot(gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 0] - gdat.timetess, gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 1], \
+                                                                                                             color=colr, marker='.', ls='', ms=1)
                     axis.set_xlabel('Time [BJD - 2457000]')
                     for a in range(2):
                         axis.set_ylabel('Relative Flux')
-                    
-                    plt.subplots_adjust(hspace=0., bottom=0.2)
-                    path = gdat.pathimag + 'lcurtran%s%s.%s' % (gdat.liststrginst[p], gdat.liststrgchun[y], gdat.strgplotextn)
+                    plt.subplots_adjust(bottom=0.2)
+                    path = gdat.pathimag + 'lcur%s.%s' % (gdat.liststrginst[p], gdat.strgplotextn)
                     print('Writing to %s...' % path)
                     plt.savefig(path)
                     plt.close()
-            
-            if gdat.boolbdtr:
-                for y in gdat.indxchun[p]:
-                    # plot baseline-detrending
-                    figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
-                    for i in gdat.indxsplnregi[p][y]:
-                        ## masked and non-baseline-detrended light curve
-                        
-                        indxtimetemp = gdat.listindxtimeregi[p][y][i][gdat.indxtimeregioutt[p][y][i]]
-                        print('indxtimetemp')
-                        summgene(indxtimetemp)
-                        print('gdat.listarrylcur[p][y][indxtimetemp, 1]')
-                        summgene(gdat.listarrylcur[p][y][indxtimetemp, 1])
-                        axis[0].plot(gdat.listarrylcur[p][y][indxtimetemp, 0] - gdat.timetess, gdat.listarrylcur[p][y][indxtimetemp, 1], \
-                                                                                                            marker='o', ls='', ms=1, color='k')
-                        ## spline
-                        if gdat.listobjtspln[p][y] is not None and gdat.listobjtspln[p][y][i] is not None:
-                            timesplnregifine = np.linspace(gdat.listarrylcur[p][y][gdat.listindxtimeregi[p][y][i], 0][0], \
-                                                                                    gdat.listarrylcur[p][y][gdat.listindxtimeregi[p][y][i], 0][-1], 1000)
-                            axis[0].plot(timesplnregifine - gdat.timetess, gdat.listobjtspln[p][y][i](timesplnregifine), 'b-', lw=3)
-                        ## baseline-detrended light curve
-                        indxtimetemp = gdat.listindxtimeregi[p][y][i]
-                        axis[1].plot(gdat.listarrylcurbdtr[p][y][indxtimetemp, 0] - gdat.timetess, gdat.listarrylcurbdtr[p][y][indxtimetemp, 1], \
-                                                                                                            marker='o', ms=1, ls='', color='k')
-                    for a in range(2):
-                        axis[a].set_ylabel('Relative Flux')
-                    axis[0].set_xticklabels([])
-                    axis[1].set_xlabel('Time [BJD - 2457000]')
-                    plt.subplots_adjust(hspace=0.)
-                    path = gdat.pathimag + 'lcurbdtr%s%s.%s' % (gdat.liststrginst[p], gdat.liststrgchun[y], gdat.strgplotextn)
-                    print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
-                    
-                    if gdat.listobjtspln[p][y] is not None and gdat.listobjtspln[p][y][i] is not None:
-                        # produce a table for the spline coefficients
-                        fileoutp = open(gdat.pathdata + 'coefbdtr.csv', 'w')
-                        fileoutp.write(' & ')
-                        for i in gdat.indxsplnregi[p][y]:
-                            print('$\beta$:', gdat.listobjtspln[p][y][i].get_coeffs())
-                            print('$t_k$:', gdat.listobjtspln[p][y][i].get_knots())
-                            print
-                        fileoutp.write('\\hline\n')
-                        fileoutp.close()
-
-    plot_pcur(gdat, 'prio')
    
+                    if gdat.numbplan > 1:
+                        figr, axis = plt.subplots(gdat.numbplan, 1, figsize=gdat.figrsizeydobskin)
+                        for jj, j in enumerate(gdat.indxplan):
+                            axis[jj].plot(gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 0] - gdat.timetess, \
+                                                                                                gdat.arrylcurbdtr[p][gdat.listindxtimetran[j], 1], \
+                                                                                                              color=gdat.listcolrplan[j], marker='o', ls='', ms=0.2)
+                            axis[jj].set_ylabel('Relative Flux')
+                        axis[-1].set_xlabel('Time [BJD - 2457000]')
+                        plt.subplots_adjust(bottom=0.2)
+                        path = gdat.pathimag + 'lcurplanmask%s.%s' % (gdat.liststrginst[p], gdat.strgplotextn)
+                        print('Writing to %s...' % path)
+                        plt.savefig(path)
+                        plt.close()
+                    
+                    if gdat.numbchun[p] > 1:
+                        for y in gdat.indxchun[p]:
+                            figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydobskin)
+                            
+                            axis.plot(gdat.listarrylcur[p][y][:, 0] - gdat.timetess, gdat.listarrylcur[p][y][:, 1], \
+                                                                                            color='grey', marker='.', ls='', ms=1, rasterized=True)
+                            
+                            if listlimttimemask is not None:
+                                axis.plot(gdat.listarrylcur[p][y][listindxtimegood, 0] - gdat.timetess, \
+                                                            gdat.listarrylcur[p][y][listindxtimegood, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
+                            
+                            # color transits
+                            ylim = axis.get_ylim()
+                            listtimetext = []
+                            for j in gdat.indxplan:
+                                colr = gdat.listcolrplan[j]
+                                axis.plot(gdat.listarrylcur[p][y][gdat.listindxtimetranchun[j][p][y], 0] - gdat.timetess, \
+                                                                                           gdat.listarrylcur[p][y][gdat.listindxtimetranchun[j][p][y], 1], \
+                                                                                                          color=colr, marker='.', ls='', ms=1, rasterized=True)
+                                # draw planet names
+                                for n in np.linspace(-30, 30, 61):
+                                    time = gdat.epocprio[j] + n * gdat.periprio[j] - gdat.timetess
+                                    if np.where(abs(gdat.listarrylcur[p][y][:, 0] - gdat.timetess - time) < 0.1)[0].size > 0:
+                                        
+                                        # add a vertical offset if overlapping
+                                        if np.where(abs(np.array(listtimetext) - time) < 0.5)[0].size > 0:
+                                            ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.95
+                                        else:
+                                            ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.9
+
+                                        # draw the planet letter
+                                        axis.text(time, ypostemp, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], va='center', ha='center')
+                                        listtimetext.append(time)
+                            #axis.set_xlim(xlim)
+
+                            axis.set_xlabel('Time [BJD - 2457000]')
+                            for a in range(2):
+                                axis.set_ylabel('Relative Flux')
+                            
+                            plt.subplots_adjust(hspace=0., bottom=0.2)
+                            path = gdat.pathimag + 'lcurtran%s%s.%s' % (gdat.liststrginst[p], gdat.liststrgchun[y], gdat.strgplotextn)
+                            print('Writing to %s...' % path)
+                            plt.savefig(path)
+                            plt.close()
+                    
+                    if gdat.boolbdtr:
+                        for y in gdat.indxchun[p]:
+                            # plot baseline-detrending
+                            figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
+                            for i in gdat.indxsplnregi[p][y]:
+                                ## masked and non-baseline-detrended light curve
+                                
+                                indxtimetemp = gdat.listindxtimeregi[p][y][i][gdat.indxtimeregioutt[p][y][i]]
+                                print('indxtimetemp')
+                                summgene(indxtimetemp)
+                                print('gdat.listarrylcur[p][y][indxtimetemp, 1]')
+                                summgene(gdat.listarrylcur[p][y][indxtimetemp, 1])
+                                axis[0].plot(gdat.listarrylcur[p][y][indxtimetemp, 0] - gdat.timetess, gdat.listarrylcur[p][y][indxtimetemp, 1], \
+                                                                                                                    marker='o', ls='', ms=1, color='k')
+                                ## spline
+                                if gdat.listobjtspln[p][y] is not None and gdat.listobjtspln[p][y][i] is not None:
+                                    timesplnregifine = np.linspace(gdat.listarrylcur[p][y][gdat.listindxtimeregi[p][y][i], 0][0], \
+                                                                                            gdat.listarrylcur[p][y][gdat.listindxtimeregi[p][y][i], 0][-1], 1000)
+                                    axis[0].plot(timesplnregifine - gdat.timetess, gdat.listobjtspln[p][y][i](timesplnregifine), 'b-', lw=3)
+                                ## baseline-detrended light curve
+                                indxtimetemp = gdat.listindxtimeregi[p][y][i]
+                                axis[1].plot(gdat.listarrylcurbdtr[p][y][indxtimetemp, 0] - gdat.timetess, gdat.listarrylcurbdtr[p][y][indxtimetemp, 1], \
+                                                                                                                    marker='o', ms=1, ls='', color='k')
+                            for a in range(2):
+                                axis[a].set_ylabel('Relative Flux')
+                            axis[0].set_xticklabels([])
+                            axis[1].set_xlabel('Time [BJD - 2457000]')
+                            plt.subplots_adjust(hspace=0.)
+                            path = gdat.pathimag + 'lcurbdtr%s%s.%s' % (gdat.liststrginst[p], gdat.liststrgchun[y], gdat.strgplotextn)
+                            print('Writing to %s...' % path)
+                            plt.savefig(path)
+                            plt.close()
+                            
+                            if gdat.listobjtspln[p][y] is not None and gdat.listobjtspln[p][y][i] is not None:
+                                # produce a table for the spline coefficients
+                                fileoutp = open(gdat.pathdata + 'coefbdtr.csv', 'w')
+                                fileoutp.write(' & ')
+                                for i in gdat.indxsplnregi[p][y]:
+                                    print('$\beta$:', gdat.listobjtspln[p][y][i].get_coeffs())
+                                    print('$t_k$:', gdat.listobjtspln[p][y][i].get_knots())
+                                    print
+                                fileoutp.write('\\hline\n')
+                                fileoutp.close()
+
+        # number of samples to draw from the prior
+        gdat.numbsamp = 10000
+    
+        if gdat.booldatatser:
+            plot_pcur(gdat, 'prio')
+        calc_prop(gdat, 'prio', 'orbt')
+    
+    ## augment object dictinary
+    if gdat.boolobjt:
+        gdat.dictfeatobjt = dict()
+        gdat.dictfeatobjt['namestar'] = np.array([gdat.labltarg] * gdat.numbplan)
+        gdat.dictfeatobjt['nameplan'] = gdat.liststrgplanfull
+        gdat.dictfeatobjt['booltran'] = np.array([True], dtype=bool)
+        gdat.dictfeatobjt['vmagstar'] = np.zeros(gdat.numbplan) + gdat.vmagstar
+        gdat.dictfeatobjt['jmagstar'] = np.zeros(gdat.numbplan) + gdat.jmagstar
+        gdat.dictfeatobjt['hmagstar'] = np.zeros(gdat.numbplan) + gdat.hmagstar
+        gdat.dictfeatobjt['kmagstar'] = np.zeros(gdat.numbplan) + gdat.kmagstar
+        gdat.dictfeatobjt['numbplanstar'] = np.zeros(gdat.numbplan) + gdat.numbplan
+        gdat.dicterrr['radistarsunn'] = gdat.dicterrr['radistar'] / gdat.factrsrj # R_S
+        #gdat.dicterrr['stdvradistar'] = gdat.dicterrr['radistar'] / gdat.factrsrj # R_S
+    
+    plot_prop(gdat, 'prio')
+    
+    if not gdat.boolobjt:
+        return
+
     # look for single transits using matched filter
     
 
-    gdat.pathallebase = gdat.pathobjt + 'allesfits/'
+    if gdat.booldatatser:
+        gdat.pathallebase = gdat.pathobjt + 'allesfits/'
     
     #gdat.boolalleprev = {}
-    #for strgalle in gdat.liststrgalle:
-    #    gdat.boolalleprev[strgalle] = {}
+    #for typeparacalc in gdat.listtypeparacalc:
+    #    gdat.boolalleprev[typeparacalc] = {}
     #
     #for strgfile in ['params.csv', 'settings.csv', 'params_star.csv']:
     #    
-    #    for strgalle in gdat.liststrgalle:
-    #        pathinit = '%sdata/allesfit_templates/%s/%s' % (gdat.pathbase, strgalle, strgfile)
-    #        pathfinl = '%sallesfits/allesfit_%s/%s' % (gdat.pathobjt, strgalle, strgfile)
+    #    for typeparacalc in gdat.listtypeparacalc:
+    #        pathinit = '%sdata/allesfit_templates/%s/%s' % (gdat.pathbase, typeparacalc, strgfile)
+    #        pathfinl = '%sallesfits/allesfit_%s/%s' % (gdat.pathobjt, typeparacalc, strgfile)
 
     #        if not os.path.exists(pathfinl):
     #            cmnd = 'cp %s %s' % (pathinit, pathfinl)
     #            print(cmnd)
     #            os.system(cmnd)
     #            if strgfile == 'params.csv':
-    #                gdat.boolalleprev[strgalle]['para'] = False
+    #                gdat.boolalleprev[typeparacalc]['para'] = False
     #            if strgfile == 'settings.csv':
-    #                gdat.boolalleprev[strgalle]['sett'] = False
+    #                gdat.boolalleprev[typeparacalc]['sett'] = False
     #            if strgfile == 'params_star.csv':
-    #                gdat.boolalleprev[strgalle]['pars'] = False
+    #                gdat.boolalleprev[typeparacalc]['pars'] = False
     #        else:
     #            if strgfile == 'params.csv':
-    #                gdat.boolalleprev[strgalle]['para'] = True
+    #                gdat.boolalleprev[typeparacalc]['para'] = True
     #            if strgfile == 'settings.csv':
-    #                gdat.boolalleprev[strgalle]['sett'] = True
+    #                gdat.boolalleprev[typeparacalc]['sett'] = True
     #            if strgfile == 'params_star.csv':
-    #                gdat.boolalleprev[strgalle]['pars'] = True
+    #                gdat.boolalleprev[typeparacalc]['pars'] = True
 
-    if gdat.boolallebkgdgaus:
-        # background allesfitter run
-        print('Setting up the background allesfitter run...')
-        
-        if not gdat.boolalleprev['bkgd']['para']:
-            evol_file(gdat, 'params.csv', gdat.pathallebkgd, lineadde)
-        
-        ## mask out the transits for the background run
-        path = gdat.pathallebkgd + gdat.liststrgchun[y]  + '.csv'
-        if not os.path.exists(path):
-            indxtimebkgd = np.setdiff1d(gdat.indxtime, np.concatenate(gdat.listindxtimetran))
-            gdat.arrylcurbkgd = gdat.listarrylcurbdtr[p][y][indxtimebkgd, :]
-            print('Writing to %s...' % path)
-            np.savetxt(path, gdat.arrylcurbkgd, delimiter=',', header='time,flux,flux_err')
-        else:
-            print('OoT light curve available for the background allesfitter run at %s.' % path)
-        
-        #liststrg = list(gdat.objtallebkgd.posterior_params.keys())
-        #for k, strg in enumerate(liststrg):
-        #   post = gdat.objtallebkgd.posterior_params[strg]
-        #   linesplt = '%s' % gdat.objtallebkgd.posterior_params_at_maximum_likelihood[strg][0]
+    if gdat.booldatatser:
+        if gdat.boolallebkgdgaus:
+            # background allesfitter run
+            print('Setting up the background allesfitter run...')
+            
+            if not gdat.boolalleprev['bkgd']['para']:
+                evol_file(gdat, 'params.csv', gdat.pathallebkgd, lineadde)
+            
+            ## mask out the transits for the background run
+            path = gdat.pathallebkgd + gdat.liststrgchun[y]  + '.csv'
+            if not os.path.exists(path):
+                indxtimebkgd = np.setdiff1d(gdat.indxtime, np.concatenate(gdat.listindxtimetran))
+                gdat.arrylcurbkgd = gdat.listarrylcurbdtr[p][y][indxtimebkgd, :]
+                print('Writing to %s...' % path)
+                np.savetxt(path, gdat.arrylcurbkgd, delimiter=',', header='time,flux,flux_err')
+            else:
+                print('OoT light curve available for the background allesfitter run at %s.' % path)
+            
+            #liststrg = list(gdat.objtallebkgd.posterior_params.keys())
+            #for k, strg in enumerate(liststrg):
+            #   post = gdat.objtallebkgd.posterior_params[strg]
+            #   linesplt = '%s' % gdat.objtallebkgd.posterior_params_at_maximum_likelihood[strg][0]
     
     gdat.pathalle = dict()
     gdat.objtalle = dict()
@@ -3280,22 +3571,22 @@ def init( \
         ## plot the spherical limits
         #figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
         #
-        #gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathallepcur)
-        #gdat.objtalle[strgalle].posterior_params_median['b_sbratio_TESS'] = 0
-        #gdat.objtalle[strgalle].settings['host_shape_TESS'] = 'sphere'
-        #gdat.objtalle[strgalle].settings['b_shape_TESS'] = 'roche'
-        #gdat.objtalle[strgalle].posterior_params_median['host_gdc_TESS'] = 0
-        #gdat.objtalle[strgalle].posterior_params_median['host_bfac_TESS'] = 0
-        #lcurmodltemp = gdat.objtalle[strgalle].get_posterior_median_model(strgchun, 'flux', xx=gdat.time)
+        #gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathallepcur)
+        #gdat.objtalle[typeparacalc].posterior_params_median['b_sbratio_TESS'] = 0
+        #gdat.objtalle[typeparacalc].settings['host_shape_TESS'] = 'sphere'
+        #gdat.objtalle[typeparacalc].settings['b_shape_TESS'] = 'roche'
+        #gdat.objtalle[typeparacalc].posterior_params_median['host_gdc_TESS'] = 0
+        #gdat.objtalle[typeparacalc].posterior_params_median['host_bfac_TESS'] = 0
+        #lcurmodltemp = gdat.objtalle[typeparacalc].get_posterior_median_model(strgchun, 'flux', xx=gdat.time)
         #axis.plot(gdat.arrypcurquadbdtr[p][j][:, 0], (gdat.lcurmodlevvv - lcurmodltemp) * 1e6, lw=2, label='Spherical star')
         #
-        #gdat.objtalle[strgalle] = allesfitter.allesclass(gdat.pathallepcur)
-        #gdat.objtalle[strgalle].posterior_params_median['b_sbratio_TESS'] = 0
-        #gdat.objtalle[strgalle].settings['host_shape_TESS'] = 'roche'
-        #gdat.objtalle[strgalle].settings['b_shape_TESS'] = 'sphere'
-        #gdat.objtalle[strgalle].posterior_params_median['host_gdc_TESS'] = 0
-        #gdat.objtalle[strgalle].posterior_params_median['host_bfac_TESS'] = 0
-        #lcurmodltemp = gdat.objtalle[strgalle].get_posterior_median_model(strgchun, 'flux', xx=gdat.time)
+        #gdat.objtalle[typeparacalc] = allesfitter.allesclass(gdat.pathallepcur)
+        #gdat.objtalle[typeparacalc].posterior_params_median['b_sbratio_TESS'] = 0
+        #gdat.objtalle[typeparacalc].settings['host_shape_TESS'] = 'roche'
+        #gdat.objtalle[typeparacalc].settings['b_shape_TESS'] = 'sphere'
+        #gdat.objtalle[typeparacalc].posterior_params_median['host_gdc_TESS'] = 0
+        #gdat.objtalle[typeparacalc].posterior_params_median['host_bfac_TESS'] = 0
+        #lcurmodltemp = gdat.objtalle[typeparacalc].get_posterior_median_model(strgchun, 'flux', xx=gdat.time)
         #axis.plot(gdat.arrypcurquadbdtr[p][j][:, 0], (gdat.lcurmodlevvv - lcurmodltemp) * 1e6, lw=2, label='Spherical planet')
         #axis.legend()
         #axis.set_ylim([-100, 100])
