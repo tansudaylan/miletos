@@ -1,13 +1,13 @@
-# PEXO (Pipeline for exoplanets)
+# miletos
 
 ## Introduction
 
-PEXO is a tool to analyze exoplanet data. It querries the Exoplanet Archive and the TESS TOI catalog to highlight the target among the set of known and candidate exoplanets and interfaces with allesfitter to configure and analyze the TESS data.
+miletos is a tool to analyze exoplanet data. It querries the Exoplanet Archive and the TESS TOI catalog to highlight the target among the set of known and candidate exoplanets and interfaces with allesfitter to configure and analyze the TESS data.
 
 
 ## Usage
 
-Here is an example usage of PEXO for analyzing the TESS data on an ultra-hot Jupiet, WASP-121b.
+Here is an example usage of miletos for analyzing the TESS data on an ultra-hot Jupiet, WASP-121b.
 
 ```
 def cnfg_WASP0121():
@@ -27,12 +27,12 @@ def cnfg_WASP0121():
     # also do a phase curve analysis
     boolphascurv = True
     
-    # call PEXO
-    pexo.main( \
-         strgtarg=strgtarg, \
-         strgmast=strgmast, \
-         labltarg=labltarg, \
-         strgtoii=strgtoii, \
-         boolphascurv=boolphascurv, \
-        )
+    # call miletos
+    miletos.main( \
+                 strgtarg=strgtarg, \
+                 strgmast=strgmast, \
+                 labltarg=labltarg, \
+                 strgtoii=strgtoii, \
+                 boolphascurv=boolphascurv, \
+                )
 ```
