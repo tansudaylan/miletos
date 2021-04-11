@@ -3222,10 +3222,16 @@ def plot_tser(gdat, strgarry):
                             
 
 def init( \
+         # target identifiers
+         ## string to search on MAST
          strgmast=None, \
+         ## TIC ID
          ticitarg=None, \
+         ## TOI ID
          toiitarg=None, \
+         ## RA
          rasctarg=None, \
+         ## Dec
          decltarg=None, \
 
          # string to pull the priors from the NASA Exoplanet Archive
