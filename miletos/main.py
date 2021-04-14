@@ -1,12 +1,4 @@
-import tdpy.util
-import tdpy.mcmc
-from tdpy.util import summgene
-
 import time
-
-import lygos.main
-
-import ephesus.util
 
 import os, fnmatch
 import sys, datetime
@@ -32,10 +24,14 @@ import matplotlib.pyplot as plt
 
 import seaborn as sns
 
-#from allesfitter.prior import simulate_PDF
-mpl.rc('text', usetex=True)
-mpl.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
-mpl.rcParams['text.latex.preamble']=[r"\usepackage{amssymb}"]
+import tdpy
+from tdpy.util import summgene
+import lygos
+import ephesus
+
+#mpl.rc('text', usetex=True)
+#mpl.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
+#mpl.rcParams['text.latex.preamble']=[r"\usepackage{amssymb}"]
 
 '''
 Given a target, pexo is an time-domain astronomy tool that allows 
@@ -97,10 +93,10 @@ def retr_dilu(tmpttarg, tmptcomp, strgwlentype='tess'):
     meanwlen = (binswlen[1:] + binswlen[:-1]) / 2.
     diffwlen = (binswlen[1:] - binswlen[:-1]) / 2.
     
-    fluxtarg = tdpy.util.retr_specbbod(tmpttarg, meanwlen)
+    fluxtarg = tdpy.retr_specbbod(tmpttarg, meanwlen)
     fluxtarg = np.sum(diffwlen * fluxtarg)
     
-    fluxcomp = tdpy.util.retr_specbbod(tmptcomp, meanwlen)
+    fluxcomp = tdpy.retr_specbbod(tmptcomp, meanwlen)
     fluxcomp = np.sum(diffwlen * fluxcomp)
     
     dilu = 1. - fluxtarg / (fluxtarg + fluxcomp)
@@ -116,10 +112,10 @@ def retr_modl_spec(gdat, tmpt, booltess=False, strgtype='intg'):
         thpt = 1.
     
     if strgtype == 'intg':
-        spec = tdpy.util.retr_specbbod(tmpt, gdat.meanwlen)
+        spec = tdpy.retr_specbbod(tmpt, gdat.meanwlen)
         spec = np.sum(gdat.diffwlen * spec)
     if strgtype == 'diff' or strgtype == 'logt':
-        spec = tdpy.util.retr_specbbod(tmpt, gdat.cntrwlen)
+        spec = tdpy.retr_specbbod(tmpt, gdat.cntrwlen)
         if strgtype == 'logt':
             spec *= gdat.cntrwlen
     
@@ -233,7 +229,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
     
     import json
 
-    factrsrj, factrjre, factrsre, factmsmj, factmjme, factmsme, factaurs = ephesus.util.retr_factconv()
+    factrsrj, factrjre, factrsre, factmsmj, factmjme, factmsme, factaurs = ephesus.retr_factconv()
     
     pathlygo = os.environ['LYGOS_DATA_PATH'] + '/'
     pathexof = pathlygo + 'data/exofop_tess_tois.csv'
@@ -300,7 +296,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
         listticiuniq = np.unique(dictexof['tici'].astype(str))
         request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':"*", \
                                                               'filters':[{'paramName':'ID', 'values':list(listticiuniq)}]}}
-        headers, outString = ephesus.util.mastQuery(request)
+        headers, outString = ephesus.mastQuery(request)
         listdictquer = json.loads(outString)['data']
         
         # get magnitudes from crossmatches
@@ -350,7 +346,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
                 listradiplan = scipy.stats.truncnorm.rvs(-meanvarb/stdvvarb, np.inf, size=numbsamppopl) * stdvvarb + meanvarb
                 listradiplan /= np.mean(listradiplan)
                 listradiplan *= meanvarb
-                listmassplan = ephesus.util.retr_massfromradi(listradiplan)
+                listmassplan = ephesus.retr_massfromradi(listradiplan)
                 dicttemp['massplan'][k] = np.mean(listmassplan)
                 dicttemp['stdvmassplan'][k] = np.std(listmassplan)
             print('Writing to %s...' % path)
@@ -365,7 +361,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
         dictexof['stdvmassplan'] = dicttemp['stdvmassplan']
         
         dictexof['masstotl'] = dictexof['massstar'] + dictexof['massplan'] / factmsme
-        dictexof['smax'] = ephesus.util.retr_smaxkepl(dictexof['peri'], dictexof['masstotl'])
+        dictexof['smax'] = ephesus.retr_smaxkepl(dictexof['peri'], dictexof['masstotl'])
         
         dictexof['inso'] = dictexof['lumistar'] / dictexof['smax']**2
         
@@ -375,7 +371,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
                                                         0.5 * (dictexof['stdvradistar'] / dictexof['radistar'])**2) / np.sqrt(2.)
         
         dictexof['densplan'] = dictexof['massplan'] / dictexof['radiplan']**3
-        dictexof['vesc'] = ephesus.util.retr_vesc(dictexof['massplan'], dictexof['radiplan'])
+        dictexof['vesc'] = ephesus.retr_vesc(dictexof['massplan'], dictexof['radiplan'])
         dictexof['booltran'] = np.ones_like(dictexof['toii'], dtype=bool)
     
         print('temp')
@@ -384,7 +380,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
         
         # replace confirmed planet properties
         if boolreplexar:
-            dictexar = ephesus.util.retr_dictexar()
+            dictexar = ephesus.retr_dictexar()
             listdisptess = objtexof['TESS Disposition'][indxplan].values.astype(str)
             listdisptfop = objtexof['TFOPWG Disposition'][indxplan].values.astype(str)
             indxexofcpla = np.where((listdisptfop == 'CP') & (listdisptess == 'PC'))[0]
@@ -657,8 +653,8 @@ def calc_prop(gdat, strgpdfn):
             print('stdvtemp')
             print(stdvtemp)
             raise Exception('')
-        gdat.dictlist[featstar] = allesfitter.priors.simulate_PDF.simulate_PDF(meantemp, stdvtemp, stdvtemp, size=gdat.numbsamp, plot=False)
-        #gdat.dictlist[featstar] = r = scipy.stats.truncnorm.rvs(a, np.inf, size=gdat.numbsamp) * stdvtemp + meantemp
+        #gdat.dictlist[featstar] = allesfitter.priors.simulate_PDF.simulate_PDF(meantemp, stdvtemp, stdvtemp, size=gdat.numbsamp, plot=False)
+        gdat.dictlist[featstar] = r = scipy.stats.truncnorm.rvs(a, np.inf, size=gdat.numbsamp) * stdvtemp + meantemp
         
         gdat.dictlist[featstar] = np.vstack([gdat.dictlist[featstar]] * gdat.numbplan).T
     
@@ -702,8 +698,8 @@ def calc_prop(gdat, strgpdfn):
         print('gdat.dictlist[radiplan][:, j]')
         summgene(gdat.dictlist['radiplan'][:, j])
         print('')
-        gdat.dictlist['massplanpredchen'][:, j] = ephesus.util.retr_massfromradi(gdat.dictlist['radiplan'][:, j])
-        gdat.dictlist['massplanpredwolf'][:, j] = ephesus.util.retr_massfromradi(gdat.dictlist['radiplan'][:, j], strgtype='wolf2016')
+        gdat.dictlist['massplanpredchen'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j])
+        gdat.dictlist['massplanpredwolf'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j], strgtype='wolf2016')
     gdat.dictlist['massplanpred'] = gdat.dictlist['massplanpredchen']
     
     # mass used for later calculations
@@ -725,7 +721,7 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['loggstar'] = gdat.dictlist['massstar'] / gdat.dictlist['radistar']**2
 
     # escape velocity
-    gdat.dictlist['vesc'] = ephesus.util.retr_vesc(gdat.dictlist['massplanused'], gdat.dictlist['radiplan'])
+    gdat.dictlist['vesc'] = ephesus.retr_vesc(gdat.dictlist['massplanused'], gdat.dictlist['radiplan'])
     
     print('Calculating radius and period ratios...')
     for j in gdat.indxplan:
@@ -738,17 +734,17 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['ecce'] = gdat.dictlist['esin']**2 + gdat.dictlist['ecos']**2
     print('Calculating RV semi-amplitudes...')
     # RV semi-amplitude
-    gdat.dictlist['rvsapred'] = ephesus.util.retr_rvelsema(gdat.dictlist['peri'], gdat.dictlist['massplanpred'], \
+    gdat.dictlist['rvsapred'] = ephesus.retr_rvelsema(gdat.dictlist['peri'], gdat.dictlist['massplanpred'], \
                                                                                             gdat.dictlist['massstar'], \
                                                                                                 gdat.dictlist['incl'], gdat.dictlist['ecce'])
     
     print('Calculating TSMs...')
     # TSM
-    gdat.dictlist['tsmm'] = ephesus.util.retr_tsmm(gdat.dictlist['radiplan'], gdat.dictlist['tmptplan'], \
+    gdat.dictlist['tsmm'] = ephesus.retr_tsmm(gdat.dictlist['radiplan'], gdat.dictlist['tmptplan'], \
                                                                                 gdat.dictlist['massplanused'], gdat.dictlist['radistar'], gdat.jmagsyst)
     
     # ESM
-    gdat.dictlist['esmm'] = ephesus.util.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
+    gdat.dictlist['esmm'] = ephesus.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
                                                                                 gdat.dictlist['radiplan'], gdat.dictlist['radistar'], gdat.kmagsyst)
         
     # temp
@@ -758,7 +754,7 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['dept'] = gdat.dictlist['rrat']**2
     gdat.dictlist['sinw'] = np.sin(np.pi / 180. * gdat.dictlist['omeg'])
     
-    gdat.dictlist['imfa'] = ephesus.util.retr_imfa(gdat.dictlist['cosi'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
+    gdat.dictlist['imfa'] = ephesus.retr_imfa(gdat.dictlist['cosi'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
    
     ## expected ellipsoidal variation (EV)
     gdat.dictlist['deptelli'] = gdat.alphelli * gdat.dictlist['massplanused'] * np.sin(gdat.dictlist['incl'] / 180. * np.pi)**2 / \
@@ -769,9 +765,9 @@ def calc_prop(gdat, strgpdfn):
     print('Calculating durations...')
     
 
-    gdat.dictlist['durafull'] = ephesus.util.retr_durafull(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
+    gdat.dictlist['durafull'] = ephesus.retr_durafull(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
                                                                                     gdat.dictlist['rrat'], gdat.dictlist['imfa'])
-    gdat.dictlist['duratotl'] = ephesus.util.retr_duratotl(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
+    gdat.dictlist['duratotl'] = ephesus.retr_duratotl(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
                                                                                     gdat.dictlist['rrat'], gdat.dictlist['imfa'])
     #gdat.dictlist['durafull'] = gdat.dictlist['peri'] / np.pi * np.arcsin(gdat.dictlist['rs2a'] / gdat.dictlist['sini'] * \
     #                    np.sqrt((1. - gdat.dictlist['rrat'])**2 - gdat.dictlist['imfa']**2))
@@ -1319,7 +1315,7 @@ def proc_alle(gdat, typemodlexop):
                 
                 for j in gdat.indxplan:
                     gdat.listarrypcur['quadmodl'+strgproc][b][p][j][ii, :, :] = \
-                                            ephesus.util.fold_tser(gdat.listarrytsermodl[b][p][ii, gdat.listindxtimeclen[j][b][p], :], \
+                                            ephesus.fold_tser(gdat.listarrytsermodl[b][p][ii, gdat.listindxtimeclen[j][b][p], :], \
                                                                                    gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)
 
             
@@ -1426,16 +1422,16 @@ def proc_alle(gdat, typemodlexop):
             print('Phase folding and binning the light curve for inference named %s...' % strgproc)
             for j in gdat.indxplan:
                 
-                gdat.arrypcur['primmodltotl'+strgproc][b][p][j] = ephesus.util.fold_tser(gdat.arrytser['modltotl'+strgproc][b][p][j][gdat.listindxtimeclen[j][b][p], :], \
+                gdat.arrypcur['primmodltotl'+strgproc][b][p][j] = ephesus.fold_tser(gdat.arrytser['modltotl'+strgproc][b][p][j][gdat.listindxtimeclen[j][b][p], :], \
                                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j])
                 
-                gdat.arrypcur['primbdtr'+strgproc][b][p][j] = ephesus.util.fold_tser(gdat.arrytser['bdtr'+strgproc][b][p][gdat.listindxtimeclen[j][b][p], :], \
+                gdat.arrypcur['primbdtr'+strgproc][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'+strgproc][b][p][gdat.listindxtimeclen[j][b][p], :], \
                                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j])
                 
-                gdat.arrypcur['primbdtr'+strgproc+'bindtotl'][b][p][j] = ephesus.util.rebn_tser(gdat.arrypcur['primbdtr'+strgproc][b][p][j], \
+                gdat.arrypcur['primbdtr'+strgproc+'bindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'+strgproc][b][p][j], \
                                                                                                                     binsxdat=gdat.binsphasprimtotl)
                 
-                gdat.arrypcur['primbdtr'+strgproc+'bindzoom'][b][p][j] = ephesus.util.rebn_tser(gdat.arrypcur['primbdtr'+strgproc][b][p][j], \
+                gdat.arrypcur['primbdtr'+strgproc+'bindzoom'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'+strgproc][b][p][j], \
                                                                                                                     binsxdat=gdat.binsphasprimzoom[j])
 
                 for strgpcurcomp in gdat.liststrgpcurcomp + gdat.liststrgpcur:
@@ -1450,9 +1446,9 @@ def proc_alle(gdat, typemodlexop):
                     else:
                         boolpost = False
                     gdat.arrypcur['quad'+strgpcurcomp+strgproc][b][p][j] = \
-                                        ephesus.util.fold_tser(arrytsertemp, gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25) 
+                                        ephesus.fold_tser(arrytsertemp, gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25) 
                 
-                    gdat.arrypcur['quad'+strgpcurcomp+strgproc+'bindtotl'][b][p][j] = ephesus.util.rebn_tser(gdat.arrypcur['quad'+strgpcurcomp+strgproc][b][p][j], \
+                    gdat.arrypcur['quad'+strgpcurcomp+strgproc+'bindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['quad'+strgpcurcomp+strgproc][b][p][j], \
                                                                                                                 binsxdat=gdat.binsphasquadtotl)
                     
                     # write
@@ -1750,8 +1746,8 @@ def proc_alle(gdat, typemodlexop):
                     maxmalbg = max(np.amax(gdat.dictlist['albginfo']), np.amax(gdat.dictlist['albg']))
                     binsalbg = np.linspace(minmalbg, maxmalbg, 100)
                     meanalbg = (binsalbg[1:] + binsalbg[:-1]) / 2.
-                    pdfnalbg = tdpy.util.retr_kdegpdfn(gdat.dictlist['albg'][:, 0], binsalbg, 0.02)
-                    pdfnalbginfo = tdpy.util.retr_kdegpdfn(gdat.dictlist['albginfo'][:, 0], binsalbg, 0.02)
+                    pdfnalbg = tdpy.retr_kdegpdfn(gdat.dictlist['albg'][:, 0], binsalbg, 0.02)
+                    pdfnalbginfo = tdpy.retr_kdegpdfn(gdat.dictlist['albginfo'][:, 0], binsalbg, 0.02)
                     
                     figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
                     axis.plot(meanalbg, pdfnalbg, label='TESS only', lw=2)
@@ -1814,7 +1810,7 @@ def proc_alle(gdat, typemodlexop):
                     
                     gdat.kdegstdvpsii = 0.01
                     figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
-                    gdat.kdegpsii = tdpy.util.retr_kdeg(gdat.listpsii, gdat.meanpsii, gdat.kdegstdvpsii)
+                    gdat.kdegpsii = tdpy.retr_kdeg(gdat.listpsii, gdat.meanpsii, gdat.kdegstdvpsii)
                     axis.plot(gdat.meanpsii, gdat.kdegpsii)
                     axis.set_xlabel('$\psi$')
                     axis.set_ylabel('$K_\psi$')
@@ -2085,7 +2081,7 @@ def plot_orbt( \
     from allesfitter.v2.classes import allesclass2
     from allesfitter.v2.translator import translate
     
-    factrsrj, factrjre, factrsre, factmsmj, factmjme, factmsme, factaurs = ephesus.util.retr_factconv()
+    factrsrj, factrjre, factrsre, factmsmj, factmjme, factmsme, factaurs = ephesus.retr_factconv()
     
     mpl.use('Agg')
 
@@ -2159,7 +2155,7 @@ def plot_orbt( \
     
     print('epoc')
     print(epoc)
-    rflxtranmodl = ephesus.util.retr_rflxtranmodl(time, peri, epoc, radiplan, radistar, rsma, cosi) - 1.
+    rflxtranmodl = ephesus.retr_rflxtranmodl(time, peri, epoc, radiplan, radistar, rsma, cosi) - 1.
     print('rflxtranmodl')
     summgene(rflxtranmodl)
     #alles.settings = {'inst_phot':['telescope'], 'host_ld_law_telescope':'quad'}
@@ -2461,11 +2457,11 @@ def plot_prop(gdat, strgpdfn):
         indx = np.where(dictpopl['nameplan'] == 'Kepler-397 b')[0]
         print('indx')
         print(indx)
-        listtsmm = ephesus.util.retr_tsmm(dictlistplan['radiplan'], dictlistplan['tmptplan'], dictlistplan['massplan'], \
+        listtsmm = ephesus.retr_tsmm(dictlistplan['radiplan'], dictlistplan['tmptplan'], dictlistplan['massplan'], \
                                                                                         dictlistplan['radistar'], dictlistplan['jmagsyst'])
 
         #### ESM
-        listesmm = ephesus.util.retr_esmm(dictlistplan['tmptplan'], dictlistplan['tmptstar'], dictlistplan['radiplan'], dictlistplan['radistar'], \
+        listesmm = ephesus.retr_esmm(dictlistplan['tmptplan'], dictlistplan['tmptstar'], dictlistplan['radiplan'], dictlistplan['radistar'], \
                                                                                                                     dictlistplan['kmagsyst'])
         ## augment the 
         dictpopl['stdvtsmm'] = np.std(listtsmm, 0)
@@ -2598,7 +2594,7 @@ def plot_prop(gdat, strgpdfn):
                     radistar = 0.66 # [R_S]
                     jmagsyst = jmagsystwasp0107
                     duratranplan = duratranplanwasp0107
-                scalheig = ephesus.util.retr_scalheig(tmptplan, massplan, radiplan)
+                scalheig = ephesus.retr_scalheig(tmptplan, massplan, radiplan)
                 deptscal = 2. * radiplan * scalheig / radistar**2
                 dept = 80. * deptscal
                 factstdv = np.sqrt(10**((-jmagsystwasp0107 + jmagsyst) / 2.5) * duratranplanwasp0107 / duratranplan)
@@ -3067,7 +3063,7 @@ def bdtr_wrap(gdat, epocmask, perimask, duramask, strgintp, strgoutp, indxdatats
         for y in gdat.indxchun[b][p]:
             if gdat.boolbdtr:
                 gdat.rflxbdtrregi, gdat.listindxtimeregi[b][p][y], gdat.indxtimeregioutt[b][p][y], gdat.listobjtspln[b][p][y], timeedge = \
-                                 ephesus.util.bdtr_tser(gdat.listarrytser[strgintp][b][p][y][:, 0], gdat.listarrytser[strgintp][b][p][y][:, 1], \
+                                 ephesus.bdtr_tser(gdat.listarrytser[strgintp][b][p][y][:, 0], gdat.listarrytser[strgintp][b][p][y][:, 1], \
                                                             epocmask=epocmask, perimask=perimask, duramask=duramask, \
                                                             verbtype=gdat.verbtype, durabrek=gdat.durabrek, ordrspln=gdat.ordrspln, \
                                                             timescalspln=gdat.timescalbdtrspln, \
@@ -3438,7 +3434,7 @@ def init( \
         ):
     
     # construct global object
-    gdat = tdpy.util.gdatstrt()
+    gdat = tdpy.gdatstrt()
     
     # copy unnamed inputs to the global object
     for attr, valu in locals().items():
@@ -3499,7 +3495,7 @@ def init( \
         objtexof = pd.read_csv(gdat.pathtoii, skiprows=0)
     
     # conversion factors
-    gdat.factrsrj, gdat.factrjre, gdat.factrsre, gdat.factmsmj, gdat.factmjme, gdat.factmsme, gdat.factaurs = ephesus.util.retr_factconv()
+    gdat.factrsrj, gdat.factrjre, gdat.factrsre, gdat.factmsmj, gdat.factmjme, gdat.factmsme, gdat.factaurs = ephesus.retr_factconv()
 
     # settings
     ## plotting
@@ -3584,7 +3580,7 @@ def init( \
     gdat.dictexof = retr_dictexof()
 
     ## NASA Exoplanet Archive
-    gdat.dictexar = ephesus.util.retr_dictexar()
+    gdat.dictexar = ephesus.retr_dictexar()
     numbplanexar = gdat.dictexar['radiplan'].size
     gdat.indxplanexar = np.arange(numbplanexar)
     
@@ -3645,7 +3641,7 @@ def init( \
             print(gdat.strgexar)
 
             # grab object properties from NASA Excoplanet Archive
-            gdat.dictexartarg = ephesus.util.retr_dictexar(strgexar=gdat.strgexar)
+            gdat.dictexartarg = ephesus.retr_dictexar(strgexar=gdat.strgexar)
             
             if gdat.dictexartarg is None:
                 print('The target name was **not** found in the NASA Exoplanet Archive planetary systems composite table.')
@@ -3684,8 +3680,11 @@ def init( \
             print('gdat.typeprioplan')
             print(gdat.typeprioplan)
             gdat.liststrgpdfn = [gdat.typeprioplan] + [gdat.typeprioplan + typemodlexop for typemodlexop in gdat.listtypemodlexop]
+        gdat.liststrgpdfn = ['prio']
     if not gdat.boolobjt:
         gdat.liststrgpdfn = ['prio']
+    print('gdat.liststrgpdfn')
+    print(gdat.liststrgpdfn)
 
     for strgpdfn in gdat.liststrgpdfn:
         pathimagpdfn = gdat.pathimagfeat + strgpdfn + '/'
@@ -3736,7 +3735,7 @@ def init( \
 
                 arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
                                       gdat.listtsec, gdat.listtcam, gdat.listtccd = \
-                                      ephesus.util.retr_lcurtess( \
+                                      ephesus.retr_lcurtess( \
                                                     gdat.pathtarg, \
                                                     strgmast=gdat.strgmast, \
                                                     rasctarg=rasctarg, \
@@ -3890,7 +3889,7 @@ def init( \
 
                 if gdat.cosiprio is None:
                     gdat.cosiprio = np.zeros_like(gdat.epocprio)
-                gdat.duraprio = ephesus.util.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
+                gdat.duraprio = ephesus.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
                 gdat.deptprio = gdat.rratprio**2
             
             # check MAST
@@ -4045,7 +4044,7 @@ def init( \
                                 print('temp')
                                 booltlsq = True
 
-                                dictblsq = ephesus.util.exec_blsq(arry, gdat.pathimag, maxmnumbplanblsq=gdat.maxmnumbplanblsq, \
+                                dictblsq = ephesus.exec_blsq(arry, gdat.pathimag, maxmnumbplanblsq=gdat.maxmnumbplanblsq, \
                                                            strgextn=strgextn, dicttlsqinpt=gdat.dicttlsqinpt, thrssdeeblsq=gdat.thrssdeeblsq, \
                                                            strgplotextn=gdat.typefileplot, figrsize=gdat.figrsizeydob, \
                                                            booltlsq=booltlsq, \
@@ -4065,7 +4064,7 @@ def init( \
     
             # look for single transits using matched filter
             if gdat.boolexectmat:
-                corr, listindxtimeposimaxm, timefull, rflxfull = ephesus.util.corr_tmpt(gdat.timethis, gdat.rflxthis, gdat.listtimetmpt, gdat.listdflxtmpt, \
+                corr, listindxtimeposimaxm, timefull, rflxfull = ephesus.corr_tmpt(gdat.timethis, gdat.rflxthis, gdat.listtimetmpt, gdat.listdflxtmpt, \
                                                                                     thrs=gdat.thrstmpt, boolanim=gdat.boolanimtmpt, boolplot=gdat.boolplottmpt, \
                                                                                 verbtype=gdat.verbtype, strgextn=gdat.strgextnthis, pathimag=gdat.pathtargimag)
                 #find_bump(gdat.timethis, gdat.rflxthis, verbtype=1, strgextn='', numbduraslentmpt=3, minmduraslentmpt=None, maxmduraslentmpt=None, \
@@ -4087,7 +4086,7 @@ def init( \
 
         if gdat.typemodl == 'exop':
             if gdat.duraprio is None:
-                gdat.duraprio = ephesus.util.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
+                gdat.duraprio = ephesus.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
             
             if gdat.rratprio is None:
                 gdat.rratprio = np.sqrt(gdat.deptprio)
@@ -4382,10 +4381,10 @@ def init( \
             for b in gdat.indxdatatser:
                 if b == 1 and gdat.numbinst[b] > 0:
                     strgextn = '%s' % (gdat.liststrgtser[b])
-                    listperilspe = ephesus.util.plot_lspe(gdat.pathimag, gdat.arrytsertotl[b], strgextn=strgextn)
+                    listperilspe = ephesus.plot_lspe(gdat.pathimag, gdat.arrytsertotl[b], strgextn=strgextn)
                     for p in gdat.indxinst[b]:
                         strgextn = '%s_%s' % (gdat.liststrgtser[b], gdat.liststrginst[b][p]) 
-                        listperilspe = ephesus.util.plot_lspe(gdat.pathimag, gdat.arrytser['raww'][b][p], strgextn=strgextn)
+                        listperilspe = ephesus.plot_lspe(gdat.pathimag, gdat.arrytser['raww'][b][p], strgextn=strgextn)
             
             # determine transit masks
             gdat.listindxtimeoutt = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxplan]
@@ -4401,14 +4400,14 @@ def init( \
                             if not np.isfinite(gdat.duramask[j]):
                                 raise Exception('')
                         for y in gdat.indxchun[b][p]:
-                            gdat.listindxtimetranchun[j][b][p][y] = ephesus.util.retr_indxtimetran(gdat.listarrytser['bdtr'][b][p][y][:, 0], gdat.epocprio[j], \
+                            gdat.listindxtimetranchun[j][b][p][y] = ephesus.retr_indxtimetran(gdat.listarrytser['bdtr'][b][p][y][:, 0], gdat.epocprio[j], \
                                                                                                                         gdat.periprio[j], gdat.duramask[j])
                         
-                        gdat.listindxtimetran[j][b][p][0] = ephesus.util.retr_indxtimetran(gdat.arrytser['bdtr'][b][p][:, 0], \
+                        gdat.listindxtimetran[j][b][p][0] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][b][p][:, 0], \
                                                                                                         gdat.epocprio[j], gdat.periprio[j], gdat.duramask[j])
                         
                         # floor of the secondary
-                        gdat.listindxtimetran[j][b][p][1] = ephesus.util.retr_indxtimetran(gdat.arrytser['bdtr'][b][p][:, 0], \
+                        gdat.listindxtimetran[j][b][p][1] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][b][p][:, 0], \
                                                                                  gdat.epocprio[j], gdat.periprio[j], 0.5 * gdat.duraprio[j], boolseco=True)
                         
                         gdat.listindxtimeoutt[j][b][p] = np.setdiff1d(np.arange(gdat.arrytser['bdtr'][b][p].shape[0]), gdat.listindxtimetran[j][b][p][0])
@@ -4449,9 +4448,9 @@ def init( \
                 
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    gdat.arrytser['bdtrbind'][b][p] = ephesus.util.rebn_tser(gdat.arrytser['bdtr'][b][p], delt=gdat.delttimebind)
+                    gdat.arrytser['bdtrbind'][b][p] = ephesus.rebn_tser(gdat.arrytser['bdtr'][b][p], delt=gdat.delttimebind)
                     for y in gdat.indxchun[b][p]:
-                        gdat.listarrytser['bdtrbind'][b][p][y] = ephesus.util.rebn_tser(gdat.listarrytser['bdtr'][b][p][y], delt=gdat.delttimebind)
+                        gdat.listarrytser['bdtrbind'][b][p][y] = ephesus.rebn_tser(gdat.listarrytser['bdtr'][b][p][y], delt=gdat.delttimebind)
                         
                         path = gdat.pathdata + 'arrytserbdtrbind%s%s.csv' % (gdat.liststrginst[b][p], gdat.liststrgchun[b][p][y])
                         print('Writing to %s' % path)
@@ -4515,7 +4514,7 @@ def init( \
         coeflidaline = 0.4
         # gravitational darkening coefficient
         coefgrda = 0.2
-        gdat.alphelli = ephesus.util.retr_alphelli(coeflidaline, coefgrda)
+        gdat.alphelli = ephesus.retr_alphelli(coeflidaline, coefgrda)
         
         ### Doppler beaming
         gdat.binswlenbeam = np.linspace(0.6, 1., 101)
@@ -4584,19 +4583,19 @@ def init( \
                     for j in gdat.indxplan:
                         numbbinspcurzoom = int(gdat.periprio[j] / gdat.delttimebindzoom)
                         
-                        gdat.arrypcur['primbdtr'][b][p][j] = ephesus.util.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
+                        gdat.arrypcur['primbdtr'][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
                                                                                                                      gdat.epocprio[j], gdat.periprio[j])
                         
-                        gdat.arrypcur['primbdtrbindtotl'][b][p][j] = ephesus.util.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
+                        gdat.arrypcur['primbdtrbindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
                                                                                                             binsxdat=gdat.binsphasprimtotl)
                         
-                        gdat.arrypcur['primbdtrbindzoom'][b][p][j] = ephesus.util.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
+                        gdat.arrypcur['primbdtrbindzoom'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
                                                                                                             binsxdat=gdat.binsphasprimzoom[j])
                         
-                        gdat.arrypcur['quadbdtr'][b][p][j] = ephesus.util.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
+                        gdat.arrypcur['quadbdtr'][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
                                                                                                 gdat.epocprio[j], gdat.periprio[j], phasshft=0.25)
                         
-                        gdat.arrypcur['quadbdtrbindtotl'][b][p][j] = ephesus.util.rebn_tser(gdat.arrypcur['quadbdtr'][b][p][j], \
+                        gdat.arrypcur['quadbdtrbindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['quadbdtr'][b][p][j], \
                                                                                                             binsxdat=gdat.binsphasquadtotl)
                         
                         # write (good for Vespa)
