@@ -17,7 +17,6 @@ import astropy.units
 
 import allesfitter
 import allesfitter.config
-import allesfitter.priors
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -33,13 +32,86 @@ import ephesus
 #mpl.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
 #mpl.rcParams['text.latex.preamble']=[r"\usepackage{amssymb}"]
 
-'''
-Given a target, pexo is an time-domain astronomy tool that allows 
+"""
+Given a target, miletos is an time-domain astronomy tool that allows 
 1) automatic search for, download and process TESS and Kepler data via MAST or use user-provided data
 2) impose priors based on custom inputs, ExoFOP or NASA Exoplanet Archive
 3) model radial velocity and photometric time-series data on planetary systems
 4) Make characterization plots of the target after the analysis
-'''
+"""
+
+
+def retr_dictcatltic8(pathdata, tsec):
+    """
+    Get a dictionary of the sources in the TIC8 with the fields in the TIC8
+    
+    Arguments   
+        pathdata
+        tsec: 
+
+    Returns a dictionary with keys:
+        rasc: RA
+        decl: declination
+        tmag: TESS magnitude
+        radistar: radius of the star
+        massstar: mass of the star
+    """
+    
+    print('Retrieving a dictionary of TIC8...')
+    
+    # list of strings that will be keys of the output dictionary
+    listname = ['rasc', 'decl', 'tmag', 'radistar', 'massstar']
+    
+    path = pathdata + 'listtici_sc%02d.csv' % tsec
+    if not os.path.exists(path):
+        url = 'https://tess.mit.edu/wp-content/uploads/all_targets_S%03d_v1.csv' % tsec
+        c = pd.read_csv(url, header=5)
+        listtici = c['TICID'].values
+        print('Writing to %s...' % path)
+        np.savetxt(path, listtici)
+    else:
+        listtici = np.loadtxt(path)
+
+    listtici = listtici.astype(str)
+    
+    numbtarg = listtici.size
+    print('%d observed 2-min targets...' % numbtarg)
+    
+    path = pathdata + 'listticidata_sc%02d.csv' % tsec
+    if not os.path.exists(path):
+        request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':'rad, mass', \
+                                                                        'filters':[{'paramName':'ID', 'values':list(listtici)}]}}
+        headers, outString = mastQuery(request)
+        listdictquer = json.loads(outString)['data']
+        print('%d matches...' % len(listdictquer))
+        dictcatl = dict()
+        for name in listname:
+            dictcatl[name] = []
+        for k in range(len(listdictquer)):
+            radistar = listdictquer[k]['rad']
+            massstar = listdictquer[k]['mass']
+            if radistar is None or massstar is None:
+                continue
+            if not np.isfinite(radistar) or not np.isfinite(massstar):
+                raise Exception('')
+
+            dictcatl['radistar'].append(radistar)
+            dictcatl['massstar'].append(massstar)
+            dictcatl['rasc'].append(listdictquer[k]['ra'])
+            dictcatl['decl'].append(listdictquer[k]['dec'])
+            dictcatl['tmag'].append(listdictquer[k]['Tmag'])
+        for name in listname:
+            dictcatl[name] = np.array(dictcatl[name])
+        numbfini = dictcatl['massstar'].size
+        print('%d targets with non-NAN radii...' % numbfini)
+        
+        print('Writing to %s...' % path)
+        pd.DataFrame.from_dict(dictcatl).to_csv(path)
+    else:
+        print('Reading from %s...' % path)
+        dictcatl = pd.read_csv(path).to_dict(orient='list')
+   
+    return dictcatl
 
 
 def retr_listcolrplan(numbplan):
@@ -3452,7 +3524,7 @@ def init( \
     # string for date and time
     gdat.strgtimestmp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    print('pexo initialized at %s...' % gdat.strgtimestmp)
+    print('miletos initialized at %s...' % gdat.strgtimestmp)
     # paths
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
     gdat.pathbase = os.environ['PEXO_DATA_PATH'] + '/'
@@ -3491,7 +3563,7 @@ def init( \
                                                                                             can be provided when data (listarrytser) is provided.')
     
     # dictionary to be returned
-    dictpexo = dict()
+    dictmile = dict()
     
     if gdat.typemodl == 'exop':
         gdat.pathtoii = gdat.pathbaselygo + 'data/exofop_tess_tois.csv'
@@ -4638,10 +4710,10 @@ def init( \
                     plot_prop(gdat, 'prio')
     
     if gdat.typeprioplan == 'blsq':
-        dictpexo['dictblsq'] = dictblsq
+        dictmile['dictblsq'] = dictblsq
     
     if not gdat.boolobjt or gdat.numbplan == 0 or not gdat.boolmodl or not gdat.booldatatser:
-        return dictpexo
+        return dictmile
 
     #gdat.boolalleprev = {}
     #for typemodlexop in gdat.listtypemodlexop:
