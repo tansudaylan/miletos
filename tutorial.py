@@ -456,12 +456,12 @@ def cnfg_HATP19():
         )
 
 
-def cnfg_gene():
+def cnfg_popl():
 
     miletos.main.init( \
                    boolobjt=False, \
                    boolfeatplan=True, \
-                   strgfeatsort='seti', \
+                   #strgfeatsort='seti', \
                   )
 
 
