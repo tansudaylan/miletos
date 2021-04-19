@@ -1,14 +1,14 @@
 import time
 
 import os, fnmatch
+import json
 import sys, datetime
 import numpy as np
+import pandas as pd
 import scipy.interpolate
 import scipy.stats
 
 from tqdm import tqdm
-
-import pandas as pd
 
 import astroquery
 import astropy
@@ -28,10 +28,6 @@ from tdpy.util import summgene
 import lygos
 import ephesus
 
-#mpl.rc('text', usetex=True)
-#mpl.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
-#mpl.rcParams['text.latex.preamble']=[r"\usepackage{amssymb}"]
-
 """
 Given a target, miletos is an time-domain astronomy tool that allows 
 1) automatic search for, download and process TESS and Kepler data via MAST or use user-provided data
@@ -41,13 +37,48 @@ Given a target, miletos is an time-domain astronomy tool that allows
 """
 
 
-def retr_dictcatltic8(pathdata, tsec):
+def quer_mast(request):
+
+    from urllib.parse import quote as urlencode
+    import http.client as httplib 
+
+    server='mast.stsci.edu'
+
+    # Grab Python Version
+    version = '.'.join(map(str, sys.version_info[:3]))
+
+    # Create Http Header Variables
+    headers = {'Content-type': 'application/x-www-form-urlencoded',
+               'Accept': 'text/plain',
+               'User-agent':'python-requests/'+version}
+
+    # Encoding the request as a json string
+    requestString = json.dumps(request)
+    requestString = urlencode(requestString)
+
+    # opening the https connection
+    conn = httplib.HTTPSConnection(server)
+
+    # Making the query
+    conn.request('POST', '/api/v0/invoke', 'request='+requestString, headers)
+
+    # Getting the response
+    resp = conn.getresponse()
+    head = resp.getheaders()
+    content = resp.read().decode('utf-8')
+
+    # Close the https connection
+    conn.close()
+
+    return head,content
+
+
+def retr_dictcatltic8(tsecsele=None):
     """
     Get a dictionary of the sources in the TIC8 with the fields in the TIC8
     
-    Arguments   
-        pathdata
-        tsec: 
+    Keyword arguments   
+        tsecsele: sector (default:None)
 
     Returns a dictionary with keys:
         rasc: RA
@@ -62,26 +93,31 @@ def retr_dictcatltic8(pathdata, tsec):
     # list of strings that will be keys of the output dictionary
     listname = ['rasc', 'decl', 'tmag', 'radistar', 'massstar']
     
-    path = pathdata + 'listtici_sc%02d.csv' % tsec
-    if not os.path.exists(path):
-        url = 'https://tess.mit.edu/wp-content/uploads/all_targets_S%03d_v1.csv' % tsec
-        c = pd.read_csv(url, header=5)
-        listtici = c['TICID'].values
-        print('Writing to %s...' % path)
-        np.savetxt(path, listtici)
+    if tsecsele is None:
+        listtsecsele = range(1, 27)
+        strgpopl = 'nomi'
     else:
-        listtici = np.loadtxt(path)
+        listtsecsele = [tsecsele]
+        strgpopl = 'sc%02d' % tsecsele
+    
+    pathlistticidata = os.environ['MILETOS_DATA_PATH'] + '/data/listticidata/'
+    os.system('mkdir -p %s' % pathlistticidata)
 
-    listtici = listtici.astype(str)
-    
-    numbtarg = listtici.size
-    print('%d observed 2-min targets...' % numbtarg)
-    
-    path = pathdata + 'listticidata_sc%02d.csv' % tsec
+    path = pathlistticidata + 'listticidata_%s.csv' % strgpopl
     if not os.path.exists(path):
+        listtici = []
+        for tsec in listtsecsele:
+            url = 'https://tess.mit.edu/wp-content/uploads/all_targets_S%03d_v1.csv' % tsec
+            c = pd.read_csv(url, header=5)
+            listticitemp = c['TICID'].values
+            listticitemp = listticitemp.astype(str)
+            listtici.append(listticitemp) 
+            numbtarg = listticitemp.size
+            print('%d observed 2-min targets...' % numbtarg)
+        listtici = list(np.concatenate(listtici))
         request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':'rad, mass', \
-                                                                        'filters':[{'paramName':'ID', 'values':list(listtici)}]}}
-        headers, outString = mastQuery(request)
+                                                                                'filters':[{'paramName':'ID', 'values':listtici}]}}
+        headers, outString = quer_mast(request)
         listdictquer = json.loads(outString)['data']
         print('%d matches...' % len(listdictquer))
         dictcatl = dict()
@@ -126,6 +162,25 @@ def retr_liststrgplan(numbplan):
     liststrgplan = np.array(['b', 'c', 'd', 'e', 'f', 'g'])[:numbplan]
 
     return liststrgplan
+
+
+def retr_llik(para, gdat):
+    
+    """
+    Returns the likelihood
+    """
+    
+    radistar = para[0]
+    peri = para[1]
+    masscomp = para[2]
+    massstar = para[3]
+    
+    if gdat.typeinfe == 'bhol':
+        rflxtotl, dflxelli, dflxbeam, dflxslen = retr_rflxmodl(gdat.timethis, para)
+    
+    llik = np.sum(-0.5 * (gdat.rflxbdtr - rflxmodl)**2 / gdat.varirflxbdtrthis)
+
+    return llik
 
 
 def retr_llik_albbepsi(para, gdat):
@@ -316,8 +371,6 @@ def retr_dictcatlrvel():
 
 def retr_dictexof(toiitarg=None, boolreplexar=False):
     
-    import json
-
     factrsrj, factrjre, factrsre, factmsmj, factmjme, factmsme, factaurs = ephesus.retr_factconv()
     
     pathlygo = os.environ['LYGOS_DATA_PATH'] + '/'
@@ -385,7 +438,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False):
         listticiuniq = np.unique(dictexof['tici'].astype(str))
         request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':"*", \
                                                               'filters':[{'paramName':'ID', 'values':list(listticiuniq)}]}}
-        headers, outString = ephesus.mastQuery(request)
+        headers, outString = quer_mast(request)
         listdictquer = json.loads(outString)['data']
         
         # get magnitudes from crossmatches
@@ -3340,8 +3393,8 @@ def init( \
          ## Boolean flag to enforce offline operation
          boolforcoffl=False, \
         
-         # path for the target
-         pathtarg=None, \
+         # the folder in which the folder for the target will be placed
+         pathbasetarg=None, \
         
          # Boolean flag to turn on object mode
          boolobjt=True, \
@@ -3416,17 +3469,21 @@ def init( \
          # signal search
          ## template-matching
          ### Boolean flag to search for single transits
-         boolfindtransing=False, \
+         boolsrchtransing=False, \
+         ### input dictionary to the search pipeline for single transits
+         dictsrchtransinginpt=None, \
          ### Boolean flag to search for stellar flares
-         boolfindflar=False, \
+         boolsrchflar=False, \
+         ### input dictionary to the search pipeline for flares
+         dictsrchflarinpt=dict(), \
 
          ## transit search
-         ### dictionary to be fed into TLS
-         dicttlsqinpt=None, \
+         ### Boolean flag to search for periodic boxes
+         boolsrchpbox=False, \
+         ### input dictionary to the search pipeline for periodic boxes
+         dictsrchpboxinpt=None, \
          ### maximum number of planets for BLS
          maxmnumbplanblsq=None, \
-         ### SDE threshold for BLS searches
-         thrssdeeblsq=7.1, \
         
          # include the ExoFOP catalog in the comparisons to exoplanet population
          boolexofpopl=True, \
@@ -3712,8 +3769,10 @@ def init( \
             gdat.strgclus = ''
         else:
             gdat.strgclus += '/'
-        if gdat.pathtarg is None:
-            gdat.pathtarg = gdat.pathbase + '%s%s/' % (gdat.strgclus, gdat.strgtarg)
+        
+        if gdat.pathbasetarg is None:
+            gdat.pathbasetarg = gdat.pathbase
+        gdat.pathtarg = gdat.pathbasetarg + '%s%s/' % (gdat.strgclus, gdat.strgtarg)
     if not gdat.boolobjt:
         gdat.strgtarg = 'popl'
     
@@ -3763,9 +3822,6 @@ def init( \
     gdat.pathdata = gdat.pathtarg + 'data/'
     gdat.pathimag = gdat.pathtarg + 'imag/'
     
-    os.system('mkdir -p %s' % gdat.pathdata)
-    os.system('mkdir -p %s' % gdat.pathimag)
-    
     if gdat.boolobjt:
         if gdat.typemodl == 'exop':
             gdat.liststrgpdfn = [gdat.typeprioplan] + [gdat.typeprioplan + typemodlinfe for typemodlinfe in gdat.listtypemodlinfe]
@@ -3775,7 +3831,7 @@ def init( \
     print('gdat.liststrgpdfn')
     print(gdat.liststrgpdfn)
 
-    if gdat.typemodl == 'exop':
+    if gdat.typemodl == 'exop' and gdat.boolplotprop:
         gdat.pathimagfeat = gdat.pathimag + 'prop/'
         for strgpdfn in gdat.liststrgpdfn:
             pathimagpdfn = gdat.pathimagfeat + strgpdfn + '/'
@@ -3783,10 +3839,10 @@ def init( \
             setattr(gdat, 'pathimagfeatsyst' + strgpdfn, pathimagpdfn + 'featsyst/')
             setattr(gdat, 'pathimagdataplan' + strgpdfn, pathimagpdfn + 'dataplan/')
     
-    if gdat.boolplotprop:
-        for attr, valu in gdat.__dict__.items():
-            if attr.startswith('pathimag'):
-                os.system('mkdir -p %s' % valu)
+    # make folders
+    for attr, valu in gdat.__dict__.items():
+        if attr.startswith('path'):
+            os.system('mkdir -p %s' % valu)
 
     if not gdat.boolobjt:
         plot_prop(gdat, 'prio')
@@ -3891,10 +3947,10 @@ def init( \
                     gdat.listdatatype[b] = ['real' for p in gdat.indxinst[b]]
 
             # Boolean flag to execute BLS
-            gdat.boolexecblsq = gdat.typemodl == 'exop' and gdat.typeprioplan == 'blsq' or gdat.typemodl == 'bhol'
-            print('gdat.boolexecblsq') 
-            print(gdat.boolexecblsq)
-        
+            gdat.boolsrchpbox = gdat.typemodl == 'exop' and gdat.typeprioplan == 'blsq' or gdat.typemodl == 'bhol'
+            print('gdat.boolsrchpbox') 
+            print(gdat.boolsrchpbox)
+
             if gdat.dictdictallesett is None:
                 gdat.dictdictallesett = dict()
                 for typemodlinfe in gdat.listtypemodlinfe:
@@ -4099,72 +4155,73 @@ def init( \
             #    for p in gdat.indxinst[b]:
             #        gdat.arrytser['raww'][b][p][:, 0] -= 1.928623616695404 / 24. / 60.
 
-            if gdat.boolexecblsq:
+            if gdat.boolsrchpbox or gdat.boolsrchtransing or gdat.boolsrchflar:
+            
+                # baseline-detrend without ephemeris prior
+                epocmask = np.array([])
+                perimask = np.array([])
+                duramask = np.array([])
+                bdtr_wrap(gdat, epocmask, perimask, duramask, 'raww', 'tpri', indxdatatser=0)
+                
+            if gdat.boolsrchpbox:
             
                 # temp
-                for b in gdat.indxdatatser:
-                    if b == 0:
-                        for p in gdat.indxinst[b]:
-                            
-                            # check if log file has been created properly before
-                            path = gdat.pathdata + 'blsq.csv'
-                            if False and os.path.exists(path):
-                                print('Reading %s...' % path)
-                                dictblsq = pd.read_csv(path).to_dict()
-                                for name in dictblsq:
-                                    if len(dictblsq[name]) == 0:
-                                        dictblsq[name] = np.array([])
-                            else:
-                                # baseline-detrend without ephemeris prior
-                                epocmask = np.array([])
-                                perimask = np.array([])
-                                duramask = np.array([])
-                                bdtr_wrap(gdat, epocmask, perimask, duramask, 'raww', 'tpri', indxdatatser=b)
-                                
-                                strgextn = '%s_%s' % (gdat.liststrginst[b][p], gdat.strgtarg)
-                                
-                                arry = np.copy(gdat.arrytser['tpri'][b][p])
-                                if gdat.typemodl == 'bhol':
-                                    boolpuls = True
-                                else:
-                                    boolpuls = False
-                                
-                                print('temp')
-                                gdat.maxmnumbplanblsq = 1
-                                
-                                print('temp')
-                                booltlsq = True
+                for p in gdat.indxinst[0]:
+                    
+                    # check if log file has been created properly before
+                    path = gdat.pathdata + 'blsq.csv'
+                    if os.path.exists(path):
+                        print('Reading %s...' % path)
+                        dictsrchpboxoutp = pd.read_csv(path).to_dict()
+                        for name in dictsrchpboxoutp:
+                            if len(dictsrchpboxoutp[name]) == 0:
+                                dictsrchpboxoutp[name] = np.array([])
+                    else:
+                        
+                        strgextn = '%s_%s' % (gdat.liststrginst[0][p], gdat.strgtarg)
+                        
+                        arry = np.copy(gdat.arrytser['tpri'][0][p])
+                        if gdat.typemodl == 'bhol':
+                            dictsrchpboxinpt['boolpuls'] = True
+                        else:
+                            dictsrchpboxinpt['boolpuls'] = False
+                        
+                        print('temp')
+                        dictsrchpboxinpt['maxmnumbtobj'] = 1
+                        dictsrchpboxinpt['pathimag'] = gdat.pathimag
 
-                                dictblsq = ephesus.exec_blsq(arry, gdat.pathimag, maxmnumbplanblsq=gdat.maxmnumbplanblsq, \
-                                                           strgextn=strgextn, dicttlsqinpt=gdat.dicttlsqinpt, thrssdeeblsq=gdat.thrssdeeblsq, \
-                                                           strgplotextn=gdat.typefileplot, figrsize=gdat.figrsizeydob, \
-                                                           booltlsq=booltlsq, \
-                                                           figrsizeydobskin=gdat.figrsizeydobskin, \
-                                                           boolpuls=boolpuls, alphraww=gdat.alphraww, \
-                                                           )
-                                pd.DataFrame.from_dict(dictblsq).to_csv(path)
-                            if gdat.epocprio is None:
-                                gdat.epocprio = dictblsq['epoc']
-                            if gdat.periprio is None:
-                                gdat.periprio = dictblsq['peri']
-                            gdat.deptprio = 1. - dictblsq['dept']
-                            gdat.duraprio = dictblsq['duratran']
-                            gdat.cosiprio = np.zeros_like(dictblsq['epoc']) 
-                            gdat.rratprio = np.sqrt(gdat.deptprio)
-                            gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio)
+                        dictsrchpboxoutp = ephesus.srch_pbox(arry, **gdat.dictsrchpboxinpt, \
+                                                   #strgextn=strgextn, \
+                                                   #strgplotextn=gdat.typefileplot, \
+                                                   #figrsize=gdat.figrsizeydob, \
+                                                   #figrsizeydobskin=gdat.figrsizeydobskin, \
+                                                   #alphraww=gdat.alphraww, \
+                                                   )
+                        
+                        pd.DataFrame.from_dict(dictsrchpboxoutp).to_csv(path)
+                    dictmile['dictsrchpboxoutp'] = dictsrchpboxoutp
+
+                    if gdat.epocprio is None:
+                        gdat.epocprio = dictsrchpboxoutp['epoc']
+                    if gdat.periprio is None:
+                        gdat.periprio = dictsrchpboxoutp['peri']
+                    gdat.deptprio = 1. - dictsrchpboxoutp['dept']
+                    gdat.duraprio = dictsrchpboxoutp['duratran']
+                    gdat.cosiprio = np.zeros_like(dictsrchpboxoutp['epoc']) 
+                    gdat.rratprio = np.sqrt(gdat.deptprio)
+                    gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio)
     
             # look for single transits using matched filter
-            if gdat.boolfindtransing:
-                ephesus.find_transing(gdat.arrytser['tpri'][b][p][:, 0], gdat.arrytser['tpri'][b][p][:, 1], \
-                                                                        **dictflarinpt)
-            if gdat.boolfindflar:
-                b = 0
-                for p in gdat.indxinst[b]:
-                    ephesus.find_flar(gdat.arrytser['tpri'][b][p][:, 0], gdat.arrytser['tpri'][b][p][:, 1], \
+            if gdat.boolsrchtransing:
+                ephesus.srch_transing(gdat.arrytser['tpri'][b][p][:, 0], gdat.arrytser['tpri'][0][p][:, 1], **dictsrchtransinginpt)
+            if gdat.boolsrchflar:
+                dictsrchflarinpt['pathimag'] = gdat.pathimag
                 #verbtype=1, strgextn='', numbduratrantmpt=3, \
-                                                                    #minmduratrantmpt=None, maxmduratrantmpt=None, \
-                                                                    **dictflarinpt)
-                                                                        #pathimag=None, boolplot=True, boolanimtmpt=False)
+                                                                #minmduratrantmpt=None, maxmduratrantmpt=None, \
+                                                                    #pathimag=None, boolplot=True, boolanimtmpt=False)
+                
+                for p in gdat.indxinst[0]:
+                    ephesus.srch_flar(gdat.arrytser['tpri'][0][p][:, 0], gdat.arrytser['tpri'][0][p][:, 1], **dictsrchflarinpt)
                 numbkern = len(maxmcorr)
                 indxkern = np.arange(numbkern)
                 
@@ -4431,12 +4488,13 @@ def init( \
                                                                             (gdat.listarrytser['inte'][b][p][y][:, 1] > lcurcliplowr))[0]
                                 gdat.listarrytser['clip'][b][p][y] = gdat.listarrytser['mask'][b][p][y][indx, :]
                             gdat.arrytser['clip'][b][p] = np.concatenate(gdat.listarrytser['clip'][b][p], 0)
+                
+                    # plot the sigma-clipped time-series data
+                    plot_tser(gdat, 'clip')
+                
                 else:
                     gdat.arrytser['clip'] = gdat.arrytser['mask']
                     gdat.listarrytser['clip'] = gdat.listarrytser['mask']
-                
-                # plot the sigma-clipped time-series data
-                plot_tser(gdat, 'clip')
                 
                 for b in gdat.indxdatatser:
                     for p in gdat.indxinst[b]:
@@ -4508,7 +4566,7 @@ def init( \
             
             # plot LS periodogram
             for b in gdat.indxdatatser:
-                if (gdat.typemodl == 'bhol' or b == 1) and gdat.numbinst[b] > 0:
+                if gdat.numbinst[b] > 0:
                     
                     if gdat.numbinst[b] > 1:
                         strgextn = '%s' % (gdat.liststrgtser[b])
@@ -4753,9 +4811,6 @@ def init( \
                     calc_prop(gdat, 'prio')
                 if gdat.boolplotprop:
                     plot_prop(gdat, 'prio')
-    
-    if gdat.typeprioplan == 'blsq':
-        dictmile['dictblsq'] = dictblsq
     
     if not gdat.boolobjt or gdat.numbplan == 0 or not gdat.boolmodl or not gdat.booldatatser:
         return dictmile
