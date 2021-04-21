@@ -73,12 +73,15 @@ def quer_mast(request):
     return head,content
 
 
-def retr_dictcatltic8(tsecsele=None, verbtype=1):
+def retr_dictcatltic8(typepopl, verbtype=1):
     """
     Get a dictionary of the sources in the TIC8 with the fields in the TIC8
     
     Keyword arguments   
-        tsecsele: sector (default:None)
+        typepopl: type of the population
+            'm135nomi': TESS targets
+            '2minnomi': 2-minute TESS targets
+            '2minsc17': 2-minute TESS targets for sector 17
 
     Returns a dictionary with keys:
         rasc: RA
@@ -94,31 +97,58 @@ def retr_dictcatltic8(tsecsele=None, verbtype=1):
     # list of strings that will be keys of the output dictionary
     listname = ['rasc', 'decl', 'tmag', 'radistar', 'massstar']
     
-    if tsecsele is None:
-        listtsecsele = range(1, 27)
-        strgpopl = 'nomi'
-    else:
-        listtsecsele = [tsecsele]
-        strgpopl = 'sc%02d' % tsecsele
+    if typepopl.startswith('2min'):
+        if typepopl.endswith('nomi'):
+            listtsec = range(1, 27)
+        else:
+            listtsec = [int(typepopl[-2:])]
     
     pathlistticidata = os.environ['MILETOS_DATA_PATH'] + '/data/listticidata/'
     os.system('mkdir -p %s' % pathlistticidata)
 
-    path = pathlistticidata + 'listticidata_%s.csv' % strgpopl
+    path = pathlistticidata + 'listticidata_%s.csv' % typepopl
     if not os.path.exists(path):
-        listtici = []
-        for tsec in listtsecsele:
-            url = 'https://tess.mit.edu/wp-content/uploads/all_targets_S%03d_v1.csv' % tsec
-            c = pd.read_csv(url, header=5)
-            listticitemp = c['TICID'].values
-            listticitemp = listticitemp.astype(str)
-            listtici.append(listticitemp) 
-            numbtarg = listticitemp.size
+        if typepopl.startswith('2min'):
+            #listtici = []
+            cntr = 0
+            for tsec in listtsec:
+                url = 'https://tess.mit.edu/wp-content/uploads/all_targets_S%03d_v1.csv' % tsec
+                c = pd.read_csv(url, header=5)
+                listticitemp = c['TICID'].values
+                listticitemp = listticitemp.astype(str)
+                listtici = list(listticitemp)
+                #listtici.append(listticitemp) 
+                numbtarg = listticitemp.size
+                if verbtype > 0:
+                    print('%d observed 2-min targets in Sector %d...' % (numbtarg, tsec))
+                request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':'rad, mass', \
+                                                                                    'filters':[{'paramName':'ID', 'values':listtici}]}}
+                headers, outString = quer_mast(request)
+                listdictquertemp = json.loads(outString)['data']
+                
+                if cntr == 0:
+                    listdictquer = dict()
+                    for name in listdictquertemp[0].keys():
+                        listdictquer[name] = []
+                
+                for name in listdictquer.keys():
+                    for k in range(len(listdictquertemp)):
+                        listdictquer[name].append(listdictquertemp[k][name])
+                cntr += 1
+
+            for name in listdictquer.keys():
+                listdictquer[name] = np.concatenate(listdictquer[name])
+
+            listtici = list(np.unique(np.concatenate(listtici)))
+            numbtarg = len(listtici)
             if verbtype > 0:
                 print('%d observed 2-min targets...' % numbtarg)
-        listtici = list(np.concatenate(listtici))
-        request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':'rad, mass', \
-                                                                                'filters':[{'paramName':'ID', 'values':listtici}]}}
+            
+        elif typepopl == 'm135nomi':
+            request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':'rad, mass', \
+                                                                            'filters':[{'paramName':'Tmag', 'values':[{"max":13.5}]}]}}
+        else:
+            raise Exception('')
         headers, outString = quer_mast(request)
         listdictquer = json.loads(outString)['data']
         if verbtype > 0:
@@ -141,17 +171,23 @@ def retr_dictcatltic8(tsecsele=None, verbtype=1):
             dictcatl['tmag'].append(listdictquer[k]['Tmag'])
         for name in listname:
             dictcatl[name] = np.array(dictcatl[name])
-        numbfini = dictcatl['massstar'].size
+        numbtarg = dictcatl['massstar'].size
         if verbtype > 0:
-            print('%d targets with non-NAN radii...' % numbfini)
-        
+            print('%d targets...' % numbtarg)
             print('Writing to %s...' % path)
         pd.DataFrame.from_dict(dictcatl).to_csv(path)
     else:
         if verbtype > 0:
             print('Reading from %s...' % path)
         dictcatl = pd.read_csv(path).to_dict(orient='list')
-   
+        
+        for name in dictcatl.keys():
+            dictcatl[name] = np.array(dictcatl[name])
+        print('type(dictcatl)')
+        print(type(dictcatl))
+        print('dictcatl[rasc]')
+        summgene(dictcatl['rasc'])
+
     return dictcatl
 
 
@@ -802,6 +838,15 @@ def calc_prop(gdat, strgpdfn):
             a = -np.inf
         else:
             a = -meantemp / stdvtemp
+
+        print('featstar')
+        print(featstar)
+        print('meantemp')
+        print(meantemp)
+        
+        # not a specific host star
+        if meantemp is None:
+            continue
 
         if not np.isfinite(meantemp):
             print('featstar')
@@ -4277,7 +4322,7 @@ def init( \
                     if gdat.periprio is None:
                         gdat.periprio = dictsrchpboxoutp['peri']
                     gdat.deptprio = 1. - dictsrchpboxoutp['dept']
-                    gdat.duraprio = dictsrchpboxoutp['duratran']
+                    gdat.duraprio = dictsrchpboxoutp['dura']
                     gdat.cosiprio = np.zeros_like(dictsrchpboxoutp['epoc']) 
                     gdat.rratprio = np.sqrt(gdat.deptprio)
                     gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio)
@@ -4961,7 +5006,7 @@ def init( \
     #            if strgfile == 'params_star.csv':
     #                gdat.boolalleprev[typemodlinfe]['pars'] = True
 
-    if gdat.boolinfealle and gdat.booldatatser:
+    if gdat.typeinfe == 'alle' and gdat.booldatatser:
         if gdat.boolallebkgdgaus:
             # background allesfitter run
             if gdat.verbtype > 0:
@@ -5008,7 +5053,7 @@ def init( \
         gdat.data = np.loadtxt(gdat.pathdata + 'band.csv', delimiter=',', skiprows=9)
         gdat.meanwlenband = gdat.data[:, 0] * 1e-3
         gdat.thptband = gdat.data[:, 1]
-        
+    
     for typemodlinfe in gdat.listtypemodlinfe:
         if gdat.typeinfe == 'mile':
             
@@ -5124,6 +5169,10 @@ def init( \
 
             if typemodlinfe == 'bhol':
                 
+                # number of total samples after burn-in
+                gdat.numbsamp = (gdat.numbsampwalk - gdat.numbsampburnwalkseco) * numbwalk
+                gdat.indxsamp = np.arange(gdat.numbsamp)
+    
                 ### MCMC
                 if gdat.boolmcmc:
                     gdat.listlablpara = [['T$_0$', 'day'], ['P', 'day'], ['M', r'M$_s$']]
@@ -5190,7 +5239,7 @@ def init( \
 
 
     # measure final time
-    gdat.timeinit = modutime.time()
+    gdat.timefinl = modutime.time()
     gdat.timeexec = gdat.timefinl - gdat.timeinit
     if gdat.verbtype > 0:
         print('miletos ran in %.3g seconds.')
