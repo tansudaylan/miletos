@@ -103,6 +103,7 @@ def cnfg_WASP121():
                    #boolinfefoldbind=True, \
                    listtypemodlexop=['0003'], \
                    timescalbdtrspln=2.5, \
+                   typeprioplan='blsq', \
                    boolclip=False, \
                    typedatatess='SPOC', \
                    listtsecsele=[7, 33, 34], \
