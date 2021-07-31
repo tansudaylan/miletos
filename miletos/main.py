@@ -114,6 +114,7 @@ def retr_dictcatltic8(typepopl, typeverb=1):
         typepopl: type of the population
             'ffimhcon': TESS targets with contamination larger than
             'ffimm135': TESS targets brighter than mag 13.5
+            '2minnomibulk': 2-minute TESS targets obtained by merging the SPOC 2-min bulk downloads
             '2minnomi': 2-minute TESS targets
             '2minsc17': 2-minute TESS targets for sector 17
 
@@ -129,9 +130,9 @@ def retr_dictcatltic8(typepopl, typeverb=1):
         print('Retrieving a dictionary of TIC8 for population %s...' % typepopl)
     
     if typepopl.startswith('2min') or typepopl.startswith('20sc'):
-        if typepopl.endswith('nomi'):
+        if typepopl[4:].startswith('nomi'):
             listtsec = np.arange(1, 27)
-        elif typepopl.endswith('extd'):
+        elif typepopl[4:].endswith('extd'):
             listtsec = np.arange(27, 39)
         else:
             listtsec = [int(typepopl[-2:])]
@@ -169,16 +170,25 @@ def retr_dictcatltic8(typepopl, typeverb=1):
             dictquer = dict()
             listtici = []
             for o in indxtsec:
-                url = 'https://tess.mit.edu/wp-content/uploads/all_targets%sS%03d_v1.csv' % (strgurll, listtsec[o])
-                c = pd.read_csv(url, header=5)
-                listticitsec = c['TICID'].values
-                listticitsec = listticitsec.astype(str)
-                listtici.append(listticitsec) 
+                if typepopl.endswith('bulk'):
+                    pathtess = os.environ['TESS_DATA_PATH'] + '/data/lcur/sector-%02d' % listtsec[o]
+                    listnamefile = fnmatch.filter(os.listdir(pathtess), '*.fits')
+                    listticitsec = []
+                    for namefile in listnamefile:
+                        listticitsec.append(str(int(namefile.split('-')[2])))
+                    listticitsec = np.array(listticitsec)
+                else:
+                    url = 'https://tess.mit.edu/wp-content/uploads/all_targets%sS%03d_v1.csv' % (strgurll, listtsec[o])
+                    c = pd.read_csv(url, header=5)
+                    listticitsec = c['TICID'].values
+                    listticitsec = listticitsec.astype(str)
                 numbtargtsec = listticitsec.size
+                
                 if typeverb > 0:
                     print('%d observed %s targets in Sector %d...' % (numbtargtsec, labltemp, listtsec[o]))
                 
-                dictquertemp = xmat_tici(listticitsec)
+                if numbtargtsec > 0:
+                    dictquertemp = xmat_tici(listticitsec)
                 
                 if o == 0:
                     dictquerinte = dict()
@@ -222,6 +232,7 @@ def retr_dictcatltic8(typepopl, typeverb=1):
                 for k in range(len(listdictquer)):
                     dictquer[name][k] = listdictquer[k][name]
         else:
+            print('Unrecognized population name: %s' % typepopl)
             raise Exception('')
         
         if typeverb > 0:
@@ -234,8 +245,6 @@ def retr_dictcatltic8(typepopl, typeverb=1):
         dictquer = pd.read_csv(path).to_dict(orient='list')
         
         for name in dictquer.keys():
-            print('name')
-            print(name)
             dictquer[name] = np.array(dictquer[name])
         del dictquer['Unnamed: 0']
 
@@ -347,7 +356,7 @@ def retr_llik_spec(para, gdat):
     #timeinit = time.time()
     
     specboloplan = retr_modl_spec(gdat, tmpt, booltess=False, strgtype='intg')
-    deptplan = 1e6 * gdat.rratmedi[0]**2 * specboloplan / gdat.specstarintg # [ppm]
+    deptplan = 1e3 * gdat.rratmedi[0]**2 * specboloplan / gdat.specstarintg # [ppt]
     
     llik = -0.5 * np.sum((deptplan - gdat.deptobsd)**2 / gdat.varideptobsd)
     
@@ -495,14 +504,14 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
             print('The host name, %s, was not found in the ExoFOP TOI Catalog.' % toiitarg)
         return None
     else:
-        dictexof['namestar'] = np.empty(numbplan, dtype=object)
+        dictexof['namesyst'] = np.empty(numbplan, dtype=object)
         dictexof['nameplan'] = np.empty(numbplan, dtype=object)
         for kk, k in enumerate(indxplan):
             dictexof['nameplan'][kk] = 'TOI ' + str(dictexof['toii'][kk])
-            dictexof['namestar'][kk] = 'TOI ' + str(dictexof['toii'][kk])[:-3]
+            dictexof['namesyst'][kk] = 'TOI ' + str(dictexof['toii'][kk])[:-3]
         
-        dictexof['dept'] = objtexof['Depth (ppm)'].values[indxplan] * 1e-6
-        dictexof['rrat'] = np.sqrt(dictexof['dept'])
+        dictexof['dept'] = objtexof['Depth (ppm)'].values[indxplan] * 1e-3 # [ppt]
+        dictexof['rrat'] = np.sqrt(dictexof['dept'] * 1e-3)
         dictexof['radiplan'] = objtexof['Planet Radius (R_Earth)'][indxplan].values
         dictexof['stdvradiplan'] = objtexof['Planet Radius error'][indxplan].values
         
@@ -554,7 +563,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
         dictexof['numbplanstar'] = np.empty(numbplan)
         dictexof['boolfrst'] = np.zeros(numbplan, dtype=bool)
         for kk, k in enumerate(indxplan):
-            indxplanthis = np.where(dictexof['namestar'][kk] == dictexof['namestar'])[0]
+            indxplanthis = np.where(dictexof['namesyst'][kk] == dictexof['namesyst'])[0]
             if kk == indxplanthis[0]:
                 dictexof['boolfrst'][kk] = True
             dictexof['numbplanstar'][kk] = indxplanthis.size
@@ -739,7 +748,7 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                     axis.plot(gdat.arrypcur[strgarry[:4]+'modltotl'+strgarry[-4:]][b][p][j][:, 0], gdat.arrypcur[strgarry[:4]+'modltotl'+strgarry[-4:]][b][p][j][:, 1], color='b', zorder=3)
                 if gdat.listdeptdraw is not None:
                     for k in range(len(gdat.listdeptdraw)):  
-                        axis.axhline(1. - gdat.listdeptdraw[k], ls='-', color='grey')
+                        axis.axhline(1. - 1e-3 * gdat.listdeptdraw[k], ls='-', color='grey')
                 path = gdat.pathimag + 'pcurphas_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgplan[j], \
                                                                                             strgarry, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                 if typeverb > 0:
@@ -760,9 +769,11 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                         yerr = None
                     if b == 1:
                         yerr = arrypcurbindzoom[b][p][j][:, 2]
-                    axis.errorbar(gdat.periprio[j] * arrypcurbindzoom[b][p][j][:, 0] * 24., arrypcurbindzoom[b][p][j][:, 1], zorder=2, \
+                    
+                    if np.isfinite(gdat.duraprio[j]):
+                        axis.errorbar(gdat.periprio[j] * arrypcurbindzoom[b][p][j][:, 0] * 24., arrypcurbindzoom[b][p][j][:, 1], zorder=2, \
                                                                                                     yerr=yerr, elinewidth=1, capsize=2, \
-                                                                                        color=gdat.listcolrplan[j], marker='o', ls='', ms=3)
+                                                                                                          color=gdat.listcolrplan[j], marker='o', ls='', ms=3)
                     if boolpost:
                         axis.plot(gdat.periprio[j] * 24. * gdat.arrypcur[strgarry[:4]+'modltotl'+strgarry[-4:]][b][p][j][:, 0], \
                                                                                         gdat.arrypcur[strgarry[:4]+'modltotl'+strgarry[-4:]][b][p][j][:, 1], \
@@ -772,10 +783,11 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                                         r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], va='center', ha='center', transform=axis.transAxes)
                     axis.set_ylabel(gdat.listlabltser[b])
                     axis.set_xlabel('Time [hours]')
-                    axis.set_xlim([-np.amax(gdat.duramask), np.amax(gdat.duramask)])
+                    if np.isfinite(gdat.duramask[j]):
+                        axis.set_xlim([-np.nanmax(gdat.duramask), np.nanmax(gdat.duramask)])
                     if gdat.listdeptdraw is not None:
                         for k in range(len(gdat.listdeptdraw)):  
-                            axis.axhline(1. - gdat.listdeptdraw[k], ls='--', color='grey')
+                            axis.axhline(1. - 1e-3 * gdat.listdeptdraw[k], ls='--', color='grey')
                     plt.subplots_adjust(hspace=0., bottom=0.25, left=0.25)
                     path = gdat.pathimag + 'pcurtime_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgplan[j], \
                                                                                     strgarry, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
@@ -835,8 +847,19 @@ def calc_prop(gdat, strgpdfn):
 
         for j in gdat.indxplan:
             if strgpdfn == 'prio':
-                gdat.dictlist[strgfeat][:, j] = getattr(gdat, strgfeat + 'prio')[j] + np.random.randn(gdat.numbsamp) * \
-                                                                                            getattr(gdat, 'stdv' + strgfeat + 'prio')[j]
+                mean = getattr(gdat, strgfeat + 'prio')
+                stdv = getattr(gdat, 'stdv' + strgfeat + 'prio')
+                if not np.isfinite(mean[j]):
+                    continue
+
+                gdat.dictlist[strgfeat][:, j] = mean[j] + np.random.randn(gdat.numbsamp) * stdv[j]
+                if strgfeat == 'rrat':
+                    print('mean')
+                    print(mean)
+                    print('stdv')
+                    print(stdv)
+                    gdat.dictlist[strgfeat][:, j] = scipy.stats.truncnorm.rvs(-mean[j]/stdv[j], np.inf, size=gdat.numbsamp) * stdv[j] + mean[j]
+
             else:
                 if strgfeat == 'epoc':
                     strg = '%s_epoch' % gdat.liststrgplan[j]
@@ -888,17 +911,8 @@ def calc_prop(gdat, strgpdfn):
 
     # stellar properties
     for featstar in gdat.listfeatstar:
-        stdvtemp = getattr(gdat, 'stdv' + featstar)
         meantemp = getattr(gdat, featstar)
-        if stdvtemp == 0.:
-            a = -np.inf
-        else:
-            a = -meantemp / stdvtemp
-
-        print('featstar')
-        print(featstar)
-        print('meantemp')
-        print(meantemp)
+        stdvtemp = getattr(gdat, 'stdv' + featstar)
         
         # not a specific host star
         if meantemp is None:
@@ -912,16 +926,11 @@ def calc_prop(gdat, strgpdfn):
             print('stdvtemp')
             print(stdvtemp)
             raise Exception('')
-        #gdat.dictlist[featstar] = allesfitter.priors.simulate_PDF.simulate_PDF(meantemp, stdvtemp, stdvtemp, size=gdat.numbsamp, plot=False)
-        print('featstar')
-        print(featstar)
-        print('meantemp')
-        print(meantemp)
-        print('stdvtemp')
-        print(stdvtemp)
-        print('a')
-        print(a)
-        gdat.dictlist[featstar] = r = scipy.stats.truncnorm.rvs(a, np.inf, size=gdat.numbsamp) * stdvtemp + meantemp
+        
+        if stdvtemp == 0.:
+            gdat.dictlist[featstar] = meantemp + np.zeros(gdat.numbsamp)
+        else:
+            gdat.dictlist[featstar] = scipy.stats.truncnorm.rvs(-meantemp/stdvtemp, np.inf, size=gdat.numbsamp) * stdvtemp + meantemp
         
         gdat.dictlist[featstar] = np.vstack([gdat.dictlist[featstar]] * gdat.numbplan).T
     
@@ -940,7 +949,11 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['incl'] = np.arccos(gdat.dictlist['cosi']) * 180. / np.pi
     
     # radius of the planets
-    gdat.dictlist['radiplan'] = gdat.dictlist['radistar'] * gdat.dictlist['rrat']
+    print('gdat.dictlist[radistar]')
+    summgene(gdat.dictlist['radistar'])
+    print('gdat.dictlist[rrat]')
+    summgene(gdat.dictlist['rrat'])
+    gdat.dictlist['radiplan'] = gdat.dictfact['rsre'] * gdat.dictlist['radistar'] * gdat.dictlist['rrat'] # [R_E]
     
     # semi-major axis
     gdat.dictlist['smax'] = (gdat.dictlist['radiplan'] + gdat.dictlist['radistar']) / gdat.dictlist['rsma']
@@ -963,9 +976,20 @@ def calc_prop(gdat, strgpdfn):
     
     gdat.dictlist['massplanpredchen'] = np.empty_like(gdat.dictlist['radiplan'])
     gdat.dictlist['massplanpredwolf'] = np.empty_like(gdat.dictlist['radiplan'])
+    print('gdat.booltranplan')
+    print(gdat.booltranplan)
+    print('gdat.rratprio')
+    print(gdat.rratprio)
     for j in gdat.indxplan:
-        if not np.isfinite(gdat.dictlist['radiplan'][:, j]).all():
-            raise Exception('')
+        if not gdat.booltranplan[j]:
+            continue
+        print('j')
+        print(j)
+        print('gdat.dictlist[rrat][:, j]')
+        summgene(gdat.dictlist['rrat'][:, j])
+        print('gdat.dictlist[radiplan][:, j]')
+        summgene(gdat.dictlist['radiplan'][:, j])
+
         gdat.dictlist['massplanpredchen'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j])
         gdat.dictlist['massplanpredwolf'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j], strgtype='wolf2016')
     gdat.dictlist['massplanpred'] = gdat.dictlist['massplanpredchen']
@@ -1026,7 +1050,7 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['sini'] = np.sqrt(1. - gdat.dictlist['cosi']**2)
     gdat.dictlist['omeg'] = 180. / np.pi * np.mod(np.arctan2(gdat.dictlist['esin'], gdat.dictlist['ecos']), 2 * np.pi)
     gdat.dictlist['rs2a'] = gdat.dictlist['rsma'] / (1. + gdat.dictlist['rrat'])
-    gdat.dictlist['dept'] = gdat.dictlist['rrat']**2
+    gdat.dictlist['dept'] = 1e3 * gdat.dictlist['rrat']**2 # [ppt]
     gdat.dictlist['sinw'] = np.sin(np.pi / 180. * gdat.dictlist['omeg'])
     
     gdat.dictlist['imfa'] = ephesus.retr_imfa(gdat.dictlist['cosi'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
@@ -1039,10 +1063,10 @@ def calc_prop(gdat, strgpdfn):
     # gravitational darkening coefficient
     coefgrda = 0.2
     alphelli = ephesus.retr_alphelli(coeflidaline, coefgrda)
-    gdat.dictlist['deptelli'] = alphelli * gdat.dictlist['massplanused'] * np.sin(gdat.dictlist['incl'] / 180. * np.pi)**2 / \
-                                                                  gdat.dictlist['massstar']* (gdat.dictlist['radistar'] / gdat.dictlist['smax'])**3
+    gdat.dictlist['deptelli'] = 1e3 * alphelli * gdat.dictlist['massplanused'] * np.sin(gdat.dictlist['incl'] / 180. * np.pi)**2 / \
+                                                                  gdat.dictlist['massstar']* (gdat.dictlist['radistar'] / gdat.dictlist['smax'])**3 # [ppt]
     ## expected Doppler beaming (DB)
-    deptbeam = 4. * gdat.dictlist['rvsapred'] / 3e8 * gdat.consbeam
+    deptbeam = 1e3 * 4. * gdat.dictlist['rvsapred'] / 3e8 * gdat.consbeam # [ppt]
 
     if gdat.typeverb > 0:
         print('Calculating durations...')
@@ -1052,15 +1076,15 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['duratrantotl'] = ephesus.retr_duratrantotl(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
                                                                                     gdat.dictlist['rrat'], gdat.dictlist['imfa'])
     
-    gdat.dictlist['maxmdeptblen'] = (1. - gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 / \
-                                                                    (1. + gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2
+    gdat.dictlist['maxmdeptblen'] = 1e3 * (1. - gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 / \
+                                                                    (1. + gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 # [ppt]
     gdat.dictlist['minmdilu'] = gdat.dictlist['dept'] / gdat.dictlist['maxmdeptblen']
     gdat.dictlist['minmratiflux'] = gdat.dictlist['minmdilu'] / (1. - gdat.dictlist['minmdilu'])
     gdat.dictlist['maxmdmag'] = -2.5 * np.log10(gdat.dictlist['minmratiflux'])
     
     # orbital
     ## RM effect
-    gdat.dictlist['amplrmef'] = 2. / 3. * gdat.dictlist['vsiistar'] * gdat.dictlist['dept'] * np.sqrt(1. - gdat.dictlist['imfa'])
+    gdat.dictlist['amplrmef'] = 2. / 3. * gdat.dictlist['vsiistar'] * 1e-3 * gdat.dictlist['dept'] * np.sqrt(1. - gdat.dictlist['imfa'])
     gdat.dictlist['stnormefpfss'] = (gdat.dictlist['amplrmef'] / 0.9) * np.sqrt(gdat.dictlist['duratranfull'] / (10. / 60. / 24.))
     
     # 0003 single component, offset
@@ -1118,7 +1142,7 @@ def calc_prop(gdat, strgpdfn):
         wlenmodl = arrymodl[:, 0]
         deptmodl = arrymodl[:, 1]
         indxwlenmodltess = np.where((wlenmodl > 0.6) & (wlenmodl < 0.95))[0]
-        gdat.amplplantheratmo = np.mean(1e-6 * deptmodl[indxwlenmodltess])
+        gdat.amplplantheratmo = np.mean(deptmodl[indxwlenmodltess])
         print('gdat.amplplantheratmo')
         print(gdat.amplplantheratmo)
         gdat.dictlist['amplplanreflatmo'] = 1e-6 * arrydata[0, 2] + np.random.randn(gdat.numbsamp).reshape((gdat.numbsamp, 1)) \
@@ -1130,12 +1154,12 @@ def calc_prop(gdat, strgpdfn):
         print('Updating the multiband depth array with dayside and adding the nightside...')
         medideptseco = np.median(gdat.dictlist['amplseco'][:, 0])
         stdvdeptseco = (np.percentile(gdat.dictlist['amplseco'][:, 0], 84.) - np.percentile(gdat.dictlist['amplseco'][:, 0], 16.)) / 2.
-        arrydata[0, 2] = medideptseco * 1e6 # [ppm]
-        arrydata[0, 3] = stdvdeptseco * 1e6 # [ppm]
+        arrydata[0, 2] = medideptseco * 1e3 # [ppm]
+        arrydata[0, 3] = stdvdeptseco * 1e3 # [ppm]
         ## add the nightside depth
         medideptnigh = np.median(gdat.dictlist['amplnigh'][:, 0])
         stdvdeptnigh = (np.percentile(gdat.dictlist['amplnigh'][:, 0], 84.) - np.percentile(gdat.dictlist['amplnigh'][:, 0], 16.)) / 2.
-        arrydata = np.concatenate((arrydata, np.array([[arrydata[0, 0], arrydata[0, 1], medideptnigh * 1e6, stdvdeptnigh * 1e6, 0, 0, 0, 0]])), axis=0)
+        arrydata = np.concatenate((arrydata, np.array([[arrydata[0, 0], arrydata[0, 1], medideptnigh * 1e3, stdvdeptnigh * 1e6, 0, 0, 0, 0]])), axis=0) # [ppm]
         
         print('arrydata[0, :]')
         print(arrydata[0, :])
@@ -1860,7 +1884,7 @@ def proc_alle(gdat, typemodlinfe):
                         
                         # add Vivien's result
                         if k == 2 and gdat.labltarg == 'WASP-121':
-                            axis[k].plot(gdat.phasvivi, gdat.deptvivi*1e6, color='orange', lw=2, label='GCM (Parmentier+2018)')
+                            axis[k].plot(gdat.phasvivi, gdat.deptvivi*1e3, color='orange', lw=2, label='GCM (Parmentier+2018)')
                             axis[k].axhline(0., ls='-.', alpha=0.3, color='grey')
 
                         if k == 0:
@@ -2805,9 +2829,9 @@ def plot_prop(gdat, strgpdfn):
         gdat.intgreso = []
         liststrgstarcomp = []
         for m in indxtargpopl:
-            strgstar = dictpopl['namestar'][m]
+            strgstar = dictpopl['namesyst'][m]
             if not strgstar in liststrgstarcomp:
-                indxexarstar = np.where(dictpopl['namestar'] == strgstar)[0]
+                indxexarstar = np.where(dictpopl['namesyst'] == strgstar)[0]
                 if indxexarstar[0] != m:
                     raise Exception('')
                 
@@ -2883,7 +2907,7 @@ def plot_prop(gdat, strgpdfn):
                 jmagsyst = jmagsystwasp0107
                 duratranplan = duratranplanwasp0107
             scalheig = ephesus.retr_scalheig(tmptplan, massplan, radiplan)
-            deptscal = 2. * radiplan * scalheig / radistar**2
+            deptscal = 1e3 * 2. * radiplan * scalheig / radistar**2 # [ppt]
             dept = 80. * deptscal
             factstdv = np.sqrt(10**((-jmagsystwasp0107 + jmagsyst) / 2.5) * duratranplanwasp0107 / duratranplan)
             stdvnirsthis = factstdv * stdvnirs
@@ -2993,7 +3017,7 @@ def plot_prop(gdat, strgpdfn):
                 maxmnumbname = min(5, varbnorm.size)
                 while True:
                     k = indxsort[cntr]
-                    nameadd = dictpopl['namestar'][indx][k]
+                    nameadd = dictpopl['namesyst'][indx][k]
                     if not nameadd in listnameaddd:
                         axis.text(varbnorm[k], dictpopl['numbplanstar'][indx][k] + 0.5, nameadd, size=6, \
                                                                                                 va='center', ha='right', rotation=45)
@@ -3663,7 +3687,10 @@ def init( \
          # threshold percentile for detecting stellar flares
          thrssigmflar=7., \
 
-         ## prior values
+         ### 
+         # Boolean flag to turn on transit for each planet
+         booltranplan=None, \
+
          ### photometric and RV model
          #### means
          rratprio=None, \
@@ -3774,8 +3801,8 @@ def init( \
     
     
     if gdat.typeverb > 0:
-        print('List of model types: %s' % gdat.listtypemodlinfe)
         print('List of analysis types: %s' % gdat.listtypeanls)
+        print('List of model types: %s' % gdat.listtypemodlinfe)
 
     # Boolean flag to perform inference
     gdat.boolinfe = len(gdat.listtypemodlinfe) > 0 and gdat.booldatatser
@@ -3956,6 +3983,8 @@ def init( \
     
     gdat.pathtarg = gdat.pathbasetarg + '%s%s/' % (gdat.strgclus, gdat.strgtarg)
     
+    dictmileoutp['pathtarg'] = gdat.pathtarg
+
     #if os.path.exists(gdat.pathtarg):
     #    print('Path for the object exists... Returning.')
     #    return
@@ -3965,7 +3994,7 @@ def init( \
     
     # make folders
     for attr, valu in gdat.__dict__.items():
-        if attr.startswith('path'):
+        if attr.startswith('path') and valu.endswith('/'):
             os.system('mkdir -p %s' % valu)
             
     if gdat.typepriostar is None:
@@ -4199,7 +4228,7 @@ def init( \
             if gdat.cosiprio is None:
                 gdat.cosiprio = np.zeros_like(gdat.epocprio)
             gdat.duraprio = ephesus.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
-            gdat.deptprio = gdat.rratprio**2
+            gdat.deptprio = 1e3 * gdat.rratprio**2
         
         # check MAST
         if gdat.typetarg != 'inpt' and gdat.strgmast is None:
@@ -4395,10 +4424,10 @@ def init( \
                     gdat.epocprio = dictsrchpboxoutp['epoc']
                 if gdat.periprio is None:
                     gdat.periprio = dictsrchpboxoutp['peri']
-                gdat.deptprio = 1. - dictsrchpboxoutp['dept']
+                gdat.deptprio = 1. - 1e-3 * dictsrchpboxoutp['dept']
                 gdat.duraprio = dictsrchpboxoutp['dura']
                 gdat.cosiprio = np.zeros_like(dictsrchpboxoutp['epoc']) 
-                gdat.rratprio = np.sqrt(gdat.deptprio)
+                gdat.rratprio = np.sqrt(1e-3 * gdat.deptprio)
                 gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio / 24.)
     
         # look for single transits using matched filter
@@ -4475,6 +4504,10 @@ def init( \
         gdat.numbplan = gdat.epocprio.size
     else:
         gdat.numbplan = 0
+    
+    if gdat.booltranplan is None:
+        gdat.booltranplan = np.zeros(gdat.numbplan, dtype=bool)
+        gdat.booltranplan[np.where(np.isfinite(gdat.deptprio))] = True
 
     gdat.indxplan = np.arange(gdat.numbplan)
         
@@ -4492,7 +4525,7 @@ def init( \
             gdat.duraprio = ephesus.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
         
         if gdat.rratprio is None:
-            gdat.rratprio = np.sqrt(gdat.deptprio)
+            gdat.rratprio = np.sqrt(1e-3 * gdat.deptprio)
         if gdat.rsmaprio is None:
             gdat.rsmaprio = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.periprio / 24.)**2 + gdat.cosiprio**2)
         if gdat.ecosprio is None:
@@ -4532,6 +4565,8 @@ def init( \
                 print('Sorting the planets with respect to orbital period...')
             
             indxplansort = np.argsort(gdat.periprio)
+            
+            gdat.booltranplan = gdat.booltranplan[indxplansort]
             gdat.rratprio = gdat.rratprio[indxplansort]
             gdat.rsmaprio = gdat.rsmaprio[indxplansort]
             gdat.epocprio = gdat.epocprio[indxplansort]
@@ -4545,7 +4580,7 @@ def init( \
         
         # if stellar properties are NaN, use Solar defaults
         for featstar in gdat.listfeatstar:
-            if not hasattr(gdat, featstar) or getattr(gdat, featstar) is None:
+            if not hasattr(gdat, featstar) or getattr(gdat, featstar) is None or not np.isfinite(getattr(gdat, featstar)):
                 if featstar == 'radistar':
                     setattr(gdat, featstar, 1.)
                 if featstar == 'massstar':
@@ -4559,7 +4594,7 @@ def init( \
 
         # if stellar property uncertainties are NaN, use 10%
         for featstar in gdat.listfeatstar:
-            if (not hasattr(gdat, 'stdv' + featstar) or getattr(gdat, 'stdv' + featstar) is None or not np.isfinite(stdv)) \
+            if (not hasattr(gdat, 'stdv' + featstar) or getattr(gdat, 'stdv' + featstar) is None or not np.isfinite(getattr(gdat, 'stdv' + featstar))) \
                                                                         and not (featstar == 'rascstar' or featstar == 'declstar'):
                 print('featstar')
                 print(featstar)
@@ -4573,10 +4608,6 @@ def init( \
             print(gdat.rascstar)
             print('gdat.declstar')
             print(gdat.declstar)
-            print('gdat.radistar')
-            print(gdat.radistar)
-            print('gdat.stdvradistar')
-            print(gdat.stdvradistar)
             print('gdat.radistar [R_S]')
             print(gdat.radistar)
             print('gdat.stdvradistar [R_S]')
@@ -4838,10 +4869,9 @@ def init( \
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for j in gdat.indxplan:
+                        if not np.isfinite(gdat.duramask[j]):
+                            continue
                         # determine time mask
-                        if gdat.booldiagmode:
-                            if not np.isfinite(gdat.duramask[j]):
-                                raise Exception('')
                         for y in gdat.indxchun[b][p]:
                             gdat.listindxtimetranchun[j][b][p][y] = ephesus.retr_indxtimetran(gdat.listarrytser['bdtr'][b][p][y][:, 0], \
                                                                                                    gdat.epocprio[j], gdat.periprio[j], gdat.duramask[j])
@@ -4974,7 +5004,7 @@ def init( \
 
     ## augment object dictinary
     gdat.dictfeatobjt = dict()
-    gdat.dictfeatobjt['namestar'] = np.array([gdat.labltarg] * gdat.numbplan)
+    gdat.dictfeatobjt['namesyst'] = np.array([gdat.labltarg] * gdat.numbplan)
     gdat.dictfeatobjt['nameplan'] = gdat.liststrgplanfull
     # temp
     gdat.dictfeatobjt['booltran'] = np.array([True] * gdat.numbplan, dtype=bool)
@@ -5017,22 +5047,23 @@ def init( \
             gdat.numbbinspcurzoom = (gdat.periprio / gdat.delttimebindzoom).astype(int)
             gdat.binsphasprimzoom = [[] for j in gdat.indxplan]
             for j in gdat.indxplan:
-                gdat.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gdat.numbbinspcurzoom[j] + 1)
+                if np.isfinite(gdat.duraprio[j]):
+                    gdat.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gdat.numbbinspcurzoom[j] + 1)
 
             if gdat.typeverb > 0:
                 print('Phase folding and binning the light curve...')
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for j in gdat.indxplan:
-                        numbbinspcurzoom = int(gdat.periprio[j] / gdat.delttimebindzoom)
-                        
+
                         gdat.arrypcur['primbdtr'][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
                                                                                                                 gdat.epocprio[j], gdat.periprio[j])
                         
                         gdat.arrypcur['primbdtrbindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
                                                                                                             binsxdat=gdat.binsphasprimtotl)
                         
-                        gdat.arrypcur['primbdtrbindzoom'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
+                        if np.isfinite(gdat.duraprio[j]):
+                            gdat.arrypcur['primbdtrbindzoom'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
                                                                                                             binsxdat=gdat.binsphasprimzoom[j])
                         
                         gdat.arrypcur['quadbdtr'][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
