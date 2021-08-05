@@ -94,8 +94,19 @@ def quer_mast(request):
 
 
 def xmat_tici(listtici):
-
-    if not isinstance(listtici, list):
+    
+    if len(listtici) == 0:
+        raise Exception('')
+    
+    # make sure the input is a python list of strings
+    if isinstance(listtici[0], str):
+        if isinstance(listtici, np.ndarray):
+            listtici = list(listtici)
+    else:
+        if isinstance(listtici, list):
+            listtici = np.array(listtici)
+        if isinstance(listtici, np.ndarray):
+            listtici = listtici.astype(str)
         listtici = list(listtici)
 
     request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':'rad, mass', \
@@ -114,9 +125,8 @@ def retr_dictcatltic8(typepopl, typeverb=1):
         typepopl: type of the population
             'ffimhcon': TESS targets with contamination larger than
             'ffimm135': TESS targets brighter than mag 13.5
-            '2minnomibulk': 2-minute TESS targets obtained by merging the SPOC 2-min bulk downloads
-            '2minnomi': 2-minute TESS targets
-            '2minsc17': 2-minute TESS targets for sector 17
+            'tessnomi2minbulk': 2-minute TESS targets obtained by merging the SPOC 2-min bulk downloads
+            'tessnomi2min': 2-minute TESS targets
 
     Returns a dictionary with keys:
         rasc: RA
@@ -129,7 +139,7 @@ def retr_dictcatltic8(typepopl, typeverb=1):
     if typeverb > 0:
         print('Retrieving a dictionary of TIC8 for population %s...' % typepopl)
     
-    if typepopl.startswith('2min') or typepopl.startswith('20sc'):
+    if typepopl.startswith('tess'):
         if typepopl[4:].startswith('nomi'):
             listtsec = np.arange(1, 27)
         elif typepopl[4:].endswith('extd'):
@@ -158,12 +168,14 @@ def retr_dictcatltic8(typepopl, typeverb=1):
         dictstrg['MH'] = 'metastar'
         liststrg = list(dictstrg.keys())
         
-        if typepopl.startswith('2min') or typepopl.startswith('20sc'):
+        print('typepopl')
+        print(typepopl)
+        if typepopl.startswith('tessnomi'):
             
-            if typepopl.startswith('20sc'):
+            if typepopl[8:12] == '20sc':
                 strgurll = '_20s_'
                 labltemp = '20-second'
-            else:
+            if typepopl[8:12] == '2min':
                 strgurll = '_'
                 labltemp = '2-minute'
 
@@ -251,18 +263,18 @@ def retr_dictcatltic8(typepopl, typeverb=1):
     return dictquer
 
 
-def retr_listcolrplan(numbplan):
+def retr_listcolrcomp(numbcomp):
     
-    listcolrplan = np.array(['magenta', 'orange', 'red', 'green', 'purple', 'cyan'])[:numbplan]
+    listcolrcomp = np.array(['magenta', 'orange', 'red', 'green', 'purple', 'cyan'])[:numbcomp]
 
-    return listcolrplan
+    return listcolrcomp
 
 
-def retr_liststrgplan(numbplan):
+def retr_liststrgcomp(numbcomp):
     
-    liststrgplan = np.array(['b', 'c', 'd', 'e', 'f', 'g'])[:numbplan]
+    liststrgcomp = np.array(['b', 'c', 'd', 'e', 'f', 'g'])[:numbcomp]
 
-    return liststrgplan
+    return liststrgcomp
 
 
 def retr_llik(para, gdat):
@@ -276,7 +288,7 @@ def retr_llik(para, gdat):
     masscomp = para[2]
     massstar = para[3]
     
-    rflxtotl, dflxelli, dflxbeam, dflxslen = retr_rflxmodl(gdat.timethis, para)
+    rflxtotl, dflxelli, dflxbeam, dflxslen = ephesus.retr_rflxmodl(gdat.timethis, para)
     
     llik = np.sum(-0.5 * (gdat.rflxbdtr - rflxmodl)**2 / gdat.varirflxbdtrthis)
 
@@ -376,12 +388,12 @@ def retr_reso(listperi, maxmordr=10):
         raise Exception('')
 
     numbsamp = listperi.shape[0]
-    numbplan = listperi.shape[1]
-    indxplan = np.arange(numbplan)
-    listratiperi = np.zeros((numbsamp, numbplan, numbplan))
-    intgreso = np.zeros((numbplan, numbplan, 2))
-    for j in indxplan:
-        for jj in indxplan:
+    numbcomp = listperi.shape[1]
+    indxcomp = np.arange(numbcomp)
+    listratiperi = np.zeros((numbsamp, numbcomp, numbcomp))
+    intgreso = np.zeros((numbcomp, numbcomp, 2))
+    for j in indxcomp:
+        for jj in indxcomp:
             if j >= jj:
                 continue
                 
@@ -484,49 +496,49 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
     
     dictexof = {}
     dictexof['toii'] = objtexof['TOI'].values
-    numbplan = dictexof['toii'].size
-    indxplan = np.arange(numbplan)
-    toiitargexof = np.empty(numbplan, dtype=object)
-    for k in indxplan:
+    numbcomp = dictexof['toii'].size
+    indxcomp = np.arange(numbcomp)
+    toiitargexof = np.empty(numbcomp, dtype=object)
+    for k in indxcomp:
         toiitargexof[k] = int(dictexof['toii'][k])
         
     if toiitarg is None:
-        indxplan = np.arange(numbplan)
+        indxcomp = np.arange(numbcomp)
     else:
-        indxplan = np.where(toiitargexof == toiitarg)[0]
+        indxcomp = np.where(toiitargexof == toiitarg)[0]
     
-    dictexof['toii'] = dictexof['toii'][indxplan]
+    dictexof['toii'] = dictexof['toii'][indxcomp]
     
-    numbplan = indxplan.size
+    numbcomp = indxcomp.size
     
-    if indxplan.size == 0:
+    if indxcomp.size == 0:
         if typeverb > 0:
             print('The host name, %s, was not found in the ExoFOP TOI Catalog.' % toiitarg)
         return None
     else:
-        dictexof['namesyst'] = np.empty(numbplan, dtype=object)
-        dictexof['nameplan'] = np.empty(numbplan, dtype=object)
-        for kk, k in enumerate(indxplan):
+        dictexof['namesyst'] = np.empty(numbcomp, dtype=object)
+        dictexof['nameplan'] = np.empty(numbcomp, dtype=object)
+        for kk, k in enumerate(indxcomp):
             dictexof['nameplan'][kk] = 'TOI ' + str(dictexof['toii'][kk])
             dictexof['namesyst'][kk] = 'TOI ' + str(dictexof['toii'][kk])[:-3]
         
-        dictexof['dept'] = objtexof['Depth (ppm)'].values[indxplan] * 1e-3 # [ppt]
+        dictexof['dept'] = objtexof['Depth (ppm)'].values[indxcomp] * 1e-3 # [ppt]
         dictexof['rrat'] = np.sqrt(dictexof['dept'] * 1e-3)
-        dictexof['radiplan'] = objtexof['Planet Radius (R_Earth)'][indxplan].values
-        dictexof['stdvradiplan'] = objtexof['Planet Radius error'][indxplan].values
+        dictexof['radiplan'] = objtexof['Planet Radius (R_Earth)'][indxcomp].values
+        dictexof['stdvradiplan'] = objtexof['Planet Radius error'][indxcomp].values
         
-        dictexof['rascstar'] = objtexof['RA (deg)'][indxplan].values
-        dictexof['declstar'] = objtexof['Dec (deg)'][indxplan].values
+        dictexof['rascstar'] = objtexof['RA (deg)'][indxcomp].values
+        dictexof['declstar'] = objtexof['Dec (deg)'][indxcomp].values
         
-        dictexof['facidisc'] = np.empty(numbplan, dtype=object)
+        dictexof['facidisc'] = np.empty(numbcomp, dtype=object)
         dictexof['facidisc'][:] = 'Transiting Exoplanet Survey Satellite (TESS)'
         
-        dictexof['peri'] = objtexof['Period (days)'][indxplan].values
-        dictexof['epoc'] = objtexof['Transit Epoch (BJD)'][indxplan].values
-        dictexof['duratran'] = objtexof['Duration (hours)'].values[indxplan] # [hours]
+        dictexof['peri'] = objtexof['Period (days)'][indxcomp].values
+        dictexof['epoc'] = objtexof['Transit Epoch (BJD)'][indxcomp].values
+        dictexof['duratran'] = objtexof['Duration (hours)'].values[indxcomp] # [hours]
 
-        dictexof['boolfrst'] = np.zeros(numbplan)
-        dictexof['numbplanstar'] = np.zeros(numbplan)
+        dictexof['boolfrst'] = np.zeros(numbcomp)
+        dictexof['numbcompstar'] = np.zeros(numbcomp)
         
         liststrgfeatstartici = ['massstar', 'vmagsyst', 'jmagsyst', 'hmagsyst', 'kmagsyst', 'distsyst', 'metastar', 'radistar', 'tmptstar', 'loggstar']
         liststrgfeatstarticiinhe = ['mass', 'Vmag', 'Jmag', 'Hmag', 'Kmag', 'd', 'MH', 'rad', 'Teff', 'logg']
@@ -535,11 +547,11 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
         indxstrgfeatstartici = np.arange(numbstrgfeatstartici)
 
         for strgfeat in liststrgfeatstartici:
-            dictexof[strgfeat] = np.zeros(numbplan)
-            dictexof['stdv' + strgfeat] = np.zeros(numbplan)
+            dictexof[strgfeat] = np.zeros(numbcomp)
+            dictexof['stdv' + strgfeat] = np.zeros(numbcomp)
         
         ## crossmatch with TIC
-        dictexof['tici'] = objtexof['TIC ID'][indxplan].values
+        dictexof['tici'] = objtexof['TIC ID'][indxcomp].values
         listticiuniq = np.unique(dictexof['tici'].astype(str))
         request = {'service':'Mast.Catalogs.Filtered.Tic', 'format':'json', 'params':{'columns':"*", \
                                                               'filters':[{'paramName':'ID', 'values':list(listticiuniq)}]}}
@@ -557,18 +569,18 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
                 dictexof[liststrgfeatstartici[n]][indxtemp] = listdictquer[k][liststrgfeatstarticiinhe[n]]
                 dictexof['stdv' + liststrgfeatstartici[n]][indxtemp] = listdictquer[k]['e_' + liststrgfeatstarticiinhe[n]]
         
-        dictexof['boolfpos'] = objtexof['TFOPWG Disposition'][indxplan].values == 'FP'
+        dictexof['boolfpos'] = objtexof['TFOPWG Disposition'][indxcomp].values == 'FP'
         
         # augment
-        dictexof['numbplanstar'] = np.empty(numbplan)
-        dictexof['boolfrst'] = np.zeros(numbplan, dtype=bool)
-        for kk, k in enumerate(indxplan):
-            indxplanthis = np.where(dictexof['namesyst'][kk] == dictexof['namesyst'])[0]
-            if kk == indxplanthis[0]:
+        dictexof['numbcompstar'] = np.empty(numbcomp)
+        dictexof['boolfrst'] = np.zeros(numbcomp, dtype=bool)
+        for kk, k in enumerate(indxcomp):
+            indxcompthis = np.where(dictexof['namesyst'][kk] == dictexof['namesyst'])[0]
+            if kk == indxcompthis[0]:
                 dictexof['boolfrst'][kk] = True
-            dictexof['numbplanstar'][kk] = indxplanthis.size
+            dictexof['numbcompstar'][kk] = indxcompthis.size
         
-        dictexof['numbplantranstar'] = dictexof['numbplanstar']
+        dictexof['numbcomptranstar'] = dictexof['numbcompstar']
         dictexof['lumistar'] = dictexof['radistar']**2 * (dictexof['tmptstar'] / 5778.)**4
         dictexof['stdvlumistar'] = dictexof['lumistar'] * np.sqrt((2 * dictexof['stdvradistar'] / dictexof['radistar'])**2 + \
                                                                         (4 * dictexof['stdvtmptstar'] / dictexof['tmptstar'])**2)
@@ -611,7 +623,7 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
             for name in dicttemp:
                 dicttemp[name] = np.array(dicttemp[name])
                 if toiitarg is not None:
-                    dicttemp[name] = dicttemp[name][indxplan]
+                    dicttemp[name] = dicttemp[name][indxcomp]
 
         print('dicttemp[massplan]')
         summgene(dicttemp['massplan'])
@@ -633,14 +645,14 @@ def retr_dictexof(toiitarg=None, boolreplexar=False, typeverb=1):
         dictexof['booltran'] = np.ones_like(dictexof['toii'], dtype=bool)
     
         print('temp: vsiistar and projoblq are NaNs')
-        dictexof['vsiistar'] = np.ones(numbplan) + np.nan
-        dictexof['projoblq'] = np.ones(numbplan) + np.nan
+        dictexof['vsiistar'] = np.ones(numbcomp) + np.nan
+        dictexof['projoblq'] = np.ones(numbcomp) + np.nan
         
         # replace confirmed planet properties
         if boolreplexar:
             dictexar = ephesus.retr_dictexar()
-            listdisptess = objtexof['TESS Disposition'][indxplan].values.astype(str)
-            listdisptfop = objtexof['TFOPWG Disposition'][indxplan].values.astype(str)
+            listdisptess = objtexof['TESS Disposition'][indxcomp].values.astype(str)
+            listdisptfop = objtexof['TFOPWG Disposition'][indxcomp].values.astype(str)
             indxexofcpla = np.where((listdisptfop == 'CP') & (listdisptess == 'PC'))[0]
             listticicpla = dictexof['tici'][indxexofcpla]
             numbticicpla = len(listticicpla)
@@ -722,7 +734,7 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
             arrypcurbindzoom = gdat.arrypcur[strgarry+'bindzoom']
         # plot individual phase curves
         for p in gdat.indxinst[b]:
-            for j in gdat.indxplan:
+            for j in gdat.indxcomp:
                 
                 # phase on the horizontal axis
                 figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydob)
@@ -736,11 +748,11 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                     yerr = None
                 if b == 1:
                     yerr = arrypcurbindzoom[b][p][j][:, 2]
-                axis.errorbar(arrypcurbindtotl[b][p][j][:, 0], arrypcurbindtotl[b][p][j][:, 1], color=gdat.listcolrplan[j], elinewidth=1, capsize=2, \
+                axis.errorbar(arrypcurbindtotl[b][p][j][:, 0], arrypcurbindtotl[b][p][j][:, 1], color=gdat.listcolrcomp[j], elinewidth=1, capsize=2, \
                                                                                                                  zorder=2, marker='o', ls='', ms=3)
                 if gdat.boolwritplan:
-                    axis.text(0.9, 0.9, r'\textbf{%s}' % gdat.liststrgplan[j], \
-                                        color=gdat.listcolrplan[j], va='center', ha='center', transform=axis.transAxes)
+                    axis.text(0.9, 0.9, r'\textbf{%s}' % gdat.liststrgcomp[j], \
+                                        color=gdat.listcolrcomp[j], va='center', ha='center', transform=axis.transAxes)
                 axis.set_ylabel(gdat.listlabltser[b])
                 axis.set_xlabel('Phase')
                 # overlay the posterior model
@@ -749,7 +761,7 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                 if gdat.listdeptdraw is not None:
                     for k in range(len(gdat.listdeptdraw)):  
                         axis.axhline(1. - 1e-3 * gdat.listdeptdraw[k], ls='-', color='grey')
-                path = gdat.pathimag + 'pcurphas_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgplan[j], \
+                path = gdat.pathimag + 'pcurphas_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgcomp[j], \
                                                                                             strgarry, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                 if typeverb > 0:
                     print('Writing to %s...' % path)
@@ -773,14 +785,14 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                     if np.isfinite(gdat.duraprio[j]):
                         axis.errorbar(gdat.periprio[j] * arrypcurbindzoom[b][p][j][:, 0] * 24., arrypcurbindzoom[b][p][j][:, 1], zorder=2, \
                                                                                                     yerr=yerr, elinewidth=1, capsize=2, \
-                                                                                                          color=gdat.listcolrplan[j], marker='o', ls='', ms=3)
+                                                                                                          color=gdat.listcolrcomp[j], marker='o', ls='', ms=3)
                     if boolpost:
                         axis.plot(gdat.periprio[j] * 24. * gdat.arrypcur[strgarry[:4]+'modltotl'+strgarry[-4:]][b][p][j][:, 0], \
                                                                                         gdat.arrypcur[strgarry[:4]+'modltotl'+strgarry[-4:]][b][p][j][:, 1], \
                                                                                                                         color='b', zorder=3)
                     if gdat.boolwritplan:
                         axis.text(0.9, 0.9, \
-                                        r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], va='center', ha='center', transform=axis.transAxes)
+                                        r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], va='center', ha='center', transform=axis.transAxes)
                     axis.set_ylabel(gdat.listlabltser[b])
                     axis.set_xlabel('Time [hours]')
                     if np.isfinite(gdat.duramask[j]):
@@ -789,29 +801,29 @@ def plot_pser(gdat, strgarry, boolpost=False, typeverb=1):
                         for k in range(len(gdat.listdeptdraw)):  
                             axis.axhline(1. - 1e-3 * gdat.listdeptdraw[k], ls='--', color='grey')
                     plt.subplots_adjust(hspace=0., bottom=0.25, left=0.25)
-                    path = gdat.pathimag + 'pcurtime_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgplan[j], \
+                    path = gdat.pathimag + 'pcurtime_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgcomp[j], \
                                                                                     strgarry, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
                     plt.close()
             
-            if gdat.numbplan > 1:
+            if gdat.numbcomp > 1:
                 # plot all phase curves
-                figr, axis = plt.subplots(gdat.numbplan, 1, figsize=gdat.figrsizeydob, sharex=True)
-                if gdat.numbplan == 1:
+                figr, axis = plt.subplots(gdat.numbcomp, 1, figsize=gdat.figrsizeydob, sharex=True)
+                if gdat.numbcomp == 1:
                     axis = [axis]
-                for jj, j in enumerate(gdat.indxplan):
+                for jj, j in enumerate(gdat.indxcomp):
                     axis[jj].plot(arrypcur[b][p][j][:, 0], arrypcur[b][p][j][:, 1], color='grey', alpha=gdat.alphraww, \
                                                                                         marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
-                    axis[jj].plot(arrypcurbindtotl[b][p][j][:, 0], arrypcurbindtotl[b][p][j][:, 1], color=gdat.listcolrplan[j], marker='o', ls='', ms=1)
+                    axis[jj].plot(arrypcurbindtotl[b][p][j][:, 0], arrypcurbindtotl[b][p][j][:, 1], color=gdat.listcolrcomp[j], marker='o', ls='', ms=1)
                     if gdat.boolwritplan:
-                        axis[jj].text(0.97, 0.8, r'\textbf{%s}' % gdat.liststrgplan[j], transform=axis[jj].transAxes, \
-                                                                                            color=gdat.listcolrplan[j], va='center', ha='center')
+                        axis[jj].text(0.97, 0.8, r'\textbf{%s}' % gdat.liststrgcomp[j], transform=axis[jj].transAxes, \
+                                                                                            color=gdat.listcolrcomp[j], va='center', ha='center')
                 axis[0].set_ylabel(gdat.listlabltser[b])
                 axis[0].set_xlim(-0.5, 0.5)
-                axis[0].yaxis.set_label_coords(-0.08, 1. - 0.5 * gdat.numbplan)
-                axis[gdat.numbplan-1].set_xlabel('Phase')
+                axis[0].yaxis.set_label_coords(-0.08, 1. - 0.5 * gdat.numbcomp)
+                axis[gdat.numbcomp-1].set_xlabel('Phase')
                 
                 plt.subplots_adjust(hspace=0., bottom=0.2)
                 path = gdat.pathimag + 'pcurphastotl_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], strgarry, \
@@ -843,9 +855,9 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictpost = {}
     gdat.dicterrr = {}
     for strgfeat in gdat.liststrgfeat:
-        gdat.dictlist[strgfeat] = np.empty((gdat.numbsamp, gdat.numbplan))
+        gdat.dictlist[strgfeat] = np.empty((gdat.numbsamp, gdat.numbcomp))
 
-        for j in gdat.indxplan:
+        for j in gdat.indxcomp:
             if strgpdfn == 'prio':
                 mean = getattr(gdat, strgfeat + 'prio')
                 stdv = getattr(gdat, 'stdv' + strgfeat + 'prio')
@@ -862,37 +874,37 @@ def calc_prop(gdat, strgpdfn):
 
             else:
                 if strgfeat == 'epoc':
-                    strg = '%s_epoch' % gdat.liststrgplan[j]
+                    strg = '%s_epoch' % gdat.liststrgcomp[j]
                 if strgfeat == 'peri':
-                    strg = '%s_period' % gdat.liststrgplan[j]
+                    strg = '%s_period' % gdat.liststrgcomp[j]
                 if strgfeat == 'rrat':
-                    strg = '%s_rr' % gdat.liststrgplan[j]
+                    strg = '%s_rr' % gdat.liststrgcomp[j]
                 if strgfeat == 'rsma':
-                    strg = '%s_rsuma' % gdat.liststrgplan[j]
+                    strg = '%s_rsuma' % gdat.liststrgcomp[j]
                 if strgfeat == 'cosi':
-                    strg = '%s_cosi' % gdat.liststrgplan[j]
+                    strg = '%s_cosi' % gdat.liststrgcomp[j]
     
                 if strgpdfn == '0003' or strgpdfn == '0004':
                     if strgfeat == 'sbrtrati':
-                        strg = '%s_sbratio_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_sbratio_TESS' % gdat.liststrgcomp[j]
                     if strgfeat == 'amplbeam':
-                        strg = '%s_phase_curve_beaming_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_beaming_TESS' % gdat.liststrgcomp[j]
                     if strgfeat == 'amplelli':
-                        strg = '%s_phase_curve_ellipsoidal_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_ellipsoidal_TESS' % gdat.liststrgcomp[j]
                 if strgpdfn == '0003':
                     if strgfeat == 'amplplan':
-                        strg = '%s_phase_curve_atmospheric_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_atmospheric_TESS' % gdat.liststrgcomp[j]
                     if strgfeat == 'timeshftplan':
-                        strg = '%s_phase_curve_atmospheric_shift_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_atmospheric_shift_TESS' % gdat.liststrgcomp[j]
                 if strgpdfn == '0004':
                     if strgfeat == 'amplplanther':
-                        strg = '%s_phase_curve_atmospheric_thermal_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_atmospheric_thermal_TESS' % gdat.liststrgcomp[j]
                     if strgfeat == 'amplplanrefl':
-                        strg = '%s_phase_curve_atmospheric_reflected_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_atmospheric_reflected_TESS' % gdat.liststrgcomp[j]
                     if strgfeat == 'timeshftplanther':
-                        strg = '%s_phase_curve_atmospheric_thermal_shift_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_atmospheric_thermal_shift_TESS' % gdat.liststrgcomp[j]
                     if strgfeat == 'timeshftplanrefl':
-                        strg = '%s_phase_curve_atmospheric_reflected_shift_TESS' % gdat.liststrgplan[j]
+                        strg = '%s_phase_curve_atmospheric_reflected_shift_TESS' % gdat.liststrgcomp[j]
             
                 if strg in gdat.objtalle[strgpdfn].posterior_params.keys():
                     gdat.dictlist[strgfeat][:, j] = gdat.objtalle[strgpdfn].posterior_params[strg][gdat.indxsamp]
@@ -932,129 +944,105 @@ def calc_prop(gdat, strgpdfn):
         else:
             gdat.dictlist[featstar] = scipy.stats.truncnorm.rvs(-meantemp/stdvtemp, np.inf, size=gdat.numbsamp) * stdvtemp + meantemp
         
-        gdat.dictlist[featstar] = np.vstack([gdat.dictlist[featstar]] * gdat.numbplan).T
+        gdat.dictlist[featstar] = np.vstack([gdat.dictlist[featstar]] * gdat.numbcomp).T
     
-    if strgpdfn == '0003' or strgpdfn == '0004':
-        gdat.dictlist['amplnigh'] = gdat.dictlist['sbrtrati'] * gdat.dictlist['rrat']**2
-    if strgpdfn == '0003':
-        gdat.dictlist['phasshftplan'] = gdat.dictlist['timeshftplan'] * 360. / gdat.dictlist['peri']
-    if strgpdfn == '0004':
-        gdat.dictlist['phasshftplanther'] = gdat.dictlist['timeshftplanther'] * 360. / gdat.dictlist['peri']
-        gdat.dictlist['phasshftplanrefl'] = gdat.dictlist['timeshftplanrefl'] * 360. / gdat.dictlist['peri']
-
-    if gdat.typeverb > 0:
-        print('Calculating inclinations...')
-   
     # inclination [degree]
     gdat.dictlist['incl'] = np.arccos(gdat.dictlist['cosi']) * 180. / np.pi
     
-    # radius of the planets
-    print('gdat.dictlist[radistar]')
-    summgene(gdat.dictlist['radistar'])
-    print('gdat.dictlist[rrat]')
-    summgene(gdat.dictlist['rrat'])
-    gdat.dictlist['radiplan'] = gdat.dictfact['rsre'] * gdat.dictlist['radistar'] * gdat.dictlist['rrat'] # [R_E]
-    
-    # semi-major axis
-    gdat.dictlist['smax'] = (gdat.dictlist['radiplan'] + gdat.dictlist['radistar']) / gdat.dictlist['rsma']
-    
-    if gdat.typeverb > 0:
-        print('Calculating equilibrium temperatures...')
-    
-    # planet equilibrium temperature
-    gdat.dictlist['tmptplan'] = gdat.dictlist['tmptstar'] * np.sqrt(gdat.dictlist['radistar'] / 2. / gdat.dictlist['smax'])
-    
-    # stellar luminosity
-    gdat.dictlist['lumistar'] = gdat.dictlist['radistar']**2 * (gdat.dictlist['tmptstar'] / 5778.)**4
-    
-    # insolation
-    gdat.dictlist['inso'] = gdat.dictlist['lumistar'] / gdat.dictlist['smax']**2
-    
-    # predicted planet mass
-    if gdat.typeverb > 0:
-        print('Calculating predicted masses...')
-    
-    gdat.dictlist['massplanpredchen'] = np.empty_like(gdat.dictlist['radiplan'])
-    gdat.dictlist['massplanpredwolf'] = np.empty_like(gdat.dictlist['radiplan'])
-    print('gdat.booltranplan')
-    print(gdat.booltranplan)
-    print('gdat.rratprio')
-    print(gdat.rratprio)
-    for j in gdat.indxplan:
-        if not gdat.booltranplan[j]:
-            continue
-        print('j')
-        print(j)
-        print('gdat.dictlist[rrat][:, j]')
-        summgene(gdat.dictlist['rrat'][:, j])
-        print('gdat.dictlist[radiplan][:, j]')
-        summgene(gdat.dictlist['radiplan'][:, j])
-
-        gdat.dictlist['massplanpredchen'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j])
-        gdat.dictlist['massplanpredwolf'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j], strgtype='wolf2016')
-    gdat.dictlist['massplanpred'] = gdat.dictlist['massplanpredchen']
-    
-    # mass used for later calculations
-    gdat.dictlist['massplanused'] = np.empty_like(gdat.dictlist['massplanpredchen'])
-    
-    # temp
-    gdat.dictlist['massplan'] = np.zeros_like(gdat.dictlist['esin'])
-    gdat.dictlist['massplanused'] = gdat.dictlist['massplanpredchen']
-    #for j in gdat.indxplan:
-    #    if 
-    #        gdat.dictlist['massplanused'][:, j] = 
-    #    else:
-    #        gdat.dictlist['massplanused'][:, j] = 
-    
-    # density of the planet
-    gdat.dictlist['densplan'] = gdat.dictlist['massplanused'] / gdat.dictlist['radiplan']**3
-
     # log g of the host star
     gdat.dictlist['loggstar'] = gdat.dictlist['massstar'] / gdat.dictlist['radistar']**2
 
-    # escape velocity
-    gdat.dictlist['vesc'] = ephesus.retr_vesc(gdat.dictlist['massplanused'], gdat.dictlist['radiplan'])
-    
-    if gdat.typeverb > 0:
-        print('Calculating radius and period ratios...')
-    
-    for j in gdat.indxplan:
-        strgratiperi = 'ratiperi_%s' % gdat.liststrgplan[j]
-        strgratiradi = 'ratiradi_%s' % gdat.liststrgplan[j]
-        for jj in gdat.indxplan:
-            gdat.dictlist[strgratiperi] = gdat.dictlist['peri'][:, j] / gdat.dictlist['peri'][:, jj]
-            gdat.dictlist[strgratiradi] = gdat.dictlist['radiplan'][:, j] / gdat.dictlist['radiplan'][:, jj]
-    
     gdat.dictlist['ecce'] = gdat.dictlist['esin']**2 + gdat.dictlist['ecos']**2
     
-    if gdat.typeverb > 0:
-        print('Calculating RV semi-amplitudes...')
+    if 'exop' in gdat.listtypeobjt:
+        # radius of the planets
+        gdat.dictlist['radiplan'] = gdat.dictfact['rsre'] * gdat.dictlist['radistar'] * gdat.dictlist['rrat'] # [R_E]
     
-    # RV semi-amplitude
-    gdat.dictlist['rvsapred'] = ephesus.retr_rvelsema(gdat.dictlist['peri'], gdat.dictlist['massplanpred'], \
-                                                                                            gdat.dictlist['massstar'], \
-                                                                                                gdat.dictlist['incl'], gdat.dictlist['ecce'])
+        # semi-major axis
+        gdat.dictlist['smax'] = (gdat.dictlist['radiplan'] + gdat.dictlist['radistar']) / gdat.dictlist['rsma']
     
-    if gdat.typeverb > 0:
-        print('Calculating TSMs...')
-    
-    # TSM
-    gdat.dictlist['tsmm'] = ephesus.retr_tsmm(gdat.dictlist['radiplan'], gdat.dictlist['tmptplan'], \
-                                                                                gdat.dictlist['massplanused'], gdat.dictlist['radistar'], gdat.jmagsyst)
-    
-    # ESM
-    gdat.dictlist['esmm'] = ephesus.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
-                                                                                gdat.dictlist['radiplan'], gdat.dictlist['radistar'], gdat.kmagsyst)
+        if strgpdfn == '0003' or strgpdfn == '0004':
+            gdat.dictlist['amplnigh'] = gdat.dictlist['sbrtrati'] * gdat.dictlist['rrat']**2
+        if strgpdfn == '0003':
+            gdat.dictlist['phasshftplan'] = gdat.dictlist['timeshftplan'] * 360. / gdat.dictlist['peri']
+        if strgpdfn == '0004':
+            gdat.dictlist['phasshftplanther'] = gdat.dictlist['timeshftplanther'] * 360. / gdat.dictlist['peri']
+            gdat.dictlist['phasshftplanrefl'] = gdat.dictlist['timeshftplanrefl'] * 360. / gdat.dictlist['peri']
+
+        # planet equilibrium temperature
+        gdat.dictlist['tmptplan'] = gdat.dictlist['tmptstar'] * np.sqrt(gdat.dictlist['radistar'] / 2. / gdat.dictlist['smax'])
         
+        # stellar luminosity
+        gdat.dictlist['lumistar'] = gdat.dictlist['radistar']**2 * (gdat.dictlist['tmptstar'] / 5778.)**4
+        
+        # insolation
+        gdat.dictlist['inso'] = gdat.dictlist['lumistar'] / gdat.dictlist['smax']**2
+    
+        # predicted planet mass
+        if gdat.typeverb > 0:
+            print('Calculating predicted masses...')
+        
+        gdat.dictlist['massplanpredchen'] = np.empty_like(gdat.dictlist['radiplan'])
+        gdat.dictlist['massplanpredwolf'] = np.empty_like(gdat.dictlist['radiplan'])
+        for j in gdat.indxcomp:
+            if not gdat.booltranplan[j]:
+                continue
+
+            gdat.dictlist['massplanpredchen'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j])
+            gdat.dictlist['massplanpredwolf'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j], strgtype='wolf2016')
+        gdat.dictlist['massplanpred'] = gdat.dictlist['massplanpredchen']
+        
+        # mass used for later calculations
+        gdat.dictlist['massplanused'] = np.empty_like(gdat.dictlist['massplanpredchen'])
+        
+        # temp
+        gdat.dictlist['massplan'] = np.zeros_like(gdat.dictlist['esin'])
+        gdat.dictlist['massplanused'] = gdat.dictlist['massplanpredchen']
+        #for j in gdat.indxcomp:
+        #    if 
+        #        gdat.dictlist['massplanused'][:, j] = 
+        #    else:
+        #        gdat.dictlist['massplanused'][:, j] = 
+    
+        # density of the planet
+        gdat.dictlist['densplan'] = gdat.dictlist['massplanused'] / gdat.dictlist['radiplan']**3
+
+        # escape velocity
+        gdat.dictlist['vesc'] = ephesus.retr_vesc(gdat.dictlist['massplanused'], gdat.dictlist['radiplan'])
+        
+        for j in gdat.indxcomp:
+            strgratiperi = 'ratiperi_%s' % gdat.liststrgcomp[j]
+            strgratiradi = 'ratiradi_%s' % gdat.liststrgcomp[j]
+            for jj in gdat.indxcomp:
+                gdat.dictlist[strgratiperi] = gdat.dictlist['peri'][:, j] / gdat.dictlist['peri'][:, jj]
+                gdat.dictlist[strgratiradi] = gdat.dictlist['radiplan'][:, j] / gdat.dictlist['radiplan'][:, jj]
+    
+        gdat.dictlist['dept'] = 1e3 * gdat.dictlist['rrat']**2 # [ppt]
+        # TSM
+        gdat.dictlist['tsmm'] = ephesus.retr_tsmm(gdat.dictlist['radiplan'], gdat.dictlist['tmptplan'], \
+                                                                                    gdat.dictlist['massplanused'], gdat.dictlist['radistar'], gdat.jmagsyst)
+        
+        # ESM
+        gdat.dictlist['esmm'] = ephesus.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
+                                                                                    gdat.dictlist['radiplan'], gdat.dictlist['radistar'], gdat.kmagsyst)
+        
+    else:
+        # semi-major axis
+        gdat.dictlist['smax'] = (gdat.dictlist['radistar']) / gdat.dictlist['rsma']
+    
     # temp
     gdat.dictlist['sini'] = np.sqrt(1. - gdat.dictlist['cosi']**2)
     gdat.dictlist['omeg'] = 180. / np.pi * np.mod(np.arctan2(gdat.dictlist['esin'], gdat.dictlist['ecos']), 2 * np.pi)
     gdat.dictlist['rs2a'] = gdat.dictlist['rsma'] / (1. + gdat.dictlist['rrat'])
-    gdat.dictlist['dept'] = 1e3 * gdat.dictlist['rrat']**2 # [ppt]
     gdat.dictlist['sinw'] = np.sin(np.pi / 180. * gdat.dictlist['omeg'])
-    
     gdat.dictlist['imfa'] = ephesus.retr_imfa(gdat.dictlist['cosi'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
    
+    # RV semi-amplitude
+    gdat.dictlist['rvsapred'] = ephesus.retr_rvelsema(gdat.dictlist['peri'], gdat.dictlist['massplanpred'], gdat.dictlist['massstar'], gdat.dictlist['incl'], gdat.dictlist['ecce'])
+    
+    ## expected Doppler beaming (DB)
+    deptbeam = 1e3 * 4. * gdat.dictlist['rvsapred'] / 3e8 * gdat.consbeam # [ppt]
+
     ## expected ellipsoidal variation (EV)
     ## limb and gravity darkening coefficients from Claret2017
     print('temp: connect these to Claret2017')
@@ -1065,9 +1053,6 @@ def calc_prop(gdat, strgpdfn):
     alphelli = ephesus.retr_alphelli(coeflidaline, coefgrda)
     gdat.dictlist['deptelli'] = 1e3 * alphelli * gdat.dictlist['massplanused'] * np.sin(gdat.dictlist['incl'] / 180. * np.pi)**2 / \
                                                                   gdat.dictlist['massstar']* (gdat.dictlist['radistar'] / gdat.dictlist['smax'])**3 # [ppt]
-    ## expected Doppler beaming (DB)
-    deptbeam = 1e3 * 4. * gdat.dictlist['rvsapred'] / 3e8 * gdat.consbeam # [ppt]
-
     if gdat.typeverb > 0:
         print('Calculating durations...')
 
@@ -1223,7 +1208,7 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictlist['projoblq'] = np.random.randn(gdat.numbsamp)[:, None] * gdat.stdvprojoblqprio[None, :] + gdat.projoblqprio[None, :]
     
     gdat.boolsampbadd = np.zeros(gdat.numbsamp, dtype=bool)
-    for j in gdat.indxplan:
+    for j in gdat.indxcomp:
         boolsampbaddtemp = ~np.isfinite(gdat.dictlist['maxmdmag'][:, j])
         gdat.boolsampbadd = gdat.boolsampbadd | boolsampbaddtemp
     gdat.indxsampbadd = np.where(gdat.boolsampbadd)[0]
@@ -1269,25 +1254,23 @@ def calc_prop(gdat, strgpdfn):
     gdat.dictfeatobjt['stdvtsmm'] = np.mean(gdat.dicterrr['tsmm'][1:, :], 0)
     
 
-def proc_alle(gdat, typemodlinfe):
+def proc_alle(gdat, typemodl):
     
     #_0003: single component offset baseline
     #_0004: multiple components, offset baseline
         
-    print('Processing allesfitter model %s...' % typemodlinfe)
+    print('Processing allesfitter model %s...' % typemodl)
     # allesfit run folder
-    gdat.pathalle[typemodlinfe] = gdat.pathallebase + 'allesfit_%s/' % typemodlinfe
-    
-    strgproc = typemodlinfe
+    gdat.pathalle[typemodl] = gdat.pathallebase + 'allesfit_%s/' % typemodl
     
     # make sure the folder exists
-    cmnd = 'mkdir -p %s' % gdat.pathalle[typemodlinfe]
+    cmnd = 'mkdir -p %s' % gdat.pathalle[typemodl]
     os.system(cmnd)
     
     # write the input data file
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            path = gdat.pathalle[typemodlinfe] + gdat.liststrginst[b][p] + '.csv'
+            path = gdat.pathalle[typemodl] + gdat.liststrginst[b][p] + '.csv'
             
             if gdat.boolinfefoldbind:
                 listarrytserbdtrtemp = np.copy(gdat.arrypcur['primbdtrbindtotl'][b][p][0])
@@ -1305,7 +1288,7 @@ def proc_alle(gdat, typemodlinfe):
             np.savetxt(path, listarrytserbdtrtemp, delimiter=',', header='time,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
     
     ## params_star
-    pathparastar = gdat.pathalle[typemodlinfe] + 'params_star.csv'
+    pathparastar = gdat.pathalle[typemodl] + 'params_star.csv'
     if not os.path.exists(pathparastar):
         if gdat.typeverb > 0:
             print('Writing to %s...' % pathparastar)
@@ -1319,58 +1302,58 @@ def proc_alle(gdat, typemodlinfe):
 
     ## params
     dictalleparadefa = dict()
-    pathpara = gdat.pathalle[typemodlinfe] + 'params.csv'
+    pathpara = gdat.pathalle[typemodl] + 'params.csv'
     if not os.path.exists(pathpara):
         cmnd = 'touch %s' % (pathpara)
         print(cmnd)
         os.system(cmnd)
     
-        for j in gdat.indxplan:
-            strgrrat = '%s_rr' % gdat.liststrgplan[j]
-            strgrsma = '%s_rsuma' % gdat.liststrgplan[j]
-            strgcosi = '%s_cosi' % gdat.liststrgplan[j]
-            strgepoc = '%s_epoch' % gdat.liststrgplan[j]
-            strgperi = '%s_period' % gdat.liststrgplan[j]
-            strgecos = '%s_f_c' % gdat.liststrgplan[j]
-            strgesin = '%s_f_s' % gdat.liststrgplan[j]
-            strgrvsa = '%s_K' % gdat.liststrgplan[j]
+        for j in gdat.indxcomp:
+            strgrrat = '%s_rr' % gdat.liststrgcomp[j]
+            strgrsma = '%s_rsuma' % gdat.liststrgcomp[j]
+            strgcosi = '%s_cosi' % gdat.liststrgcomp[j]
+            strgepoc = '%s_epoch' % gdat.liststrgcomp[j]
+            strgperi = '%s_period' % gdat.liststrgcomp[j]
+            strgecos = '%s_f_c' % gdat.liststrgcomp[j]
+            strgesin = '%s_f_s' % gdat.liststrgcomp[j]
+            strgrvsa = '%s_K' % gdat.liststrgcomp[j]
             dictalleparadefa[strgrrat] = ['%f' % gdat.rratprio[j], '1', 'uniform 0 %f' % (4 * gdat.rratprio[j]), \
-                                                                            '$R_{%s} / R_\star$' % gdat.liststrgplan[j], '']
+                                                                            '$R_{%s} / R_\star$' % gdat.liststrgcomp[j], '']
             
             dictalleparadefa[strgrsma] = ['%f' % gdat.rsmaprio[j], '1', 'uniform 0 %f' % (4 * gdat.rsmaprio[j]), \
-                                                                      '$(R_\star + R_{%s}) / a_{%s}$' % (gdat.liststrgplan[j], gdat.liststrgplan[j]), '']
+                                                                      '$(R_\star + R_{%s}) / a_{%s}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
             dictalleparadefa[strgcosi] = ['%f' % gdat.cosiprio[j], '1', 'uniform 0 %f' % max(0.1, 4 * gdat.cosiprio[j]), \
-                                                                                        '$\cos{i_{%s}}$' % gdat.liststrgplan[j], '']
+                                                                                        '$\cos{i_{%s}}$' % gdat.liststrgcomp[j], '']
             dictalleparadefa[strgepoc] = ['%f' % gdat.epocprio[j], '1', \
                                             'uniform %f %f' % (gdat.epocprio[j] - gdat.stdvepocprio[j], gdat.epocprio[j] + gdat.stdvepocprio[j]), \
-                                                                    '$T_{0;%s}$' % gdat.liststrgplan[j], '$\mathrm{BJD}$']
+                                                                    '$T_{0;%s}$' % gdat.liststrgcomp[j], '$\mathrm{BJD}$']
             dictalleparadefa[strgperi] = ['%f' % gdat.periprio[j], '1', \
                                      'uniform %f %f' % (gdat.periprio[j] - 3. * gdat.stdvperiprio[j], gdat.periprio[j] + 3. * gdat.stdvperiprio[j]), \
-                                                                    '$P_{%s}$' % gdat.liststrgplan[j], 'days']
+                                                                    '$P_{%s}$' % gdat.liststrgcomp[j], 'days']
             dictalleparadefa[strgecos] = ['%f' % gdat.ecosprio[j], '0', 'uniform -0.9 0.9', \
-                                                                '$\sqrt{e_{%s}} \cos{\omega_{%s}}$' % (gdat.liststrgplan[j], gdat.liststrgplan[j]), '']
+                                                                '$\sqrt{e_{%s}} \cos{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
             dictalleparadefa[strgesin] = ['%f' % gdat.esinprio[j], '0', 'uniform -0.9 0.9', \
-                                                                '$\sqrt{e_{%s}} \sin{\omega_{%s}}$' % (gdat.liststrgplan[j], gdat.liststrgplan[j]), '']
+                                                                '$\sqrt{e_{%s}} \sin{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
             dictalleparadefa[strgrvsa] = ['%f' % gdat.rvsaprio[j], '0', \
                                     'uniform %f %f' % (max(0, gdat.rvsaprio[j] - 5 * gdat.stdvrvsaprio[j]), gdat.rvsaprio[j] + 5 * gdat.stdvrvsaprio[j]), \
-                                                                '$K_{%s}$' % gdat.liststrgplan[j], '']
-            if typemodlinfe == '0003' or typemodlinfe == '0004':
+                                                                '$K_{%s}$' % gdat.liststrgcomp[j], '']
+            if typemodl == '0003' or typemodl == '0004':
                 for b in gdat.indxdatatser:
                     if b != 0:
                         continue
                     for p in gdat.indxinst[b]:
-                        strgsbrt = '%s_sbratio_' % gdat.liststrgplan[j] + gdat.liststrginst[b][p]
+                        strgsbrt = '%s_sbratio_' % gdat.liststrgcomp[j] + gdat.liststrginst[b][p]
                         dictalleparadefa[strgsbrt] = ['1e-3', '1', 'uniform 0 1', '$J_{%s; \mathrm{%s}}$' % \
-                                                                            (gdat.liststrgplan[j], gdat.listlablinst[b][p]), '']
+                                                                            (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
                         
-                        dictalleparadefa['%s_phase_curve_beaming_%s' % (gdat.liststrgplan[j], gdat.liststrginst[b][p])] = \
-                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{beam; %s; %s}$' % (gdat.liststrgplan[j], gdat.listlablinst[b][p]), '']
-                        dictalleparadefa['%s_phase_curve_atmospheric_%s' % (gdat.liststrgplan[j], gdat.liststrginst[b][p])] = \
-                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{atmo; %s; %s}$' % (gdat.liststrgplan[j], gdat.listlablinst[b][p]), '']
-                        dictalleparadefa['%s_phase_curve_ellipsoidal_%s' % (gdat.liststrgplan[j], gdat.liststrginst[b][p])] = \
-                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{elli; %s; %s}$' % (gdat.liststrgplan[j], gdat.listlablinst[b][p]), '']
+                        dictalleparadefa['%s_phase_curve_beaming_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
+                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{beam; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
+                        dictalleparadefa['%s_phase_curve_atmospheric_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
+                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{atmo; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
+                        dictalleparadefa['%s_phase_curve_ellipsoidal_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
+                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{elli; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
 
-            if typemodlinfe == '0003':
+            if typemodl == '0003':
                 for b in gdat.indxdatatser:
                     if b != 0:
                         continue
@@ -1378,10 +1361,10 @@ def proc_alle(gdat, typemodlinfe):
                         maxmshft = 0.25 * gdat.periprio[j]
                         minmshft = -maxmshft
 
-                        dictalleparadefa['%s_phase_curve_atmospheric_shift_%s' % (gdat.liststrgplan[j], gdat.liststrginst[b][p])] = \
+                        dictalleparadefa['%s_phase_curve_atmospheric_shift_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
                                          ['0', '1', 'uniform %.3g %.3g' % (minmshft, maxmshft), \
-                                            '$\Delta_\mathrm{%s; %s}$' % (gdat.liststrgplan[j], gdat.listlablinst[b][p]), '']
-        if typemodlinfe == 'pfss':
+                                            '$\Delta_\mathrm{%s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
+        if typemodl == 'pfss':
             for p in gdat.indxinst[1]:
                                 ['', 'host_vsini,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.vsiistarprio, 0, \
                                                                                                                             10 * gdat.vsiistarprio)], \
@@ -1410,15 +1393,15 @@ def proc_alle(gdat, typemodlinfe):
                 #                 (strggprorhoo, -2, -12, 12)], \
                 #           ])
                 
-        writ_filealle(gdat, 'params.csv', gdat.pathalle[typemodlinfe], gdat.dictdictallepara[typemodlinfe], dictalleparadefa)
+        writ_filealle(gdat, 'params.csv', gdat.pathalle[typemodl], gdat.dictdictallepara[typemodl], dictalleparadefa)
     
     ## settings
     dictallesettdefa = dict()
-    if typemodlinfe == 'pfss':
-        for j in gdat.indxplan:
-            dictallesettdefa['%s_flux_weighted_PFS' % gdat.liststrgplan[j]] = 'True'
+    if typemodl == 'pfss':
+        for j in gdat.indxcomp:
+            dictallesettdefa['%s_flux_weighted_PFS' % gdat.liststrgcomp[j]] = 'True'
     
-    pathsett = gdat.pathalle[typemodlinfe] + 'settings.csv'
+    pathsett = gdat.pathalle[typemodl] + 'settings.csv'
     if not os.path.exists(pathsett):
         cmnd = 'touch %s' % (pathsett)
         print(cmnd)
@@ -1449,14 +1432,14 @@ def proc_alle(gdat, typemodlinfe):
         
         #dictallesettdefa['use_host_density_prior'] = 'False'
         
-        if typemodlinfe == '0003' or typemodlinfe == '0004':
+        if typemodl == '0003' or typemodl == '0004':
             dictallesettdefa['phase_curve'] = 'True'
             dictallesettdefa['phase_curve_style'] = 'sine_physical'
         
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                for j in gdat.indxplan:
-                    dictallesettdefa['%s_grid_%s' % (gdat.liststrgplan[j], gdat.liststrginst[b][p])] = 'very_sparse'
+                for j in gdat.indxcomp:
+                    dictallesettdefa['%s_grid_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = 'very_sparse'
             
             if gdat.numbinst[b] > 0:
                 if b == 0:
@@ -1465,37 +1448,37 @@ def proc_alle(gdat, typemodlinfe):
                     strg = 'companions_rv'
                 varb = ''
                 cntr = 0
-                for j in gdat.indxplan:
+                for j in gdat.indxcomp:
                     if cntr != 0:
                         varb += ' '
-                    varb += '%s' % gdat.liststrgplan[j]
+                    varb += '%s' % gdat.liststrgcomp[j]
                     cntr += 1
                 dictallesettdefa[strg] = varb
         
         dictallesettdefa['fast_fit'] = 'True'
 
-        writ_filealle(gdat, 'settings.csv', gdat.pathalle[typemodlinfe], gdat.dictdictallesett[typemodlinfe], dictallesettdefa)
+        writ_filealle(gdat, 'settings.csv', gdat.pathalle[typemodl], gdat.dictdictallesett[typemodl], dictallesettdefa)
     
     ## initial plot
-    path = gdat.pathalle[typemodlinfe] + 'results/initial_guess_b.pdf'
+    path = gdat.pathalle[typemodl] + 'results/initial_guess_b.pdf'
     if not os.path.exists(path):
-        allesfitter.show_initial_guess(gdat.pathalle[typemodlinfe])
+        allesfitter.show_initial_guess(gdat.pathalle[typemodl])
     
     ## do the run
-    path = gdat.pathalle[typemodlinfe] + 'results/mcmc_save.h5'
+    path = gdat.pathalle[typemodl] + 'results/mcmc_save.h5'
     if not os.path.exists(path):
-        allesfitter.mcmc_fit(gdat.pathalle[typemodlinfe])
+        allesfitter.mcmc_fit(gdat.pathalle[typemodl])
     else:
         print('%s exists... Skipping the orbit run.' % path)
 
     ## make the final plots
-    path = gdat.pathalle[typemodlinfe] + 'results/mcmc_corner.pdf'
+    path = gdat.pathalle[typemodl] + 'results/mcmc_corner.pdf'
     if not os.path.exists(path):
-        allesfitter.mcmc_output(gdat.pathalle[typemodlinfe])
+        allesfitter.mcmc_output(gdat.pathalle[typemodl])
         
     # read the allesfitter posterior
-    print('Reading from %s...' % gdat.pathalle[typemodlinfe])
-    gdat.objtalle[typemodlinfe] = allesfitter.allesclass(gdat.pathalle[typemodlinfe])
+    print('Reading from %s...' % gdat.pathalle[typemodl])
+    gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
     
     gdat.numbsampalle = allesfitter.config.BASEMENT.settings['mcmc_total_steps']
     gdat.numbwalkalle = allesfitter.config.BASEMENT.settings['mcmc_nwalkers']
@@ -1511,7 +1494,7 @@ def proc_alle(gdat, typemodlinfe):
     print('gdat.numbsampallethin')
     print(gdat.numbsampallethin)
 
-    gdat.numbsamp = gdat.objtalle[typemodlinfe].posterior_params[list(gdat.objtalle[typemodlinfe].posterior_params.keys())[0]].size
+    gdat.numbsamp = gdat.objtalle[typemodl].posterior_params[list(gdat.objtalle[typemodl].posterior_params.keys())[0]].size
     
     print('gdat.numbsamp')
     print(gdat.numbsamp)
@@ -1527,36 +1510,38 @@ def proc_alle(gdat, typemodlinfe):
     print('gdat.numbsamp')
     print(gdat.numbsamp)
 
-    calc_prop(gdat, typemodlinfe)
+    calc_prop(gdat, typemodl)
 
-    gdat.arrytser['bdtr'+strgproc] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['modl'+strgproc] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['resi'+strgproc] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['bdtr'+strgproc] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['modl'+strgproc] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['resi'+strgproc] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['bdtr'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['modl'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['resi'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['bdtr'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['modl'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['resi'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            gdat.arrytser['modl'+strgproc][b][p] = np.empty((gdat.time[b][p].size, 3))
-            gdat.arrytser['modl'+strgproc][b][p][:, 0] = gdat.time[b][p]
-            gdat.arrytser['modl'+strgproc][b][p][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+            gdat.arrytser['modl'+typemodl][b][p] = np.empty((gdat.time[b][p].size, 3))
+            gdat.arrytser['modl'+typemodl][b][p][:, 0] = gdat.time[b][p]
+            gdat.arrytser['modl'+typemodl][b][p][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                              gdat.liststrgtseralle[b], xx=gdat.time[b][p])
-            gdat.arrytser['modl'+strgproc][b][p][:, 2] = 0.
+            gdat.arrytser['modl'+typemodl][b][p][:, 2] = 0.
 
-            gdat.arrytser['resi'+strgproc][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
-            gdat.arrytser['resi'+strgproc][b][p][:, 1] -= gdat.arrytser['modl'+strgproc][b][p][:, 1]
+            gdat.arrytser['resi'+typemodl][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
+            gdat.arrytser['resi'+typemodl][b][p][:, 1] -= gdat.arrytser['modl'+typemodl][b][p][:, 1]
             for y in gdat.indxchun[b][p]:
-                gdat.listarrytser['modl'+strgproc][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
-                gdat.listarrytser['modl'+strgproc][b][p][y][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+                gdat.listarrytser['modl'+typemodl][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
+                gdat.listarrytser['modl'+typemodl][b][p][y][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                        gdat.liststrgtseralle[b], xx=gdat.listtime[b][p][y])
                 
-                gdat.listarrytser['resi'+strgproc][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
-                gdat.listarrytser['resi'+strgproc][b][p][y][:, 1] -= gdat.listarrytser['modl'+strgproc][b][p][y][:, 1]
+                gdat.listarrytser['resi'+typemodl][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
+                gdat.listarrytser['resi'+typemodl][b][p][y][:, 1] -= gdat.listarrytser['modl'+typemodl][b][p][y][:, 1]
     
-    # plot residuals
-    if gdat.boolplottser:
-        plot_tser(gdat, 'resi' + strgproc)
+                # plot residuals
+                if gdat.boolplottser:
+                    plot_tser(gdat, b, p, y, 'resi' + typemodl)
+            if gdat.boolplottser:
+                plot_tser(gdat, b, p, None, 'resi' + typemodl)
 
     # write the model to file
     for b in gdat.indxdatatser:
@@ -1564,30 +1549,30 @@ def proc_alle(gdat, typemodlinfe):
             path = gdat.pathdata + 'arry%smodl_%s.csv' % (gdat.liststrgdatatser[b], gdat.liststrginst[b][p])
             if gdat.typeverb > 0:
                 print('Writing to %s...' % path)
-            np.savetxt(path, gdat.arrytser['modl'+strgproc][b][p], delimiter=',', \
+            np.savetxt(path, gdat.arrytser['modl'+typemodl][b][p], delimiter=',', \
                                                     header='time,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
 
     # number of samples to plot
     gdat.numbsampplot = min(10, gdat.numbsamp)
     gdat.indxsampplot = np.random.choice(gdat.indxsamp, gdat.numbsampplot, replace=False)
     
-    gdat.arrypcur['primbdtr'+strgproc] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrypcur['primbdtr'+strgproc+'bindtotl'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrypcur['primbdtr'+strgproc+'bindzoom'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrypcur['primbdtr'+typemodl] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrypcur['primbdtr'+typemodl+'bindtotl'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrypcur['primbdtr'+typemodl+'bindzoom'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     gdat.listarrypcur = dict()
-    gdat.listarrypcur['quadmodl'+strgproc] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrypcur['quadmodl'+typemodl] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            for j in gdat.indxplan:
-                gdat.listarrypcur['quadmodl'+strgproc][b][p][j] = np.empty((gdat.numbsampplot, gdat.numbtimeclen[b][p][j], 3))
+            for j in gdat.indxcomp:
+                gdat.listarrypcur['quadmodl'+typemodl][b][p][j] = np.empty((gdat.numbsampplot, gdat.numbtimeclen[b][p][j], 3))
     
     print('gdat.numbsampplot')
     print(gdat.numbsampplot)
-    gdat.arrypcur['primbdtr'+strgproc] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrypcur['primmodltotl'+strgproc] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['modlbase'+strgproc] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['modlbase'+strgproc] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrypcur['primbdtr'+typemodl] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrypcur['primmodltotl'+typemodl] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['modlbase'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['modlbase'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     gdat.listarrytsermodl = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
@@ -1595,19 +1580,19 @@ def proc_alle(gdat, typemodlinfe):
             gdat.listarrytsermodl[b][p] = np.empty((gdat.numbsampplot, gdat.numbtime[b][p], 3))
        
     for strgpcur in gdat.liststrgpcur:
-        gdat.arrytser[strgpcur+strgproc] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrytser[strgpcur+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                gdat.arrytser[strgpcur+strgproc][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
+                gdat.arrytser[strgpcur+typemodl][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
     for strgpcurcomp in gdat.liststrgpcurcomp:
-        gdat.arrytser[strgpcurcomp+strgproc] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrytser[strgpcurcomp+typemodl] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                for j in gdat.indxplan:
-                    gdat.arrytser[strgpcurcomp+strgproc][b][p][j] = np.copy(gdat.arrytser['bdtr'][b][p])
+                for j in gdat.indxcomp:
+                    gdat.arrytser[strgpcurcomp+typemodl][b][p][j] = np.copy(gdat.arrytser['bdtr'][b][p])
     for strgpcurcomp in gdat.liststrgpcurcomp + gdat.liststrgpcur:
         for strgextnbins in ['', 'bindtotl']:
-            gdat.arrypcur['quad' + strgpcurcomp + strgproc + strgextnbins] = [[[[] for j in gdat.indxplan] \
+            gdat.arrypcur['quad' + strgpcurcomp + typemodl + strgextnbins] = [[[[] for j in gdat.indxcomp] \
                                                                                     for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     for b in gdat.indxdatatser:
@@ -1619,168 +1604,173 @@ def proc_alle(gdat, typemodlinfe):
                 i = gdat.indxsampplot[ii]
                 
                 # this is only the physical model and excludes the baseline, which is available separately via get_one_posterior_baseline()
-                gdat.listarrytsermodl[b][p][ii, :, 1] = gdat.objtalle[typemodlinfe].get_one_posterior_model(gdat.liststrginst[b][p], \
+                gdat.listarrytsermodl[b][p][ii, :, 1] = gdat.objtalle[typemodl].get_one_posterior_model(gdat.liststrginst[b][p], \
                                                                         gdat.liststrgtseralle[b], xx=gdat.time[b][p], sample_id=i)
                 
-                for j in gdat.indxplan:
-                    gdat.listarrypcur['quadmodl'+strgproc][b][p][j][ii, :, :] = \
+                for j in gdat.indxcomp:
+                    gdat.listarrypcur['quadmodl'+typemodl][b][p][j][ii, :, :] = \
                                             ephesus.fold_tser(gdat.listarrytsermodl[b][p][ii, gdat.listindxtimeclen[j][b][p], :], \
                                                                                    gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25)
 
             
             ## plot components in the zoomed panel
-            for j in gdat.indxplan:
+            for j in gdat.indxcomp:
                 
-                gdat.objtalle[typemodlinfe] = allesfitter.allesclass(gdat.pathalle[typemodlinfe])
+                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
                 ### total model for this planet
-                gdat.arrytser['modltotl'+strgproc][b][p][j][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+                gdat.arrytser['modltotl'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                                 'flux', xx=gdat.time[b][p])
                 
                 ### stellar baseline
-                gdat.objtalle[typemodlinfe] = allesfitter.allesclass(gdat.pathalle[typemodlinfe])
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-                if typemodlinfe == '0003':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                if typemodlinfe == '0004':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_sbratio_TESS'] = 0
-                gdat.arrytser['modlstel'+strgproc][b][p][j][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
+                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
+                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
+                if typemodl == '0003':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+                if typemodl == '0004':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                gdat.objtalle[typemodl].posterior_params_median['b_sbratio_TESS'] = 0
+                gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                                 'flux', xx=gdat.time[b][p])
                 
                 ### EV
-                gdat.objtalle[typemodlinfe] = allesfitter.allesclass(gdat.pathalle[typemodlinfe])
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_sbratio_TESS'] = 0
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
-                if typemodlinfe == '0003':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                if typemodlinfe == '0004':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-                gdat.arrytser['modlelli'+strgproc][b][p][j][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
+                gdat.objtalle[typemodl].posterior_params_median['b_sbratio_TESS'] = 0
+                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
+                if typemodl == '0003':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+                if typemodl == '0004':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                gdat.arrytser['modlelli'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                             'flux', xx=gdat.time[b][p])
-                gdat.arrytser['modlelli'+strgproc][b][p][j][:, 1] -= gdat.arrytser['modlstel'+strgproc][b][p][j][:, 1]
+                gdat.arrytser['modlelli'+typemodl][b][p][j][:, 1] -= gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1]
                 
                 ### beaming
-                gdat.objtalle[typemodlinfe] = allesfitter.allesclass(gdat.pathalle[typemodlinfe])
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_sbratio_TESS'] = 0
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-                if typemodlinfe == '0003':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                if typemodlinfe == '0004':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-                gdat.arrytser['modlbeam'+strgproc][b][p][j][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
+                gdat.objtalle[typemodl].posterior_params_median['b_sbratio_TESS'] = 0
+                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
+                if typemodl == '0003':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+                if typemodl == '0004':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                gdat.arrytser['modlbeam'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                             'flux', xx=gdat.time[b][p])
-                gdat.arrytser['modlbeam'+strgproc][b][p][j][:, 1] -= gdat.arrytser['modlstel'+strgproc][b][p][j][:, 1]
+                gdat.arrytser['modlbeam'+typemodl][b][p][j][:, 1] -= gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1]
                 
                 # planetary
-                gdat.arrytser['modlplan'+strgproc][b][p][j][:, 1] = gdat.arrytser['modltotl'+strgproc][b][p][j][:, 1] \
-                                                                      - gdat.arrytser['modlstel'+strgproc][b][p][j][:, 1] \
-                                                                      - gdat.arrytser['modlelli'+strgproc][b][p][j][:, 1] \
-                                                                      - gdat.arrytser['modlbeam'+strgproc][b][p][j][:, 1]
+                gdat.arrytser['modlplan'+typemodl][b][p][j][:, 1] = gdat.arrytser['modltotl'+typemodl][b][p][j][:, 1] \
+                                                                      - gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1] \
+                                                                      - gdat.arrytser['modlelli'+typemodl][b][p][j][:, 1] \
+                                                                      - gdat.arrytser['modlbeam'+typemodl][b][p][j][:, 1]
                 
-                offsdays = np.mean(gdat.arrytser['modlplan'+strgproc][b][p][j][gdat.listindxtimetran[j][b][p][1], 1])
+                offsdays = np.mean(gdat.arrytser['modlplan'+typemodl][b][p][j][gdat.listindxtimetran[j][b][p][1], 1])
                 print('offsdays')
                 print(offsdays)
-                gdat.arrytser['modlplan'+strgproc][b][p][j][:, 1] -= offsdays
+                gdat.arrytser['modlplan'+typemodl][b][p][j][:, 1] -= offsdays
 
                 # planetary nightside
-                gdat.objtalle[typemodlinfe] = allesfitter.allesclass(gdat.pathalle[typemodlinfe])
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
-                gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-                if typemodlinfe == '0003':
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
+                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
+                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
+                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
+                if typemodl == '0003':
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
                 else:
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodlinfe].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-                gdat.arrytser['modlnigh'+strgproc][b][p][j][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_model(gdat.liststrginst[b][p], \
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
+                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                gdat.arrytser['modlnigh'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                             'flux', xx=gdat.time[b][p])
-                gdat.arrytser['modlnigh'+strgproc][b][p][j][:, 1] += gdat.dicterrr['amplnigh'][0, 0]
-                gdat.arrytser['modlnigh'+strgproc][b][p][j][:, 1] -= gdat.arrytser['modlstel'+strgproc][b][p][j][:, 1]
+                gdat.arrytser['modlnigh'+typemodl][b][p][j][:, 1] += gdat.dicterrr['amplnigh'][0, 0]
+                gdat.arrytser['modlnigh'+typemodl][b][p][j][:, 1] -= gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1]
                 
                 ### planetary modulation
-                gdat.arrytser['modlpmod'+strgproc][b][p][j][:, 1] = gdat.arrytser['modlplan'+strgproc][b][p][j][:, 1] - \
-                                                                                    gdat.arrytser['modlnigh'+strgproc][b][p][j][:, 1]
+                gdat.arrytser['modlpmod'+typemodl][b][p][j][:, 1] = gdat.arrytser['modlplan'+typemodl][b][p][j][:, 1] - \
+                                                                                    gdat.arrytser['modlnigh'+typemodl][b][p][j][:, 1]
                     
                 ### planetary residual
-                gdat.arrytser['bdtrplan'+strgproc][b][p][j][:, 1] = gdat.arrytser['bdtr'][b][p][:, 1] \
-                                                                                - gdat.arrytser['modlstel'+strgproc][b][p][j][:, 1] \
-                                                                                - gdat.arrytser['modlelli'+strgproc][b][p][j][:, 1] \
-                                                                                - gdat.arrytser['modlbeam'+strgproc][b][p][j][:, 1]
-                gdat.arrytser['bdtrplan'+strgproc][b][p][j][:, 1] -= offsdays
+                gdat.arrytser['bdtrplan'+typemodl][b][p][j][:, 1] = gdat.arrytser['bdtr'][b][p][:, 1] \
+                                                                                - gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1] \
+                                                                                - gdat.arrytser['modlelli'+typemodl][b][p][j][:, 1] \
+                                                                                - gdat.arrytser['modlbeam'+typemodl][b][p][j][:, 1]
+                gdat.arrytser['bdtrplan'+typemodl][b][p][j][:, 1] -= offsdays
                     
             # get allesfitter baseline model
-            gdat.arrytser['modlbase'+strgproc][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
-            gdat.arrytser['modlbase'+strgproc][b][p][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_baseline(gdat.liststrginst[b][p], 'flux', \
+            gdat.arrytser['modlbase'+typemodl][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
+            gdat.arrytser['modlbase'+typemodl][b][p][:, 1] = gdat.objtalle[typemodl].get_posterior_median_baseline(gdat.liststrginst[b][p], 'flux', \
                                                                                                                                 xx=gdat.time[b][p])
             # get allesfitter-detrended data
-            gdat.arrytser['bdtr'+strgproc][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
-            gdat.arrytser['bdtr'+strgproc][b][p][:, 1] = gdat.arrytser['bdtr'][b][p][:, 1] - gdat.arrytser['modlbase'+strgproc][b][p][:, 1]
+            gdat.arrytser['bdtr'+typemodl][b][p] = np.copy(gdat.arrytser['bdtr'][b][p])
+            gdat.arrytser['bdtr'+typemodl][b][p][:, 1] = gdat.arrytser['bdtr'][b][p][:, 1] - gdat.arrytser['modlbase'+typemodl][b][p][:, 1]
             for y in gdat.indxchun[b][p]:
                 # get allesfitter baseline model
-                gdat.listarrytser['modlbase'+strgproc][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
-                gdat.listarrytser['modlbase'+strgproc][b][p][y][:, 1] = gdat.objtalle[typemodlinfe].get_posterior_median_baseline(gdat.liststrginst[b][p], \
-                                                                                           'flux', xx=gdat.listarrytser['modlbase'+strgproc][b][p][y][:, 0])
+                gdat.listarrytser['modlbase'+typemodl][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
+                gdat.listarrytser['modlbase'+typemodl][b][p][y][:, 1] = gdat.objtalle[typemodl].get_posterior_median_baseline(gdat.liststrginst[b][p], \
+                                                                                           'flux', xx=gdat.listarrytser['modlbase'+typemodl][b][p][y][:, 0])
                 # get allesfitter-detrended data
-                gdat.listarrytser['bdtr'+strgproc][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
-                gdat.listarrytser['bdtr'+strgproc][b][p][y][:, 1] = gdat.listarrytser['bdtr'+strgproc][b][p][y][:, 1] - \
-                                                                                gdat.listarrytser['modlbase'+strgproc][b][p][y][:, 1]
+                gdat.listarrytser['bdtr'+typemodl][b][p][y] = np.copy(gdat.listarrytser['bdtr'][b][p][y])
+                gdat.listarrytser['bdtr'+typemodl][b][p][y][:, 1] = gdat.listarrytser['bdtr'+typemodl][b][p][y][:, 1] - \
+                                                                                gdat.listarrytser['modlbase'+typemodl][b][p][y][:, 1]
            
-            print('Phase folding and binning the light curve for inference named %s...' % strgproc)
-            for j in gdat.indxplan:
+            print('Phase folding and binning the light curve for inference named %s...' % typemodl)
+            for j in gdat.indxcomp:
                 
-                gdat.arrypcur['primmodltotl'+strgproc][b][p][j] = ephesus.fold_tser(gdat.arrytser['modltotl'+strgproc][b][p][j][gdat.listindxtimeclen[j][b][p], :], \
+                gdat.arrypcur['primmodltotl'+typemodl][b][p][j] = ephesus.fold_tser(gdat.arrytser['modltotl'+typemodl][b][p][j][gdat.listindxtimeclen[j][b][p], :], \
                                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j])
                 
-                gdat.arrypcur['primbdtr'+strgproc][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'+strgproc][b][p][gdat.listindxtimeclen[j][b][p], :], \
+                gdat.arrypcur['primbdtr'+typemodl][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'+typemodl][b][p][gdat.listindxtimeclen[j][b][p], :], \
                                                                                     gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j])
                 
-                gdat.arrypcur['primbdtr'+strgproc+'bindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'+strgproc][b][p][j], \
+                gdat.arrypcur['primbdtr'+typemodl+'bindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'+typemodl][b][p][j], \
                                                                                                                     binsxdat=gdat.binsphasprimtotl)
                 
-                gdat.arrypcur['primbdtr'+strgproc+'bindzoom'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'+strgproc][b][p][j], \
+                gdat.arrypcur['primbdtr'+typemodl+'bindzoom'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['primbdtr'+typemodl][b][p][j], \
                                                                                                                     binsxdat=gdat.binsphasprimzoom[j])
 
                 for strgpcurcomp in gdat.liststrgpcurcomp + gdat.liststrgpcur:
                     
                     if strgpcurcomp in gdat.liststrgpcurcomp:
-                        arrytsertemp = gdat.arrytser[strgpcurcomp+strgproc][b][p][j][gdat.listindxtimeclen[j][b][p], :]
+                        arrytsertemp = gdat.arrytser[strgpcurcomp+typemodl][b][p][j][gdat.listindxtimeclen[j][b][p], :]
                     else:
-                        arrytsertemp = gdat.arrytser[strgpcurcomp+strgproc][b][p][gdat.listindxtimeclen[j][b][p], :]
+                        arrytsertemp = gdat.arrytser[strgpcurcomp+typemodl][b][p][gdat.listindxtimeclen[j][b][p], :]
                     
                     if strgpcurcomp == 'bdtr':
                         boolpost = True
                     else:
                         boolpost = False
-                    gdat.arrypcur['quad'+strgpcurcomp+strgproc][b][p][j] = \
+                    gdat.arrypcur['quad'+strgpcurcomp+typemodl][b][p][j] = \
                                         ephesus.fold_tser(arrytsertemp, gdat.dicterrr['epoc'][0, j], gdat.dicterrr['peri'][0, j], phasshft=0.25) 
                 
-                    gdat.arrypcur['quad'+strgpcurcomp+strgproc+'bindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['quad'+strgpcurcomp+strgproc][b][p][j], \
+                    gdat.arrypcur['quad'+strgpcurcomp+typemodl+'bindtotl'][b][p][j] = ephesus.rebn_tser(gdat.arrypcur['quad'+strgpcurcomp+typemodl][b][p][j], \
                                                                                                                 binsxdat=gdat.binsphasquadtotl)
                     
                     # write
-                    path = gdat.pathdata + 'arrypcurquad%sbindtotl_%s_%s.csv' % (strgpcurcomp, gdat.liststrgplan[j], gdat.liststrginst[b][p])
+                    path = gdat.pathdata + 'arrypcurquad%sbindtotl_%s_%s.csv' % (strgpcurcomp, gdat.liststrgcomp[j], gdat.liststrginst[b][p])
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
-                    np.savetxt(path, gdat.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, strgproc)][b][p][j], delimiter=',', \
+                    np.savetxt(path, gdat.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, typemodl)][b][p][j], delimiter=',', \
                                                     header='phase,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
                     
-                    plot_pser(gdat, 'quad'+strgpcurcomp+strgproc, boolpost=boolpost)
+                    plot_pser(gdat, 'quad'+strgpcurcomp+typemodl, boolpost=boolpost)
                 
                 
     # plots
     ## plot GP-detrended phase curves
-    if gdat.booldatatser:
-        plot_tser(gdat, 'bdtr'+strgproc)
-        plot_pser(gdat, 'primbdtr'+strgproc, boolpost=True)
+    if gdat.boolplottser:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    plot_tser(gdat, b, p, y, 'bdtr'+typemodl)
+                    plot_pser(gdat, b, p, y, 'primbdtr'+typemodl, boolpost=True)
+                plot_tser(gdat, b, p, None, 'bdtr'+typemodl)
+                plot_pser(gdat, b, p, None, 'primbdtr'+typemodl, boolpost=True)
     if gdat.boolplotprop:
-        plot_prop(gdat, gdat.typeprioplan + typemodlinfe)
+        plot_prop(gdat, gdat.typeprioplan + typemodl)
     
     # print out transit times
-    for j in gdat.indxplan:
-        print(gdat.liststrgplan[j])
+    for j in gdat.indxcomp:
+        print(gdat.liststrgcomp[j])
         time = np.empty(500)
         for n in range(500):
             time[n] = gdat.dicterrr['epoc'][0, j] + gdat.dicterrr['peri'][0, j] * n
@@ -1791,9 +1781,9 @@ def proc_alle(gdat, typemodlinfe):
                 print('%f, %s' % (time[n], listtimelabl[n]))
 
 
-    if typemodlinfe == '0003' or typemodlinfe == '0004':
+    if typemodl == '0003' or typemodl == '0004':
             
-        if typemodlinfe == '0003':
+        if typemodl == '0003':
             listlablpara = [['Nightside', 'ppm'], ['Secondary', 'ppm'], ['Planetary Modulation', 'ppm'], ['Thermal', 'ppm'], \
                                                         ['Reflected', 'ppm'], ['Phase shift', 'deg'], ['Geometric Albedo', '']]
         else:
@@ -1805,10 +1795,10 @@ def proc_alle(gdat, typemodlinfe):
         
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                for j in gdat.indxplan:
+                for j in gdat.indxcomp:
                     listpost[:, 0] = gdat.dictlist['amplnigh'][:, j] * 1e6 # [ppm]
                     listpost[:, 1] = gdat.dictlist['amplseco'][:, j] * 1e6 # [ppm]
-                    if typemodlinfe == '0003':
+                    if typemodl == '0003':
                         listpost[:, 2] = gdat.dictlist['amplplan'][:, j] * 1e6 # [ppm]
                         listpost[:, 3] = gdat.dictlist['amplplanther'][:, j] * 1e6 # [ppm]
                         listpost[:, 4] = gdat.dictlist['amplplanrefl'][:, j] * 1e6 # [ppm]
@@ -1820,7 +1810,7 @@ def proc_alle(gdat, typemodlinfe):
                         listpost[:, 4] = gdat.dictlist['phasshftplanther'][:, j]
                         listpost[:, 5] = gdat.dictlist['phasshftplanrefl'][:, j]
                         listpost[:, 6] = gdat.dictlist['albg'][:, j]
-                    tdpy.mcmc.plot_grid(gdat.pathalle[typemodlinfe], 'pcur_%s' % typemodlinfe, listpost, listlablpara, plotsize=2.5)
+                    tdpy.mcmc.plot_grid(gdat.pathalle[typemodl], 'pcur_%s' % typemodl, listpost, listlablpara, plotsize=2.5)
 
         # plot phase curve
         for b in gdat.indxdatatser:
@@ -1829,7 +1819,7 @@ def proc_alle(gdat, typemodlinfe):
                 ## determine data gaps for overplotting model without the data gaps
                 gdat.indxtimegapp = np.argmax(gdat.time[b][p][1:] - gdat.time[b][p][:-1]) + 1
                 
-                for j in gdat.indxplan:
+                for j in gdat.indxcomp:
                     figr = plt.figure(figsize=(10, 12))
                     axis = [[] for k in range(3)]
                     axis[0] = figr.add_subplot(3, 1, 1)
@@ -1841,22 +1831,22 @@ def proc_alle(gdat, typemodlinfe):
                         ## unbinned data
                         if k < 2:
                             if k == 0:
-                                xdat = gdat.time[b][p] - gdat.timetess
-                                ydat = gdat.arrytser['bdtr'+strgproc][b][p][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
+                                xdat = gdat.time[b][p] - gdat.timeoffs
+                                ydat = gdat.arrytser['bdtr'+typemodl][b][p][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
                             if k == 1:
                                 print('bpj')
                                 print(b, p, j)
-                                print('strgproc')
-                                print(strgproc)
-                                xdat = gdat.arrypcur['quadbdtr'+strgproc][b][p][j][:, 0]
-                                ydat = gdat.arrypcur['quadbdtr'+strgproc][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
+                                print('typemodl')
+                                print(typemodl)
+                                xdat = gdat.arrypcur['quadbdtr'+typemodl][b][p][j][:, 0]
+                                ydat = gdat.arrypcur['quadbdtr'+typemodl][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
                             axis[k].plot(xdat, ydat, '.', color='grey', alpha=0.3, label='Raw data')
                         
                         ## binned data
                         if k > 0:
-                            xdat = gdat.arrypcur['quadbdtr'+strgproc+'bindtotl'][b][p][j][:, 0]
-                            ydat = gdat.arrypcur['quadbdtr'+strgproc+'bindtotl'][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
-                            yerr = np.copy(gdat.arrypcur['quadbdtr'+strgproc+'bindtotl'][b][p][j][:, 2])
+                            xdat = gdat.arrypcur['quadbdtr'+typemodl+'bindtotl'][b][p][j][:, 0]
+                            ydat = gdat.arrypcur['quadbdtr'+typemodl+'bindtotl'][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
+                            yerr = np.copy(gdat.arrypcur['quadbdtr'+typemodl+'bindtotl'][b][p][j][:, 2])
                         else:
                             xdat = None
                             ydat = None
@@ -1869,11 +1859,11 @@ def proc_alle(gdat, typemodlinfe):
                         
                         ## model
                         if k > 0:
-                            xdat = gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 0]
-                            ydat = gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
+                            xdat = gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 0]
+                            ydat = gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
                         else:
-                            xdat = gdat.arrytser['modltotl'+strgproc][b][p][j][:, 0] - gdat.timetess
-                            ydat = gdat.arrytser['modltotl'+strgproc][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
+                            xdat = gdat.arrytser['modltotl'+typemodl][b][p][j][:, 0] - gdat.timeoffs
+                            ydat = gdat.arrytser['modltotl'+typemodl][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
                         if k == 2:
                             ydat = (ydat - 1) * 1e6
                         if k == 0:
@@ -1888,7 +1878,7 @@ def proc_alle(gdat, typemodlinfe):
                             axis[k].axhline(0., ls='-.', alpha=0.3, color='grey')
 
                         if k == 0:
-                            axis[k].set(xlabel='Time [BJD - %d]' % gdat.timetess)
+                            axis[k].set(xlabel='Time [BJD - %d]' % gdat.timeoffs)
                         if k > 0:
                             axis[k].set(xlabel='Phase')
                     axis[0].set(ylabel='Relative Flux')
@@ -1901,34 +1891,34 @@ def proc_alle(gdat, typemodlinfe):
                         ylimpcur = [-100, 300]
                     axis[2].set_ylim(ylimpcur)
                     
-                    xdat = gdat.arrypcur['quadmodlstel'+strgproc][b][p][j][:, 0]
-                    ydat = (gdat.arrypcur['quadmodlstel'+strgproc][b][p][j][:, 1] - 1.) * 1e6
+                    xdat = gdat.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 0]
+                    ydat = (gdat.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 1] - 1.) * 1e6
                     axis[2].plot(xdat, ydat, lw=2, color='orange', label='Stellar baseline', ls='--', zorder=11)
                     
-                    xdat = gdat.arrypcur['quadmodlelli'+strgproc][b][p][j][:, 0]
-                    ydat = (gdat.arrypcur['quadmodlelli'+strgproc][b][p][j][:, 1] - 1.) * 1e6
+                    xdat = gdat.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 0]
+                    ydat = (gdat.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 1] - 1.) * 1e6
                     axis[2].plot(xdat, ydat, lw=2, color='r', ls='--', label='Ellipsoidal variation')
                     
-                    xdat = gdat.arrypcur['quadmodlelli'+strgproc][b][p][j][:, 0]
-                    ydat = (gdat.arrypcur['quadmodlelli'+strgproc][b][p][j][:, 1] - 1.) * 1e6
+                    xdat = gdat.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 0]
+                    ydat = (gdat.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 1] - 1.) * 1e6
                     axis[2].plot(xdat, ydat, lw=2, color='r', ls='--', label='Ellipsoidal variation')
                     
-                    xdat = gdat.arrypcur['quadmodlplan'+strgproc][b][p][j][:, 0]
-                    ydat = (gdat.arrypcur['quadmodlplan'+strgproc][b][p][j][:, 1] - 1.) * 1e6
+                    xdat = gdat.arrypcur['quadmodlplan'+typemodl][b][p][j][:, 0]
+                    ydat = (gdat.arrypcur['quadmodlplan'+typemodl][b][p][j][:, 1] - 1.) * 1e6
                     axis[2].plot(xdat, ydat, lw=2, color='g', label='Planetary', ls='--')
     
-                    xdat = gdat.arrypcur['quadmodlnigh'+strgproc][b][p][j][:, 0]
-                    ydat = (gdat.arrypcur['quadmodlnigh'+strgproc][b][p][j][:, 1] - 1.) * 1e6
+                    xdat = gdat.arrypcur['quadmodlnigh'+typemodl][b][p][j][:, 0]
+                    ydat = (gdat.arrypcur['quadmodlnigh'+typemodl][b][p][j][:, 1] - 1.) * 1e6
                     axis[2].plot(xdat, ydat, lw=2, color='olive', label='Planetary baseline', ls='--', zorder=11)
     
-                    xdat = gdat.arrypcur['quadmodlpmod'+strgproc][b][p][j][:, 0]
-                    ydat = (gdat.arrypcur['quadmodlpmod'+strgproc][b][p][j][:, 1] - 1.) * 1e6
+                    xdat = gdat.arrypcur['quadmodlpmod'+typemodl][b][p][j][:, 0]
+                    ydat = (gdat.arrypcur['quadmodlpmod'+typemodl][b][p][j][:, 1] - 1.) * 1e6
                     axis[2].plot(xdat, ydat, lw=2, color='m', label='Planetary modulation', ls='--', zorder=11)
                      
                     ## legend
                     axis[2].legend(ncol=3)
                     
-                    path = gdat.pathalle[typemodlinfe] + 'pcur_grid_%s_%s_%s.%s' % (typemodlinfe, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'pcur_grid_%s_%s_%s.%s' % (typemodl, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -1937,7 +1927,7 @@ def proc_alle(gdat, typemodlinfe):
 
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                for j in gdat.indxplan:
+                for j in gdat.indxcomp:
         
                     # replot phase curve
                     ### sample model phas
@@ -1950,9 +1940,9 @@ def proc_alle(gdat, typemodlinfe):
        
                     indxphasmodlouttprim = [[] for a in range(2)]
                     indxphasdatabindouttprim = [[] for a in range(2)]
-                    indxphasmodlouttprim[0] = np.where(gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 0] < -0.05)[0]
+                    indxphasmodlouttprim[0] = np.where(gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 0] < -0.05)[0]
                     indxphasdatabindouttprim[0] = np.where(gdat.arrypcur['quadbdtrbindtotl'][b][p][j][:, 0] < -0.05)[0]
-                    indxphasmodlouttprim[1] = np.where(gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 0] > 0.05)[0]
+                    indxphasmodlouttprim[1] = np.where(gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 0] > 0.05)[0]
                     indxphasdatabindouttprim[1] = np.where(gdat.arrypcur['quadbdtrbindtotl'][b][p][j][:, 0] > 0.05)[0]
 
                     # plot the phase curve with components
@@ -1962,20 +1952,20 @@ def proc_alle(gdat, typemodlinfe):
                                    (gdat.arrypcur['quadbdtrbindtotl'][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0] - 1) * 1e6, \
                                    yerr=1e6*gdat.arrypcur['quadbdtrbindtotl'][b][p][j][:, 2], color='k', marker='o', ls='', markersize=2, lw=1, label='Data')
                     ## total model
-                    axis.plot(gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 0], \
-                                                    1e6*(gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 1]+gdat.dicterrr['amplnigh'][0, 0]-1), \
+                    axis.plot(gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 0], \
+                                                    1e6*(gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 1]+gdat.dicterrr['amplnigh'][0, 0]-1), \
                                                                                                                     color='b', lw=3, label='Model')
                     
-                    axis.plot(gdat.arrypcur['quadmodlplan'+strgproc][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlplan'+strgproc][b][p][j][:, 1]), \
+                    axis.plot(gdat.arrypcur['quadmodlplan'+typemodl][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlplan'+typemodl][b][p][j][:, 1]), \
                                                                                                                   color='g', label='Planetary', lw=1, ls='--')
                     
-                    axis.plot(gdat.arrypcur['quadmodlbeam'+strgproc][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlbeam'+strgproc][b][p][j][:, 1]), \
+                    axis.plot(gdat.arrypcur['quadmodlbeam'+typemodl][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlbeam'+typemodl][b][p][j][:, 1]), \
                                                                                                           color='m', label='Beaming', lw=2, ls='--')
                     
-                    axis.plot(gdat.arrypcur['quadmodlelli'+strgproc][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlelli'+strgproc][b][p][j][:, 1]), \
+                    axis.plot(gdat.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 1]), \
                                                                                                           color='r', label='Ellipsoidal variation', lw=2, ls='--')
                     
-                    axis.plot(gdat.arrypcur['quadmodlstel'+strgproc][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlstel'+strgproc][b][p][j][:, 1]-1.), \
+                    axis.plot(gdat.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 0], 1e6*(gdat.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 1]-1.), \
                                                                                                           color='orange', label='Stellar baseline', lw=2, ls='--')
                     
                     axis.set_ylim(ylimpcur)
@@ -1983,7 +1973,7 @@ def proc_alle(gdat, typemodlinfe):
                     axis.set_xlabel('Phase')
                     axis.legend(ncol=3)
                     plt.tight_layout()
-                    path = gdat.pathalle[typemodlinfe] + 'pcur_comp_%s_%s_%s.%s' % (typemodlinfe, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'pcur_comp_%s_%s_%s.%s' % (typemodl, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -1995,14 +1985,14 @@ def proc_alle(gdat, typemodlinfe):
                                 (gdat.arrypcur['quadbdtrbindtotl'][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0] - 1) * 1e6, \
                                                  yerr=1e6*gdat.arrypcur['quadbdtrbindtotl'][b][p][j][:, 2], color='k', marker='o', ls='', markersize=2, lw=1)
                     for ii, i in enumerate(gdat.indxsampplot):
-                        axis.plot(gdat.arrypcur['quadmodl'+strgproc][b][p][j][:, 0], \
-                                                    1e6 * (gdat.listarrypcur['quadmodl'+strgproc][b][p][j][ii, :] + gdat.dicterrr['amplnigh'][0, 0] - 1.), \
+                        axis.plot(gdat.arrypcur['quadmodl'+typemodl][b][p][j][:, 0], \
+                                                    1e6 * (gdat.listarrypcur['quadmodl'+typemodl][b][p][j][ii, :] + gdat.dicterrr['amplnigh'][0, 0] - 1.), \
                                                                                                                                       alpha=0.1, color='b')
                     axis.set_ylabel('Relative Flux [ppm]')
                     axis.set_xlabel('Phase')
                     axis.set_ylim(ylimpcur)
                     plt.tight_layout()
-                    path = gdat.pathalle[typemodlinfe] + 'pcur_samp_%s_%s_%s.%s' % (typemodlinfe, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'pcur_samp_%s_%s_%s.%s' % (typemodl, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -2020,17 +2010,17 @@ def proc_alle(gdat, typemodlinfe):
                     #axis.set_ylabel('Relative Flux - 1 [ppm]')
                     #axis.set_xlabel('Phase')
                     #plt.tight_layout()
-                    #path = gdat.pathalle[typemodlinfe] + 'pcur_resi_%s_%s_%s.%s' % (typemodlinfe, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    #path = gdat.pathalle[typemodl] + 'pcur_resi_%s_%s_%s.%s' % (typemodl, gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     #print('Writing to %s...' % path)
                     #plt.savefig(path)
                     #plt.close()
 
                     # write to text file
-                    fileoutp = open(gdat.pathalle[typemodlinfe] + 'post_pcur_%s_tabl.csv' % (typemodlinfe), 'w')
+                    fileoutp = open(gdat.pathalle[typemodl] + 'post_pcur_%s_tabl.csv' % (typemodl), 'w')
                     for strgfeat in gdat.dictlist:
                         if gdat.dictlist[strgfeat].ndim == 2:
-                            for j in gdat.indxplan:
-                                fileoutp.write('%s,%s,%g,%g,%g,%g,%g\\\\\n' % (strgfeat, gdat.liststrgplan[j], gdat.dictlist[strgfeat][0, j], gdat.dictlist[strgfeat][1, j], \
+                            for j in gdat.indxcomp:
+                                fileoutp.write('%s,%s,%g,%g,%g,%g,%g\\\\\n' % (strgfeat, gdat.liststrgcomp[j], gdat.dictlist[strgfeat][0, j], gdat.dictlist[strgfeat][1, j], \
                                                                             gdat.dictlist[strgfeat][2, j], gdat.dicterrr[strgfeat][1, j], gdat.dicterrr[strgfeat][2, j]))
                         else:
                             fileoutp.write('%s,,%g,%g,%g,%g,%g\\\\\n' % (strgfeat, gdat.dictlist[strgfeat][0], gdat.dictlist[strgfeat][1], \
@@ -2038,11 +2028,11 @@ def proc_alle(gdat, typemodlinfe):
                         #fileoutp.write('\\\\\n')
                     fileoutp.close()
                     
-                    fileoutp = open(gdat.pathalle[typemodlinfe] + 'post_pcur_%s_cmnd.csv' % (typemodlinfe), 'w')
+                    fileoutp = open(gdat.pathalle[typemodl] + 'post_pcur_%s_cmnd.csv' % (typemodl), 'w')
                     for strgfeat in gdat.dictlist:
                         if gdat.dictlist[strgfeat].ndim == 2:
-                            for j in gdat.indxplan:
-                                fileoutp.write('%s,%s,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (strgfeat, gdat.liststrgplan[j], gdat.dicterrr[strgfeat][0, j], \
+                            for j in gdat.indxcomp:
+                                fileoutp.write('%s,%s,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (strgfeat, gdat.liststrgcomp[j], gdat.dicterrr[strgfeat][0, j], \
                                                                                             gdat.dicterrr[strgfeat][1, j], gdat.dicterrr[strgfeat][2, j]))
                         else:
                             fileoutp.write('%s,,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (strgfeat, gdat.dicterrr[strgfeat][0], \
@@ -2050,7 +2040,7 @@ def proc_alle(gdat, typemodlinfe):
                         #fileoutp.write('\\\\\n')
                     fileoutp.close()
 
-                if gdat.labltarg == 'WASP-121' and typemodlinfe == '0003':
+                if gdat.labltarg == 'WASP-121' and typemodl == '0003':
                     
                     # wavelength axis
                     gdat.conswlentmpt = 0.0143877735e6 # [um K]
@@ -2070,7 +2060,7 @@ def proc_alle(gdat, typemodlinfe):
                     axis.legend()
                     axis.set_xlim([0, None])
                     plt.subplots_adjust()
-                    path = gdat.pathalle[typemodlinfe] + 'pdfn_albg_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'pdfn_albg_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -2083,7 +2073,7 @@ def proc_alle(gdat, typemodlinfe):
                     axis.set_ylabel('$N(A_g)$')
                     axis.legend()
                     plt.subplots_adjust()
-                    path = gdat.pathalle[typemodlinfe] + 'hist_albg_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'hist_albg_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -2105,7 +2095,7 @@ def proc_alle(gdat, typemodlinfe):
                     # plot ATMO posterior
                     listlablpara = [['$\kappa_{IR}$', ''], ['$\gamma$', ''], ['$\psi$', ''], ['[M/H]', ''], \
                                                                                                     ['[C/H]', ''], ['[O/H]', '']]
-                    tdpy.mcmc.plot_grid(gdat.pathalle[typemodlinfe], 'post_atmo', listsampatmo, listlablpara, plotsize=2.5)
+                    tdpy.mcmc.plot_grid(gdat.pathalle[typemodl], 'post_atmo', listsampatmo, listlablpara, plotsize=2.5)
    
                     # get the ATMO posterior on irradiation efficiency, psi
                     indxsampatmo = np.random.choice(np.arange(listsampatmo.shape[0]), size=gdat.numbsamp, replace=False)
@@ -2130,7 +2120,7 @@ def proc_alle(gdat, typemodlinfe):
                     axis.set_xlabel('$\psi$')
                     axis.set_ylabel('$K_\psi$')
                     plt.subplots_adjust()
-                    path = gdat.pathalle[typemodlinfe] + 'kdeg_psii_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'kdeg_psii_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -2148,7 +2138,7 @@ def proc_alle(gdat, typemodlinfe):
                     liststdvgauspara = None
                     numbdata = 0
                     strgextn = 'albbepsi'
-                    listpostheat = tdpy.mcmc.samp(gdat, gdat.pathalle[typemodlinfe], numbsampwalk, numbsampburnwalk, \
+                    listpostheat = tdpy.mcmc.samp(gdat, gdat.pathalle[typemodl], numbsampwalk, numbsampburnwalk, \
                                                                                 numbsampburnwalkseco, retr_llik_albbepsi, \
                                          listlablpara, listscalpara, listminmpara, listmaxmpara, listmeangauspara, liststdvgauspara, numbdata, strgextn=strgextn)
 
@@ -2233,7 +2223,7 @@ def proc_alle(gdat, typemodlinfe):
                     axis[3].xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
                     axis[3].xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
                     plt.subplots_adjust(hspace=0., wspace=0.)
-                    path = gdat.pathalle[typemodlinfe] + 'spec_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'spec_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -2351,7 +2341,7 @@ def proc_alle(gdat, typemodlinfe):
                     axis[1].set_yscale('log')
                     axis[1].set_xlim([1e-16, 1])
                     plt.subplots_adjust(hspace=0., wspace=0., bottom=0.15)
-                    path = gdat.pathalle[typemodlinfe] + 'ptem_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                    path = gdat.pathalle[typemodl] + 'ptem_%s_%s.%s' % (gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
                     if gdat.typeverb > 0:
                         print('Writing to %s...' % path)
                     plt.savefig(path)
@@ -2390,8 +2380,8 @@ def plot_orbt( \
 
               # size of the figure
               sizefigr=(8, 8), \
-              listcolrplan=None, \
-              liststrgplan=None, \
+              listcolrcomp=None, \
+              liststrgcomp=None, \
               boolsingside=True, \
               typefileplot='pdf', \
 
@@ -2405,7 +2395,7 @@ def plot_orbt( \
     
     mpl.use('Agg')
 
-    numbplan = len(radiplan)
+    numbcomp = len(radiplan)
     
     if isinstance(radiplan, list):
         radiplan = np.array(radiplan)
@@ -2422,15 +2412,15 @@ def plot_orbt( \
     if isinstance(cosi, list):
         cosi = np.array(cosi)
 
-    if listcolrplan is None:
-        listcolrplan = retr_listcolrplan(numbplan)
+    if listcolrcomp is None:
+        listcolrcomp = retr_listcolrcomp(numbcomp)
 
-    if liststrgplan is None:
-        liststrgplan = retr_liststrgplan(numbplan)
+    if liststrgcomp is None:
+        liststrgcomp = retr_liststrgcomp(numbcomp)
     
     # semi-major axes of the planets [AU]
     smax = (radiplan / dictfact['rsre'] + radistar) / dictfact['aurs'] / rsma
-    indxplan = np.arange(numbplan)
+    indxcomp = np.arange(numbcomp)
     
     # perspective factor
     factpers = np.sin(anglpers * np.pi / 180.)
@@ -2473,13 +2463,13 @@ def plot_orbt( \
     rrat = radiplan / radistar
     alles = allesclass2()
     
-    rflxtranmodl = ephesus.retr_rflxtranmodl(time, peri, epoc, radiplan, radistar, rsma, cosi) - 1.
+    rflxtranmodl = ephesus.retr_rflxmodl(time, peri, epoc, radiplan, radistar, rsma, cosi) - 1.
     
     #alles.settings = {'inst_phot':['telescope'], 'host_ld_law_telescope':'quad'}
     #alles.settings['companions_phot'] = []
     #alles.params['host_ldc_q1_telescope'] = 0.5
     #alles.params['host_ldc_q2_telescope'] = 0.2
-    #for j, strgplan in enumerate(liststrgplan):
+    #for j, strgplan in enumerate(liststrgcomp):
     #    alles.settings['companions_phot'].append(strgplan)
     #    alles.params['%s_rr' % strgplan] = rrat[j]
     #    alles.params['%s_rsuma' % strgplan] = rsma[j]
@@ -2492,7 +2482,7 @@ def plot_orbt( \
     lcur = rflxtranmodl + np.random.randn(numbtime) * 1e-6
     ylimrflx = [np.amin(lcur), np.amax(lcur)]
     
-    phas = np.random.rand(numbplan)[None, :] * 2. * np.pi + 2. * np.pi * time[:, None] / peri[None, :]
+    phas = np.random.rand(numbcomp)[None, :] * 2. * np.pi + 2. * np.pi * time[:, None] / peri[None, :]
     yposelli = yposmaxm[None, :] * np.sin(phas)
     xposelli = xposmaxm[None, :] * np.cos(phas)
     
@@ -2523,20 +2513,20 @@ def plot_orbt( \
         w1 = mpl.patches.Wedge((0, 0), radistarscal, 180, 360, fc=colrstar, zorder=1, edgecolor=colrstar)
         axis.add_artist(w1)
         
-        for jj, j in enumerate(indxplan):
+        for jj, j in enumerate(indxcomp):
             xposellishft = np.roll(xposelli[:, j], -indxtimeiter[k])[-numbtimequad:][::-1]
             yposellishft = np.roll(yposelli[:, j], -indxtimeiter[k])[-numbtimequad:][::-1]
         
             # trailing lines
             if typevisu.startswith('cart'):
-                objt = retr_objtlinefade(xposellishft, yposellishft, colr=listcolrplan[j], initalph=1., alphfinl=0.)
+                objt = retr_objtlinefade(xposellishft, yposellishft, colr=listcolrcomp[j], initalph=1., alphfinl=0.)
                 axis.add_collection(objt)
             
             # add planets
             if typevisu.startswith('cart'):
-                colrplan = listcolrplan[j]
+                colrplan = listcolrcomp[j]
                 # add planet labels
-                axis.text(.6 + 0.03 * jj, 0.1, liststrgplan[j], color=listcolrplan[j], transform=axis.transAxes)
+                axis.text(.6 + 0.03 * jj, 0.1, liststrgcomp[j], color=listcolrcomp[j], transform=axis.transAxes)
         
             if typevisu.startswith('real'):
                 if typevisu == 'realillu':
@@ -2658,12 +2648,12 @@ def plot_prop(gdat, strgpdfn):
     figr, axis = plt.subplots(figsize=gdat.figrsize)
     
     # this system
-    for jj, j in enumerate(gdat.indxplan):
+    for jj, j in enumerate(gdat.indxcomp):
         xposlowr = gdat.dictfact['rjre'] * gdat.dictpost['radiplan'][0, j]
         xposuppr = gdat.dictfact['rjre'] * gdat.dictpost['radiplan'][2, j]
-        axis.axvspan(xposlowr, xposuppr, alpha=0.5, color=gdat.listcolrplan[j])
-        axis.axvline(gdat.dictfact['rjre'] * gdat.dicterrr['radiplan'][0, j], color=gdat.listcolrplan[j], ls='--', label=gdat.liststrgplan[j])
-        axis.text(0.7, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
+        axis.axvspan(xposlowr, xposuppr, alpha=0.5, color=gdat.listcolrcomp[j])
+        axis.axvline(gdat.dictfact['rjre'] * gdat.dicterrr['radiplan'][0, j], color=gdat.listcolrcomp[j], ls='--', label=gdat.liststrgcomp[j])
+        axis.text(0.7, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], \
                                                                                     va='center', ha='center', transform=axis.transAxes)
     xerr = (timeoccu[1:] - timeoccu[:-1]) / 2.
     xerr = np.concatenate([xerr[0, None], xerr])
@@ -2712,8 +2702,8 @@ def plot_prop(gdat, strgpdfn):
         else:
             dictpopl = gdat.dictexof
         
-        numbplanpopl = dictpopl['radiplan'].size
-        indxtargpopl = np.arange(numbplanpopl)
+        numbcomppopl = dictpopl['radiplan'].size
+        indxtargpopl = np.arange(numbcomppopl)
 
         ### TSM and ESM
         numbsamppopl = 100
@@ -2812,7 +2802,7 @@ def plot_prop(gdat, strgpdfn):
         #    print('')
         
         # from SETI
-        dictpopl['metrplan'] = (0.99 * np.heaviside(dictpopl['numbplantranstar'] - 2, 1.) + 0.01)
+        dictpopl['metrplan'] = (0.99 * np.heaviside(dictpopl['numbcomptranstar'] - 2, 1.) + 0.01)
         dictpopl['metrhzon'] = (0.99 * dictpopl['boolhabiopti'].astype(float) + 0.01)
         dictpopl['metrunlo'] = (0.99 * dictpopl['boolunlo'].astype(float) + 0.01)
         dictpopl['metrterr'] = (0.99 * dictpopl['boolterr'].astype(float) + 0.01)
@@ -2841,9 +2831,9 @@ def plot_prop(gdat, strgpdfn):
                     continue
                 intgreso, ratiperi = retr_reso(listperi)
                 
-                numbplan = indxexarstar.size
+                numbcomp = indxexarstar.size
                 
-                gdat.listratiperi.append(ratiperi[0, :, :][np.triu_indices(numbplan, k=1)])
+                gdat.listratiperi.append(ratiperi[0, :, :][np.triu_indices(numbcomp, k=1)])
                 gdat.intgreso.append(intgreso)
                 
                 liststrgstarcomp.append(strgstar)
@@ -2852,14 +2842,14 @@ def plot_prop(gdat, strgpdfn):
         figr, axis = plt.subplots(figsize=gdat.figrsize)
         bins = np.linspace(1., 10., 400)
         axis.hist(gdat.listratiperi, bins=bins, rwidth=1)
-        if gdat.numbplan > 1:
+        if gdat.numbcomp > 1:
             ## this system
-            for j in gdat.indxplan:
-                for jj in gdat.indxplan:
+            for j in gdat.indxcomp:
+                for jj in gdat.indxcomp:
                     if gdat.dicterrr['peri'][0, j] > gdat.dicterrr['peri'][0, jj]:
                         ratiperi = gdat.dicterrr['peri'][0, j] / gdat.dicterrr['peri'][0, jj]
-                        axis.axvline(ratiperi, color=gdat.listcolrplan[jj])
-                        axis.axvline(ratiperi, color=gdat.listcolrplan[j], ls='--')
+                        axis.axvline(ratiperi, color=gdat.listcolrcomp[jj])
+                        axis.axvline(ratiperi, color=gdat.listcolrcomp[j], ls='--')
         
         ylim = axis.get_ylim()
         ydatlabl = 0.9 * ylim[1] + ylim[0]
@@ -2996,9 +2986,9 @@ def plot_prop(gdat, strgpdfn):
                 if a == 0:
                     indx = np.where(dictpopl['boolfrst'])[0]
                 if a == 1:
-                    indx = np.where(dictpopl['boolfrst'] & (dictpopl['numbplanstar'] > 3))[0]
+                    indx = np.where(dictpopl['boolfrst'] & (dictpopl['numbcompstar'] > 3))[0]
                 if a == 2:
-                    indx = np.where(dictpopl['boolfrst'] & (dictpopl['numbplantranstar'] > 3))[0]
+                    indx = np.where(dictpopl['boolfrst'] & (dictpopl['numbcomptranstar'] > 3))[0]
                 
                 if (b == 2 or b == 3):
                     normfact = max(varbtarg, np.nanmax(varb[indx]))
@@ -3006,7 +2996,7 @@ def plot_prop(gdat, strgpdfn):
                     normfact = 1.
                 varbtargnorm = varbtarg / normfact
                 varbnorm = varb[indx] / normfact
-                axis.scatter(varbnorm, dictpopl['numbplanstar'][indx], s=1, color='black')
+                axis.scatter(varbnorm, dictpopl['numbcompstar'][indx], s=1, color='black')
                 
                 indxsort = np.argsort(varbnorm)
                 if b == 2 or b == 3:
@@ -3019,14 +3009,14 @@ def plot_prop(gdat, strgpdfn):
                     k = indxsort[cntr]
                     nameadd = dictpopl['namesyst'][indx][k]
                     if not nameadd in listnameaddd:
-                        axis.text(varbnorm[k], dictpopl['numbplanstar'][indx][k] + 0.5, nameadd, size=6, \
+                        axis.text(varbnorm[k], dictpopl['numbcompstar'][indx][k] + 0.5, nameadd, size=6, \
                                                                                                 va='center', ha='right', rotation=45)
                         listnameaddd.append(nameadd)
                     cntr += 1
                     if len(listnameaddd) == maxmnumbname: 
                         break
-                axis.scatter(varbtargnorm, gdat.numbplan, s=5, color='black', marker='x')
-                axis.text(varbtargnorm, gdat.numbplan + 0.5, gdat.labltarg, size=8, color='black', \
+                axis.scatter(varbtargnorm, gdat.numbcomp, s=5, color='black', marker='x')
+                axis.text(varbtargnorm, gdat.numbcomp + 0.5, gdat.labltarg, size=8, color='black', \
                                                                                             va='center', ha='center', rotation=45)
                 axis.set_ylabel(r'Number of transiting planets')
                 axis.set_xlabel(lablxaxi)
@@ -3055,7 +3045,7 @@ def plot_prop(gdat, strgpdfn):
         
         # planet feature distribution plots
         print('Will make the relevant distribution plots...')
-        numbplantext = min(10, numbplanpopl)
+        numbcomptext = min(10, numbcomppopl)
         liststrgtext = ['notx', 'text']
         
         # first is x-axis, second is y-axis
@@ -3091,43 +3081,43 @@ def plot_prop(gdat, strgpdfn):
         numbstrgsort = len(liststrgsort)
         indxstrgsort = np.arange(numbstrgsort)
 
-        indxplanfilt = dict()
-        indxplanfilt['totl'] = indxtargpopl
+        indxcompfilt = dict()
+        indxcompfilt['totl'] = indxtargpopl
         
-        #indxplanfilt['tran'] = np.where(dictpopl['booltran'])[0]
+        #indxcompfilt['tran'] = np.where(dictpopl['booltran'])[0]
         strgcuttmain = 'totl'
         
-        #indxplanfilt['box1'] = np.where((dictpopl['radiplan'] < 3.5) & (dictpopl['radiplan'] > 3.) & (dictpopl['tmptplan'] > 300) & \
+        #indxcompfilt['box1'] = np.where((dictpopl['radiplan'] < 3.5) & (dictpopl['radiplan'] > 3.) & (dictpopl['tmptplan'] > 300) & \
         #                                                                                            (dictpopl['tmptplan'] < 500) & dictpopl['booltran'])[0]
-        #indxplanfilt['box2'] = np.where((dictpopl['radiplan'] < 2.5) & (dictpopl['radiplan'] > 2.) & (dictpopl['tmptplan'] > 800) & \
+        #indxcompfilt['box2'] = np.where((dictpopl['radiplan'] < 2.5) & (dictpopl['radiplan'] > 2.) & (dictpopl['tmptplan'] > 800) & \
         #                                                                                            (dictpopl['tmptplan'] < 1000) & dictpopl['booltran'])[0]
-        #indxplanfilt['box2'] = np.where((dictpopl['radiplan'] < 3.) & (dictpopl['radiplan'] > 2.5) & (dictpopl['tmptplan'] > 1000) & \
+        #indxcompfilt['box2'] = np.where((dictpopl['radiplan'] < 3.) & (dictpopl['radiplan'] > 2.5) & (dictpopl['tmptplan'] > 1000) & \
         #                                                                                            (dictpopl['tmptplan'] < 1400) & dictpopl['booltran'])[0]
-        #indxplanfilt['box3'] = np.where((dictpopl['radiplan'] < 3.) & (dictpopl['radiplan'] > 2.5) & (dictpopl['tmptplan'] > 1000) & \
+        #indxcompfilt['box3'] = np.where((dictpopl['radiplan'] < 3.) & (dictpopl['radiplan'] > 2.5) & (dictpopl['tmptplan'] > 1000) & \
         #                                                                                            (dictpopl['tmptplan'] < 1400) & dictpopl['booltran'])[0]
-        #indxplanfilt['r4tr'] = np.where((dictpopl['radiplan'] < 4) & dictpopl['booltran'])[0]
-        #indxplanfilt['r4trtess'] = np.where((dictpopl['radiplan'] < 4) & dictpopl['booltran'] & \
+        #indxcompfilt['r4tr'] = np.where((dictpopl['radiplan'] < 4) & dictpopl['booltran'])[0]
+        #indxcompfilt['r4trtess'] = np.where((dictpopl['radiplan'] < 4) & dictpopl['booltran'] & \
         #                                                                (dictpopl['facidisc'] == 'Transiting Exoplanet Survey Satellite (TESS)'))[0]
 
-        #indxplanfilt['r154'] = np.where((dictpopl['radiplan'] > 1.5) & (dictpopl['radiplan'] < 4))[0]
-        #indxplanfilt['r204'] = np.where((dictpopl['radiplan'] > 2) & (dictpopl['radiplan'] < 4))[0]
-        #indxplanfilt['rb24'] = np.where((dictpopl['radiplan'] < 4) & (dictpopl['radiplan'] > 2.))[0]
-        #indxplanfilt['gmtr'] = np.where(np.isfinite(stnomass) & (stnomass > 5) & (dictpopl['booltran']))[0]
-        #indxplanfilt['tran'] = np.where(dictpopl['booltran'])[0]
-        #indxplanfilt['mult'] = np.where(dictpopl['numbplantranstar'] > 3)[0]
-        #indxplanfilt['live'] = np.where(dictpopl['boollive'])[0]
-        #indxplanfilt['terr'] = np.where(dictpopl['boolterr'] & dictpopl['boollive'])[0]
-        #indxplanfilt['hzoncons'] = np.where(dictpopl['boolhabicons'] & dictpopl['boollive'])[0]
-        #indxplanfilt['hzonopti'] = np.where(dictpopl['boolhabiopti'] & dictpopl['boollive'])[0]
-        #indxplanfilt['unlo'] = np.where(dictpopl['boolunlo'] & dictpopl['boollive'])[0]
-        #indxplanfilt['habi'] = np.where(dictpopl['boolterr'] & dictpopl['boolhabiopti'] & dictpopl['boolunlo'] & dictpopl['boollive'])[0]
-        #indxplanfilt['eatp'] = np.where(dictpopl['booleatp'] & dictpopl['boollive'])[0]
-        #indxplanfilt['seti'] = np.where(dictpopl['boolterr'] & dictpopl['boolhabicons'] & dictpopl['boolunlo'] & \
+        #indxcompfilt['r154'] = np.where((dictpopl['radiplan'] > 1.5) & (dictpopl['radiplan'] < 4))[0]
+        #indxcompfilt['r204'] = np.where((dictpopl['radiplan'] > 2) & (dictpopl['radiplan'] < 4))[0]
+        #indxcompfilt['rb24'] = np.where((dictpopl['radiplan'] < 4) & (dictpopl['radiplan'] > 2.))[0]
+        #indxcompfilt['gmtr'] = np.where(np.isfinite(stnomass) & (stnomass > 5) & (dictpopl['booltran']))[0]
+        #indxcompfilt['tran'] = np.where(dictpopl['booltran'])[0]
+        #indxcompfilt['mult'] = np.where(dictpopl['numbcomptranstar'] > 3)[0]
+        #indxcompfilt['live'] = np.where(dictpopl['boollive'])[0]
+        #indxcompfilt['terr'] = np.where(dictpopl['boolterr'] & dictpopl['boollive'])[0]
+        #indxcompfilt['hzoncons'] = np.where(dictpopl['boolhabicons'] & dictpopl['boollive'])[0]
+        #indxcompfilt['hzonopti'] = np.where(dictpopl['boolhabiopti'] & dictpopl['boollive'])[0]
+        #indxcompfilt['unlo'] = np.where(dictpopl['boolunlo'] & dictpopl['boollive'])[0]
+        #indxcompfilt['habi'] = np.where(dictpopl['boolterr'] & dictpopl['boolhabiopti'] & dictpopl['boolunlo'] & dictpopl['boollive'])[0]
+        #indxcompfilt['eatp'] = np.where(dictpopl['booleatp'] & dictpopl['boollive'])[0]
+        #indxcompfilt['seti'] = np.where(dictpopl['boolterr'] & dictpopl['boolhabicons'] & dictpopl['boolunlo'] & \
                                                                                             #dictpopl['booleatp'] & dictpopl['boollive'])[0]
         dicttemp = dict()
         dicttemptotl = dict()
         
-        liststrgcutt = indxplanfilt.keys()
+        liststrgcutt = indxcompfilt.keys()
         
         liststrgvarb = [ \
                         'peri', 'inso', 'vesc0060', 'massplan', \
@@ -3193,13 +3183,13 @@ def plot_prop(gdat, strgpdfn):
                     continue
                         
                 for strgfeat, valu in dictpopl.items():
-                    dicttemptotl[strgfeat] = np.concatenate([dictpopl[strgfeat][indxplanfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
+                    dicttemptotl[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
                 
                 for strgcutt in liststrgcutt:
                     
                     # merge population with the target
                     for strgfeat, valu in dictpopl.items():
-                        dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indxplanfilt[strgcutt]], gdat.dicterrr[strgfeat][0, :]])
+                        dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcutt]], gdat.dicterrr[strgfeat][0, :]])
                     
                     liststrgfeatcsvv = [ \
                                         #'inso', 'metrhzon', 'radiplan', 'metrterr', 'massstar', 'smax', 'metrunlo', 'distsyst', 'metrplan', 'metrseti', \
@@ -3211,7 +3201,7 @@ def plot_prop(gdat, strgpdfn):
                         
                             indxgood = np.where(np.isfinite(dicttemp[liststrgsort[y]]))[0]
                             indxsort = np.argsort(dicttemp[liststrgsort[y]][indxgood])[::-1]
-                            indxplansort = indxgood[indxsort]
+                            indxcompsort = indxgood[indxsort]
                             
                             path = gdat.pathdata + '%s_%s_%s.csv' % (strgpopl, strgcutt, liststrgsort[y])
                             objtfile = open(path, 'w')
@@ -3223,7 +3213,7 @@ def plot_prop(gdat, strgpdfn):
                             
                             objtfile.write(strghead)
                             cntr = 1
-                            for l in indxplansort:
+                            for l in indxcompsort:
                                 
                                 strgline = '%4d, %20s' % (cntr, dicttemp['nameplan'][l])
                                 for strgfeatcsvv in liststrgfeatcsvv:
@@ -3251,7 +3241,7 @@ def plot_prop(gdat, strgpdfn):
                                     axis.errorbar(dicttemp[strgxaxi], dicttemp[strgyaxi], ls='', ms=2, marker='o', color='r')
                                 
                                 ## this system
-                                for j in gdat.indxplan:
+                                for j in gdat.indxcomp:
                                     if strgxaxi in gdat.dicterrr:
                                         xdat = gdat.dicterrr[strgxaxi][0, j, None]
                                         xerr = gdat.dicterrr[strgxaxi][1:3, j, None]
@@ -3275,7 +3265,7 @@ def plot_prop(gdat, strgpdfn):
                                                                                               va='center', ha='center', transform=axis.transAxes)
                                                 break
                                             else:
-                                                axis.axhline(ydat, color=gdat.listcolrplan[j], lw=1, ls='--', zorder=2)
+                                                axis.axhline(ydat, color=gdat.listcolrcomp[j], lw=1, ls='--', zorder=2)
                                         if not strgyaxi in gdat.dicterrr and strgxaxi in gdat.dicterrr:
                                             if strgxaxi in gdat.listfeatstar:
                                                 axis.axvline(xdat, color='k', lw=1, ls='--', zorder=2)
@@ -3283,19 +3273,19 @@ def plot_prop(gdat, strgpdfn):
                                                                                               va='center', ha='center', transform=axis.transAxes)
                                                 break
                                             else:
-                                                axis.axvline(xdat, color=gdat.listcolrplan[j], lw=1, ls='--')
+                                                axis.axvline(xdat, color=gdat.listcolrcomp[j], lw=1, ls='--')
                                         if strgxaxi in gdat.dicterrr and strgyaxi in gdat.dicterrr:
-                                            axis.errorbar(xdat, ydat, color=gdat.listcolrplan[j], lw=1, xerr=xerr, yerr=yerr, ls='', marker='o', \
+                                            axis.errorbar(xdat, ydat, color=gdat.listcolrcomp[j], lw=1, xerr=xerr, yerr=yerr, ls='', marker='o', \
                                                                                                                                 zorder=2, ms=6)
                                         
                                         if strgxaxi in gdat.dicterrr or strgyaxi in gdat.dicterrr:
-                                            axis.text(0.85, 0.9 - j * 0.08, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], \
+                                            axis.text(0.85, 0.9 - j * 0.08, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], \
                                                                                             va='center', ha='center', transform=axis.transAxes)
                                 
                                 # include text
                                 if liststrgsort[y] != 'none' and strgtext == 'text':
-                                    for ll, l in enumerate(indxplansort):
-                                        if ll < numbplantext:
+                                    for ll, l in enumerate(indxcompsort):
+                                        if ll < numbcomptext:
                                             text = '%s' % dicttemp['nameplan'][l]
                                             xdat = dicttemp[strgxaxi][l]
                                             ydat = dicttemp[strgyaxi][l]
@@ -3351,204 +3341,188 @@ def plot_prop(gdat, strgpdfn):
                                 plt.close()
 
    
-def bdtr_wrap(gdat, epocmask, perimask, duramask, strgintp, strgoutp, strgtren, indxdatatser):
+def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, strgtren, timescalbdtrspln):
     
-    gdat.listobjtspln = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.indxsplnregi = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listindxtimeregi = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.indxtimeregioutt = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.rflxbdtrregi, gdat.listindxtimeregi[b][p][y], gdat.indxtimeregioutt[b][p][y], gdat.listobjtspln[b][p][y], timeedge = \
+                     ephesus.bdtr_tser(gdat.listarrytser[strgintp][b][p][y][:, 0], gdat.listarrytser[strgintp][b][p][y][:, 1], \
+                                                epocmask=epocmask, perimask=perimask, duramask=duramask, \
+                                                typeverb=gdat.typeverb, timebrek=gdat.timebrek, ordrspln=gdat.ordrspln, \
+                                                timescalbdtrspln=timescalbdtrspln, timescalbdtrmedi=gdat.timescalbdtrmedi, \
+                                                typebdtr=gdat.typebdtr)
+    gdat.listarrytser[strgoutp][b][p][y] = np.copy(gdat.listarrytser[strgintp][b][p][y])
+    gdat.listarrytser[strgoutp][b][p][y][:, 1] = np.concatenate(gdat.rflxbdtrregi)
     
-    b = indxdatatser
-    for p in gdat.indxinst[b]:
-        for y in gdat.indxchun[b][p]:
-            if gdat.boolbdtr:
-                print('Detrending data from chunck %s...' % gdat.liststrgchun[b][p][y])
-                gdat.rflxbdtrregi, gdat.listindxtimeregi[b][p][y], gdat.indxtimeregioutt[b][p][y], gdat.listobjtspln[b][p][y], timeedge = \
-                                 ephesus.bdtr_tser(gdat.listarrytser[strgintp][b][p][y][:, 0], gdat.listarrytser[strgintp][b][p][y][:, 1], \
-                                                            epocmask=epocmask, perimask=perimask, duramask=duramask, \
-                                                            typeverb=gdat.typeverb, timebrek=gdat.timebrek, ordrspln=gdat.ordrspln, \
-                                                            timescalbdtrspln=gdat.timescalbdtrspln, timescalbdtrmedi=gdat.timescalbdtrmedi, \
-                                                            typebdtr=gdat.typebdtr)
-                gdat.listarrytser[strgoutp][b][p][y] = np.copy(gdat.listarrytser[strgintp][b][p][y])
-                gdat.listarrytser[strgoutp][b][p][y][:, 1] = np.concatenate(gdat.rflxbdtrregi)
-                
-                # trend
-                gdat.listarrytser[strgtren][b][p][y] = np.copy(gdat.listarrytser[strgintp][b][p][y])
-                rflxtren = []
-                for k in range(len(gdat.rflxbdtrregi)):
-                    if gdat.listobjtspln[b][p][y][k] is None:
-                        rflxtren.append(np.zeros(gdat.listindxtimeregi[b][p][y][k].size) + \
-                                                        np.mean(gdat.listarrytser[strgintp][b][p][y][gdat.listindxtimeregi[b][p][y][k], 0]))
-                    else:
-                        rflxtren.append(gdat.listobjtspln[b][p][y][k](gdat.listarrytser[strgintp][b][p][y][gdat.listindxtimeregi[b][p][y][k], 0]))
-                gdat.listarrytser[strgtren][b][p][y][:, 1] = np.concatenate(rflxtren)
+    # trend
+    gdat.listarrytser[strgtren][b][p][y] = np.copy(gdat.listarrytser[strgintp][b][p][y])
+    rflxtren = []
+    for k in range(len(gdat.rflxbdtrregi)):
+        if gdat.listobjtspln[b][p][y][k] is None:
+            rflxtren.append(np.zeros(gdat.listindxtimeregi[b][p][y][k].size) + \
+                                            np.mean(gdat.listarrytser[strgintp][b][p][y][gdat.listindxtimeregi[b][p][y][k], 0]))
+        else:
+            rflxtren.append(gdat.listobjtspln[b][p][y][k](gdat.listarrytser[strgintp][b][p][y][gdat.listindxtimeregi[b][p][y][k], 0]))
+    gdat.listarrytser[strgtren][b][p][y][:, 1] = np.concatenate(rflxtren)
 
-                numbsplnregi = len(gdat.rflxbdtrregi)
-                gdat.indxsplnregi[b][p][y] = np.arange(numbsplnregi)
-            else:
-                gdat.listarrytser[strgoutp][b][p][y] = gdat.listarrytser[strgintp][b][p][y]
-        # merge chuncks
-        gdat.arrytser[strgoutp][b][p] = np.concatenate(gdat.listarrytser[strgoutp][b][p], axis=0)
+    numbsplnregi = len(gdat.rflxbdtrregi)
+    gdat.indxsplnregi[b][p][y] = np.arange(numbsplnregi)
 
 
-def plot_tserwrap(gdat, strgarry, boolchun=True, boolcolr=True):
+def plot_tserwrap(gdat, b, p, y, strgarry, boolchun=True, boolcolr=True):
     
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            
-            if not boolchun and gdat.numbchun[b][p] == 1:
+    if not boolchun and gdat.numbchun[b][p] == 1:
+        return
+    
+    for y in gdat.indxchun[b][p]:
+        figr, axis = plt.subplots(figsize=gdat.figrsizeydobskin)
+        
+        if boolchun:
+            arrytser = gdat.listarrytser[strgarry][b][p][y]
+            print('strgarry')
+            print(strgarry)
+            print('bpy')
+            print(b)
+            print(p)
+            print(y)
+            print('arrytser')
+            summgene(arrytser)
+            if strgarry == 'flar':
+                arrytsertren = gdat.listarrytser['rawwtren'][b][p][y]
+        else:
+            if y > 0:
                 continue
-            
-            for y in gdat.indxchun[b][p]:
-                figr, axis = plt.subplots(figsize=gdat.figrsizeydobskin)
-                
+            arrytser = gdat.arrytser[strgarry][b][p]
+            if strgarry == 'flar':
+                arrytsertren = gdat.arrytser['rawwtren'][b][p]
+        
+        axis.plot(arrytser[:, 0] - gdat.timeoffs, arrytser[:, 1], color='grey', marker='.', ls='', ms=1, rasterized=True)
+        if boolcolr:
+            # color and name transits
+            ylim = axis.get_ylim()
+            listtimetext = []
+            for j in gdat.indxcomp:
                 if boolchun:
-                    arrytser = gdat.listarrytser[strgarry][b][p][y]
-                    if strgarry == 'flar':
-                        arrytsertren = gdat.listarrytser['rawwtren'][b][p][y]
+                    indxtime = gdat.listindxtimetranchun[j][b][p][y] 
                 else:
                     if y > 0:
                         continue
-                    arrytser = gdat.arrytser[strgarry][b][p]
-                    if strgarry == 'flar':
-                        arrytsertren = gdat.arrytser['rawwtren'][b][p]
+                    indxtime = gdat.listindxtimetran[j][b][p][0]
                 
-                axis.plot(arrytser[:, 0] - gdat.timetess, arrytser[:, 1], color='grey', marker='.', ls='', ms=1, rasterized=True)
-                if boolcolr:
-                    # color and name transits
-                    ylim = axis.get_ylim()
-                    listtimetext = []
-                    for j in gdat.indxplan:
-                        if boolchun:
-                            indxtime = gdat.listindxtimetranchun[j][b][p][y] 
-                        else:
-                            if y > 0:
-                                continue
-                            indxtime = gdat.listindxtimetran[j][b][p][0]
+                colr = gdat.listcolrcomp[j]
+                axis.plot(arrytser[indxtime, 0] - gdat.timeoffs, arrytser[indxtime, 1], \
+                                                                                   color=colr, marker='.', ls='', ms=1, rasterized=True)
+                # draw planet names
+                for n in np.linspace(-gdat.numbcyclcolrplot, gdat.numbcyclcolrplot, 2 * gdat.numbcyclcolrplot + 1):
+                    time = gdat.epocprio[j] + n * gdat.periprio[j] - gdat.timeoffs
+                    if np.where(abs(arrytser[:, 0] - gdat.timeoffs - time) < 0.1)[0].size > 0:
                         
-                        colr = gdat.listcolrplan[j]
-                        axis.plot(arrytser[indxtime, 0] - gdat.timetess, arrytser[indxtime, 1], \
-                                                                                           color=colr, marker='.', ls='', ms=1, rasterized=True)
-                        # draw planet names
-                        for n in np.linspace(-gdat.numbcyclcolrplot, gdat.numbcyclcolrplot, 2 * gdat.numbcyclcolrplot + 1):
-                            time = gdat.epocprio[j] + n * gdat.periprio[j] - gdat.timetess
-                            if np.where(abs(arrytser[:, 0] - gdat.timetess - time) < 0.1)[0].size > 0:
-                                
-                                # add a vertical offset if overlapping
-                                if np.where(abs(np.array(listtimetext) - time) < 0.5)[0].size > 0:
-                                    ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.95
-                                else:
-                                    ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.9
+                        # add a vertical offset if overlapping
+                        if np.where(abs(np.array(listtimetext) - time) < 0.5)[0].size > 0:
+                            ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.95
+                        else:
+                            ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.9
 
-                                # draw the planet letter
-                                axis.text(time, ypostemp, r'\textbf{%s}' % gdat.liststrgplan[j], color=gdat.listcolrplan[j], va='center', ha='center')
-                                listtimetext.append(time)
-                
-                if strgarry == 'flar':
-                    ydat = axis.get_ylim()[1]
-                    for kk in range(len(gdat.listindxtimeflar[p][y])):
-                        ms = 0.5 * gdat.listmdetflar[p][y][kk]
-                        axis.plot(arrytser[gdat.listindxtimeflar[p][y][kk], 0] - gdat.timetess, ydat, marker='v', color='b', ms=ms, rasterized=True)
-                    axis.plot(arrytsertren[:, 0] - gdat.timetess, arrytsertren[:, 1], color='g', marker='.', ls='', ms=1, rasterized=True)
-                    axis.fill_between(arrytsertren[:, 0] - gdat.timetess, arrytsertren[:, 1] - gdat.thrsrflxflar[p][y] + 1., \
-                                                                          arrytsertren[:, 1] + gdat.thrsrflxflar[p][y] - 1., \
-                                                                          color='c', alpha=0.2, rasterized=True)
-                    
-                if strgarry == 'tpri':
-                    axis.axhline(gdat.thrsrflxflar[p][y], ls='--', alpha=0.5, color='r')
-                    
-                axis.set_xlabel('Time [BJD - %d]' % gdat.timetess)
-                axis.set_ylabel(gdat.listlabltser[b])
-                axis.set_title(gdat.labltarg)
-                plt.subplots_adjust(bottom=0.2)
-                typeprioplan = ''
-                if strgarry == 'raww' or gdat.typeprioplan is None:
-                    typeprioplan = ''
-                else:
-                    typeprioplan = '_%s' % gdat.typeprioplan
-                strgcolr = ''
-                if boolcolr:
-                    strgcolr = '_colr'
-                strgchun = ''
-                if boolchun:
-                    strgchun = '_' + gdat.liststrgchun[b][p][y]
-                path = gdat.pathimag + '%s%s%s_%s%s_%s%s.%s' % (gdat.liststrgtser[b], strgarry, strgcolr, gdat.liststrginst[b][p], \
-                                                                                            strgchun, gdat.strgtarg, typeprioplan, gdat.typefileplot)
-                
-                if gdat.typeverb > 0:
-                    print('Writing to %s...' % path)
-                plt.savefig(path, dpi=200)
-                plt.close()
-
-
-def plot_tser(gdat, strgarry):
-    
-    plot_tserwrap(gdat, strgarry, boolchun=True, boolcolr=False)
-    if strgarry == 'bdtr':
-        plot_tserwrap(gdat, strgarry, boolchun=False, boolcolr=False)
+                        # draw the planet letter
+                        axis.text(time, ypostemp, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], va='center', ha='center')
+                        listtimetext.append(time)
         
-        if gdat.numbplan > 0:
+        if strgarry == 'flar':
+            ydat = axis.get_ylim()[1]
+            for kk in range(len(gdat.listindxtimeflar[p][y])):
+                ms = 0.5 * gdat.listmdetflar[p][y][kk]
+                axis.plot(arrytser[gdat.listindxtimeflar[p][y][kk], 0] - gdat.timeoffs, ydat, marker='v', color='b', ms=ms, rasterized=True)
+            axis.plot(arrytsertren[:, 0] - gdat.timeoffs, arrytsertren[:, 1], color='g', marker='.', ls='', ms=1, rasterized=True)
+            axis.fill_between(arrytsertren[:, 0] - gdat.timeoffs, arrytsertren[:, 1] - gdat.thrsrflxflar[p][y] + 1., \
+                                                                  arrytsertren[:, 1] + gdat.thrsrflxflar[p][y] - 1., \
+                                                                  color='c', alpha=0.2, rasterized=True)
             
-            plot_tserwrap(gdat, strgarry, boolchun=False, boolcolr=True)
-            plot_tserwrap(gdat, strgarry, boolchun=True, boolcolr=True)
-
-            for b in gdat.indxdatatser:
-                if b == 1:
-                    continue
-                for p in gdat.indxinst[b]:
-                    # plot only the in-transit data
-                    figr, axis = plt.subplots(gdat.numbplan, 1, figsize=gdat.figrsizeydobskin, sharex=True)
-                    if gdat.numbplan == 1:
-                        axis = [axis]
-                    for jj, j in enumerate(gdat.indxplan):
-                        axis[jj].plot(gdat.arrytser[strgarry][b][p][gdat.listindxtimetran[j][b][p][0], 0] - gdat.timetess, \
-                                                                             gdat.arrytser[strgarry][b][p][gdat.listindxtimetran[j][b][p][0], 1], \
-                                                                                               color=gdat.listcolrplan[j], marker='o', ls='', ms=0.2)
-                    
-                    axis[-1].set_ylabel('Relative Flux')
-                    #axis[-1].yaxis.set_label_coords(0, gdat.numbplan * 0.5)
-                    axis[-1].set_xlabel('Time [BJD - %d]' % gdat.timetess)
-                    
-                    #plt.subplots_adjust(bottom=0.2)
-                    path = gdat.pathimag + 'rflx%s_intr_%s_%s_%s.%s' % \
-                                                    (strgarry, gdat.liststrginst[b][p], gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
-                    print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
+        if strgarry == 'flarprep':
+            axis.axhline(gdat.thrsrflxflar[p][y], ls='--', alpha=0.5, color='r')
+            
+        axis.set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
+        axis.set_ylabel(gdat.listlabltser[b])
+        axis.set_title(gdat.labltarg)
+        plt.subplots_adjust(bottom=0.2)
+        typeprioplan = ''
+        if strgarry == 'raww' or gdat.typeprioplan is None:
+            typeprioplan = ''
+        else:
+            typeprioplan = '_%s' % gdat.typeprioplan
+        strgcolr = ''
+        if boolcolr:
+            strgcolr = '_colr'
+        strgchun = ''
+        if boolchun:
+            strgchun = '_' + gdat.liststrgchun[b][p][y]
+        path = gdat.pathimag + '%s%s%s_%s%s_%s%s.%s' % (gdat.liststrgtser[b], strgarry, strgcolr, gdat.liststrginst[b][p], \
+                                                                                    strgchun, gdat.strgtarg, typeprioplan, gdat.typefileplot)
         
-        for b in gdat.indxdatatser:
-            if b == 1:
-                continue
-            for p in gdat.indxinst[b]:
-                for y in gdat.indxchun[b][p]:
-                    # plot baseline-detrending
-                    figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
-                    for i in gdat.indxsplnregi[b][p][y]:
-                        ## non-baseline-detrended light curve
-                        indxtimetemp = gdat.listindxtimeregi[b][p][y][i][gdat.indxtimeregioutt[b][p][y][i]]
-                        axis[0].plot(gdat.listarrytser['clip'][b][p][y][indxtimetemp, 0] - gdat.timetess, \
-                                                         gdat.listarrytser['clip'][b][p][y][indxtimetemp, 1], rasterized=True, alpha=gdat.alphraww, \
-                                                                                                        marker='o', ls='', ms=1, color='grey')
-                        ## spline
-                        if gdat.listobjtspln[b][p][y] is not None and gdat.listobjtspln[b][p][y][i] is not None:
-                            timesplnregifine = np.linspace(gdat.listarrytser[strgarry][b][p][y][gdat.listindxtimeregi[b][p][y][i], 0][0], \
-                                                                 gdat.listarrytser[strgarry][b][p][y][gdat.listindxtimeregi[b][p][y][i], 0][-1], 1000)
-                            axis[0].plot(timesplnregifine - gdat.timetess, gdat.listobjtspln[b][p][y][i](timesplnregifine), 'b-', lw=3, rasterized=True)
-                        ## baseline-detrended light curve
-                        indxtimetemp = gdat.listindxtimeregi[b][p][y][i]
-                        axis[1].plot(gdat.listarrytser[strgarry][b][p][y][indxtimetemp, 0] - gdat.timetess, \
-                                                                           gdat.listarrytser[strgarry][b][p][y][indxtimetemp, 1], rasterized=True, \
-                                                                                                          marker='o', ms=1, ls='', color='grey')
-                    for a in range(2):
-                        axis[a].set_ylabel('Relative Flux')
-                    axis[0].set_xticklabels([])
-                    axis[1].set_xlabel('Time [BJD - %d]' % gdat.timetess)
-                    plt.subplots_adjust(hspace=0.)
-                    path = gdat.pathimag + 'rflxbdtr_bdtr_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], \
-                                                        gdat.liststrgchun[b][p][y], gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
-                    print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
+        if gdat.typeverb > 0:
+            print('Writing to %s...' % path)
+        plt.savefig(path, dpi=200)
+        plt.close()
+
+
+def plot_tser(gdat, b, p, y, strgarry):
+    
+    plot_tserwrap(gdat, b, p, y, strgarry, boolchun=True, boolcolr=False)
+    if strgarry == 'bdtr':
+        plot_tserwrap(gdat, b, p, y, strgarry, boolchun=False, boolcolr=False)
+        
+        if gdat.numbcomp is not None and gdat.numbcomp > 0:
+            
+            plot_tserwrap(gdat, b, p, y, strgarry, boolchun=False, boolcolr=True)
+            plot_tserwrap(gdat, b, p, y, strgarry, boolchun=True, boolcolr=True)
+
+            if b == 0:
+                # plot only the in-transit data
+                figr, axis = plt.subplots(gdat.numbcomp, 1, figsize=gdat.figrsizeydobskin, sharex=True)
+                if gdat.numbcomp == 1:
+                    axis = [axis]
+                for jj, j in enumerate(gdat.indxcomp):
+                    axis[jj].plot(gdat.arrytser[strgarry][b][p][gdat.listindxtimetran[j][b][p][0], 0] - gdat.timeoffs, \
+                                                                         gdat.arrytser[strgarry][b][p][gdat.listindxtimetran[j][b][p][0], 1], \
+                                                                                           color=gdat.listcolrcomp[j], marker='o', ls='', ms=0.2)
+                
+                axis[-1].set_ylabel('Relative Flux')
+                #axis[-1].yaxis.set_label_coords(0, gdat.numbcomp * 0.5)
+                axis[-1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
+                
+                #plt.subplots_adjust(bottom=0.2)
+                path = gdat.pathimag + 'rflx%s_intr_%s_%s_%s.%s' % \
+                                                (strgarry, gdat.liststrginst[b][p], gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+                print('Writing to %s...' % path)
+                plt.savefig(path)
+                plt.close()
+        
+        if b == 0 and y is not None:
+            # plot baseline-detrending
+            figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
+            for i in gdat.indxsplnregi[b][p][y]:
+                ## non-baseline-detrended light curve
+                indxtimetemp = gdat.listindxtimeregi[b][p][y][i][gdat.indxtimeregioutt[b][p][y][i]]
+                axis[0].plot(gdat.listarrytser['mask'][b][p][y][indxtimetemp, 0] - gdat.timeoffs, \
+                                                 gdat.listarrytser['mask'][b][p][y][indxtimetemp, 1], rasterized=True, alpha=gdat.alphraww, \
+                                                                                                marker='o', ls='', ms=1, color='grey')
+                ## spline
+                if gdat.listobjtspln[b][p][y] is not None and gdat.listobjtspln[b][p][y][i] is not None:
+                    timesplnregifine = np.linspace(gdat.listarrytser[strgarry][b][p][y][gdat.listindxtimeregi[b][p][y][i], 0][0], \
+                                                         gdat.listarrytser[strgarry][b][p][y][gdat.listindxtimeregi[b][p][y][i], 0][-1], 1000)
+                    axis[0].plot(timesplnregifine - gdat.timeoffs, gdat.listobjtspln[b][p][y][i](timesplnregifine), 'b-', lw=3, rasterized=True)
+                ## baseline-detrended light curve
+                indxtimetemp = gdat.listindxtimeregi[b][p][y][i]
+                axis[1].plot(gdat.listarrytser[strgarry][b][p][y][indxtimetemp, 0] - gdat.timeoffs, \
+                                                                   gdat.listarrytser[strgarry][b][p][y][indxtimetemp, 1], rasterized=True, alpha=gdat.alphraww, \
+                                                                                                  marker='o', ms=1, ls='', color='grey')
+            for a in range(2):
+                axis[a].set_ylabel('Relative Flux')
+            axis[0].set_xticklabels([])
+            axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
+            plt.subplots_adjust(hspace=0.)
+            path = gdat.pathimag + 'rflxbdtr_bdtr_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], \
+                                                gdat.liststrgchun[b][p][y], gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+            print('Writing to %s...' % path)
+            plt.savefig(path, dpi=200)
+            plt.close()
                             
 
 def init( \
@@ -3579,13 +3553,22 @@ def init( \
          # mode of operation
          ## Boolean flag to use and plot time-series data
          booldatatser=True, \
+         
+         # Boolean flag to only consider SPOC data on disk
+         boolspoconly=True, \
+
+         # output
+         ## plotting
          ## Boolean flag to plot the properties of exoplanets
          boolplotprop=False, \
          ## Boolean flag to plot the time-series
          boolplottser=True, \
+         ## Boolean flag to plot the prior
+         boolplotprio=True, \
+         
          ## Boolean flag to enforce offline operation
          boolforcoffl=False, \
-        
+
          # the folder in which the folder for the target will be placed
          pathbasetarg=None, \
         
@@ -3595,6 +3578,9 @@ def init( \
          listpathdatainpt=None, \
          # data input
          listarrytser=None, \
+         
+         # plotting
+         timeoffs=None, \
 
          # list of labels indicating instruments
          listlablinst=[['TESS'], []], \
@@ -3607,12 +3593,12 @@ def init( \
          
          # planet names
          ## list of letters to be assigned to planets
-         liststrgplan=None, \
+         liststrgcomp=None, \
          ## list of colors to be assigned to planets
-         listcolrplan=None, \
-         ## Boolean flag to assign them letters *after* ordering them in orbital period, unless liststrgplan is specified by the user
+         listcolrcomp=None, \
+         ## Boolean flag to assign them letters *after* ordering them in orbital period, unless liststrgcomp is specified by the user
          boolordrplanname=True, \
-
+        
          # plot orbit
          boolanimorbt=False, \
         
@@ -3650,6 +3636,8 @@ def init( \
          # signal search
          ### Boolean flag to estimate the LS periodogram
          boollspe=False, \
+         ### maximum frequency (per day) for LS periodogram
+         maxmfreqlspe=None, \
          
          ### input dictionary to the search pipeline for single transits
          dictsrchtransinginpt=None, \
@@ -3669,13 +3657,16 @@ def init( \
          boolexofpopl=True, \
 
          # model
-         ## type of analysis
-         ### 'exop':
-         ### 'bhol':
-         ### 'flar':
-         ### 'tsin': search for single microlensing pulses
-         ### 'psin': search for single transits
-         listtypeanls=['exop'], \
+         ## list of analysis types
+         ### 'blsq': search for periodic boxes
+         ### 'mfil': matched filter
+         listtypeanls=['blsq'], \
+         
+         # list of object types
+         ## 'exop':
+         ## 'bhol':
+         ## 'flar':
+         listtypeobjt=['exop'], \
 
          ## priors
          ### type of priors for stars: 'tici', 'exar', 'inpt'
@@ -3740,7 +3731,7 @@ def init( \
          typeinfe='mile', \
 
          ## type of exoplanet model
-         listtypemodlinfe=['orbt'], \
+         listtypemodl=['orbt'], \
          ## Boolean flag to perform inference on the phase-folded (onto the period of the first planet) and binned data
          boolinfefoldbind=False, \
          ## Boolean flag to model the out-of-transit data to learn a background model
@@ -3749,8 +3740,6 @@ def init( \
          dictdictallesett=None, \
          dictdictallepara=None, \
          # output
-         ## Boolean flag to plot the prior
-         boolplotprio=True, \
 
          ## Boolean flag to write planet name on plots
          boolwritplan=True, \
@@ -3796,16 +3785,17 @@ def init( \
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
     gdat.pathbase = os.environ['MILETOS_DATA_PATH'] + '/'
     
-    if 'exop' in gdat.listtypeanls:
+    if 'exop' in gdat.listtypeobjt:
         gdat.pathtoii = gdat.pathbaselygo + 'data/exofop_tess_tois.csv'
     
     
     if gdat.typeverb > 0:
+        print('List of object types: %s' % gdat.listtypeobjt)
         print('List of analysis types: %s' % gdat.listtypeanls)
-        print('List of model types: %s' % gdat.listtypemodlinfe)
+        print('List of model types: %s' % gdat.listtypemodl)
 
     # Boolean flag to perform inference
-    gdat.boolinfe = len(gdat.listtypemodlinfe) > 0 and gdat.booldatatser
+    gdat.boolinfe = len(gdat.listtypemodl) > 0 and gdat.booldatatser
     
     ## ensure that target and star coordinates are not provided separately
     if gdat.rasctarg is not None and gdat.rascstar is not None:
@@ -3833,7 +3823,7 @@ def init( \
     # dictionary to be returned
     dictmileoutp = dict()
     
-    if 'exop' in gdat.listtypeanls:
+    if 'exop' in gdat.listtypeobjt and gdat.typeprioplan != 'exar':
         if gdat.typeverb > 0:
             print('Reading from %s...' % gdat.pathtoii)
         objtexof = pd.read_csv(gdat.pathtoii, skiprows=0)
@@ -3869,7 +3859,7 @@ def init( \
         if gdat.typeverb > 0:
             print('A TIC ID was provided as target identifier.')
         
-        if 'exop' in gdat.listtypeanls:
+        if 'exop' in gdat.listtypeobjt and gdat.typeprioplan != 'exar':
             indx = np.where(objtexof['TIC ID'].values == gdat.ticitarg)[0]
             if indx.size > 0:
                 gdat.toiitarg = int(str(objtexof['TOI'][indx[0]]).split('.')[0])
@@ -3913,7 +3903,9 @@ def init( \
 
         if gdat.labltarg is None:
             raise Exception('')
-
+    
+    gdat.maxmnumbiterbdtr = 5
+    
     if gdat.typeverb > 0:
         print('gdat.ticitarg')
         print(gdat.ticitarg)
@@ -3928,6 +3920,9 @@ def init( \
     
     print('boolplotprop')
     print(boolplotprop)
+    
+    print('gdat.liststrginst')
+    print(gdat.liststrginst)
 
     # ExoFOP
     if gdat.boolplotprop:
@@ -3936,8 +3931,8 @@ def init( \
     ## NASA Exoplanet Archive
     if gdat.boolplotprop:
         gdat.dictexar = ephesus.retr_dictexar()
-        numbplanexar = gdat.dictexar['radiplan'].size
-        gdat.indxplanexar = np.arange(numbplanexar)
+        numbcompexar = gdat.dictexar['radiplan'].size
+        gdat.indxcompexar = np.arange(numbcompexar)
     
     if gdat.strgclus is None:
         gdat.strgclus = ''
@@ -3947,7 +3942,7 @@ def init( \
         gdat.pathbasetarg = gdat.pathbase
     print('gdat.strgclus')
     print(gdat.strgclus)
-    if 'exop' in gdat.listtypeanls and gdat.boolplotprop:
+    if 'exop' in gdat.listtypeobjt and gdat.boolplotprop:
         gdat.pathimagfeat = gdat.pathimag + 'prop/'
         for strgpdfn in gdat.liststrgpdfn:
             pathimagpdfn = gdat.pathimagfeat + strgpdfn + '/'
@@ -3955,6 +3950,8 @@ def init( \
             setattr(gdat, 'pathimagfeatsyst' + strgpdfn, pathimagpdfn + 'featsyst/')
             setattr(gdat, 'pathimagdataplan' + strgpdfn, pathimagpdfn + 'dataplan/')
     
+    print('gdat.labltarg')
+    print(gdat.labltarg)
     if gdat.labltarg is None:
         if gdat.typetarg == 'mast':
             gdat.labltarg = gdat.strgmast
@@ -3997,6 +3994,70 @@ def init( \
         if attr.startswith('path') and valu.endswith('/'):
             os.system('mkdir -p %s' % valu)
             
+    if gdat.booldatatser:
+        gdat.liststrgdatatser = ['lcur', 'rvel']
+        gdat.numbdatatser = len(gdat.liststrgdatatser)
+        gdat.indxdatatser = np.arange(gdat.numbdatatser)
+
+        gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
+        gdat.indxinst = [[] for b in gdat.indxdatatser]
+        for b in gdat.indxdatatser:
+            gdat.numbinst[b] = len(gdat.listlablinst[b])
+            gdat.indxinst[b] = np.arange(gdat.numbinst[b])
+        
+        if gdat.typeverb > 0:
+            print('gdat.numbinst')
+            print(gdat.numbinst)
+        
+        if gdat.liststrginst is None:
+            gdat.liststrginst = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    gdat.liststrginst[b][p] = ''.join(gdat.listlablinst[b][p].split(' '))
+
+        if gdat.typetarg != 'inpt' and 'TESS' in gdat.liststrginst[0]:
+            if gdat.boolspoconly:
+                # get the list of TESS sectors and file paths
+                gdat.listtsec, listpath = ephesus.retr_tsectici(gdat.ticitarg)
+                # get data
+                listarrylcurtess = [[] for k in range(len(listpath))]
+                gdat.listtsec = np.empty(len(listpath))
+                listtcam = np.empty(len(listpath))
+                listtccd = np.empty(len(listpath))
+                for k in range(len(listpath)):
+                    listarrylcurtess[k], indxtimequalgood, indxtimenanngood, gdat.listtsec[k], listtcam[k], listtccd[k] = ephesus.read_tesskplr_file(listpath[k], typeinst='tess', \
+                                                                                                                                                                strgtype='PDCSAP_FLUX')
+                # load data
+                if len(listarrylcurtess) > 0:
+                    arrylcurtess = np.concatenate(listarrylcurtess)
+                gdat.listarrytsersapp = None
+                gdat.listarrytserpdcc = None
+
+            else:
+            
+                if gdat.ticitarg is None and gdat.strgmast is None:
+                    rasctarg = gdat.rascstar
+                    decltarg = gdat.declstar
+                else:
+                    rasctarg = None
+                    decltarg = None
+
+                arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
+                                      gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur = \
+                                      ephesus.retr_lcurtess( \
+                                                    gdat.pathtarg, \
+                                                    strgmast=gdat.strgmast, \
+                                                    rasctarg=rasctarg, \
+                                                    decltarg=decltarg, \
+                                                    labltarg=gdat.labltarg, \
+                                                    strgtarg=gdat.strgtarg, \
+                                                    dictlygoinpt=gdat.dictlygoinpt, \
+                                                    **gdat.dictlcurtessinpt, \
+                                                    )
+            if len(listarrylcurtess) == 0:
+                print('No data found. Returning...')
+                return dictmileoutp
+        
     if gdat.typepriostar is None:
         if gdat.radistar is not None:
             gdat.typepriostar = 'inpt'
@@ -4006,7 +4067,7 @@ def init( \
     if gdat.typeverb > 0:
         print('Stellar parameter prior type: %s' % gdat.typepriostar)
     
-    if 'exop' in gdat.listtypeanls:
+    if 'exop' in gdat.listtypeobjt:
         if gdat.strgexar is None:
             gdat.strgexar = gdat.strgmast
     
@@ -4043,65 +4104,30 @@ def init( \
 
         if gdat.typeverb > 0:
             print('Planetary parameter prior type: %s' % gdat.typeprioplan)
+        
+        if not gdat.boolexar and gdat.typeprioplan == 'exar':
+            raise Exception('')
+    
     else:
         gdat.typeprioplan = None
     
-    if 'exop' in gdat.listtypeanls:
-        gdat.liststrgpdfn = [gdat.typeprioplan] + [gdat.typeprioplan + typemodlinfe for typemodlinfe in gdat.listtypemodlinfe]
+    if 'exop' in gdat.listtypeobjt:
+        gdat.liststrgpdfn = [gdat.typeprioplan] + [gdat.typeprioplan + typemodl for typemodl in gdat.listtypemodl]
+
     gdat.liststrgpdfn = ['prio']
     
-    if 'flar' in gdat.listtypeanls:
+    if 'flar' in gdat.listtypeobjt:
         gdat.boolsrchflar = True
     else:
         gdat.boolsrchflar = False
+    
+    gdat.numbcomp = None
 
     if gdat.typeverb > 0:
         print('gdat.liststrgpdfn')
         print(gdat.liststrgpdfn)
 
     if gdat.booldatatser:
-        gdat.liststrgdatatser = ['lcur', 'rvel']
-        gdat.numbdatatser = len(gdat.liststrgdatatser)
-        gdat.indxdatatser = np.arange(gdat.numbdatatser)
-
-        gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
-        gdat.indxinst = [[] for b in gdat.indxdatatser]
-        for b in gdat.indxdatatser:
-            gdat.numbinst[b] = len(gdat.listlablinst[b])
-            gdat.indxinst[b] = np.arange(gdat.numbinst[b])
-        
-        if gdat.typeverb > 0:
-            print('gdat.numbinst')
-            print(gdat.numbinst)
-        
-        if gdat.liststrginst is None:
-            gdat.liststrginst = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    gdat.liststrginst[b][p] = ''.join(gdat.listlablinst[b][p].split(' '))
-
-        if gdat.typetarg != 'inpt' and 'TESS' in gdat.liststrginst[0]:
-            
-            if gdat.ticitarg is None and gdat.strgmast is None:
-                rasctarg = gdat.rascstar
-                decltarg = gdat.declstar
-            else:
-                rasctarg = None
-                decltarg = None
-
-            arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
-                                  gdat.listtsec, gdat.listtcam, gdat.listtccd = \
-                                  ephesus.retr_lcurtess( \
-                                                gdat.pathtarg, \
-                                                strgmast=gdat.strgmast, \
-                                                rasctarg=rasctarg, \
-                                                decltarg=decltarg, \
-                                                labltarg=gdat.labltarg, \
-                                                strgtarg=gdat.strgtarg, \
-                                                dictlygoinpt=gdat.dictlygoinpt, \
-                                                **gdat.dictlcurtessinpt, \
-                                                )
-
         # determine number of chunks
         gdat.numbchun = [np.empty(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
@@ -4143,34 +4169,32 @@ def init( \
                 gdat.listdatatype[b] = ['real' for p in gdat.indxinst[b]]
     
         # Boolean flag to execute BLS
-        gdat.boolsrchpbox = 'exop' in gdat.listtypeanls and gdat.typeprioplan == 'blsq' or 'bhol' in gdat.listtypeanls
+        gdat.boolsrchpbox = 'blsq' in gdat.listtypeanls
         if gdat.typeverb > 0:
             print('gdat.boolsrchpbox') 
             print(gdat.boolsrchpbox)
 
         if gdat.dictdictallesett is None:
             gdat.dictdictallesett = dict()
-            for typemodlinfe in gdat.listtypemodlinfe:
-                gdat.dictdictallesett[typemodlinfe] = None
+            for typemodl in gdat.listtypemodl:
+                gdat.dictdictallesett[typemodl] = None
 
         if gdat.dictdictallepara is None:
             gdat.dictdictallepara = dict()
-            for typemodlinfe in gdat.listtypemodlinfe:
-                gdat.dictdictallepara[typemodlinfe] = None
+            for typemodl in gdat.listtypemodl:
+                gdat.dictdictallepara[typemodl] = None
 
         gdat.listlabltser = ['Relative Flux', 'Radial Velocity [km/s]']
         gdat.liststrgtser = ['rflx', 'rvel']
         gdat.liststrgtseralle = ['flux', 'rv']
     
-        gdat.timetess = 2457000
+        if gdat.timeoffs is None:
+            gdat.timeoffs = 2457000
 
         if gdat.typeverb > 0:
             print('Light curve data: %s' % gdat.listlablinst[0])
             print('RV data: %s' % gdat.listlablinst[1])
     
-        if gdat.typeprioplan != 'inpt' and gdat.epocprio is not None:
-            raise Exception('')
-
         if gdat.offstextatmoraditmpt is None:
             gdat.offstextatmoraditmpt = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
         if gdat.offstextatmoradimetr is None:
@@ -4186,9 +4210,9 @@ def init( \
             if gdat.kmagsyst is None:
                 gdat.kmagsyst = 0.
 
-    if 'exop' in gdat.listtypeanls:
+    if 'exop' in gdat.listtypeobjt:
     
-        if gdat.boolexar:
+        if gdat.typeprioplan == 'exar':
             if gdat.periprio is None:
                 gdat.periprio = gdat.dictexartarg['peri']
             gdat.deptprio = gdat.dictexartarg['dept']
@@ -4198,7 +4222,13 @@ def init( \
                 gdat.epocprio = gdat.dictexartarg['epoc']
 
             gdat.duraprio = gdat.dictexartarg['duratran']
-        
+            print('gdat.duraprio')
+            print(gdat.duraprio)
+            indx = np.where(~np.isfinite(gdat.duraprio) & gdat.dictexartarg['booltran'])[0]
+            if indx.size > 0:
+                dcyc = 0.15
+                print('Duration from the Exoplanet Archive Composite PS table is infite for companions. Assuming a duty cycle of %.3g.' % dcyc)
+                gdat.duraprio[indx] = gdat.periprio[indx] * dcyc
         if gdat.typeprioplan == 'exof':
             if gdat.typeverb > 0:
                 print('A TOI number is provided. Retreiving the TCE attributes from ExoFOP-TESS...')
@@ -4294,14 +4324,15 @@ def init( \
             gdat.hmagsyst = listdictcatl[0]['Hmag']
             gdat.kmagsyst = listdictcatl[0]['Kmag']
             gdat.vmagsyst = listdictcatl[0]['Vmag']
-        
+    
+    else:
+        gdat.epocprio = None
+        gdat.periprio = None
+        gdat.duraprio = None
+    
     if gdat.booldatatser and gdat.boolinfe and gdat.typeinfe == 'alle':
         gdat.pathallebase = gdat.pathtarg + 'allesfits/'
         
-    if not gdat.typetarg == 'inpt':
-        gdat.listarrytser = dict()
-    gdat.arrytser = dict()
-    
     if gdat.typeverb > 0:
         print('gdat.typeprioplan')
         print(gdat.typeprioplan)
@@ -4309,32 +4340,37 @@ def init( \
         print(gdat.booldatatser)
 
     if gdat.booldatatser:
+        gdat.arrytser = dict()
+        if not gdat.typetarg == 'inpt':
+            gdat.listarrytser = dict()
     
         gdat.pathalle = dict()
         gdat.objtalle = dict()
         
         gdat.arrytser['raww'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['mask'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['inte'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['clip'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrytser['temp'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        for r in range(gdat.maxmnumbiterbdtr):
+            gdat.arrytser['clipinteclip%04d' % r] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrytser['clipintebdtr%04d' % r] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['bdtr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['bdtrbind'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['tpri'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['rawwtren'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['cliptren'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        
         if not gdat.typetarg == 'inpt':
             gdat.listarrytser['raww'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         else:
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     gdat.arrytser['raww'][b][p] = np.concatenate(gdat.listarrytser['raww'][b][p])
-            
         gdat.listarrytser['mask'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['inte'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['clip'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.listarrytser['temp'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        for r in range(gdat.maxmnumbiterbdtr):
+            gdat.listarrytser['clipinteclip%04d' % r] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.listarrytser['clipintebdtr%04d' % r] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['bdtr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['tpri'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['rawwtren'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['cliptren'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
@@ -4344,7 +4380,7 @@ def init( \
                 if gdat.typetarg != 'inpt' and b == 0 and gdat.liststrginst[b][p] == 'TESS':
                     gdat.arrytser['raww'][b][p] = arrylcurtess
                     for y in gdat.indxchun[b][p]:
-                        gdat.listarrytser['raww'][b][p] = listarrylcurtess
+                        gdat.listarrytser['raww'][b][p][y] = listarrylcurtess[y]
         
         # load input data
         if gdat.listpathdatainpt is not None:
@@ -4360,20 +4396,210 @@ def init( \
                         indx = np.where(gdat.listarrytser['raww'][b][p][y][:, 1] < 1e6)[0]
                         gdat.listarrytser['raww'][b][p][y] = gdat.listarrytser['raww'][b][p][y][indx, :]
                         gdat.listisec = None
+
+        # check availability of data 
+        booldataaval = False
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    if len(gdat.listarrytser['raww'][b][p]) > 0:
+                        booldataaval = True
+        if not booldataaval:
+            print('No data found. Returning...')
+            return dictmileoutp
+        
+        # plot raw data
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    if gdat.boolplottser:
+                        plot_tser(gdat, b, p, y, 'raww')
+                if gdat.boolplottser:
                     gdat.arrytser['raww'][b][p] = np.concatenate(gdat.listarrytser['raww'][b][p])
+                    plot_tser(gdat, b, p, None, 'raww')
 
-        if gdat.boolplottser:
-            plot_tser(gdat, 'raww')
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    if len(gdat.listarrytser['raww'][b][p][y]) == 0:
+                        print('bpy')
+                        print(b, p, y)
+                        raise Exception('')
+        
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if not np.isfinite(gdat.arrytser['raww'][b][p]).all():
+                    print('b, p')
+                    print(b, p)
+                    indxbadd = np.where(~np.isfinite(gdat.arrytser['raww'][b][p]))[0]
+                    print('gdat.arrytser[raww][b][p]')
+                    summgene(gdat.arrytser['raww'][b][p])
+                    print('indxbadd')
+                    summgene(indxbadd)
+                    raise Exception('')
+        
+        # mask out data
+        if gdat.listlimttimemask is not None:
+            
+            if gdat.typeverb > 0:
+                print('Masking the data...')
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    numbmask = len(gdat.listlimttimemask[b][p])
+                    for y in gdat.indxchun[b][p]:
+                        listindxtimemask = []
+                        for k in range(numbmask):
+                            indxtimemask = np.where((gdat.listarrytser['raww'][b][p][y][:, 0] < gdat.listlimttimemask[b][p][k][1]) & \
+                                                        (gdat.listarrytser['raww'][b][p][y][:, 0] > gdat.listlimttimemask[b][p][k][0]))[0]
+                            listindxtimemask.append(indxtimemask)
+                        listindxtimemask = np.concatenate(listindxtimemask)
+                        listindxtimegood = np.setdiff1d(np.arange(gdat.listarrytser['raww'][b][p][y].shape[0]), listindxtimemask)
+                        gdat.listarrytser['mask'][b][p][y] = gdat.listarrytser['raww'][b][p][y][listindxtimegood, :]
+                        if gdat.boolplottser:
+                            plot_tser(gdat, b, p, y, 'mask')
+                    gdat.arrytser['mask'][b][p] = np.concatenate(gdat.listarrytser['mask'][b][p], 0)
+                    if gdat.boolplottser:
+                        plot_tser(gdat, b, p, y, 'mask')
+        else:
+            gdat.arrytser['mask'] = gdat.arrytser['raww']
+            gdat.listarrytser['mask'] = gdat.listarrytser['raww']
+        
+        # detrending
+        ## determine whether to use any mask for detrending
+        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+            # determine the baseline-detrend mask
+            if gdat.duraprio is not None and len(gdat.duraprio) > 0:
+                gdat.epocmask = gdat.epocprio
+                gdat.perimask = gdat.periprio
+                gdat.duramask = 2. * gdat.duraprio
+            else:
+                gdat.epocmask = None
+                gdat.perimask = None
+                gdat.duramask = None
+        
+        if gdat.numbinst[0] > 0 and gdat.boolbdtr:
+            gdat.listobjtspln = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+            gdat.indxsplnregi = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+            gdat.listindxtimeregi = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+            gdat.indxtimeregioutt = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+            
+            gdat.numbiterbdtr = [[0 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
+            numbtimecutt = [[1 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
+            # baseline-detrending
+            for p in gdat.indxinst[0]:
+                for y in gdat.indxchun[0][p]:
+                    
+                    print('Detrending data from chunck %s...' % gdat.liststrgchun[0][p][y])
+                    
+                    r = 0
+                    while numbtimecutt[p][y] > 0:
+                        
+                        print('r')
+                        print(r)
 
-        if gdat.boolsrchpbox or gdat.boolsrchflar:
+                        if r == 0:
+                            strgarryclipinteclipinit = 'mask'
+                        else:
+                            strgarryclipinteclipinit = 'clipinteclip%04d' % (r - 1)
+                        print('strgarryclipinteclipinit')
+                        print(strgarryclipinteclipinit)
+                        
+                        strgarryclipintebdtr = 'clipintebdtr%04d' % r
+                        print('strgarryclipintebdtr')
+                        print(strgarryclipintebdtr)
+
+                        strgarryclipinteclipfinl = 'clipinteclip%04d' % r
+                        print('strgarryclipinteclipfinl')
+                        print(strgarryclipinteclipfinl)
+                        
+                        print('gdat.listarrytser[strgarryclipinteclipinit][0][p][y][:, 1]')
+                        summgene(gdat.listarrytser[strgarryclipinteclipinit][0][p][y][:, 1])
+                        
+                        ## tria detrending time-scale
+                        timescalbdtrsplniter = gdat.timescalbdtrspln * 0.5**r
+                        
+                        # trial detrending
+                        bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarryclipinteclipinit, strgarryclipintebdtr, 'temp', \
+                                                                                                                                timescalbdtrspln=timescalbdtrsplniter)
+                        
+                        print('gdat.listarrytser[strgarryclipintebdtr][0][p][y][:, 1]')
+                        summgene(gdat.listarrytser[strgarryclipintebdtr][0][p][y][:, 1])
+                        
+                        # sigma-clipping
+                        lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrytser['temp'][0][p][y][:, 1], low=7., high=7.)
+                        indx = np.where((gdat.listarrytser['temp'][0][p][y][:, 1] < lcurclipuppr) & \
+                                                                    (gdat.listarrytser['temp'][0][p][y][:, 1] > lcurcliplowr))[0]
+                        print('indx')
+                        summgene(indx)
+                        if indx.size == 0:
+                            raise Exception('')
+                        
+                        gdat.listarrytser[strgarryclipinteclipfinl][0][p][y] = gdat.listarrytser[strgarryclipinteclipinit][0][p][y][indx, :]
+                        numbtimecutt[p][y] = gdat.listarrytser['temp'][0][p][y][:, 1].size - indx.size
+                        
+                        gdat.numbiterbdtr[p][y] += 1
+                        print('gdat.numbiterbdtr[p][y]')
+                        print(gdat.numbiterbdtr[p][y])
+                        
+                        if gdat.numbiterbdtr[p][y] == gdat.maxmnumbiterbdtr:
+                            break
+
+                        # merge chunks
+                        #gdat.arrytser[strgarryclipintebdtr][0][p] = np.concatenate(gdat.listarrytser[strgarryclipintebdtr][0][p][y], 0)
+                        #gdat.arrytser[strgarryclipinteclipfinl][0][p] = np.concatenate(gdat.listarrytser[strgarryclipinteclipfinl][0][p][y], 0)
+                        
+                        # plot the detrended and sigma-clipped time-series data
+                        if gdat.boolplottser and numbtimecutt[p][y] > 0:
+                            plot_tser(gdat, 0, p, y, strgarryclipintebdtr)
+                            plot_tser(gdat, 0, p, y, strgarryclipinteclipfinl)
+                
+                    gdat.listarrytser['bdtr'][0][p][y] = gdat.listarrytser[strgarryclipintebdtr][0][p][y]
+                gdat.arrytser['bdtr'][0][p] = gdat.arrytser[strgarryclipintebdtr][0][p]
             
-            print('Baseline-detrending without an ephemeris prior...')
-            # baseline-detrend without ephemeris prior
-            epocmask = None
-            perimask = None
-            duramask = None
-            bdtr_wrap(gdat, epocmask, perimask, duramask, 'raww', 'tpri', 'rawwtren', indxdatatser=0)
+            # perform diagnostic check
+            for p in gdat.indxinst[0]:
+                if not np.isfinite(gdat.arrytser['bdtr'][0][p]).all():
+                    print('p')
+                    print(p)
+                    indxbadd = np.where(~np.isfinite(gdat.arrytser['bdtr'][0][p]))[0]
+                    print('gdat.arrytser[bdtr][0][p]')
+                    summgene(gdat.arrytser['bdtr'][0][p])
+                    print('indxbadd')
+                    summgene(indxbadd)
+                    raise Exception('')
             
+            # write baseline-detrended light curve
+            for p in gdat.indxinst[0]:
+                
+                if gdat.numbchun[0][p] > 1:
+                    path = gdat.pathdata + 'arrytserbdtr%s.csv' % (gdat.liststrginst[0][p])
+                    if gdat.typeverb > 0:
+                        print('Writing to %s...' % path)
+                    np.savetxt(path, gdat.arrytser['bdtr'][0][p], delimiter=',', \
+                                                    header='time,%s,%s_err' % (gdat.liststrgtseralle[0], gdat.liststrgtseralle[0]))
+                
+                for y in gdat.indxchun[0][p]:
+                    path = gdat.pathdata + 'arrytserbdtr%s%s.csv' % (gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y])
+                    if gdat.typeverb > 0:
+                        print('Writing to %s...' % path)
+                    np.savetxt(path, gdat.listarrytser['bdtr'][0][p][y], delimiter=',', \
+                                                   header='time,%s,%s_err' % (gdat.liststrgtseralle[0], gdat.liststrgtseralle[0]))
+        
+            
+            # merge chunks
+            for p in gdat.indxinst[0]:
+                gdat.arrytser['bdtr'][0][p] = np.concatenate(gdat.listarrytser['bdtr'][0][p], 0)
+            
+            if gdat.boolplottser:
+                for p in gdat.indxinst[0]:
+                    for y in gdat.indxchun[0][p]:
+                        plot_tser(gdat, 0, p, y, 'bdtr')
+                    plot_tser(gdat, 0, p, None, 'bdtr')
+        else:
+            gdat.arrytser['bdtr'] = gdat.arrytser['mask']
+            gdat.listarrytser['bdtr'] = gdat.listarrytser['mask']
+            
+        # search for periodic boxes
         if gdat.boolsrchpbox:
             
             print('Searching for periodic boxes in the light curves...')
@@ -4396,8 +4622,8 @@ def init( \
                     
                     strgextn = '%s_%s' % (gdat.liststrginst[0][p], gdat.strgtarg)
                     
-                    arry = np.copy(gdat.arrytser['tpri'][0][p])
-                    if 'bhol' in gdat.listtypeanls:
+                    arry = np.copy(gdat.arrytser['bdtr'][0][p])
+                    if 'bhol' in gdat.listtypeobjt:
                         dictsrchpboxinpt['boolpuls'] = True
                     else:
                         dictsrchpboxinpt['boolpuls'] = False
@@ -4405,6 +4631,7 @@ def init( \
                     print('temp: limiting the number of transiting objects to 1...')
                     dictsrchpboxinpt['maxmnumbtobj'] = 1
                     dictsrchpboxinpt['pathimag'] = gdat.pathimag
+                    dictsrchpboxinpt['timeoffs'] = gdat.timeoffs
 
                     dictsrchpboxoutp = ephesus.srch_pbox(arry, **gdat.dictsrchpboxinpt, \
                                                #strgextn=strgextn, \
@@ -4429,8 +4656,20 @@ def init( \
                 gdat.cosiprio = np.zeros_like(dictsrchpboxoutp['epoc']) 
                 gdat.rratprio = np.sqrt(1e-3 * gdat.deptprio)
                 gdat.rsmaprio = np.sin(np.pi * gdat.duraprio / gdat.periprio / 24.)
+                
+                gdat.perimask = gdat.periprio
+                gdat.epocmask = gdat.epocprio
+                gdat.duramask = 2. * gdat.duraprio
     
-        # look for single transits using matched filter
+        if gdat.typeverb > 0:
+            print('gdat.epocmask')
+            print(gdat.epocmask)
+            print('gdat.perimask')
+            print(gdat.perimask)
+            print('gdat.duramask')
+            print(gdat.duramask)
+        
+        # search for flares
         if gdat.boolsrchflar:
             dictsrchflarinpt['pathimag'] = gdat.pathimag
             
@@ -4442,7 +4681,7 @@ def init( \
                 for y in gdat.indxchun[0][0]:
                     
                     if gdat.typemodlflar == 'outl':
-                        listydat = gdat.listarrytser['tpri'][0][p][y][:, 1]
+                        listydat = gdat.listarrytser['bdtr'][0][p][y][:, 1]
                         medi = np.median(listydat)
                         indxcent = np.where((listydat > np.percentile(listydat, 1.)) & (listydat < np.percentile(listydat, 99.)))[0]
                         stdv = np.std(listydat[indxcent])
@@ -4460,25 +4699,20 @@ def init( \
                         gdat.listmdetflar[p][y] = np.array(gdat.listmdetflar[p][y])
 
                     if gdat.typemodlflar == 'tmpl':
-                        dictsrchflaroutp = ephesus.srch_flar(gdat.arrytser['tpri'][0][p][:, 0], gdat.arrytser['tpri'][0][p][:, 1], **dictsrchflarinpt)
+                        dictsrchflaroutp = ephesus.srch_flar(gdat.arrytser['bdtr'][0][p][:, 0], gdat.arrytser['bdtr'][0][p][:, 1], **dictsrchflarinpt)
                 
             dictmileoutp['listindxtimeflar'] = gdat.listindxtimeflar
             dictmileoutp['listmdetflar'] = gdat.listmdetflar
             dictmileoutp['precphot'] = gdat.precphot
             
-            if gdat.boolplottser:
-                plot_tser(gdat, 'tpri')
-            
-            gdat.arrytser['flar'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-            gdat.listarrytser['flar'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    gdat.arrytser['flar'][b][p] = gdat.arrytser['raww'][b][p]
-                    for y in gdat.indxchun[b][p]:
-                        gdat.listarrytser['flar'][b][p][y] = gdat.listarrytser['raww'][b][p][y]
-            
-            if gdat.boolplottser:
-                plot_tser(gdat, 'flar')
+            gdat.arrytser['flar'] = [[[] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+            gdat.listarrytser['flar'] = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+            for p in gdat.indxinst[0]:
+                for y in gdat.indxchun[0][p]:
+                    if gdat.boolplottser:
+                        plot_tser(gdat, 0, p, y, 'flar')
+                if gdat.boolplottser:
+                    plot_tser(gdat, 0, p, None, 'flar')
             
             print('temp: skipping masking out of flaress...')
             # mask out flares
@@ -4497,29 +4731,40 @@ def init( \
             #gdat.lcurdatastdv = gdat.lcurdatastdv[indxtimegood]
             #gdat.numbtime = gdat.time.size
 
-    # temp -- rename plan -> trob
-    # priors on transiting objects
-    
-    if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
-        gdat.numbplan = gdat.epocprio.size
+        # calculate PSD
+        if gdat.boolcalcpden:
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    for y in gdat.indxchun[b][p]:
+                        freq, gdat.psdn = scipy.signal.periodogram(gdat.listarrytser['bdtr'][b][p][y][:, 1], fs=fs)
+                        perisamp = 1. / freq
+        
+    # priors
+    if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+        gdat.numbcomp = gdat.epocprio.size
     else:
-        gdat.numbplan = 0
+        gdat.numbcomp = 0
+    dictmileoutp['numbcomp'] = gdat.numbcomp
     
     if gdat.booltranplan is None:
-        gdat.booltranplan = np.zeros(gdat.numbplan, dtype=bool)
+        gdat.booltranplan = np.zeros(gdat.numbcomp, dtype=bool)
+        print('gdat.deptprio')
+        print(gdat.deptprio)
+        print('gdat.numbcomp')
+        print(gdat.numbcomp)
         gdat.booltranplan[np.where(np.isfinite(gdat.deptprio))] = True
 
-    gdat.indxplan = np.arange(gdat.numbplan)
+    gdat.indxcomp = np.arange(gdat.numbcomp)
         
-    if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
-        if gdat.liststrgplan is None:
-            gdat.liststrgplan = retr_liststrgplan(gdat.numbplan)
-        if gdat.listcolrplan is None:
-            gdat.listcolrplan = retr_listcolrplan(gdat.numbplan)
+    if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+        if gdat.liststrgcomp is None:
+            gdat.liststrgcomp = retr_liststrgcomp(gdat.numbcomp)
+        if gdat.listcolrcomp is None:
+            gdat.listcolrcomp = retr_listcolrcomp(gdat.numbcomp)
         
         if gdat.typeverb > 0:
             print('Planet letters: ')
-            print(gdat.liststrgplan)
+            print(gdat.liststrgcomp)
 
         if gdat.duraprio is None:
             gdat.duraprio = ephesus.retr_dura(gdat.periprio, gdat.rsmaprio, gdat.cosiprio)
@@ -4529,34 +4774,34 @@ def init( \
         if gdat.rsmaprio is None:
             gdat.rsmaprio = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.periprio / 24.)**2 + gdat.cosiprio**2)
         if gdat.ecosprio is None:
-            gdat.ecosprio = np.zeros(gdat.numbplan)
+            gdat.ecosprio = np.zeros(gdat.numbcomp)
         if gdat.esinprio is None:
-            gdat.esinprio = np.zeros(gdat.numbplan)
+            gdat.esinprio = np.zeros(gdat.numbcomp)
         if gdat.rvsaprio is None:
-            gdat.rvsaprio = np.zeros(gdat.numbplan)
+            gdat.rvsaprio = np.zeros(gdat.numbcomp)
         
         if gdat.stdvrratprio is None:
-            gdat.stdvrratprio = 0.01 + np.zeros(gdat.numbplan)
+            gdat.stdvrratprio = 0.01 + np.zeros(gdat.numbcomp)
         if gdat.stdvrsmaprio is None:
-            gdat.stdvrsmaprio = 0.01 + np.zeros(gdat.numbplan)
+            gdat.stdvrsmaprio = 0.01 + np.zeros(gdat.numbcomp)
         if gdat.stdvepocprio is None:
-            gdat.stdvepocprio = 0.1 + np.zeros(gdat.numbplan)
+            gdat.stdvepocprio = 0.1 + np.zeros(gdat.numbcomp)
         if gdat.stdvperiprio is None:
-            gdat.stdvperiprio = 0.01 + np.zeros(gdat.numbplan)
+            gdat.stdvperiprio = 0.01 + np.zeros(gdat.numbcomp)
         if gdat.stdvcosiprio is None:
-            gdat.stdvcosiprio = 0.05 + np.zeros(gdat.numbplan)
+            gdat.stdvcosiprio = 0.05 + np.zeros(gdat.numbcomp)
         if gdat.stdvecosprio is None:
-            gdat.stdvecosprio = 0.1 + np.zeros(gdat.numbplan)
+            gdat.stdvecosprio = 0.1 + np.zeros(gdat.numbcomp)
         if gdat.stdvesinprio is None:
-            gdat.stdvesinprio = 0.1 + np.zeros(gdat.numbplan)
+            gdat.stdvesinprio = 0.1 + np.zeros(gdat.numbcomp)
         if gdat.stdvrvsaprio is None:
-            gdat.stdvrvsaprio = 0.001 + np.zeros(gdat.numbplan)
+            gdat.stdvrvsaprio = 0.001 + np.zeros(gdat.numbcomp)
         
         # others
         if gdat.projoblqprio is None:
-            gdat.projoblqprio = 0. + np.zeros(gdat.numbplan)
+            gdat.projoblqprio = 0. + np.zeros(gdat.numbcomp)
         if gdat.stdvprojoblqprio is None:
-            gdat.stdvprojoblqprio = 10. + np.zeros(gdat.numbplan)
+            gdat.stdvprojoblqprio = 10. + np.zeros(gdat.numbcomp)
         
         # order planets with respect to period
         if gdat.typeprioplan != 'inpt':
@@ -4564,19 +4809,19 @@ def init( \
             if gdat.typeverb > 0:
                 print('Sorting the planets with respect to orbital period...')
             
-            indxplansort = np.argsort(gdat.periprio)
+            indxcompsort = np.argsort(gdat.periprio)
             
-            gdat.booltranplan = gdat.booltranplan[indxplansort]
-            gdat.rratprio = gdat.rratprio[indxplansort]
-            gdat.rsmaprio = gdat.rsmaprio[indxplansort]
-            gdat.epocprio = gdat.epocprio[indxplansort]
-            gdat.periprio = gdat.periprio[indxplansort]
-            gdat.cosiprio = gdat.cosiprio[indxplansort]
-            gdat.ecosprio = gdat.ecosprio[indxplansort]
-            gdat.esinprio = gdat.esinprio[indxplansort]
-            gdat.rvsaprio = gdat.rvsaprio[indxplansort]
+            gdat.booltranplan = gdat.booltranplan[indxcompsort]
+            gdat.rratprio = gdat.rratprio[indxcompsort]
+            gdat.rsmaprio = gdat.rsmaprio[indxcompsort]
+            gdat.epocprio = gdat.epocprio[indxcompsort]
+            gdat.periprio = gdat.periprio[indxcompsort]
+            gdat.cosiprio = gdat.cosiprio[indxcompsort]
+            gdat.ecosprio = gdat.ecosprio[indxcompsort]
+            gdat.esinprio = gdat.esinprio[indxcompsort]
+            gdat.rvsaprio = gdat.rvsaprio[indxcompsort]
         
-            gdat.duraprio = gdat.duraprio[indxplansort]
+            gdat.duraprio = gdat.duraprio[indxcompsort]
         
         # if stellar properties are NaN, use Solar defaults
         for featstar in gdat.listfeatstar:
@@ -4680,158 +4925,6 @@ def init( \
             if not np.isfinite(gdat.rvsaprio).all():
                 print('rvsa is infinite!')
 
-    if gdat.booldatatser:
-        if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
-            # determine the baseline-detrend mask
-            if gdat.duraprio is not None and len(gdat.duraprio) > 0:
-                gdat.epocmask = gdat.epocprio
-                gdat.perimask = gdat.periprio
-                gdat.duramask = 2. * gdat.duraprio
-            else:
-                if gdat.typeverb > 0:
-                    print('Did not find any transit-like features in the light curve...')
-                gdat.epocmask = None
-                gdat.perimask = None
-                gdat.duramask = None
-            if gdat.typeverb > 0:
-                print('gdat.epocmask')
-                print(gdat.epocmask)
-                print('gdat.perimask')
-                print(gdat.perimask)
-                print('gdat.duramask')
-                print(gdat.duramask)
-        
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                for y in gdat.indxchun[b][p]:
-                    if len(gdat.listarrytser['raww'][b][p][y]) == 0:
-                        print('bpy')
-                        print(b, p, y)
-                        raise Exception('')
-        
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if not np.isfinite(gdat.arrytser['raww'][b][p]).all():
-                    print('b, p')
-                    print(b, p)
-                    indxbadd = np.where(~np.isfinite(gdat.arrytser['raww'][b][p]))[0]
-                    print('gdat.arrytser[raww][b][p]')
-                    summgene(gdat.arrytser['raww'][b][p])
-                    print('indxbadd')
-                    summgene(indxbadd)
-                    raise Exception('')
-            
-        # mask out data
-        if gdat.listlimttimemask is not None:
-            
-            if gdat.typeverb > 0:
-                print('Masking the data...')
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    numbmask = len(gdat.listlimttimemask[b][p])
-                    for y in gdat.indxchun[b][p]:
-                        listindxtimemask = []
-                        for k in range(numbmask):
-                            indxtimemask = np.where((gdat.listarrytser['raww'][b][p][y][:, 0] < gdat.listlimttimemask[b][p][k][1]) & \
-                                                        (gdat.listarrytser['raww'][b][p][y][:, 0] > gdat.listlimttimemask[b][p][k][0]))[0]
-                            listindxtimemask.append(indxtimemask)
-                        listindxtimemask = np.concatenate(listindxtimemask)
-                        listindxtimegood = np.setdiff1d(np.arange(gdat.listarrytser['raww'][b][p][y].shape[0]), listindxtimemask)
-                        gdat.listarrytser['mask'][b][p][y] = gdat.listarrytser['raww'][b][p][y][listindxtimegood, :]
-                    gdat.arrytser['mask'][b][p] = np.concatenate(gdat.listarrytser['mask'][b][p], 0)
-            
-            if gdat.boolplottser:
-                plot_tser(gdat, 'mask')
-
-        else:
-            gdat.arrytser['mask'] = gdat.arrytser['raww']
-            gdat.listarrytser['mask'] = gdat.listarrytser['raww']
-            
-        if gdat.numbinst[0] > 0:
-            
-            # sigma-clip the light curve
-            # temp -- this does not work properly!
-            if gdat.boolclip:
-                for b in gdat.indxdatatser:
-                    for p in gdat.indxinst[b]:
-                        for y in gdat.indxchun[b][p]:
-                            gdat.listarrytser['inte'][b][p][y] = np.copy(gdat.listarrytser['mask'][b][p][y])
-                            meditemp = scipy.ndimage.median_filter(gdat.listarrytser['inte'][b][p][y][:, 1], size=21)
-                            
-                            lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(1. + gdat.listarrytser['inte'][b][p][y][:, 1] - meditemp, \
-                                                                                                                                    low=7., high=7.)
-                            indx = np.where((gdat.listarrytser['inte'][b][p][y][:, 1] < lcurclipuppr) & \
-                                                                        (gdat.listarrytser['inte'][b][p][y][:, 1] > lcurcliplowr))[0]
-                            gdat.listarrytser['clip'][b][p][y] = gdat.listarrytser['mask'][b][p][y][indx, :]
-                        gdat.arrytser['clip'][b][p] = np.concatenate(gdat.listarrytser['clip'][b][p], 0)
-            
-                # plot the sigma-clipped time-series data
-                if gdat.boolplottser:
-                    plot_tser(gdat, 'clip')
-            
-            else:
-                gdat.arrytser['clip'] = gdat.arrytser['mask']
-                gdat.listarrytser['clip'] = gdat.listarrytser['mask']
-            
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    if not np.isfinite(gdat.arrytser['clip'][b][p]).all():
-                        print('b, p')
-                        print(b, p)
-                        indxbadd = np.where(~np.isfinite(gdat.arrytser['clip'][b][p]))[0]
-                        print('gdat.arrytser[clip][b][p]')
-                        summgene(gdat.arrytser['clip'][b][p])
-                        print('indxbadd')
-                        summgene(indxbadd)
-                        raise Exception('')
-            
-            if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
-                # baseline-detrend with the ephemeris prior
-                bdtr_wrap(gdat, gdat.epocmask, gdat.perimask, gdat.duramask, 'clip', 'bdtr', 'cliptren', indxdatatser=0)
-            else:
-                for p in gdat.indxinst[0]:
-                    gdat.arrytser['bdtr'][0][p] =  gdat.arrytser['clip'][0][p]
-                    for y in gdat.indxchun[0][p]:
-                        gdat.listarrytser['bdtr'][0][p] =  gdat.listarrytser['clip'][0][p]
-            
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    if not np.isfinite(gdat.arrytser['bdtr'][b][p]).all():
-                        print('b, p')
-                        print(b, p)
-                        indxbadd = np.where(~np.isfinite(gdat.arrytser['bdtr'][b][p]))[0]
-                        print('gdat.arrytser[bdtr][b][p]')
-                        summgene(gdat.arrytser['bdtr'][b][p])
-                        print('indxbadd')
-                        summgene(indxbadd)
-                        raise Exception('')
-            
-            # write baseline-detrended light curve
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    
-                    if gdat.numbchun[b][p] > 1:
-                        path = gdat.pathdata + 'arrytserbdtr%s.csv' % (gdat.liststrginst[b][p])
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrytser['bdtr'][b][p], delimiter=',', \
-                                                        header='time,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
-                    
-                    for y in gdat.indxchun[b][p]:
-                        path = gdat.pathdata + 'arrytserbdtr%s%s.csv' % (gdat.liststrginst[b][p], gdat.liststrgchun[b][p][y])
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.listarrytser['bdtr'][b][p][y], delimiter=',', \
-                                                       header='time,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
-        
-        # calculate PSD
-        if gdat.boolcalcpden:
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    for y in gdat.indxchun[b][p]:
-                        freq, gdat.psdn = scipy.signal.periodogram(gdat.listarrytser['bdtr'][b][p][y][:, 1], fs=fs)
-                        perisamp = 1. / freq
-        
         # carry over RV data as is, without any detrending
         gdat.arrytser['bdtr'][1] = gdat.arrytser['raww'][1]
         gdat.listarrytser['bdtr'][1] = gdat.listarrytser['raww'][1]
@@ -4852,32 +4945,34 @@ def init( \
                     
                     if gdat.numbinst[b] > 1:
                         strgextn = '%s' % (gdat.liststrgtser[b])
-                        listperilspe = ephesus.plot_lspe(gdat.pathimag, gdat.arrytsertotl[b], strgextn=strgextn)
+                        perilspe, powrlspe = ephesus.exec_lspe(gdat.arrytsertotl[b], pathimag=gdat.pathimag, strgextn=strgextn, maxmfreq=maxmfreqlspe)
                     
                     for p in gdat.indxinst[b]:
                         strgextn = '%s_%s' % (gdat.liststrgtser[b], gdat.liststrginst[b][p]) 
-                        listperilspe = ephesus.plot_lspe(gdat.pathimag, gdat.arrytser['raww'][b][p], strgextn=strgextn)
+                        perilspe, powrlspe = ephesus.exec_lspe(gdat.arrytser['raww'][b][p], pathimag=gdat.pathimag, strgextn=strgextn, maxmfreq=maxmfreqlspe)
         
-        if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
-            # determine transit masks
-            gdat.listindxtimeoutt = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxplan]
-            gdat.listindxtimetran = [[[[[] for m in range(2)] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxplan]
-            gdat.listindxtimetranchun = [[[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] \
-                                                                                for b in gdat.indxdatatser] for j in gdat.indxplan]
-            gdat.listindxtimeclen = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxplan]
-            gdat.numbtimeclen = [[np.empty((gdat.numbplan), dtype=int) for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            dictmileoutp['perilspe'] = perilspe
+            dictmileoutp['powrlspe'] = powrlspe
+        
+        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+            # determine times during transits
+            gdat.listindxtimeoutt = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxcomp]
+            gdat.listindxtimetran = [[[[[] for m in range(2)] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxcomp]
+            gdat.listindxtimetranchun = [[[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxcomp]
+            gdat.listindxtimeclen = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxcomp]
+            gdat.numbtimeclen = [[np.empty((gdat.numbcomp), dtype=int) for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    for j in gdat.indxplan:
-                        if not np.isfinite(gdat.duramask[j]):
+                    for j in gdat.indxcomp:
+                        if not np.isfinite(gdat.duraprio[j]):
                             continue
                         # determine time mask
                         for y in gdat.indxchun[b][p]:
                             gdat.listindxtimetranchun[j][b][p][y] = ephesus.retr_indxtimetran(gdat.listarrytser['bdtr'][b][p][y][:, 0], \
-                                                                                                   gdat.epocprio[j], gdat.periprio[j], gdat.duramask[j])
+                                                                                                   gdat.epocprio[j], gdat.periprio[j], gdat.duraprio[j])
                         
                         gdat.listindxtimetran[j][b][p][0] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][b][p][:, 0], \
-                                                                                                 gdat.epocprio[j], gdat.periprio[j], gdat.duramask[j])
+                                                                                                 gdat.epocprio[j], gdat.periprio[j], gdat.duraprio[j])
                         
                         # floor of the secondary
                         gdat.listindxtimetran[j][b][p][1] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][b][p][:, 0], \
@@ -4887,10 +4982,10 @@ def init( \
                 
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    for j in gdat.indxplan:
+                    for j in gdat.indxcomp:
                         # clean times for each planet
                         listindxtimetemp = []
-                        for jj in gdat.indxplan:
+                        for jj in gdat.indxcomp:
                             if jj != j:
                                 listindxtimetemp.append(gdat.listindxtimetran[jj][b][p][0])
                         if len(listindxtimetemp) > 0:
@@ -4913,11 +5008,53 @@ def init( \
                     #                print
                     #            fileoutp.write('\\hline\n')
                     #            fileoutp.close()
+        
+        # seti
+        gdat.fracineg = np.zeros(2)
+        gdat.listindxtimetranineg = [[[[[] for k in range(4)] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxcomp]
+        gdat.durafullprio = (1. - gdat.rratprio) / (1. + gdat.rratprio) * gdat.duraprio
+        for p in gdat.indxinst[0]:
+            for j in gdat.indxcomp:
+                gdat.listindxtimetranineg[j][0][p][0] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][0][p][:, 0], gdat.epocprio[j], gdat.periprio[j], \
+                                                                                                                    gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='ingrinit')
+                gdat.listindxtimetranineg[j][0][p][1] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][0][p][:, 0], gdat.epocprio[j], gdat.periprio[j], \
+                                                                                                                    gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='ingrfinl')
+                gdat.listindxtimetranineg[j][0][p][2] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][0][p][:, 0], gdat.epocprio[j], gdat.periprio[j], \
+                                                                                                                    gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='eggrinit')
+                gdat.listindxtimetranineg[j][0][p][3] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][0][p][:, 0], gdat.epocprio[j], gdat.periprio[j], \
+                                                                                                                    gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='eggrfinl')
+                
+                for k in range(2):
+                    indxtimefrst = gdat.listindxtimetranineg[j][0][p][2*k+0]
+                    indxtimeseco = gdat.listindxtimetranineg[j][0][p][2*k+1]
+                    if indxtimefrst.size == 0 or indxtimeseco.size == 0:
+                        continue
+                    rflxinit = np.mean(gdat.arrytser['bdtr'][0][p][indxtimefrst, 1])
+                    rflxfinl = np.mean(gdat.arrytser['bdtr'][0][p][indxtimeseco, 1])
+                    gdat.fracineg[k] = rflxinit / rflxfinl
+                if False and (gdat.fracineg == 0).any():
+                    print('rflxinit')
+                    print(rflxinit)
+                    print('rflxfinl')
+                    print(rflxfinl)
+                    print('gdat.arrytser[bdtr][0][p]')
+                    summgene(gdat.arrytser['bdtr'][0][p])
+                    print('gdat.arrytser[bdtr][0][p][:, 1]')
+                    summgene(gdat.arrytser['bdtr'][0][p][:, 1])
+                    print('gdat.arrytser[bdtr][0][p][indxtimefrst, 1]')
+                    summgene(gdat.arrytser['bdtr'][0][p][indxtimefrst, 1])
+                    print('gdat.arrytser[bdtr][0][p][indxtimeseco, 1]')
+                    summgene(gdat.arrytser['bdtr'][0][p][indxtimeseco, 1])
+                    raise Exception('')
 
+                path = gdat.pathdata + 'fracineg%04d.csv' % j
+                np.savetxt(path, gdat.fracineg, delimiter=',')
+                dictmileoutp['fracineg%04d' % j] = gdat.fracineg
+        
         ## bin the light curve
         gdat.numbbinspcurtotl = 100
         gdat.delttimebind = 1. # [days]
-        if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
+        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
             gdat.delttimebindzoom = gdat.duraprio / 24. / 50.
             
         for b in gdat.indxdatatser:
@@ -4932,9 +5069,6 @@ def init( \
                     np.savetxt(path, gdat.listarrytser['bdtrbind'][b][p][y], delimiter=',', \
                                                     header='time,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
                 
-        if ('exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls) and gdat.boolplottser:
-            plot_tser(gdat, 'bdtr')
-
         gdat.listtime = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.indxtime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -4968,11 +5102,11 @@ def init( \
             
             # plot PDCSAP and SAP light curves
             figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
-            axis[0].plot(gdat.arrytsersapp[:, 0] - gdat.timetess, gdat.arrytsersapp[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
-            axis[1].plot(gdat.arrytserpdcc[:, 0] - gdat.timetess, gdat.arrytserpdcc[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
+            axis[0].plot(gdat.arrytsersapp[:, 0] - gdat.timeoffs, gdat.arrytsersapp[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
+            axis[1].plot(gdat.arrytserpdcc[:, 0] - gdat.timeoffs, gdat.arrytserpdcc[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
             #axis[0].text(.97, .97, 'SAP', transform=axis[0].transAxes, size=20, color='r', ha='right', va='top')
             #axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
-            axis[1].set_xlabel('Time [BJD - %d]' % gdat.timetess)
+            axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
             for a in range(2):
                 axis[a].set_ylabel('Relative Flux')
             
@@ -4994,27 +5128,27 @@ def init( \
     gdat.funcpcurmodu = .25 * x * np.exp(x) / (np.exp(x) - 1.)
     gdat.consbeam = np.sum(gdat.diffwlenbeam * gdat.funcpcurmodu)
 
-    #if ''.join(gdat.liststrgplan) != ''.join(sorted(gdat.liststrgplan)):
+    #if ''.join(gdat.liststrgcomp) != ''.join(sorted(gdat.liststrgcomp)):
     #    print('Provided planet letters are not in order. Changing the TCE order to respect the letter order in plots (b, c, d, e)...')
-    #    gdat.indxplan = np.argsort(np.array(gdat.liststrgplan))
+    #    gdat.indxcomp = np.argsort(np.array(gdat.liststrgcomp))
 
-    gdat.liststrgplanfull = np.empty(gdat.numbplan, dtype='object')
-    for j in gdat.indxplan:
-        gdat.liststrgplanfull[j] = gdat.labltarg + ' ' + gdat.liststrgplan[j]
+    gdat.liststrgcompfull = np.empty(gdat.numbcomp, dtype='object')
+    for j in gdat.indxcomp:
+        gdat.liststrgcompfull[j] = gdat.labltarg + ' ' + gdat.liststrgcomp[j]
 
     ## augment object dictinary
     gdat.dictfeatobjt = dict()
-    gdat.dictfeatobjt['namesyst'] = np.array([gdat.labltarg] * gdat.numbplan)
-    gdat.dictfeatobjt['nameplan'] = gdat.liststrgplanfull
+    gdat.dictfeatobjt['namesyst'] = np.array([gdat.labltarg] * gdat.numbcomp)
+    gdat.dictfeatobjt['nameplan'] = gdat.liststrgcompfull
     # temp
-    gdat.dictfeatobjt['booltran'] = np.array([True] * gdat.numbplan, dtype=bool)
-    gdat.dictfeatobjt['boolfrst'] = np.array([True] + [False] * (gdat.numbplan - 1), dtype=bool)
-    gdat.dictfeatobjt['vmagsyst'] = np.zeros(gdat.numbplan) + gdat.vmagsyst
-    gdat.dictfeatobjt['jmagsyst'] = np.zeros(gdat.numbplan) + gdat.jmagsyst
-    gdat.dictfeatobjt['hmagsyst'] = np.zeros(gdat.numbplan) + gdat.hmagsyst
-    gdat.dictfeatobjt['kmagsyst'] = np.zeros(gdat.numbplan) + gdat.kmagsyst
-    gdat.dictfeatobjt['numbplanstar'] = np.zeros(gdat.numbplan) + gdat.numbplan
-    gdat.dictfeatobjt['numbplantranstar'] = np.zeros(gdat.numbplan) + gdat.numbplan
+    gdat.dictfeatobjt['booltran'] = np.array([True] * gdat.numbcomp, dtype=bool)
+    gdat.dictfeatobjt['boolfrst'] = np.array([True] + [False] * (gdat.numbcomp - 1), dtype=bool)
+    gdat.dictfeatobjt['vmagsyst'] = np.zeros(gdat.numbcomp) + gdat.vmagsyst
+    gdat.dictfeatobjt['jmagsyst'] = np.zeros(gdat.numbcomp) + gdat.jmagsyst
+    gdat.dictfeatobjt['hmagsyst'] = np.zeros(gdat.numbcomp) + gdat.hmagsyst
+    gdat.dictfeatobjt['kmagsyst'] = np.zeros(gdat.numbcomp) + gdat.kmagsyst
+    gdat.dictfeatobjt['numbcompstar'] = np.zeros(gdat.numbcomp) + gdat.numbcomp
+    gdat.dictfeatobjt['numbcomptranstar'] = np.zeros(gdat.numbcomp) + gdat.numbcomp
     
     if gdat.booldatatser:
         if gdat.dilu == 'lygos':
@@ -5034,19 +5168,23 @@ def init( \
         ## phase-fold and save the baseline-detrended light curve
         gdat.arrypcur = dict()
 
-        gdat.arrypcur['quadbdtr'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['quadbdtrbindtotl'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['primbdtr'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['primbdtrbindtotl'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['primbdtrbindzoom'] = [[[[] for j in gdat.indxplan] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrypcur['quadbdtr'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrypcur['quadbdtrbindtotl'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrypcur['primbdtr'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrypcur['primbdtrbindtotl'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.arrypcur['primbdtrbindzoom'] = [[[[] for j in gdat.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.liststrgpcur = ['bdtr', 'resi', 'modl']
         gdat.liststrgpcurcomp = ['modltotl', 'modlstel', 'modlplan', 'modlelli', 'modlpmod', 'modlnigh', 'modlbeam', 'bdtrplan']
         gdat.binsphasprimtotl = np.linspace(-0.5, 0.5, gdat.numbbinspcurtotl + 1)
         gdat.binsphasquadtotl = np.linspace(-0.25, 0.75, gdat.numbbinspcurtotl + 1)
-        if 'exop' in gdat.listtypeanls or 'bhol' in gdat.listtypeanls:
+        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+            print('gdat.delttimebindzoom')
+            print(gdat.delttimebindzoom)
+            print('gdat.periprio')
+            print(gdat.periprio)
             gdat.numbbinspcurzoom = (gdat.periprio / gdat.delttimebindzoom).astype(int)
-            gdat.binsphasprimzoom = [[] for j in gdat.indxplan]
-            for j in gdat.indxplan:
+            gdat.binsphasprimzoom = [[] for j in gdat.indxcomp]
+            for j in gdat.indxcomp:
                 if np.isfinite(gdat.duraprio[j]):
                     gdat.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gdat.numbbinspcurzoom[j] + 1)
 
@@ -5054,7 +5192,7 @@ def init( \
                 print('Phase folding and binning the light curve...')
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    for j in gdat.indxplan:
+                    for j in gdat.indxcomp:
 
                         gdat.arrypcur['primbdtr'][b][p][j] = ephesus.fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :], \
                                                                                                                 gdat.epocprio[j], gdat.periprio[j])
@@ -5073,7 +5211,7 @@ def init( \
                                                                                                             binsxdat=gdat.binsphasquadtotl)
                         
                         # write (good for Vespa)
-                        path = gdat.pathdata + 'arrypcurprimbdtrbind_%s_%s.csv' % (gdat.liststrgplan[j], gdat.liststrginst[b][p])
+                        path = gdat.pathdata + 'arrypcurprimbdtrbind_%s_%s.csv' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
                         temp = np.copy(gdat.arrypcur['primbdtrbindtotl'][b][p][j])
@@ -5087,42 +5225,42 @@ def init( \
     if gdat.booldatatser:
         plot_pser(gdat, 'primbdtr')
     
-    if gdat.boolplotprio and gdat.numbplan > 0:
-        for typemodlinfe in gdat.listtypemodlinfe:
+    if gdat.boolplotprio and gdat.numbcomp > 0:
+        for typemodl in gdat.listtypemodl:
             calc_prop(gdat, 'prio')
             if gdat.boolplotprop:
                 plot_prop(gdat, 'prio')
     
-    if gdat.numbplan == 0 or not gdat.boolinfe or not gdat.booldatatser:
+    if gdat.numbcomp == 0 or not gdat.boolinfe or not gdat.booldatatser:
         return dictmileoutp
 
     #gdat.boolalleprev = {}
-    #for typemodlinfe in gdat.listtypemodlinfe:
-    #    gdat.boolalleprev[typemodlinfe] = {}
+    #for typemodl in gdat.listtypemodl:
+    #    gdat.boolalleprev[typemodl] = {}
     #
     #for strgfile in ['params.csv', 'settings.csv', 'params_star.csv']:
     #    
-    #    for typemodlinfe in gdat.listtypemodlinfe:
-    #        pathinit = '%sdata/allesfit_templates/%s/%s' % (gdat.pathbase, typemodlinfe, strgfile)
-    #        pathfinl = '%sallesfits/allesfit_%s/%s' % (gdat.pathtarg, typemodlinfe, strgfile)
+    #    for typemodl in gdat.listtypemodl:
+    #        pathinit = '%sdata/allesfit_templates/%s/%s' % (gdat.pathbase, typemodl, strgfile)
+    #        pathfinl = '%sallesfits/allesfit_%s/%s' % (gdat.pathtarg, typemodl, strgfile)
 
     #        if not os.path.exists(pathfinl):
     #            cmnd = 'cp %s %s' % (pathinit, pathfinl)
     #            print(cmnd)
     #            os.system(cmnd)
     #            if strgfile == 'params.csv':
-    #                gdat.boolalleprev[typemodlinfe]['para'] = False
+    #                gdat.boolalleprev[typemodl]['para'] = False
     #            if strgfile == 'settings.csv':
-    #                gdat.boolalleprev[typemodlinfe]['sett'] = False
+    #                gdat.boolalleprev[typemodl]['sett'] = False
     #            if strgfile == 'params_star.csv':
-    #                gdat.boolalleprev[typemodlinfe]['pars'] = False
+    #                gdat.boolalleprev[typemodl]['pars'] = False
     #        else:
     #            if strgfile == 'params.csv':
-    #                gdat.boolalleprev[typemodlinfe]['para'] = True
+    #                gdat.boolalleprev[typemodl]['para'] = True
     #            if strgfile == 'settings.csv':
-    #                gdat.boolalleprev[typemodlinfe]['sett'] = True
+    #                gdat.boolalleprev[typemodl]['sett'] = True
     #            if strgfile == 'params_star.csv':
-    #                gdat.boolalleprev[typemodlinfe]['pars'] = True
+    #                gdat.boolalleprev[typemodl]['pars'] = True
 
     if gdat.typeinfe == 'alle' and gdat.booldatatser:
         if gdat.boolallebkgdgaus:
@@ -5131,14 +5269,14 @@ def init( \
                 print('Setting up the background allesfitter run...')
             
             if not gdat.boolalleprev['bkgd']['para']:
-                writ_filealle(gdat, 'params.csv', gdat.pathallebkgd, gdat.dictdictallepara[typemodlinfe], dictalleparadefa)
+                writ_filealle(gdat, 'params.csv', gdat.pathallebkgd, gdat.dictdictallepara[typemodl], dictalleparadefa)
             
             ## mask out the transits for the background run
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     path = gdat.pathallebkgd + gdat.liststrgchun[b][p][y]  + '.csv'
                     if not os.path.exists(path):
-                        indxtimebkgd = np.setdiff1d(gdat.indxtime, np.concatenate(gdat.listindxtimetran[jj][b][p][0]))
+                        indxtimebkgd = np.setdiff1d(gdat.indxtime, np.concatenate(gdat.listindxtimemask[jj][b][p][0]))
                         gdat.arrytserbkgd = gdat.listarrytser['bdtr'][b][p][y][indxtimebkgd, :]
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
@@ -5172,10 +5310,10 @@ def init( \
         gdat.meanwlenband = gdat.data[:, 0] * 1e-3
         gdat.thptband = gdat.data[:, 1]
     
-    for typemodlinfe in gdat.listtypemodlinfe:
+    for typemodl in gdat.listtypemodl:
         if gdat.typeinfe == 'mile':
             
-            if typemodlinfe == 'spot':
+            if typemodl == 'spot':
 
                 # for each spot multiplicity, fit the spot model
                 for gdat.numbspot in listindxnumbspot:
@@ -5237,7 +5375,7 @@ def init( \
                     listlcurmodlspot = np.empty((gdat.numbsampplot, gdat.numbspot, gdat.numbtime))
                     for kk, k in enumerate(indxsampplot):
                         # calculate the model light curve for this parameter vector
-                        listlcurmodl[kk, :], listlcurmodlevol[kk, :, :], listlcurmodlspot[kk, :, :] = retr_modl(gdat, listpost[k, :])
+                        listlcurmodl[kk, :], listlcurmodlevol[kk, :, :], listlcurmodlspot[kk, :, :] = ephesus.retr_rflxmodl(gdat, listpost[k, :])
                         axis.plot(gdat.time, listlcurmodl[kk, :], color='b', alpha=0.1)
                     
                     # plot components of each sample
@@ -5285,7 +5423,7 @@ def init( \
                     plt.close()
 
 
-            if typemodlinfe == 'bhol':
+            if typemodl == 'bhol':
                 
                 # number of total samples after burn-in
                 gdat.numbsamp = (gdat.numbsampwalk - gdat.numbsampburnwalkseco) * numbwalk
@@ -5344,14 +5482,14 @@ def init( \
 
         if gdat.typeinfe == 'alle':
 
-            proc_alle(gdat, typemodlinfe)
+            proc_alle(gdat, typemodl)
         
             gdat.arrytsermodlinit = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     gdat.arrytsermodlinit[b][p] = np.empty((gdat.arrytser['bdtr'][b][p].shape[0], 3))
                     gdat.arrytsermodlinit[b][p][:, 0] = gdat.arrytser['bdtr'][b][p][:, 0]
-                    gdat.arrytsermodlinit[b][p][:, 1] = gdat.objtalle[typemodlinfe].get_initial_guess_model(gdat.liststrginst[b][p], 'flux', \
+                    gdat.arrytsermodlinit[b][p][:, 1] = gdat.objtalle[typemodl].get_initial_guess_model(gdat.liststrginst[b][p], 'flux', \
                                                                                                                     xx=gdat.arrytser['bdtr'][b][p][:, 0])
                     gdat.arrytsermodlinit[b][p][:, 2] = 0.
 
