@@ -125,8 +125,7 @@ def retr_dictcatltic8(typepopl, typeverb=1):
         typepopl: type of the population
             'ffimhcon': TESS targets with contamination larger than
             'ffimm135': TESS targets brighter than mag 13.5
-            'tessnomi2minbulk': 2-minute TESS targets obtained by merging the SPOC 2-min bulk downloads
-            'tessnomi2min': 2-minute TESS targets
+            'tessnomi2min': 2-minute TESS targets obtained by merging the SPOC 2-min bulk downloads
 
     Returns a dictionary with keys:
         rasc: RA
