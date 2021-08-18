@@ -3554,7 +3554,7 @@ def init( \
          booldatatser=True, \
          
          # Boolean flag to only consider SPOC data on disk
-         boolspoconly=True, \
+         boolspoconly=False, \
 
          # output
          ## plotting
@@ -3787,7 +3787,6 @@ def init( \
     if 'exop' in gdat.listtypeobjt:
         gdat.pathtoii = gdat.pathbaselygo + 'data/exofop_tess_tois.csv'
     
-    
     if gdat.typeverb > 0:
         print('List of object types: %s' % gdat.listtypeobjt)
         print('List of analysis types: %s' % gdat.listtypeanls)
@@ -3949,8 +3948,6 @@ def init( \
             setattr(gdat, 'pathimagfeatsyst' + strgpdfn, pathimagpdfn + 'featsyst/')
             setattr(gdat, 'pathimagdataplan' + strgpdfn, pathimagpdfn + 'dataplan/')
     
-    print('gdat.labltarg')
-    print(gdat.labltarg)
     if gdat.labltarg is None:
         if gdat.typetarg == 'mast':
             gdat.labltarg = gdat.strgmast
@@ -4040,6 +4037,8 @@ def init( \
                 else:
                     rasctarg = None
                     decltarg = None
+                
+                dictlygoinpt['labltarg'] = gdat.labltarg
 
                 arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
                                       gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur = \
@@ -4465,16 +4464,15 @@ def init( \
         
         # detrending
         ## determine whether to use any mask for detrending
-        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
-            # determine the baseline-detrend mask
-            if gdat.duraprio is not None and len(gdat.duraprio) > 0:
-                gdat.epocmask = gdat.epocprio
-                gdat.perimask = gdat.periprio
-                gdat.duramask = 2. * gdat.duraprio
-            else:
-                gdat.epocmask = None
-                gdat.perimask = None
-                gdat.duramask = None
+        if ('exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt) and gdat.duraprio is not None and len(gdat.duraprio) > 0:
+            # assign the prior orbital solution to the baseline-detrend mask
+            gdat.epocmask = gdat.epocprio
+            gdat.perimask = gdat.periprio
+            gdat.duramask = 2. * gdat.duraprio
+        else:
+            gdat.epocmask = None
+            gdat.perimask = None
+            gdat.duramask = None
         
         if gdat.numbinst[0] > 0 and gdat.boolbdtr:
             gdat.listobjtspln = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]

@@ -531,6 +531,32 @@ def cnfg_cont():
         )
 
 
+def cnfg_ASASSN20qc():
+    '''
+    13 July 2021, AGN from DJ
+    '''
+    rasctarg = 63.260208 
+    decltarg = -53.0727
+
+    listtypeobjt = []
+    
+    labltarg = 'ASASSN-20qc'
+
+    dictlygoinpt = dict()
+    dictlygoinpt['boolplotrflx'] = True
+    dictlygoinpt['boolplotcntp'] = True
+    dictlygoinpt['boolplotoffs'] = True
+    miletos.main.init( \
+
+               labltarg=labltarg, \
+               
+               rasctarg=rasctarg, \
+               decltarg=decltarg, \
+
+               listtypeobjt=listtypeobjt, \
+               
+               dictlygoinpt=dictlygoinpt, \
+              )
+
+
 globals().get(sys.argv[1])(*sys.argv[2:])
-
-
