@@ -984,7 +984,7 @@ def calc_prop(gdat, strgpdfn):
         gdat.dictlist['massplanpredchen'] = np.empty_like(gdat.dictlist['radiplan'])
         gdat.dictlist['massplanpredwolf'] = np.empty_like(gdat.dictlist['radiplan'])
         for j in gdat.indxcomp:
-            if not gdat.booltranplan[j]:
+            if not gdat.booltrancomp[j]:
                 continue
 
             gdat.dictlist['massplanpredchen'][:, j] = ephesus.retr_massfromradi(gdat.dictlist['radiplan'][:, j])
@@ -3376,6 +3376,7 @@ def plot_tserwrap(gdat, b, p, y, strgarry, boolchun=True, boolcolr=True):
         
         if boolchun:
             arrytser = gdat.listarrytser[strgarry][b][p][y]
+            
             print('strgarry')
             print(strgarry)
             print('bpy')
@@ -3384,6 +3385,9 @@ def plot_tserwrap(gdat, b, p, y, strgarry, boolchun=True, boolcolr=True):
             print(y)
             print('arrytser')
             summgene(arrytser)
+            
+            if len(gdat.listarrytser[strgarry][b][p][y]) == 0:
+                raise Exception('')
             if strgarry == 'flar':
                 arrytsertren = gdat.listarrytser['rawwtren'][b][p][y]
         else:
@@ -3679,7 +3683,7 @@ def init( \
 
          ### 
          # Boolean flag to turn on transit for each planet
-         booltranplan=None, \
+         booltrancomp=None, \
 
          ### photometric and RV model
          #### means
@@ -4545,6 +4549,13 @@ def init( \
                         #gdat.arrytser[strgarryclipintebdtr][0][p] = np.concatenate(gdat.listarrytser[strgarryclipintebdtr][0][p][y], 0)
                         #gdat.arrytser[strgarryclipinteclipfinl][0][p] = np.concatenate(gdat.listarrytser[strgarryclipinteclipfinl][0][p][y], 0)
                         
+                        print('bpy')
+                        print(b)
+                        print(p)
+                        print(y)
+                        print('gdat.listarrytser[strgarryclipintebdtr][0][p][y][:, 1]')
+                        summgene(gdat.listarrytser[strgarryclipintebdtr][0][p][y][:, 1])
+                        
                         # plot the detrended and sigma-clipped time-series data
                         if gdat.boolplottser and numbtimecutt[p][y] > 0:
                             plot_tser(gdat, 0, p, y, strgarryclipintebdtr)
@@ -4743,13 +4754,13 @@ def init( \
         gdat.numbcomp = 0
     dictmileoutp['numbcomp'] = gdat.numbcomp
     
-    if gdat.booltranplan is None:
-        gdat.booltranplan = np.zeros(gdat.numbcomp, dtype=bool)
+    if gdat.booltrancomp is None:
+        gdat.booltrancomp = np.zeros(gdat.numbcomp, dtype=bool)
         print('gdat.deptprio')
         print(gdat.deptprio)
         print('gdat.numbcomp')
         print(gdat.numbcomp)
-        gdat.booltranplan[np.where(np.isfinite(gdat.deptprio))] = True
+        gdat.booltrancomp[np.where(np.isfinite(gdat.deptprio))] = True
 
     gdat.indxcomp = np.arange(gdat.numbcomp)
         
@@ -4808,7 +4819,7 @@ def init( \
             
             indxcompsort = np.argsort(gdat.periprio)
             
-            gdat.booltranplan = gdat.booltranplan[indxcompsort]
+            gdat.booltrancomp = gdat.booltrancomp[indxcompsort]
             gdat.rratprio = gdat.rratprio[indxcompsort]
             gdat.rsmaprio = gdat.rsmaprio[indxcompsort]
             gdat.epocprio = gdat.epocprio[indxcompsort]
@@ -5012,6 +5023,9 @@ def init( \
         gdat.durafullprio = (1. - gdat.rratprio) / (1. + gdat.rratprio) * gdat.duraprio
         for p in gdat.indxinst[0]:
             for j in gdat.indxcomp:
+                if not gdat.booltrancomp[j]:
+                    continue
+
                 gdat.listindxtimetranineg[j][0][p][0] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][0][p][:, 0], gdat.epocprio[j], gdat.periprio[j], \
                                                                                                                     gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='ingrinit')
                 gdat.listindxtimetranineg[j][0][p][1] = ephesus.retr_indxtimetran(gdat.arrytser['bdtr'][0][p][:, 0], gdat.epocprio[j], gdat.periprio[j], \
