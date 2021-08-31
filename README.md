@@ -2,7 +2,9 @@
 
 ## Introduction
 
-miletos is a tool to analyze exoplanet data. It querries the Exoplanet Archive and the TESS TOI catalog to highlight the target among the set of known and candidate exoplanets and interfaces with allesfitter to configure and analyze the TESS data.
+miletos is a pipeline to find and characterize stellar companions, spots, and flares by analyzing and modeling time-series photometric and radial velocity data.
+
+It querries the NASA Exoplanet Archive and the TOI catalog to retrieve orbital priors.
 
 
 ## Usage

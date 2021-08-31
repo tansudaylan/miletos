@@ -6,6 +6,17 @@ import wget
 import pandas as pd
 from tdpy.util import summgene
 
+def cnfg_gene():
+        miletos.main.init( \
+                       booldatatser=False, \
+                       #strgmast=strgmasti, \
+                       #strgexar=strgexar, \
+                       ##booldatatser=False, \
+                       #boolexecalle=False, \
+                       #boolplotprop=True, \
+                      )
+
+
 def cnfg_TOIAC():
 
     for strgexar, strgmast in [['TOI-270', 'TIC 259377017'], \
@@ -538,6 +549,8 @@ def cnfg_ASASSN20qc():
     rasctarg = 63.260208 
     decltarg = -53.0727
 
+    path = pathdata + 'lc_2020adgm_cleaned_ASASSN20qc'
+
     listtypeobjt = []
     
     labltarg = 'ASASSN-20qc'
@@ -546,6 +559,10 @@ def cnfg_ASASSN20qc():
     dictlygoinpt['boolplotrflx'] = True
     dictlygoinpt['boolplotcntp'] = True
     dictlygoinpt['boolplotoffs'] = True
+    
+    dictlcurtessinpt = dict()
+    dictlcurtessinpt['boolffimonly'] = True
+
     miletos.main.init( \
 
                labltarg=labltarg, \
@@ -555,6 +572,8 @@ def cnfg_ASASSN20qc():
 
                listtypeobjt=listtypeobjt, \
                
+               dictlcurtessinpt=dictlcurtessinpt, \
+
                dictlygoinpt=dictlygoinpt, \
               )
 
