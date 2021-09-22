@@ -549,8 +549,6 @@ def cnfg_ASASSN20qc():
     rasctarg = 63.260208 
     decltarg = -53.0727
 
-    path = pathdata + 'lc_2020adgm_cleaned_ASASSN20qc'
-
     listtypeobjt = []
     
     labltarg = 'ASASSN-20qc'

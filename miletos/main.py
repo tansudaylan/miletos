@@ -3370,18 +3370,18 @@ def plot_tserwrap(gdat, strgarry, b, p, y=None, boolcolr=True):
         return
         
     # determine name of the file
-    typeprioplan = ''
-    if strgarry == 'raww' or gdat.typeprioplan is None:
-        typeprioplan = ''
-    else:
-        typeprioplan = '_%s' % gdat.typeprioplan
+    ## string indicating the prior on the transit ephemerides
+    strgprioplan = ''
+    if strgarry != 'raww' and gdat.typeprioplan is not None:
+        strgprioplan = '_%s' % gdat.typeprioplan
+
     strgcolr = ''
     if boolcolr:
         strgcolr = '_colr'
     strgchun = ''
     if boolchun:
         strgchun = '_' + gdat.liststrgchun[b][p][y]
-    path = gdat.pathimag + '%s%s%s_%s%s_%s%s.%s' % (gdat.liststrgtser[b], strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, typeprioplan, gdat.typefileplot)
+    path = gdat.pathimag + '%s%s%s_%s%s_%s%s.%s' % (gdat.liststrgtser[b], strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, strgprioplan, gdat.typefileplot)
     
     if os.path.exists(path):
         print('Plot exists at %s. Skipping the plotting...' % path)
@@ -3450,7 +3450,6 @@ def plot_tserwrap(gdat, strgarry, b, p, y=None, boolcolr=True):
         
         if gdat.typeverb > 0:
             print('Writing to %s...' % path)
-            raise Exception('')
         plt.savefig(path, dpi=200)
         plt.close()
 
@@ -3501,8 +3500,12 @@ def plot_tser(gdat, b, p, y, strgarry):
                     plt.close()
         
         if b == 0 and y is not None:
-            path = gdat.pathimag + 'rflxbdtr_bdtr_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], \
-                                                gdat.liststrgchun[b][p][y], gdat.strgtarg, gdat.typeprioplan, gdat.typefileplot)
+            ## string indicating the prior on the transit ephemerides
+            strgprioplan = ''
+            if strgarry != 'raww' and gdat.typeprioplan is not None:
+                strgprioplan = '_%s' % gdat.typeprioplan
+            path = gdat.pathimag + 'rflxbdtr_bdtr_%s_%s_%s%s.%s' % (gdat.liststrginst[b][p], \
+                                                gdat.liststrgchun[b][p][y], gdat.strgtarg, strgprioplan, gdat.typefileplot)
             if os.path.exists(path):
                 print('Plot exists at %s. Skipping the plotting...' % path)
             else:
@@ -3583,11 +3586,14 @@ def init( \
         
          listdatatype=None, \
 
-         # input
+         # input data
+         ## path of the CSV file containing the input data
          listpathdatainpt=None, \
-         # data input
+         ## input data
          listarrytser=None, \
-         
+         ## list of TESS sectors for the input data
+         listtsec=None, \
+
          # plotting
          timeoffs=None, \
 
@@ -3631,7 +3637,7 @@ def init( \
          ## time scale for median-filtering detrending
          timescalbdtrmedi=1., \
          ## time scale for spline baseline detrending
-         timescalbdtrspln=1., \
+         listtimescalbdtrspln=[1.], \
 
          ## Boolean flag to mask bad data
          dictlcurtessinpt=dict(), \
@@ -3741,7 +3747,7 @@ def init( \
          typeinfe='mile', \
 
          ## type of exoplanet model
-         listtypemodl=['orbt'], \
+         listtypemodl=None, \
          ## Boolean flag to perform inference on the phase-folded (onto the period of the first planet) and binned data
          boolinfefoldbind=False, \
          ## Boolean flag to model the out-of-transit data to learn a background model
@@ -3795,11 +3801,20 @@ def init( \
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
     gdat.pathbase = os.environ['MILETOS_DATA_PATH'] + '/'
     
+    if gdat.listtypeobjt is None:
+        gdat.listtypeobjt = ['exop']
+    
     if gdat.listtypeanls is None:
-        if len(gdat.listtypeobjt) == 0:
-            gdat.listtypeanls = []
-        elif 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
-            gdat.listtypeanls = ['pbox']
+        gdat.listtypeanls = []
+        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+            gdat.listtypeanls += ['pbox']
+
+    if gdat.listtypemodl is None:
+        gdat.listtypemodl = []
+        if 'exop' in gdat.listtypeobjt or 'bhol' in gdat.listtypeobjt:
+            gdat.listtypemodl += ['orbt']
+        if 'supn' in gdat.listtypeobjt:
+            gdat.listtypemodl += ['rise']
 
     if gdat.typeverb > 0:
         print('List of object types: %s' % gdat.listtypeobjt)
@@ -3918,6 +3933,10 @@ def init( \
         if gdat.labltarg is None:
             raise Exception('')
     
+    # check input arguments
+    if gdat.listtsec is not None and gdat.typetarg != 'inpt':
+        raise Exception('List of TESS sectors can only be input when typetarg is "inpt".')
+        
     gdat.maxmnumbiterbdtr = 5
     
     if gdat.typeverb > 0:
@@ -4164,7 +4183,7 @@ def init( \
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for y in gdat.indxchun[b][p]:
-                        if gdat.typetarg != 'inpt' and gdat.liststrginst[b][p] == 'TESS':
+                        if gdat.liststrginst[b][p] == 'TESS' and gdat.listtsec is not None:
                             gdat.liststrgchun[b][p][y] = 'sc%02d' % gdat.listtsec[y]
                         else:
                             gdat.liststrgchun[b][p][y] = 'ch%02d' % y
@@ -4175,7 +4194,7 @@ def init( \
                 for p in gdat.indxinst[b]:
                     if not isinstance(gdat.listpathdatainpt[b][p], list):
                         raise Exception('')
-
+        
         # list of data types (real or mock) for each instrument for both light curve and RV data
         if gdat.listdatatype is None:
             gdat.listdatatype = [[] for b in gdat.indxdatatser]
@@ -4224,6 +4243,10 @@ def init( \
             if gdat.kmagsyst is None:
                 gdat.kmagsyst = 0.
 
+    gdat.epocprio = None
+    gdat.periprio = None
+    gdat.duraprio = None
+        
     if 'exop' in gdat.listtypeobjt:
     
         if gdat.typeprioplan == 'exar':
@@ -4339,10 +4362,6 @@ def init( \
             gdat.kmagsyst = listdictcatl[0]['Kmag']
             gdat.vmagsyst = listdictcatl[0]['Vmag']
     
-    else:
-        gdat.epocprio = None
-        gdat.periprio = None
-        gdat.duraprio = None
     
     if gdat.booldatatser and gdat.boolinfe and gdat.typeinfe == 'alle':
         gdat.pathallebase = gdat.pathtarg + 'allesfits/'
@@ -4365,8 +4384,8 @@ def init( \
         gdat.arrytser['mask'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['temp'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for r in range(gdat.maxmnumbiterbdtr):
-            gdat.arrytser['clipinteclip%04d' % r] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-            gdat.arrytser['clipintebdtr%04d' % r] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrytser['clipoutp%04d' % r] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrytser['bdtroutp%04d' % r] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['bdtr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['bdtrbind'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.arrytser['rawwtren'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -4381,8 +4400,8 @@ def init( \
         gdat.listarrytser['mask'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['temp'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for r in range(gdat.maxmnumbiterbdtr):
-            gdat.listarrytser['clipinteclip%04d' % r] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-            gdat.listarrytser['clipintebdtr%04d' % r] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.listarrytser['clipoutp%04d' % r] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.listarrytser['bdtroutp%04d' % r] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['bdtr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['rawwtren'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -4497,57 +4516,67 @@ def init( \
             
             gdat.numbiterbdtr = [[0 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
             numbtimecutt = [[1 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
-            # baseline-detrending
-            for p in gdat.indxinst[0]:
-                for y in gdat.indxchun[0][p]:
-                    
-                    print('Detrending data from chunck %s...' % gdat.liststrgchun[0][p][y])
-                    
-                    r = 0
-                    while numbtimecutt[p][y] > 0:
-
-                        if r == 0:
-                            strgarryclipinteclipinit = 'mask'
-                        else:
-                            strgarryclipinteclipinit = 'clipinteclip%04d' % (r - 1)
-                        
-                        strgarryclipintebdtr = 'clipintebdtr%04d' % r
-
-                        strgarryclipinteclipfinl = 'clipinteclip%04d' % r
-                        
-                        ## tria detrending time-scale
-                        timescalbdtrsplniter = gdat.timescalbdtrspln * 0.5**r
-                        
-                        # trial detrending
-                        bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarryclipinteclipinit, strgarryclipintebdtr, 'temp', \
-                                                                                                                                timescalbdtrspln=timescalbdtrsplniter)
-                        
-                        # sigma-clipping
-                        lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrytser['temp'][0][p][y][:, 1], low=7., high=7.)
-                        indx = np.where((gdat.listarrytser['temp'][0][p][y][:, 1] < lcurclipuppr) & \
-                                                                    (gdat.listarrytser['temp'][0][p][y][:, 1] > lcurcliplowr))[0]
-                        if indx.size == 0:
-                            raise Exception('')
-                        
-                        gdat.listarrytser[strgarryclipinteclipfinl][0][p][y] = gdat.listarrytser[strgarryclipinteclipinit][0][p][y][indx, :]
-                        numbtimecutt[p][y] = gdat.listarrytser['temp'][0][p][y][:, 1].size - indx.size
-                        
-                        gdat.numbiterbdtr[p][y] += 1
-                        
-                        if gdat.numbiterbdtr[p][y] == gdat.maxmnumbiterbdtr:
-                            break
-
-                        # merge chunks
-                        #gdat.arrytser[strgarryclipintebdtr][0][p] = np.concatenate(gdat.listarrytser[strgarryclipintebdtr][0][p][y], 0)
-                        #gdat.arrytser[strgarryclipinteclipfinl][0][p] = np.concatenate(gdat.listarrytser[strgarryclipinteclipfinl][0][p][y], 0)
-                        
-                        # plot the detrended and sigma-clipped time-series data
-                        if gdat.boolplottser and numbtimecutt[p][y] > 0:
-                            plot_tser(gdat, 0, p, y, strgarryclipintebdtr)
-                            plot_tser(gdat, 0, p, y, strgarryclipinteclipfinl)
+            
+            for e, timescalbdtrspln in enumerate(gdat.listtimescalbdtrspln):
                 
-                    gdat.listarrytser['bdtr'][0][p][y] = gdat.listarrytser[strgarryclipintebdtr][0][p][y]
-                gdat.arrytser['bdtr'][0][p] = gdat.arrytser[strgarryclipintebdtr][0][p]
+                strgarrybdtr = 'bdtrts%02d' % e
+                gdat.listarrytser[strgarrybdtr] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+                
+                # baseline-detrending
+                for p in gdat.indxinst[0]:
+                    for y in gdat.indxchun[0][p]:
+                        
+                        print('Detrending data from chunck %s...' % gdat.liststrgchun[0][p][y])
+                        
+                        strgarryclipoutp = 'mask'
+                        r = 0
+                        while numbtimecutt[p][y] > 0:
+                            
+                            if r == gdat.maxmnumbiterbdtr:
+                                break
+
+                            print('Iteration %d' % r)
+            
+                            # trial detrending
+                            if r == 0:
+                                strgarrybdtrinpt = 'mask'
+                            else:
+                                strgarrybdtrinpt = 'clipoutpit%02dts%02d' % (r - 1, e)
+                            strgarryclipoutp = 'clipoutpit%02dts%02d' % (r, e)
+                            strgarrybdtroutp = 'bdtroutpit%02dts%02d' % (r, e)
+                            if p == 0 and y == 0:
+                                gdat.listarrytser[strgarryclipoutp] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+                                gdat.listarrytser[strgarrybdtroutp] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+                            
+                            bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarrybdtroutp, 'temp', timescalbdtrspln=timescalbdtrspln)
+                            
+                            # sigma-clipping
+                            lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrytser['temp'][0][p][y][:, 1], low=7., high=7.)
+                            indxtimekeep = np.where((gdat.listarrytser['temp'][0][p][y][:, 1] < lcurclipuppr) & \
+                                                    (gdat.listarrytser['temp'][0][p][y][:, 1] > lcurcliplowr))[0]
+                            
+                            if indxtimekeep.size == 0:
+                                raise Exception('')
+                            
+                            gdat.listarrytser[strgarryclipoutp][0][p][y] = gdat.listarrytser[strgarrybdtrinpt][0][p][y][indxtimekeep, :]
+                            numbtimecutt[p][y] = gdat.listarrytser['temp'][0][p][y][:, 1].size - indxtimekeep.size
+                            
+                            # plot the trial detrended and sigma-clipped time-series data
+                            if gdat.boolplottser and numbtimecutt[p][y] > 0:
+                                plot_tser(gdat, 0, p, y, strgarrybdtroutp)
+                                plot_tser(gdat, 0, p, y, strgarryclipoutp)
+                    
+                            r += 1
+                            
+                        gdat.numbiterbdtr[p][y] = r
+                        bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarryclipoutp, 'bdtr', 'temp', timescalbdtrspln=timescalbdtrspln)
+                        gdat.listarrytser[strgarrybdtr][0][p][y] = gdat.listarrytser[strgarrybdtroutp][0][p][y]
+            
+            gdat.listarrytser['bdtr'] = gdat.listarrytser['bdtrts00']
+            
+            # merge chunks
+            for p in gdat.indxinst[0]:
+                gdat.arrytser['bdtr'][0][p] = np.concatenate(gdat.listarrytser['bdtr'][0][p], 0)
             
             # perform diagnostic check
             for p in gdat.indxinst[0]:
@@ -4579,15 +4608,12 @@ def init( \
                                                    header='time,%s,%s_err' % (gdat.liststrgtseralle[0], gdat.liststrgtseralle[0]))
         
             
-            # merge chunks
-            for p in gdat.indxinst[0]:
-                gdat.arrytser['bdtr'][0][p] = np.concatenate(gdat.listarrytser['bdtr'][0][p], 0)
-            
             if gdat.boolplottser:
                 for p in gdat.indxinst[0]:
                     for y in gdat.indxchun[0][p]:
                         plot_tser(gdat, 0, p, y, 'bdtr')
                     plot_tser(gdat, 0, p, None, 'bdtr')
+            
         else:
             gdat.arrytser['bdtr'] = gdat.arrytser['mask']
             gdat.listarrytser['bdtr'] = gdat.listarrytser['mask']
