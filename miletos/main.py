@@ -15,9 +15,6 @@ import astropy
 import astropy.coordinates
 import astropy.units
 
-import celerite
-from celerite import terms
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -41,6 +38,9 @@ Given a target, miletos is an time-domain astronomy tool that allows
 
 def retr_noisredd(time, logtsigm, logtrhoo):
     
+    import celerite
+    from celerite import terms
+
     # set up a simple celerite model
     objtkern = celerite.terms.Matern32Term(logtsigm, logtrhoo)
     objtgpro = celerite.GP(objtkern)
