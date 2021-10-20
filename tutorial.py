@@ -6,62 +6,51 @@ import wget
 import pandas as pd
 from tdpy.util import summgene
 
-def cnfg_gene():
-        miletos.main.init( \
-                       booldatatser=False, \
-                       #strgmast=strgmasti, \
-                       #strgexar=strgexar, \
-                       ##booldatatser=False, \
-                       #boolexecalle=False, \
-                       #boolplotprop=True, \
-                      )
 
+def cnfg_multis():
 
-def cnfg_TOIAC():
-
-    for strgexar, strgmast in [['TOI-270', 'TIC 259377017'], \
-                               ['TOI-700', 'TIC 150428135'], \
-                               ['HD 191939', 'HD 191939']]:
+    for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
         miletos.main.init( \
                        strgmast=strgmast, \
-                       strgexar=strgexar, \
-                       #booldatatser=False, \
-                       boolexecalle=False, \
-                       boolplotprop=True, \
                       )
 
 
-def cnfg_TIC233965332():
-    # second TRAPPIST-1 candidate from Max
-
-    miletos.main.init( \
-                   ticitarg=233965332, \
-                   #listtsecsele=[28, 29, 30], \
-                   #typedatatess='lygos', \
-                  )
-
-
-def cnfg_TIC125731343():
+def cnfg_TICsFromGV():
     
-    # from Max and NGTS
-    miletos.main.init( \
-                   ticitarg=125731343, \
-                   boolclip=False, \
-                   #boolcuttquallygo=False, \
-                   limttimeignoquallygo=[2458609., 2458611.]
-                   #listtsecsele=[28, 29, 30], \
-                   #typedatatess='lygos', \
-                  )
-    
-    
-def cnfg_Ross619():
-    # Ben Rackham
+    listtici = [ \
+                # 30 September 2021, small star
+                1400704733, \
+               ]
 
-    miletos.main.init( \
-                   strgmast='Ross 619', \
-                   #listtsecsele=[28, 29, 30], \
-                   typedatatess='lygos-best', \
-                  )
+    for tici in listtici:
+        miletos.main.init( \
+                          ticitarg=tici, \
+                         )
+
+
+def cnfg_requests():
+    
+    liststrgmast = [ \
+                    # from Ben Rackham
+                    'Ross 619', \
+                    # from Prajwal
+                    'GJ 504', \
+                    # NGTS target from Max
+                    'TIC 125731343', \
+                    # second TRAPPIST-1 candidate from Max
+                    'TIC 233965332', \
+                   ]
+    for strgmast in liststrgmast:
+        
+        if strgmast == 'TIC 125731343':
+            limttimeignoquallygo = [2458609., 2458611.]
+        else:
+            limttimeignoquallygo = None
+        
+        miletos.main.init( \
+                          strgmast=strgmast, \
+                          limttimeignoquallygo=limttimeignoquallygo, \
+                         )
 
 
 def cnfg_TOI2406():
@@ -89,19 +78,9 @@ def cnfg_TOI2406():
                        toiitarg=toiitarg, \
                        labltarg=labltarg, \
                        #listtsecsele=[30], \
-                       typedatatess='lygos', \
                        #listlimttimemask=[[[[2458370, 2458385]]], []], \
                       )
 
-
-def cnfg_test():
-    
-    ticitarg = 10762219
-    miletos.main.init( \
-                   ticitarg=ticitarg, \
-                   typedatatess='lygos', \
-                   #listtsecsele=[3], \
-                  )
 
 def cnfg_WASP121():
 
@@ -115,7 +94,6 @@ def cnfg_WASP121():
                    listtypemodlexop=['0003'], \
                    timescalbdtrspln=2.5, \
                    typeprioplan='blsq', \
-                   boolclip=False, \
                    typedatatess='SPOC', \
                    listtsecsele=[7, 33, 34], \
                   )
@@ -131,14 +109,13 @@ def cnfg_WASP12():
                    boolinfefoldbind=True, \
                    listtypemodlexop=['0003'], \
                    timescalbdtrspln=2.5, \
-                   boolclip=False, \
                    typedatatess='SPOC', \
                   )
 
 
-def whdw():
+def cnfg_WD_GI():
     
-    pathoutp = os.environ['PEXO_DATA_PATH'] + '/data/whdw/'
+    pathoutp = os.environ['MILETOS_DATA_PATH'] + '/data/WD/'
     os.system('mkdir -p %s' % pathoutp)
     listisec = np.arange(27, 28)
     for isec in listisec:
@@ -156,6 +133,14 @@ def whdw():
                  #datatype='pand', \
                 )
 
+
+def cnfg_WD_candidates():
+    
+    listticitarg = [686072378]
+    for ticitarg in listticitarg:
+        miletos.main.init( \
+             ticitarg=ticitarg, \
+            )
 
 
 def cnfg_V563Lyr():
@@ -269,13 +254,6 @@ def cnfg_TOI1431():
                   )
 
 
-def cnfg_TOI270():
-    
-    miletos.main.init( \
-                   toiitarg=270, \
-                  )
-
-
 def cnfg_WASP18():
     
     miletos.main.init( \
@@ -331,15 +309,6 @@ def cnfg_bhol():
             )
 
 
-def cnfg_wdwr():
-    
-    listticitarg = [686072378]
-    for ticitarg in listticitarg:
-        miletos.main.init( \
-             ticitarg=ticitarg, \
-            )
-
-
 def cnfg_Michelle():
     
     miletos.main.init( \
@@ -351,7 +320,6 @@ def cnfg_Rafael():
     
     miletos.main.init( \
          ticitarg=356069146, \
-         datasourtess='lygos', \
          strgclus='Rafael', \
         )
 
@@ -399,31 +367,6 @@ def cnfg_HD118203():
         )
 
 
-def cnfg_TOI1339():
-    
-    toiitarg = 1339
-    rratprio = np.array([0.03343, 0.03158, 0.03089])
-    rsmaprio = np.array([0.0553, 0.02548, 0.02084])
-    epocprio = np.array([2458715.354492, 2458726.054199, 2458743.5534])
-    periprio = np.array([8.880832, 28.579357, 38.3499])
-    cosiprio = np.array([0.0317, 0.0153, 0.0089])
-    ecosprio = np.zeros(3)
-    esinprio = np.zeros(3)
-    rvsaprio = np.zeros(3)
-    miletos.main.init( \
-         toiitarg=toiitarg, \
-         rratprio=rratprio, \
-         rsmaprio=rsmaprio, \
-         epocprio=epocprio, \
-         periprio=periprio, \
-         cosiprio=cosiprio, \
-         ecosprio=ecosprio, \
-         esinprio=esinprio, \
-         rvsaprio=rvsaprio, \
-         booldatatser=False, \
-        )
-
-
 def cnfg_TOI1233():
     
     toiitarg = 1233
@@ -453,6 +396,16 @@ def cnfg_NGTS11():
         )
 
 
+def target(strgmast):
+    
+    print(strgmast)
+
+    miletos.main.init( \
+         strgmast=strgmast, \
+        )
+
+
+
 def cnfg_HATP19():
     
     ticitarg = 267650535
@@ -468,23 +421,8 @@ def cnfg_HATP19():
         )
 
 
-def cnfg_popl():
-
-    miletos.main.init( \
-                   boolobjt=False, \
-                   boolfeatplan=True, \
-                   #strgfeatsort='seti', \
-                  )
-
-
 def cnfg_WD1856():
 
-    rratprio = np.array([7.28])
-    rsmaprio = np.array([(1. + 7.28)/336])
-    epocprio = np.array([2458708.978112])
-    periprio = np.array([1.4079342])
-    duraprio = np.array([8. / 60. / 24.])
-    cosiprio = np.array([np.cos(88.778 * np.pi / 180.)])
     #strgtarg = 'WD1856+534'
     ticitarg = 267574918
     #strgmast = 'TIC 267574918'
@@ -514,11 +452,6 @@ def cnfg_WD1856():
          massstar=0.518*1047, \
          tmptstar=4710., \
          #boolblsq=False, \
-         rratprio=rratprio, \
-         rsmaprio=rsmaprio, \
-         epocprio=epocprio, \
-         periprio=periprio, \
-         cosiprio=cosiprio, \
         )
 
 
