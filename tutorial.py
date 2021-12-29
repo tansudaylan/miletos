@@ -6,6 +6,14 @@ import wget
 import pandas as pd
 from tdpy.util import summgene
 
+def cnfg_toii():
+    
+    for k in range(101, 5000):
+        miletos.main.init( \
+                   toiitarg=k, \
+                   typepriocomp='pdim', \
+                  )
+
 
 def cnfg_multis():
 
@@ -86,24 +94,22 @@ def cnfg_TOI2406():
                        ticitarg=ticitarg, \
                        toiitarg=toiitarg, \
                        labltarg=labltarg, \
-                       #listtsecsele=[30], \
                        #listlimttimemask=[[[[2458370, 2458385]]], []], \
                       )
 
 
 def cnfg_WASP121():
-
+    
+    dictlcurtessinpt = dict()
+    dictlcurtessinpt['listtsecsele'] = [7, 33, 34]
     miletos.main.init( \
                    strgmast='WASP-121', \
                    #typedataspoc='SAP', \
-                   boolplotpopl=True, \
-                   boolmodl=True, \
+                   #boolplotpopl=True, \
                    #boolinfefoldbind=True, \
-                   listtypemodlexop=['0003'], \
-                   timescalbdtrspln=2.5, \
-                   typeprioplan='blsq', \
-                   typedatatess='SPOC', \
-                   listtsecsele=[7, 33, 34], \
+                   listtypemodl=['psyspcur'], \
+                   typepriocomp='pdim', \
+                   dictlcurtessinpt=dictlcurtessinpt, \
                   )
 
 
@@ -112,11 +118,8 @@ def cnfg_WASP12():
     miletos.main.init( \
                    strgmast='WASP-12', \
                    boolplotpopl=True, \
-                   boolmodl=True, \
                    boolinfefoldbind=True, \
-                   listtypemodlexop=['0003'], \
-                   timescalbdtrspln=2.5, \
-                   typedatatess='SPOC', \
+                   listtypemodl=['psysttvr'], \
                   )
 
 
@@ -136,7 +139,7 @@ def cnfg_WD_GI():
             
             miletos.main.init( \
                  strgmast='TIC %d' % listtici[i], \
-                 typeprioplan='blsq', \
+                 typepriocomp='pdim', \
                  #datatype='pand', \
                 )
 
@@ -154,7 +157,7 @@ def cnfg_V563Lyr():
     
     miletos.main.init( \
          strgmast='V563 Lyr', \
-         typeprioplan='blsq', \
+         typepriocomp='pdim', \
          massstar=1., \
          datatype='pand', \
          strgtarg='V563Lyr', \
@@ -204,7 +207,7 @@ def cnfg_AlphaCen():
                    stdvtmptstar=stdvtmptstar, \
                    
                    ## planetary
-                   typeprioplan='inpt', \
+                   typepriocomp='inpt', \
                    numbplan=1, \
                    periprio=periprio, \
                    peristdvprio=peristdvprio, \
@@ -455,7 +458,6 @@ def cnfg_WD1856():
          stdvtmptstar=0, \
          massstar=0.518*1047, \
          tmptstar=4710., \
-         #boolblsq=False, \
         )
 
 
@@ -473,7 +475,6 @@ def cnfg_cont():
          ticitarg=ticitarg, \
          boolmakeanim=True, \
          contrati=10, \
-         boolblsq=False, \
         )
 
 
