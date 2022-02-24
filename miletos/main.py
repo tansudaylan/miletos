@@ -2545,9 +2545,10 @@ def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, s
                                                 epocmask=epocmask, perimask=perimask, duramask=duramask, \
                                                 timescalbdtrspln=timescalbdtrspln, \
                                                 typeverb=gdat.typeverb, \
-                                                timebrek=gdat.timebrek, \
+                                                timebrekregi=gdat.timebrekregi, \
                                                 ordrspln=gdat.ordrspln, \
                                                 timescalbdtrmedi=gdat.timescalbdtrmedi, \
+                                                #boolbrekregi=boolbrekregi, \
                                                 typebdtr=gdat.typebdtr)
     
     gdat.listarrytser[strgoutp][b][p][y] = np.copy(gdat.listarrytser[strgintp][b][p][y])
@@ -2721,8 +2722,8 @@ def plot_tser(gdat, b, p, y, strgarry, booltoge=True):
                     plt.close()
         
 
-def plot_tser_bdtr(gdat, b, p, y, strgarryinpt, strgarryoutp):
-        
+def plot_tser_bdtr(gdat, b, p, y, r, strgarryinpt, strgarryoutp):
+    
     if b == 0 and y is not None:
         ## string indicating the prior on the transit ephemerides
         strgprioplan = ''
@@ -2730,7 +2731,7 @@ def plot_tser_bdtr(gdat, b, p, y, strgarryinpt, strgarryoutp):
         #if strgarry != 'raww' and gdat.typepriocomp is not None:
         #    strgprioplan = '_%s' % gdat.typepriocomp
         
-        path = gdat.pathimagtarg + 'rflxbdtr_bdtr%s_%s_%s_%s%s.%s' % (gdat.strgcnfg, gdat.liststrginst[b][p], \
+        path = gdat.pathimagtarg + 'rflxbdtr_bdtr%s_it%02d_%s_%s_%s%s.%s' % (gdat.strgcnfg, r, gdat.liststrginst[b][p], \
                                             gdat.liststrgchun[b][p][y], gdat.strgtarg, strgprioplan, gdat.typefileplot)
         gdat.listdictdvrp[0].append({'path': path, 'limt':[0., 0.05, 1.0, 0.2]})
         if not os.path.exists(path):
@@ -2751,7 +2752,7 @@ def plot_tser_bdtr(gdat, b, p, y, strgarryinpt, strgarryoutp):
                 ## baseline-detrended light curve
                 indxtimetemp = gdat.listindxtimeregi[b][p][y][i]
                 axis[1].plot(gdat.listarrytser[strgarryoutp][b][p][y][indxtimetemp, 0] - gdat.timeoffs, \
-                                                                   gdat.listarrytser[strgarry][b][p][y][indxtimetemp, 1], rasterized=True, alpha=gdat.alphraww, \
+                                                                   gdat.listarrytser[strgarryoutp][b][p][y][indxtimetemp, 1], rasterized=True, alpha=gdat.alphraww, \
                                                                                                   marker='o', ms=1, ls='', color='grey')
             for a in range(2):
                 axis[a].set_ylabel('Relative flux')
@@ -2853,7 +2854,7 @@ def init( \
          boolordrplanname=True, \
         
          # input dictionary for lygos                                
-         dictlygoinpt=dict(), \
+         dictlygoinpt=None, \
          
          # preprocessing
          boolbdtr=True, \
@@ -2863,7 +2864,7 @@ def init( \
          ## dilution: None (no correction), 'lygos' for estimation via lygos, or float value
          dilu=None, \
          ## baseline detrending
-         timebrek=0.1, \
+         timebrekregi=0.1, \
          ordrspln=3, \
          typebdtr='spln', \
          ## time scale for median-filtering detrending
@@ -3000,7 +3001,7 @@ def init( \
          offstextatmoradimetr=None, \
          
          ## file type of the plot
-         typefileplot='pdf', \
+         typefileplot='png', \
 
          # Boolean flag to force rerun and overwrite previous data and plots 
          boolover=True, \
@@ -3016,7 +3017,6 @@ def init( \
     
     # copy locals (inputs) to the global object
     dictinpt = dict(locals())
-
     for attr, valu in dictinpt.items():
         if '__' not in attr and attr != 'gdat':
             setattr(gdat, attr, valu)
@@ -3050,6 +3050,9 @@ def init( \
     
     if gdat.boolplottser is None:
         gdat.boolplottser = gdat.boolplot
+    
+    if gdat.dictlygoinpt is None:
+        gdat.dictlygoinpt = dict()
     
     # paths
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
@@ -3353,6 +3356,8 @@ def init( \
             return gdat.dictmileoutp
         
         gdat.dictmileoutp['listtsec'] = gdat.listtsec
+        print('List of sectors for miletos:')
+        print(gdat.listtsec)
 
     if gdat.typepriostar is None:
         if gdat.radistar is not None:
@@ -3560,7 +3565,7 @@ def init( \
             if gdat.epocprio is None:
                 gdat.epocprio = gdat.dictexartarg['epoc']
 
-            gdat.duraprio = gdat.dictexartarg['duratran']
+            gdat.duraprio = gdat.dictexartarg['duratrantotl']
             indx = np.where(~np.isfinite(gdat.duraprio) & gdat.dictexartarg['booltran'])[0]
             if indx.size > 0:
                 dcyc = 0.15
@@ -3578,7 +3583,7 @@ def init( \
             if gdat.periprio is None:
                 gdat.periprio = gdat.dictexoftarg['peri']
             gdat.deptprio = gdat.dictexoftarg['dept']
-            gdat.duraprio = gdat.dictexoftarg['duratran']
+            gdat.duraprio = gdat.dictexoftarg['duratrantotl']
             if gdat.cosiprio is None:
                 gdat.cosiprio = np.zeros_like(gdat.epocprio)
 
@@ -3820,41 +3825,19 @@ def init( \
         gdat.numbiterbdtr = [[0 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
         numbtimecutt = [[1 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
         
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('gdat.strgtarg')
-        print(gdat.strgtarg)
         print('Listing all strings of detrending variables...')
         for e, timescalbdtrspln in enumerate(gdat.listtimescalbdtrspln):
             for r in range(gdat.maxmnumbiterbdtr):
                 strgarrybdtrinpt, strgarryclipoutp, strgarrybdtroutp, strgarryclipinpt, strgarrybdtrblin = retr_namebdtrclip(e, r)
-                print('strgarrybdtrinpt')
-                print(strgarrybdtrinpt)
-                print('strgarryclipoutp')
-                print(strgarryclipoutp)
-                print('strgarrybdtroutp')
-                print(strgarrybdtroutp)
                 gdat.listarrytser[strgarrybdtrinpt] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gdat.listarrytser[strgarryclipoutp] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gdat.listarrytser[strgarrybdtroutp] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gdat.listarrytser[strgarryclipinpt] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gdat.listarrytser[strgarrybdtrblin] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
-        print('gdat.listtimescalbdtrspln')
-        print(gdat.listtimescalbdtrspln)
-
         # iterate over all detrending time scales (including, but not limited to the (first) time scale used for later analysis and model)
         for e, timescalbdtrspln in enumerate(gdat.listtimescalbdtrspln):
             
-            print('e')
-            print(e)
-            print('timescalbdtrspln')
-            print(timescalbdtrspln)
-
             if timescalbdtrspln == 0:
                 continue
             
@@ -3864,20 +3847,16 @@ def init( \
             gdat.listarrytser[strgarrybdtr] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             
             # baseline-detrending
+            b = 0
             for p in gdat.indxinst[0]:
                 for y in gdat.indxchun[0][p]:
                     
-                    print('p, y')
-                    print(p, y)
                     if gdat.typeverb > 0:
                         print('Detrending data from chunck %s...' % gdat.liststrgchun[0][p][y])
                     
                     indxtimetotl = np.arange(gdat.listarrytser['mcus'][0][p][y][:, 0].size)
                     indxtimekeep = np.copy(indxtimetotl)
                     
-                    print('indxtimetotl')
-                    summgene(indxtimetotl)
-
                     r = 0
                     while True:
                         
@@ -3886,9 +3865,6 @@ def init( \
                         
                         strgarrybdtrinpt, strgarryclipoutp, strgarrybdtroutp, strgarryclipinpt, strgarrybdtrblin = retr_namebdtrclip(e, r)
                         
-                        print('indxtimekeep')
-                        summgene(indxtimekeep)
-
                         # trial filtering
                         print('Trial filtering...')
                         gdat.listarrytser[strgarrybdtrinpt][0][p][y] = gdat.listarrytser['mcus'][0][p][y][indxtimekeep, :]
@@ -3898,23 +3874,18 @@ def init( \
                 
                         # initial detrending
                         print('Trial detrending into %s...' % strgarryclipinpt)
-                        bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarryclipinpt, 'temp', timescalbdtrspln=timescalbdtrspln)
+                        bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarryclipinpt, 'temp', \
+                                                                                                        timescalbdtrspln=timescalbdtrspln)
                         
-                        plot_tser_bdtr(gdat, b, p, y, strgarrybdtrinpt, strgarryclipinpt)
+                        plot_tser_bdtr(gdat, b, p, y, r, strgarrybdtrinpt, strgarryclipinpt)
         
-                        print('gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1]')
-                        summgene(gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1])
-
                         if gdat.boolplottser:
                             plot_tser(gdat, 0, p, y, strgarryclipinpt, booltoge=False)
                 
                         print('Determining outlier limits...')
                         # sigma-clipping
                         lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1], low=3., high=3.)
-                        print('lcurcliplowr')
-                        print(lcurcliplowr)
-                        print('lcurclipuppr')
-                        print(lcurclipuppr)
+                        
                         #liststdvresisigr = retr_stdvwind(listresisigr, sizekern, boolcuttpeak=True)
                         #listsdee = listresisigr / liststdvresisigr
                         
@@ -3983,9 +3954,6 @@ def init( \
                     
                     #gdat.listarrytser[strgarrybdtr][0][p][y] = gdat.listarrytser[strgarrybdtroutp][0][p][y]
         
-        if gdat.strgtarg == 'TIC61698163':
-            raise Exception('')
-    
         if gdat.listtimescalbdtrspln[0] > 0.:
             gdat.listarrytser['bdtrnotr'] = gdat.listarrytser[strgarryclipinpt]
         else:
@@ -4039,27 +4007,27 @@ def init( \
             # input data to the periodic box search pipeline
             arry = np.copy(gdat.arrytser['bdtrnotr'][0][p])
             
-            if dictpboxinpt is None:
-                dictpboxinpt = dict()
+            if gdat.dictpboxinpt is None:
+                gdat.dictpboxinpt = dict()
             
-            if not 'typeverb' in dictpboxinpt:
-                dictpboxinpt['typeverb'] = gdat.typeverb
+            if not 'typeverb' in gdat.dictpboxinpt:
+                gdat.dictpboxinpt['typeverb'] = gdat.typeverb
             
-            if not 'pathimag' in dictpboxinpt:
+            if not 'pathimag' in gdat.dictpboxinpt:
                 if gdat.boolplot:
-                    dictpboxinpt['pathimag'] = gdat.pathimagtarg
+                    gdat.dictpboxinpt['pathimag'] = gdat.pathimagtarg
             
-            if not 'boolsrchposi' in dictpboxinpt:
+            if not 'boolsrchposi' in gdat.dictpboxinpt:
                 if 'cosc' in gdat.listtypeanls:
-                    dictpboxinpt['boolsrchposi'] = True
+                    gdat.dictpboxinpt['boolsrchposi'] = True
                 else:
-                    dictpboxinpt['boolsrchposi'] = False
-            dictpboxinpt['pathdata'] = gdat.pathdatatarg
-            dictpboxinpt['timeoffs'] = gdat.timeoffs
-            dictpboxinpt['strgextn'] = '%s_%s' % (gdat.liststrginst[0][p], gdat.strgtarg)
-            dictpboxinpt['typefileplot'] = gdat.typefileplot
-            dictpboxinpt['figrsizeydobskin'] = gdat.figrsizeydobskin
-            dictpboxinpt['alphraww'] = gdat.alphraww
+                    gdat.dictpboxinpt['boolsrchposi'] = False
+            gdat.dictpboxinpt['pathdata'] = gdat.pathdatatarg
+            gdat.dictpboxinpt['timeoffs'] = gdat.timeoffs
+            gdat.dictpboxinpt['strgextn'] = '%s_%s' % (gdat.liststrginst[0][p], gdat.strgtarg)
+            gdat.dictpboxinpt['typefileplot'] = gdat.typefileplot
+            gdat.dictpboxinpt['figrsizeydobskin'] = gdat.figrsizeydobskin
+            gdat.dictpboxinpt['alphraww'] = gdat.alphraww
 
             dictpboxoutp = ephesus.srch_pbox(arry, **gdat.dictpboxinpt)
             

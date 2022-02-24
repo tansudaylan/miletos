@@ -51,22 +51,22 @@ def cnfg_requests():
                     # from Ben Rackham
                     'Ross 619', \
                     # from Prajwal
-                    'GJ 504', \
+                    #'GJ 504', \
                     # NGTS target from Max
-                    'TIC 125731343', \
+                    #'TIC 125731343', \
                     # second TRAPPIST-1 candidate from Max
-                    'TIC 233965332', \
+                    #'TIC 233965332', \
                    ]
     for strgmast in liststrgmast:
         
         if strgmast == 'TIC 125731343':
-            limttimeignoquallygo = [2458609., 2458611.]
+            dictlygoinpt['limttimeignoqual'] = [2458609., 2458611.]
         else:
-            limttimeignoquallygo = None
+            dictlygoinpt = None
         
         miletos.main.init( \
                           strgmast=strgmast, \
-                          limttimeignoquallygo=limttimeignoquallygo, \
+                          dictlygoinpt=dictlygoinpt, \
                          )
 
 
@@ -254,6 +254,13 @@ def cnfg_HD136352():
                    periprio=periprio, \
                    cosiprio=cosiprio, \
                    strgmast='HD 136352', \
+                  )
+
+
+def cnfg_TOI2155():
+    
+    miletos.main.init( \
+                   toiitarg=2155, \
                   )
 
 
