@@ -45,8 +45,10 @@ def cnfg_TICsFromGV():
                          )
 
 
-def cnfg_requests():
+def cnfg_TargetsOfInterest():
     
+    dictlygoinpt = dict()
+    dictlygoinpt['boolplotcntp'] = True
     liststrgmast = [ \
                     # from Ben Rackham
                     'Ross 619', \
@@ -57,10 +59,16 @@ def cnfg_requests():
                     # second TRAPPIST-1 candidate from Max
                     #'TIC 233965332', \
                    ]
+    
+    dictlcurtessinpt = {'typelcurtpxftess': 'lygos'}
+    dictlygoinpt['numbside'] = 17
     for strgmast in liststrgmast:
         
         if strgmast == 'TIC 125731343':
             dictlygoinpt['limttimeignoqual'] = [2458609., 2458611.]
+        elif strgmast == 'Ross 619':
+            dictlygoinpt['limttimeignoqual'] = [-np.inf, np.inf]
+            dictlygoinpt['boolmaskqual'] = False
         else:
             dictlygoinpt = None
         
@@ -121,6 +129,48 @@ def cnfg_WASP12():
                    boolinfefoldbind=True, \
                    listtypemodl=['psysttvr'], \
                   )
+
+
+def cnfg_PhotCalibPPAStars():
+    
+    listtici = [381979590, 264221449, 233160374, 289572157, 165553746]
+    
+    for tici in listtici:
+        dictlygoinpt = dict()
+        dictlygoinpt['boolplotrflx'] = True
+        dictlygoinpt['boolplotcntp'] = True
+        dictlygoinpt['boolplotquat'] = False
+        dictlygoinpt['boolplothhistcntp'] = False
+        #dictlygoinpt['typepsfninfe'] = 'locl'
+        dictlygoinpt['typepsfninfe'] = 'fixd'
+        dictlygoinpt['boolphotaper'] = True
+        dictlygoinpt['boolanim'] = False
+        dictlygoinpt['booloutpaper'] = True
+        dictlygoinpt['numbside'] = 17
+        dictlygoinpt['maxmdmag'] = 3
+        dictlygoinpt['dictfitt'] = {'typepsfnshap': 'data'}
+        
+        boolnormphot = False
+
+        dictlcurtessinpt = dict()
+        if tici == 381979590:
+            listtsecsele = np.concatenate((np.arange(1, 28), np.arange(29, 33), np.arange(34, 50)))
+            dictlcurtessinpt['listtsecsele'] = listtsecsele
+        dictlcurtessinpt['boolnorm'] = boolnormphot
+        dictlcurtessinpt['boolffimonly'] = True
+        
+        # TESS EM2 proposal continuous-viewing zone target
+        miletos.main.init( \
+                       ticitarg=tici, \
+                       dictlygoinpt=dictlygoinpt, \
+                       dictlcurtessinpt=dictlcurtessinpt, \
+                       boolnormphot=boolnormphot, \
+                       strgclus='PhotCalibPPAStars', \
+                       #boolbdtr=False, \
+                       #boolplotpopl=True, \
+                       #boolinfefoldbind=True, \
+                       #listtypemodl=['psysttvr'], \
+                      )
 
 
 def cnfg_WD_GI():
@@ -315,16 +365,6 @@ def cnfg_GJ299():
         )
 
 
-def cnfg_bhol():
-    
-    listticitarg = [281562429]
-    typemodl = 'bhol'
-    for ticitarg in listticitarg:
-        miletos.main.init( \
-             ticitarg=ticitarg, \
-             typemodl=typemodl, \
-            )
-
 
 def cnfg_Michelle():
     
@@ -411,17 +451,6 @@ def cnfg_NGTS11():
         )
 
 
-def target(strgmast):
-    '''
-    Execute miletos on a target from command line.
-    '''
-    
-    miletos.main.init( \
-         strgmast=strgmast, \
-        )
-
-
-
 def cnfg_HATP19():
     
     ticitarg = 267650535
@@ -468,23 +497,6 @@ def cnfg_WD1856():
         )
 
 
-def cnfg_cont():
-
-    strgtarg = 'cont'
-    ticitarg = 1717706276
-    strgmast = 'TIC 1717706276'
-    labltarg = 'Cont'
-    
-    miletos.main.init( \
-         strgtarg=strgtarg, \
-         labltarg=labltarg, \
-         strgmast=strgmast, \
-         ticitarg=ticitarg, \
-         boolmakeanim=True, \
-         contrati=10, \
-        )
-
-
 def cnfg_lindsey():
     
     from astropy import units as u
@@ -519,11 +531,13 @@ def cnfg_lindsey():
             decltarg = c.dec.degree
             
             dictlygoinpt = dict()
+            dictlygoinpt['boolanim'] = False
+            dictlygoinpt['typepsfninfe'] = 'fixd'
             dictlygoinpt['boolplotrflx'] = True
             dictlygoinpt['boolplotcntp'] = True
             dictlygoinpt['numbside'] = 5
             dictlygoinpt['booldetrcbvs'] = False
-            #dictlygoinpt['boolplotoffs'] = True
+            #dictlygoinpt['boolfittoffs'] = True
             
             dictmileoutp = miletos.main.init( \
                                              rasctarg=rasctarg, \
@@ -558,98 +572,78 @@ def cnfg_ASASSN20qc():
     listtypemodl = ['supn']
     
     labltarg = 'ASASSN-20qc'
+    
+    refrlistlabltser = [['Michael']]
 
     dictlygoinpt = dict()
     dictlygoinpt['boolplotrflx'] = True
     dictlygoinpt['boolplotcntp'] = True
-    dictlygoinpt['boolplotoffs'] = True
+    dictlygoinpt['boolfittoffs'] = True
+    #dictlygoinpt['numbside'] = 9
     
+    listtsecsele = [32]
     dictlcurtessinpt = dict()
     dictlcurtessinpt['boolffimonly'] = True
 
-    miletos.main.init( \
+    #path = os.environ['LYGOS_DATA_PATH'] + '/data/lc_2020adgm_cleaned_ASASSN20qc'
+    #print(path)
+    #objtfile = open(path, 'r')
+    #k = 0
+    #linevalu = []
+    #for line in objtfile:
+    #    if k == 0:
+    #        k += 1
+    #        continue
+    #    linesplt = line.split(' ')
+    #    linevalu.append([])
+    #    for linesplttemp in linesplt:
+    #        if linesplttemp != '':
+    #            linevalu[k-1].append(float(linesplttemp))
+    #    linevalu[k-1] = np.array(linevalu[k-1])
+    #    k += 1
+    #linevalu = np.vstack(linevalu)
+    #refrarrytser = np.empty((linevalu.shape[0], 3))
+    #refrarrytser[:, 0] = linevalu[:, 0]
+    #refrarrytser[:, 1] = linevalu[:, 2]
+    #refrarrytser[:, 2] = linevalu[:, 3]
+   
+    #dictmileinpt = dict()
+    #dictmileinpt['listtypemodl'] = ['supn']
+    #
+    ##dictmileinpt['listlimttimemask'] = [[[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]]
+    #dictmileinpt['listlimttimemask'] = [[[[2457000 + 2186.5, 2457000 + 2187.5]]]]
+
+    listnumbside = [7, 11, 15]
+    for numbside in listnumbside:
+        if numbside == 11:
+            dictmileinpt['listtimescalbdtrspln'] = [0., 0.1, 0.5]
+        else:
+            dictmileinpt['listtimescalbdtrspln'] = [0.]
+        miletos.main.init( \
                       labltarg=labltarg, \
                       rasctarg=rasctarg, \
                       decltarg=decltarg, \
 
                       listtypemodl=listtypemodl, \
                       
+                      refrlistlabltser=refrlistlabltser, \
+                      refrarrytser=refrarrytser, \
+                      listtsecsele=listtsecsele, \
+
                       dictlcurtessinpt=dictlcurtessinpt, \
 
                       dictlygoinpt=dictlygoinpt, \
                      )
 
 
-def cnfg_ASASSN20qc_depr():
+def target(strgmast):
     '''
-    13 July 2021, AGN from DJ
+    Execute miletos on a target from command line.
     '''
     
-    rasctarg = 63.260208 
-    decltarg = -53.0727
-
-    labltarg = 'ASASSN-20qc'
-    
-    refrlistlabltser = [['Michael']]
-    path = os.environ['LYGOS_DATA_PATH'] + '/data/lc_2020adgm_cleaned_ASASSN20qc'
-    print(path)
-    objtfile = open(path, 'r')
-    k = 0
-    linevalu = []
-    for line in objtfile:
-        if k == 0:
-            k += 1
-            continue
-        linesplt = line.split(' ')
-        linevalu.append([])
-        for linesplttemp in linesplt:
-            if linesplttemp != '':
-                linevalu[k-1].append(float(linesplttemp))
-        linevalu[k-1] = np.array(linevalu[k-1])
-        k += 1
-    linevalu = np.vstack(linevalu)
-    refrarrytser = np.empty((linevalu.shape[0], 3))
-    refrarrytser[:, 0] = linevalu[:, 0]
-    refrarrytser[:, 1] = linevalu[:, 2]
-    refrarrytser[:, 2] = linevalu[:, 3]
-   
-    dictmileinpt = dict()
-    dictmileinpt['listtypemodl'] = ['supn']
-    
-    listnumbside = [7, 11, 15]
-    #dictmileinpt['listlimttimemask'] = [[[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]]
-    dictmileinpt['listlimttimemask'] = [[[[2457000 + 2186.5, 2457000 + 2187.5]]]]
-    for numbside in listnumbside:
-        if numbside == 11:
-            dictmileinpt['listtimescalbdtrspln'] = [0., 0.1, 0.5]
-            boolfittoffs = True
-        else:
-            dictmileinpt['listtimescalbdtrspln'] = [0.]
-            boolfittoffs = False
-
-        lygos.init( \
-                   boolplotrflx=True, \
-                   boolplotcntp=True, \
-                   boolfittoffs=boolfittoffs, \
-                
-                   refrlistlabltser=refrlistlabltser, \
-                   refrarrytser=refrarrytser, \
-
-                   labltarg=labltarg, \
-                   
-                   listtsecsele=[32], \
-                   dictmileinpt=dictmileinpt, \
-                   
-                   timeoffs=2459000, \
-
-                   numbside=numbside, \
-
-                   rasctarg=rasctarg, \
-                   decltarg=decltarg, \
-                   
-                   boolregrforc=True, \
-                   boolplotforc=True, \
-                  )
+    miletos.main.init( \
+         strgmast=strgmast, \
+        )
 
 
 globals().get(sys.argv[1])(*sys.argv[2:])

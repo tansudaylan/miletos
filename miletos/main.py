@@ -1366,8 +1366,8 @@ def proc_alle(gdat, typemodl):
                                 axis[k].set(xlabel='Time [BJD - %d]' % gdat.timeoffs)
                             if k > 0:
                                 axis[k].set(xlabel='Phase')
-                        axis[0].set(ylabel='Relative flux')
-                        axis[1].set(ylabel='Relative flux')
+                        axis[0].set(ylabel=gdat.labltserphot)
+                        axis[1].set(ylabel=gdat.labltserphot)
                         axis[2].set(ylabel='Relative flux - 1 [ppm]')
                         
                         if gdat.labltarg == 'WASP-121':
@@ -2622,6 +2622,7 @@ def plot_tserwrap(gdat, strgarry, b, p, y=None, boolcolr=True):
         
         figr, axis = plt.subplots(figsize=gdat.figrsizeydobskin)
         axis.plot(arrytser[:, 0] - gdat.timeoffs, arrytser[:, 1], color='grey', marker='.', ls='', ms=1, rasterized=True)
+        
         if boolcolr:
             # color and name transits
             ylim = axis.get_ylim()
@@ -2711,7 +2712,7 @@ def plot_tser(gdat, b, p, y, strgarry, booltoge=True):
                                                                              gdat.arrytser[strgarry][b][p][gdat.listindxtimetran[j][b][p][0], 1], \
                                                                                                color=gdat.listcolrcomp[j], marker='o', ls='', ms=0.2)
                     
-                    axis[-1].set_ylabel('Relative flux')
+                    axis[-1].set_ylabel(gdat.labltserphot)
                     #axis[-1].yaxis.set_label_coords(0, gdat.numbcomp * 0.5)
                     axis[-1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
                     
@@ -2755,7 +2756,7 @@ def plot_tser_bdtr(gdat, b, p, y, r, strgarryinpt, strgarryoutp):
                                                                    gdat.listarrytser[strgarryoutp][b][p][y][indxtimetemp, 1], rasterized=True, alpha=gdat.alphraww, \
                                                                                                   marker='o', ms=1, ls='', color='grey')
             for a in range(2):
-                axis[a].set_ylabel('Relative flux')
+                axis[a].set_ylabel(gdat.labltserphot)
             axis[0].set_xticklabels([])
             axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
             plt.subplots_adjust(hspace=0.)
@@ -2799,6 +2800,9 @@ def init( \
         
          # a string distinguishing the run
          strgcnfg=None, \
+         
+         ## Boolean flag indicating whether the input photometric data will be median-normalized
+         boolnormphot=True, \
 
          # output
          ## plotting
@@ -2873,7 +2877,7 @@ def init( \
          listtimescalbdtrspln=[1.], \
 
          ## Boolean flag to mask bad data
-         dictlcurtessinpt=dict(), \
+         dictlcurtessinpt=None, \
          
          ## time limits to mask
          listlimttimemask=None, \
@@ -3054,6 +3058,9 @@ def init( \
     if gdat.dictlygoinpt is None:
         gdat.dictlygoinpt = dict()
     
+    if gdat.dictlcurtessinpt is None:
+        gdat.dictlcurtessinpt = dict()
+
     # paths
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
     
@@ -3337,14 +3344,18 @@ def init( \
             rasctarg = gdat.rasctarg
             decltarg = gdat.decltarg
             ticitarg = None
-        dictlcurtessinpt['ticitarg'] = ticitarg
-        dictlcurtessinpt['strgmast'] = strgmast
-        dictlcurtessinpt['rasctarg'] = rasctarg
-        dictlcurtessinpt['decltarg'] = decltarg
-        dictlcurtessinpt['labltarg'] = gdat.labltarg
+        gdat.dictlcurtessinpt['ticitarg'] = ticitarg
+        gdat.dictlcurtessinpt['strgmast'] = strgmast
+        gdat.dictlcurtessinpt['rasctarg'] = rasctarg
+        gdat.dictlcurtessinpt['decltarg'] = decltarg
+        
+        gdat.dictlcurtessinpt['labltarg'] = gdat.labltarg
         
         gdat.dictlygoinpt['pathtarg'] = gdat.pathtarg + 'lygos/'
-        dictlcurtessinpt['dictlygoinpt'] = gdat.dictlygoinpt
+        if not 'typepsfninfe' in gdat.dictlygoinpt:
+            gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
+        gdat.dictlcurtessinpt['dictlygoinpt'] = gdat.dictlygoinpt
+
         arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
                               gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur = \
                               ephesus.retr_lcurtess( \
@@ -3527,7 +3538,11 @@ def init( \
         for typemodl in gdat.listtypemodl:
             gdat.dictdictallepara[typemodl] = None
 
-    gdat.listlabltser = ['Relative flux', 'Radial Velocity [km/s]']
+    if gdat.boolnormphot:
+        gdat.labltserphot = 'Relative flux'
+    else:
+        gdat.labltserphot = 'ADC Counts [e$^-$/s]'
+    gdat.listlabltser = [gdat.labltserphot, 'Radial Velocity [km/s]']
     gdat.liststrgtser = ['rflx', 'rvel']
     gdat.liststrgtseralle = ['flux', 'rv']
     
@@ -3679,8 +3694,8 @@ def init( \
     gdat.objtalle = dict()
     
     gdat.arrytser['raww'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['mcus'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['bdtrinit'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['maskcust'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['clip'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.arrytser['bdtrnotr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.arrytser['temp'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     #for r in range(gdat.maxmnumbiterbdtr):
@@ -3696,8 +3711,8 @@ def init( \
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 gdat.arrytser['raww'][b][p] = np.concatenate(gdat.listarrytser['raww'][b][p])
-    gdat.listarrytser['mcus'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['bdtrinit'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['maskcust'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['clip'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listarrytser['bdtrnotr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listarrytser['temp'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     #for r in range(gdat.maxmnumbiterbdtr):
@@ -3777,7 +3792,7 @@ def init( \
                 summgene(indxbadd)
                 raise Exception('')
     
-    # obtain 'mcus' (obtained after custom mask, if any) time-series bundle after applying user-defined custom mask, if any
+    # obtain 'maskcust' (obtained after custom mask, if any) time-series bundle after applying user-defined custom mask, if any
     if gdat.listlimttimemask is not None:
         
         if gdat.typeverb > 0:
@@ -3793,15 +3808,15 @@ def init( \
                         listindxtimemask.append(indxtimemask)
                     listindxtimemask = np.concatenate(listindxtimemask)
                     listindxtimegood = np.setdiff1d(np.arange(gdat.listarrytser['raww'][b][p][y].shape[0]), listindxtimemask)
-                    gdat.listarrytser['mcus'][b][p][y] = gdat.listarrytser['raww'][b][p][y][listindxtimegood, :]
+                    gdat.listarrytser['maskcust'][b][p][y] = gdat.listarrytser['raww'][b][p][y][listindxtimegood, :]
                     if gdat.boolplottser:
-                        plot_tser(gdat, b, p, y, 'mcus')
-                gdat.arrytser['mcus'][b][p] = np.concatenate(gdat.listarrytser['mcus'][b][p], 0)
+                        plot_tser(gdat, b, p, y, 'maskcust')
+                gdat.arrytser['maskcust'][b][p] = np.concatenate(gdat.listarrytser['maskcust'][b][p], 0)
                 if gdat.boolplottser:
-                    plot_tser(gdat, b, p, y, 'mcus')
+                    plot_tser(gdat, b, p, y, 'maskcust')
     else:
-        gdat.arrytser['mcus'] = gdat.arrytser['raww']
-        gdat.listarrytser['mcus'] = gdat.listarrytser['raww']
+        gdat.arrytser['maskcust'] = gdat.arrytser['raww']
+        gdat.listarrytser['maskcust'] = gdat.listarrytser['raww']
     
     # detrending
     ## determine whether to use any mask for detrending
@@ -3814,6 +3829,33 @@ def init( \
         gdat.epocmask = None
         gdat.perimask = None
         gdat.duramask = None
+                        
+    # obtain clip time-series bundle, performing a simple sigma clipping without trial detrending
+    if gdat.numbinst[0] > 0 and gdat.boolclip:
+        print('Performing sigma clipping...')
+        
+        gdat.listtsermedi = [[np.empty(gdat.numbchun[0][p]) for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
+        for p in gdat.indxinst[0]:
+            for y in gdat.indxchun[0][p]:
+                lcurclip, lcurcliplowr, lcurclipuppr = scipy.stats.sigmaclip(gdat.listarrytser['maskcust'][0][p][y][:, 1], low=7., high=7.)
+                indxtimeclipkeep = np.where((gdat.listarrytser['maskcust'][0][p][y][:, 1] < lcurclipuppr) & (gdat.listarrytser['maskcust'][0][p][y][:, 1] > lcurcliplowr))[0]
+                gdat.listarrytser['clip'][0][p][y] = gdat.listarrytser['maskcust'][0][p][y][indxtimeclipkeep, :]
+                
+                gdat.listtsermedi[0][p][y] = np.median(gdat.listarrytser['clip'][0][p][y])
+
+            gdat.arrytser['clip'][0][p] = np.concatenate(gdat.listarrytser['clip'][0][p], 0)
+            
+            stdv = np.std(gdat.listtsermedi[0][p])
+            print('RMS of the clipped light curve (clip) for instrument %d: %g (%g ppt)' % (p, stdv, 1e3 * stdv / np.median(gdat.listtsermedi[0][p])))
+        if gdat.boolplottser:
+            for p in gdat.indxinst[0]:
+                for y in gdat.indxchun[0][p]:
+                    plot_tser(gdat, 0, p, y, 'clip')
+        #if gdat.boolplottser:
+        #    plot_tser(gdat, 0, p, None, 'clip')
+    else:
+        gdat.arrytser['clip'] = gdat.arrytser['maskcust']
+        gdat.listarrytser['clip'] = gdat.listarrytser['maskcust']
     
     # obtain bdtrnotr time-series bundle, the baseline-detrended light curve with no masking due to identified transiting object
     if gdat.numbinst[0] > 0 and gdat.boolbdtr:
@@ -3854,7 +3896,7 @@ def init( \
                     if gdat.typeverb > 0:
                         print('Detrending data from chunck %s...' % gdat.liststrgchun[0][p][y])
                     
-                    indxtimetotl = np.arange(gdat.listarrytser['mcus'][0][p][y][:, 0].size)
+                    indxtimetotl = np.arange(gdat.listarrytser['clip'][0][p][y][:, 0].size)
                     indxtimekeep = np.copy(indxtimetotl)
                     
                     r = 0
@@ -3867,7 +3909,7 @@ def init( \
                         
                         # trial filtering
                         print('Trial filtering...')
-                        gdat.listarrytser[strgarrybdtrinpt][0][p][y] = gdat.listarrytser['mcus'][0][p][y][indxtimekeep, :]
+                        gdat.listarrytser[strgarrybdtrinpt][0][p][y] = gdat.listarrytser['clip'][0][p][y][indxtimekeep, :]
 
                         if gdat.boolplottser:
                             plot_tser(gdat, 0, p, y, strgarrybdtrinpt, booltoge=False)
@@ -3907,8 +3949,8 @@ def init( \
                         #print('listindxtimemaskclus')
                         #print(listindxtimemaskclus)
                         
-                        #print('Filtering mcus times with index indxtimekeep into %s...' % strgarryclipoutp)
-                        #gdat.listarrytser[strgarryclipoutp][0][p][y] = gdat.listarrytser['mcus'][0][p][y][indxtimekeep, :]
+                        #print('Filtering clip times with index indxtimekeep into %s...' % strgarryclipoutp)
+                        #gdat.listarrytser[strgarryclipoutp][0][p][y] = gdat.listarrytser['clip'][0][p][y][indxtimekeep, :]
                         
                         #print('Thinning the mask...')
                         #indxtimeclipmask = np.random.choice(indxtimeclipmask, size=int(indxtimeclipmask.size*0.7), replace=False)
@@ -3957,7 +3999,7 @@ def init( \
         if gdat.listtimescalbdtrspln[0] > 0.:
             gdat.listarrytser['bdtrnotr'] = gdat.listarrytser[strgarryclipinpt]
         else:
-            gdat.listarrytser['bdtrnotr'] = gdat.listarrytser['mcus']
+            gdat.listarrytser['bdtrnotr'] = gdat.listarrytser['clip']
 
         # merge chunks
         for p in gdat.indxinst[0]:
@@ -3989,7 +4031,7 @@ def init( \
                 plot_tser(gdat, 0, p, None, 'bdtrnotr')
     
     else:
-        gdat.listarrytser['bdtrnotr'] = gdat.listarrytser['mcus']
+        gdat.listarrytser['bdtrnotr'] = gdat.listarrytser['clip']
     
     if gdat.strgtarg == 'TIC61698163':
         raise Exception('')
@@ -4503,7 +4545,7 @@ def init( \
         #    #axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
         #    axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
         #    for a in range(2):
-        #        axis[a].set_ylabel('Relative flux')
+        #        axis[a].set_ylabel(gdat.labltserphot)
         #    
         #    plt.subplots_adjust(hspace=0.)
         #    path = gdat.pathimagtarg + 'lcurspoc_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
