@@ -133,6 +133,8 @@ def cnfg_WASP12():
 
 def cnfg_PhotCalibPPAStars():
     
+    dictlcurtessinpt = dict()
+    
     listtici = [381979590, 264221449, 233160374, 289572157, 165553746]
     
     for tici in listtici:
@@ -152,26 +154,50 @@ def cnfg_PhotCalibPPAStars():
         
         boolnormphot = False
 
-        dictlcurtessinpt = dict()
         if tici == 381979590:
             listtsecsele = np.concatenate((np.arange(1, 28), np.arange(29, 33), np.arange(34, 50)))
             dictlcurtessinpt['listtsecsele'] = listtsecsele
         dictlcurtessinpt['boolnorm'] = boolnormphot
         dictlcurtessinpt['boolffimonly'] = True
+    
+        # temp
+        print('temp')
+        dictlcurtessinpt['listtsecsele'] = [40]
         
         # TESS EM2 proposal continuous-viewing zone target
         miletos.main.init( \
                        ticitarg=tici, \
                        dictlygoinpt=dictlygoinpt, \
-                       dictlcurtessinpt=dictlcurtessinpt, \
                        boolnormphot=boolnormphot, \
                        strgclus='PhotCalibPPAStars', \
+                       dictlcurtessinpt=dictlcurtessinpt, \
                        #boolbdtr=False, \
                        #boolplotpopl=True, \
                        #boolinfefoldbind=True, \
                        #listtypemodl=['psysttvr'], \
                       )
 
+
+def cnfg_ADAP2022_AGNs():
+    '''
+    ADAP 2022 AGN targets with Manel et al.
+    '''
+    path = os.environ['LYGOS_DATA_PATH'] + '/data/interesting_blazars.txt'
+    print('Reading from %s...' % path)
+    dictagns = pd.read_csv(path, skiprows=3, delimiter='|').to_dict(orient='list')
+
+    listname = ['3C 279', 'PKS 1502+106', 'BL Lacertae', 'Mkn 501', 'PKS 2155-304', 'PG 1553+113', 'Mkn 421', '3C 454.3']
+    
+    dictlygoinpt = dict()
+    dictlygoinpt['typepsfninfe'] = 'fixd'
+    
+    for name in listname:
+        miletos.main.init( \
+                   strgclus='ADAP2022_AGNs', \
+                   strgmast=name, \
+                   dictlygoinpt=dictlygoinpt, \
+                  )
+    
 
 def cnfg_WD_GI():
     
