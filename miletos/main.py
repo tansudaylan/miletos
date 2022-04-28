@@ -2819,8 +2819,8 @@ def init( \
          boolforcoffl=False, \
 
          # the path of the folder in which the target folder will be placed
-         pathbasetarg=None, \
-         # the path of the target folder
+         pathbase=None, \
+         ## the path of the target folder
          pathtarg=None, \
          # the path of the target data folder
          pathdatatarg=None, \
@@ -3027,8 +3027,8 @@ def init( \
 
     # paths
     gdat.pathbasemile = os.environ['MILETOS_DATA_PATH'] + '/'
-    if gdat.pathbasetarg is None:
-        gdat.pathbasetarg = gdat.pathbasemile
+    if gdat.pathbase is None:
+        gdat.pathbase = gdat.pathbasemile
     
     # measure initial time
     gdat.timeinit = modutime.time()
@@ -3073,13 +3073,13 @@ def init( \
     gdat.dictmileoutp = dict()
     
     # check input arguments
-    if not (gdat.pathtarg is not None and gdat.pathbasetarg is None and gdat.pathdatatarg is None and gdat.pathimagtarg is None or \
-            gdat.pathtarg is None and gdat.pathbasetarg is not None and gdat.pathdatatarg is None and gdat.pathimagtarg is None or \
-            gdat.pathtarg is None and gdat.pathbasetarg is None and gdat.pathdatatarg is not None and gdat.pathimagtarg is not None):
+    if not (gdat.pathtarg is not None and gdat.pathbase is None and gdat.pathdatatarg is None and gdat.pathimagtarg is None or \
+            gdat.pathtarg is None and gdat.pathbase is not None and gdat.pathdatatarg is None and gdat.pathimagtarg is None or \
+            gdat.pathtarg is None and gdat.pathbase is None and gdat.pathdatatarg is not None and gdat.pathimagtarg is not None):
         print('gdat.pathtarg')
         print(gdat.pathtarg)
-        print('gdat.pathbasetarg')
-        print(gdat.pathbasetarg)
+        print('gdat.pathbase')
+        print(gdat.pathbase)
         print('gdat.pathdatatarg')
         print(gdat.pathdatatarg)
         print('gdat.pathimagtarg')
@@ -3239,12 +3239,20 @@ def init( \
     
     if gdat.strgclus is None:
         gdat.strgclus = ''
+        gdat.pathclus = gdat.pathbase
     else:
-        gdat.strgclus += '/'
+        #gdat.strgclus += '/'
         if gdat.typeverb > 0:
             print('gdat.strgclus')
             print(gdat.strgclus)
+        # data path for the cluster of targets
+        gdat.pathclus = gdat.pathbase + '%s/' % gdat.strgclus
+        gdat.pathdataclus = gdat.pathclus + 'data/'
+        gdat.pathimagclus = gdat.pathclus + 'imag/'
     
+    print('gdat.pathclus') 
+    print(gdat.pathclus)
+
     if gdat.labltarg is None:
         if gdat.typetarg == 'mast':
             gdat.labltarg = gdat.strgmast
@@ -3259,15 +3267,14 @@ def init( \
     if gdat.typeverb > 0:
         print('gdat.strgtarg')
         print(gdat.strgtarg)
-
+    
+    # the string that describes the target
     if gdat.strgtarg is None:
         gdat.strgtarg = ''.join(gdat.labltarg.split(' '))
     
+    # the path for the target
     if gdat.pathtarg is None:
-        
-        if gdat.pathtarg is None:
-            gdat.pathtarg = gdat.pathbasetarg + '%s%s/' % (gdat.strgclus, gdat.strgtarg)
-        
+        gdat.pathtarg = gdat.pathclus + '%s/' % (gdat.strgtarg)
         gdat.pathdatatarg = gdat.pathtarg + 'data/'
         gdat.pathimagtarg = gdat.pathtarg + 'imag/'
 
@@ -3292,7 +3299,8 @@ def init( \
         print('gdat.strgtarg')
         print(gdat.strgtarg)
     
-    gdat.dictmileoutp['pathtarg'] = gdat.pathtarg
+    for name in ['strgtarg', 'pathtarg']:
+        gdat.dictmileoutp[name] = getattr(gdat, name)
 
     #if os.path.exists(gdat.pathtarg):
     #    if gdat.typeverb > 0:
@@ -3357,7 +3365,7 @@ def init( \
         gdat.dictlcurtessinpt['dictlygoinpt'] = gdat.dictlygoinpt
 
         arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
-                              gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur = \
+                              gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur, gdat.dictlygooutp = \
                               ephesus.retr_lcurtess( \
                                                     **gdat.dictlcurtessinpt, \
                                                    )
@@ -3369,7 +3377,11 @@ def init( \
         gdat.dictmileoutp['listtsec'] = gdat.listtsec
         print('List of sectors for miletos:')
         print(gdat.listtsec)
-
+        
+        if gdat.dictlygooutp is not None:
+            for name in gdat.dictlygooutp:
+                gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
+    
     if gdat.typepriostar is None:
         if gdat.radistar is not None:
             gdat.typepriostar = 'inpt'
@@ -4194,6 +4206,37 @@ def init( \
             gdat.booltrancomp = np.zeros(gdat.numbcomp, dtype=bool)
             gdat.booltrancomp[np.where(np.isfinite(gdat.deptprio))] = True
 
+    # calculate LS periodogram
+    if gdat.boolcalclspe:
+        if gdat.boolplot:
+            pathimaglspe = gdat.pathimagtarg
+        else:
+            pathimaglspe = None
+
+        for b in gdat.indxdatatser:
+            
+            # temp -- neglects LS periodograms of RV data
+            if b == 1:
+                continue
+            
+            if gdat.numbinst[b] > 0:
+                
+                if gdat.numbinst[b] > 1:
+                    strgextn = '%s' % (gdat.liststrgtser[b])
+                    gdat.dictlspeoutp = perilspe, powrlspe = ephesus.exec_lspe(gdat.arrytsertotl[b], pathimag=pathimaglspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
+                                                                                            typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
+                
+                for p in gdat.indxinst[b]:
+                    strgextn = '%s_%s' % (gdat.liststrgtser[b], gdat.liststrginst[b][p]) 
+                    gdat.dictlspeoutp = ephesus.exec_lspe(gdat.arrytser['raww'][b][p], pathimag=pathimaglspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
+                                                                                            typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
+        
+                gdat.dictmileoutp['perilspempow'] = gdat.dictlspeoutp['perimpow']
+                gdat.dictmileoutp['powrlspempow'] = gdat.dictlspeoutp['powrmpow']
+                
+                if gdat.boolplot:
+                    gdat.listdictdvrp[0].append({'path': gdat.dictlspeoutp['pathplot'], 'limt':[0., 0.8, 0.5, 0.1]})
+        
     if gdat.boolmodltran:
         if gdat.liststrgcomp is None:
             gdat.liststrgcomp = ephesus.retr_liststrgcomp(gdat.numbcomp)
@@ -4386,36 +4429,6 @@ def init( \
                 gdat.arrytsertotl[b] = np.concatenate(gdat.arrytser['raww'][b], axis=0)
         gdat.dictmileoutp['arrytsertotl'] = gdat.arrytsertotl
         
-        # calculate LS periodogram
-        if gdat.boolcalclspe:
-            if gdat.boolplot:
-                pathimaglspe = gdat.pathimagtarg
-            else:
-                pathimaglspe = None
-
-            for b in gdat.indxdatatser:
-                
-                # temp -- neglects LS periodograms of RV data
-                if b == 1:
-                    continue
-                
-                if gdat.numbinst[b] > 0:
-                    
-                    if gdat.numbinst[b] > 1:
-                        strgextn = '%s' % (gdat.liststrgtser[b])
-                        gdat.dictlspeoutp = perilspe, powrlspe = ephesus.exec_lspe(gdat.arrytsertotl[b], pathimag=pathimaglspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
-                                                                                                typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
-                    
-                    for p in gdat.indxinst[b]:
-                        strgextn = '%s_%s' % (gdat.liststrgtser[b], gdat.liststrginst[b][p]) 
-                        gdat.dictlspeoutp = ephesus.exec_lspe(gdat.arrytser['raww'][b][p], pathimag=pathimaglspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
-                                                                                                typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
-            
-                    gdat.dictmileoutp['perilspempow'] = gdat.dictlspeoutp['perimpow']
-                    gdat.dictmileoutp['powrlspempow'] = gdat.dictlspeoutp['powrmpow']
-                    
-                    if gdat.boolplot:
-                        gdat.listdictdvrp[0].append({'path': gdat.dictlspeoutp['pathplot'], 'limt':[0., 0.8, 0.5, 0.1]})
         if gdat.boolmodltran:
             # determine times during transits
             gdat.listindxtimeoutt = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.indxcomp]
@@ -4626,9 +4639,12 @@ def init( \
         #                plot_tser(gdat, b, p, y, 'bdtrbind')
             
     
+
     gdat.dictmileoutp['boolposianls'] = np.empty(gdat.numbtypeposi, dtype=bool)
-    gdat.dictmileoutp['boolposianls'][0] = dictpboxoutp['sdee'][0] > gdat.thrssdeecosc
-    gdat.dictmileoutp['boolposianls'][1] = gdat.dictmileoutp['powrlspempow'] > gdat.thrslspecosc
+    if gdat.boolsrchpbox:
+        gdat.dictmileoutp['boolposianls'][0] = dictpboxoutp['sdee'][0] > gdat.thrssdeecosc
+    if gdat.boolcalclspe:
+        gdat.dictmileoutp['boolposianls'][1] = gdat.dictmileoutp['powrlspempow'] > gdat.thrslspecosc
     gdat.dictmileoutp['boolposianls'][2] = gdat.dictmileoutp['boolposianls'][0] or gdat.dictmileoutp['boolposianls'][1]
     gdat.dictmileoutp['boolposianls'][3] = gdat.dictmileoutp['boolposianls'][0] and gdat.dictmileoutp['boolposianls'][1]
                     
@@ -5089,7 +5105,9 @@ def init( \
     if gdat.typeverb > 0:
         print('miletos ran in %.3g seconds.' % gdat.timeexec)
 
-    gdat.dictmileoutp['timeexec'] = gdat.timeexec
+    #'lygo_meannois', 'lygo_medinois', 'lygo_stdvnois', \
+    for name in ['strgtarg', 'pathtarg', 'timeexec']:
+        gdat.dictmileoutp[name] = getattr(gdat, name)
 
     path = gdat.pathdatatarg + 'dictmileoutp.pickle'
     if gdat.typeverb > 0:
@@ -5122,6 +5140,91 @@ def init( \
                 plt.close()
         
         gdat.dictmileoutp['listpathdvrp'] = listpathdvrp
+
+    # write the output dictionary to target file
+    path = gdat.pathdatatarg + 'mileoutp.csv'
+    objtfile = open(path, 'w')
+    k = 0
+    for name, valu in gdat.dictmileoutp.items():
+        if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
+            objtfile.write('%s, ' % name)
+        if isinstance(valu, str):
+            objtfile.write('%s' % valu)
+        elif isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
+            objtfile.write('%g' % valu)
+        if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
+            objtfile.write('\n')
+    if typeverb > 0:
+        print('Writing to %s...' % path)
+    objtfile.close()
+    
+    print('gdat.dictmileoutp')
+    for name in gdat.dictmileoutp:
+        print(name)
+
+    # write the output dictionary to the cluster file
+    if gdat.strgclus is not None:
+        path = gdat.pathdataclus + 'mileoutp.csv'
+        boolappe = True
+        if os.path.exists(path):
+            print('Reading from %s...' % path)
+            dicttemp = pd.read_csv(path).to_dict(orient='list')
+            if gdat.strgtarg in dicttemp['strgtarg']:
+                boolappe = False
+            boolmakehead = False
+        else:
+            print('Opening file %s to write...' % path)
+            objtfile = open(path, 'w')
+            boolmakehead = True
+        
+        print('boolmakehead')
+        print(boolmakehead)
+
+        if boolappe:
+            
+            if boolmakehead:
+                # if the header doesn't exist, make it
+                k = 0
+                listnamecols = []
+                for name, valu in gdat.dictmileoutp.items():
+                    listnamecols.append(name)
+                    if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
+                        if k > 0:
+                            objtfile.write(',')
+                        objtfile.write('%s' % name)
+                        k += 1
+                
+            else:
+                print('Reading from %s...' % path)
+                objtfile = open(path, 'r')
+                for line in objtfile:
+                    listnamecols = line.split(',')
+                    break
+                listnamecols[-1] = listnamecols[-1][:-1]
+
+                if not gdat.strgtarg in dicttemp['strgtarg']:
+                    print('Opening file %s to append...' % path)
+                    objtfile = open(path, 'a')
+            
+            print('listnamecols')
+            print(listnamecols)
+
+            objtfile.write('\n')
+            k = 0
+            for name in listnamecols:
+                valu = gdat.dictmileoutp[name]
+                if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
+                    if k > 0:
+                        objtfile.write(',')
+                    if isinstance(valu, str):
+                        objtfile.write('%s' % valu)
+                    elif isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
+                        objtfile.write('%g' % valu)
+                    k += 1
+            #objtfile.write('\n')
+            if typeverb > 0:
+                print('Writing to %s...' % path)
+            objtfile.close()
 
     return gdat.dictmileoutp
 
