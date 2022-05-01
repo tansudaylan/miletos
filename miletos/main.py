@@ -555,14 +555,12 @@ def calc_feat(gdat, strgpdfn):
     coefgrda = 0.2
     alphelli = ephesus.retr_alphelli(coeflidaline, coefgrda)
     gdat.dictlist['deptelli'] = 1e3 * alphelli * gdat.dictlist['masscompused'] * np.sin(gdat.dictlist['incl'] / 180. * np.pi)**2 / \
-                                                                  gdat.dictlist['massstar']* (gdat.dictlist['radistar'] / gdat.dictlist['smax'])**3 # [ppt]
+                                                                  gdat.dictlist['massstar'] * (gdat.dictlist['radistar'] / gdat.dictlist['smax'])**3 # [ppt]
     if gdat.typeverb > 0:
         print('Calculating durations...')
-
-    gdat.dictlist['duratranfull'] = ephesus.retr_duratranfull(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
-                                                                                    gdat.dictlist['rrat'], gdat.dictlist['imfa'])
-    gdat.dictlist['duratrantotl'] = ephesus.retr_duratrantotl(gdat.dictlist['peri'], gdat.dictlist['rs2a'], gdat.dictlist['sini'], \
-                                                                                    gdat.dictlist['rrat'], gdat.dictlist['imfa'])
+                      
+    gdat.dictlist['duratranfull'] = ephesus.retr_duratranfull(gdat.dictlist['peri'], gdat.dictlist['rsma'], gdat.dictlist['cosi'], gdat.dictlist['rrat'])
+    gdat.dictlist['duratrantotl'] = ephesus.retr_duratrantotl(gdat.dictlist['peri'], gdat.dictlist['rsma'], gdat.dictlist['cosi'])
     
     gdat.dictlist['maxmdeptblen'] = 1e3 * (1. - gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 / \
                                                                     (1. + gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 # [ppt]
@@ -2366,6 +2364,9 @@ def plot_popl(gdat, strgpdfn):
         numbvarb = len(liststrgvarb)
         indxvarb = np.arange(numbvarb)
         for k, strgxaxi in enumerate(liststrgvarb):
+            
+            dicttemptotl[strgxaxi] = np.concatenate([dictpopl[strgxaxi][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgxaxi][0, :]])
+                
             for m, strgyaxi in enumerate(liststrgvarb):
                 
                 booltemp = False
@@ -2374,9 +2375,10 @@ def plot_popl(gdat, strgpdfn):
                         booltemp = True
                 if not booltemp:
                     continue
-                        
-                for strgfeat, valu in dictpopl.items():
-                    dicttemptotl[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
+                 
+                # to be deleted
+                #for strgfeat, valu in dictpopl.items():
+                    #dicttemptotl[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
                 
                 for strgcutt in liststrgcutt:
                     
@@ -2904,6 +2906,7 @@ def init( \
          ## 'ssys': gravitationally bound system of potentially transiting two stars
          ## 'cosc': gravitationally bound system of a star and potentially transiting compact companion
          ## 'flar': stellar flare
+         ## 'agns': AGN
          ## 'spot': stellar spot
          ## 'supn': supernova
          listtypemodl=None, \
@@ -3233,7 +3236,7 @@ def init( \
     
     ## NASA Exoplanet Archive
     if gdat.boolplotpopl:
-        gdat.dictexar = ephesus.retr_dictexar()
+        gdat.dictexar = ephesus.retr_dictexar(strgelem='comp')
         numbcompexar = gdat.dictexar['radicomp'].size
         gdat.indxcompexar = np.arange(numbcompexar)
     
@@ -3379,9 +3382,13 @@ def init( \
         print(gdat.listtsec)
         
         if gdat.dictlygooutp is not None:
+            print('names in gdat.dictlygooutp')
             for name in gdat.dictlygooutp:
+                print(name)
                 gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
-    
+            
+            raise Exception('')
+
     if gdat.typepriostar is None:
         if gdat.radistar is not None:
             gdat.typepriostar = 'inpt'
@@ -3401,7 +3408,7 @@ def init( \
             print(gdat.strgexar)
 
         # grab object features from NASA Excoplanet Archive
-        gdat.dictexartarg = ephesus.retr_dictexar(strgexar=gdat.strgexar)
+        gdat.dictexartarg = ephesus.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp')
         
         if gdat.typeverb > 0:
             if gdat.dictexartarg is None:
@@ -4867,6 +4874,9 @@ def init( \
 
 
 
+            elif typemodl == 'agns':
+
+                pass
 
 
             elif typemodl == 'spot':
@@ -5112,8 +5122,10 @@ def init( \
     path = gdat.pathdatatarg + 'dictmileoutp.pickle'
     if gdat.typeverb > 0:
         print('Writing to %s...' % path)
-    with open(path, 'wb') as objthand:
-        pickle.dump(gdat.dictmileoutp, objthand)
+    
+    # to be deleted
+    #with open(path, 'wb') as objthand:
+    #    pickle.dump(gdat.dictmileoutp, objthand)
     
     if gdat.boolplot:
         listpathdvrp = []
@@ -5158,10 +5170,6 @@ def init( \
         print('Writing to %s...' % path)
     objtfile.close()
     
-    print('gdat.dictmileoutp')
-    for name in gdat.dictmileoutp:
-        print(name)
-
     # write the output dictionary to the cluster file
     if gdat.strgclus is not None:
         path = gdat.pathdataclus + 'mileoutp.csv'
@@ -5173,16 +5181,14 @@ def init( \
                 boolappe = False
             boolmakehead = False
         else:
-            print('Opening file %s to write...' % path)
+            print('Opening %s...' % path)
             objtfile = open(path, 'w')
             boolmakehead = True
         
-        print('boolmakehead')
-        print(boolmakehead)
-
         if boolappe:
             
             if boolmakehead:
+                print('Constructing the header...')
                 # if the header doesn't exist, make it
                 k = 0
                 listnamecols = []
@@ -5203,14 +5209,13 @@ def init( \
                 listnamecols[-1] = listnamecols[-1][:-1]
 
                 if not gdat.strgtarg in dicttemp['strgtarg']:
-                    print('Opening file %s to append...' % path)
+                    print('Opening %s to append...' % path)
                     objtfile = open(path, 'a')
             
-            print('listnamecols')
-            print(listnamecols)
-
             objtfile.write('\n')
             k = 0
+            print('listnamecols')
+            print(listnamecols)
             for name in listnamecols:
                 valu = gdat.dictmileoutp[name]
                 if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):

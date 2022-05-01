@@ -110,15 +110,15 @@ def cnfg_WASP121():
     
     dictlcurtessinpt = dict()
     dictlcurtessinpt['listtsecsele'] = [7, 33, 34]
-    miletos.main.init( \
-                   strgmast='WASP-121', \
-                   #typedataspoc='SAP', \
-                   #boolplotpopl=True, \
-                   #boolinfefoldbind=True, \
-                   listtypemodl=['psyspcur'], \
-                   typepriocomp='pdim', \
-                   dictlcurtessinpt=dictlcurtessinpt, \
-                  )
+    for strg in ['SPOC', 'lygos']:
+        dictlcurtessinpt['typelcurtpxftess'] = strg
+        miletos.main.init( \
+                       strgmast='WASP-121', \
+                       boolplotpopl=True, \
+                       listtypemodl=['psyspcur'], \
+                       typepriocomp='pdim', \
+                       dictlcurtessinpt=dictlcurtessinpt, \
+                      )
 
 
 def cnfg_WASP12():
@@ -126,7 +126,6 @@ def cnfg_WASP12():
     miletos.main.init( \
                    strgmast='WASP-12', \
                    boolplotpopl=True, \
-                   boolinfefoldbind=True, \
                    listtypemodl=['psysttvr'], \
                   )
 
@@ -173,7 +172,6 @@ def cnfg_PhotCalibPPAStars():
                        dictlcurtessinpt=dictlcurtessinpt, \
                        #boolbdtr=False, \
                        #boolplotpopl=True, \
-                       #boolinfefoldbind=True, \
                        #listtypemodl=['psysttvr'], \
                       )
 
@@ -195,6 +193,7 @@ def cnfg_ADAP2022_AGNs():
         miletos.main.init( \
                    strgclus='ADAP2022_AGNs', \
                    strgmast=name, \
+                   listtypemodl=['agns'], \
                    dictlygoinpt=dictlygoinpt, \
                   )
     
