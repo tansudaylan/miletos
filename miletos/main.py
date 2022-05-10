@@ -146,7 +146,7 @@ def retr_lcurtess( \
             strgmasttemp = '%g %g' % (rasctarg, decltarg)
 
         # get the list of sectors for which TESS FFI data are available
-        listtsecffim, temp, temp = retr_listtsec(strgmasttemp)
+        listtsecffim, temp, temp = ephesus.retr_listtsec(strgmasttemp)
         
         print('List of available sectors with FFI data:')
         print(listtsecffim)
@@ -197,7 +197,7 @@ def retr_lcurtess( \
     listtccd = np.empty(numbtsec, dtype=int)
     
     # determine for each sector whether a TFP is available
-    booltpxf = retr_booltpxf(listtsec, listtsecspoc)
+    booltpxf = ephesus.retr_booltpxf(listtsec, listtsecspoc)
     
     if typeverb > 0:
         print('booltpxf')
