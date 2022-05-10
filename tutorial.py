@@ -180,14 +180,34 @@ def cnfg_ADAP2022_AGNs():
     '''
     ADAP 2022 AGN targets with Manel et al.
     '''
-    path = os.environ['LYGOS_DATA_PATH'] + '/data/interesting_blazars.txt'
+    path = os.environ['LYGOS_DATA_PATH'] + '/data/interesting_blazars_CVZ.txt'
     print('Reading from %s...' % path)
-    dictagns = pd.read_csv(path, skiprows=3, delimiter='|').to_dict(orient='list')
+    dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
+    
+    listname = []
+    for strg in dictagns['_Search_Offset               ']:
+        listname.append(strg.split('(')[1].split(')')[0])
+    print('listname')
+    print(listname)
 
-    listname = ['3C 279', 'PKS 1502+106', 'BL Lacertae', 'Mkn 501', 'PKS 2155-304', 'PG 1553+113', 'Mkn 421', '3C 454.3']
+    #listname = [ \
+    #           #'BL Lacertae', \
+    #           #'Mkn 501', 'PKS 2155-304', \
+    #           #'Mkn 421', \
+    #           
+    #           # CCD edge
+    #           '3C 279', \
+    #           
+    #           # no data
+    #           #'3C 454.3', \
+    #           #'PG 1553+113', \
+    #           #'PKS 1502+106', \
+    #           ]
     
     dictlygoinpt = dict()
     dictlygoinpt['typepsfninfe'] = 'fixd'
+    
+    #dictlygoinpt['numbside'] = 25
     
     for name in listname:
         miletos.main.init( \
@@ -235,7 +255,6 @@ def cnfg_V563Lyr():
          typepriocomp='pdim', \
          massstar=1., \
          datatype='pand', \
-         strgtarg='V563Lyr', \
         )
 
 
@@ -381,10 +400,8 @@ def cnfg_GJ299():
     massstar = 0.14502 * 1048. # [M_J]
     miletos.main.init( \
          ticitarg=334415465, \
-         strgtarg='GJ299', \
          labltarg='GJ 299', \
          strgmast='GJ 299', \
-         epocpmot=2019.3, \
          radistar=radistar, \
          massstar=massstar, \
         )
@@ -411,19 +428,16 @@ def cnfg_KOI1003():
     factmsmj = 1048.
     factrsrj = 9.95
     miletos.main.init( \
-         ticitarg=122374527, \
-         strgtarg='KOI1003', \
-         labltarg='KOI 1003', \
+         strgmast='KOI-1003', \
+         #ticitarg=122374527, \
+         #labltarg='KOI 1003', \
          radistar=2.445*factmsmj, \
          massstar=1.343*factrsrj, \
-         strgmast='KOI-1003', \
-         epocpmot=2019.3, \
         )
 
 
 def cnfg_HD118203():
     
-    strgtarg = 'HD118203'
     strgmast = 'HD 118203'
     labltarg = 'HD 118203'
     
@@ -437,7 +451,6 @@ def cnfg_HD118203():
     duraprio = np.array([5.6457]) / 24. # [day]
     rratprio = np.sqrt(np.array([3516.19165]) * 1e-6)
     miletos.main.init( \
-         strgtarg=strgtarg, \
          labltarg=labltarg, \
          strgmast=strgmast, \
          epocprio=epocprio, \
@@ -481,10 +494,8 @@ def cnfg_HATP19():
     ticitarg = 267650535
     strgmast = 'HAT-P-19'
     labltarg = 'HAT-P-19'
-    strgtarg = 'hatp0019'
     
     miletos.main.init( \
-         strgtarg=strgtarg, \
          labltarg=labltarg, \
          strgmast=strgmast, \
          ticitarg=ticitarg, \
@@ -493,17 +504,15 @@ def cnfg_HATP19():
 
 def cnfg_WD1856():
 
-    #strgtarg = 'WD1856+534'
+    strgmast = 'WD1856+534'
     ticitarg = 267574918
     #strgmast = 'TIC 267574918'
     #labltarg = 'WD-1856'
     
     print('HACKING! MAKING UP THE STAR RADIUS')
     miletos.main.init( \
-         #strgtarg=strgtarg, \
          #labltarg=labltarg, \
-         #strgmast=strgmast, \
-         ticitarg=ticitarg, \
+         strgmast=strgmast, \
          #boolmakeanim=True, \
          #makeprioplot=False, \
 

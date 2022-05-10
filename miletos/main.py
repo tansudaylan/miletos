@@ -13,6 +13,7 @@ import astroquery
 import astropy
 import astropy.coordinates
 import astropy.units
+import astropy.units as u
 
 import pickle
 
@@ -2365,6 +2366,13 @@ def plot_popl(gdat, strgpdfn):
         indxvarb = np.arange(numbvarb)
         for k, strgxaxi in enumerate(liststrgvarb):
             
+            if not strgxaxi in dictpopl:
+                continue
+
+            if not strgxaxi in gdat.dicterrr:
+                continue
+
+            # merge the target with the population
             dicttemptotl[strgxaxi] = np.concatenate([dictpopl[strgxaxi][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgxaxi][0, :]])
                 
             for m, strgyaxi in enumerate(liststrgvarb):
@@ -2383,8 +2391,8 @@ def plot_popl(gdat, strgpdfn):
                 for strgcutt in liststrgcutt:
                     
                     # merge population with the target
-                    for strgfeat, valu in dictpopl.items():
-                        dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcutt]], gdat.dicterrr[strgfeat][0, :]])
+                    #for strgfeat, valu in dictpopl.items():
+                    #    dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcutt]], gdat.dicterrr[strgfeat][0, :]])
                     
                     liststrgfeatcsvv = [ \
                                         #'inso', 'metrhzon', 'radicomp', 'metrterr', 'massstar', 'smax', 'metrunlo', 'distsyst', 'metrplan', 'metrseti', \
@@ -2807,6 +2815,26 @@ def init( \
          boolnormphot=True, \
 
          # output
+         # Boolean flag to search for and analyze time-domain data on the target
+         booltserdata=True, \
+    
+        
+         # visibility from an observatory
+         ## latitude of the observatory for the visibility calculation
+         latiobvt=None, \
+         ## longitude of the observatory for the visibility calculation
+         longobvt=None, \
+         ## height of the observatory for the visibility calculation
+         heigobvt=None, \
+         ## string of time for the night
+         strgtimeobvtnigh=None, \
+         ## string of time for the beginning of the year
+         strgtimeobvtyear=None, \
+         ## list of time difference samples for the year
+         listdelttimeobvtyear=None, \
+         ## local time offset for the visibility calculation
+         offstimeobvt=0., \
+
          ## plotting
          ## Boolean flag to make plots
          boolplot=True, \
@@ -2838,6 +2866,9 @@ def init( \
          listarrytser=None, \
          ## list of TESS sectors for the input data
          listtsec=None, \
+    
+         # Boolean flag to plot visibility of the target
+         boolplotvisi=False, \
 
          # plotting
          timeoffs=2457000., \
@@ -3042,38 +3073,12 @@ def init( \
     if gdat.typeverb > 0:
         print('miletos initialized at %s...' % gdat.strgtimestmp)
     
-    # list of models to be fitted to the data
-    if gdat.listtypemodl is None:
-        gdat.listtypemodl = ['psys']
-    
-    if gdat.typeverb > 0:
-        print('List of model types: %s' % gdat.listtypemodl)
-    
+    # check input arguments
     if not gdat.boolplot and gdat.boolplottser:
         raise Exception('')
 
-    # Boolean flag to perform inference
-    gdat.boolinfe = len(gdat.listtypemodl) > 0
-    
-    if gdat.boolplottser is None:
-        gdat.boolplottser = gdat.boolplot
-    
-    if gdat.dictlygoinpt is None:
-        gdat.dictlygoinpt = dict()
-    
-    if gdat.dictlcurtessinpt is None:
-        gdat.dictlcurtessinpt = dict()
-
     # paths
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
-    
-    # data validation (DV) report
-    ## list of dictionaries holding the paths and DV report positions of plots
-    if gdat.boolplot:
-        gdat.listdictdvrp = [[]]
-    
-    # dictionary to be returned
-    gdat.dictmileoutp = dict()
     
     # check input arguments
     if not (gdat.pathtarg is not None and gdat.pathbase is None and gdat.pathdatatarg is None and gdat.pathimagtarg is None or \
@@ -3112,16 +3117,45 @@ def init( \
             raise Exception('No TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) \
                                                                                         can be provided when data (listarrytser) is provided.')
     
-    gdat.boolmodlcosc = 'cosc' in gdat.listtypemodl
-    gdat.boolmodlpsys = 'psys' in gdat.listtypemodl or 'psyspcur' in gdat.listtypemodl
-    gdat.boolmodlsyst = gdat.boolmodlpsys or gdat.boolmodlcosc
-    gdat.boolmodltran = 'psys' in gdat.listtypemodl or 'psyspcur' in gdat.listtypemodl or 'cosc' in gdat.listtypemodl
+    # dictionary to be returned
+    gdat.dictmileoutp = dict()
     
-    if gdat.typeverb > 0:
-        print('gdat.boolmodlpsys')
-        print(gdat.boolmodlpsys)
+    if gdat.booltserdata:
+        
+        # list of models to be fitted to the data
+        if gdat.listtypemodl is None:
+            gdat.listtypemodl = ['psys']
+    
+        if gdat.typeverb > 0:
+            print('List of model types: %s' % gdat.listtypemodl)
+    
+        # Boolean flag to perform inference
+        gdat.boolinfe = len(gdat.listtypemodl) > 0
+        
+        if gdat.boolplottser is None:
+            gdat.boolplottser = gdat.boolplot
+        
+        if gdat.dictlygoinpt is None:
+            gdat.dictlygoinpt = dict()
+        
+        if gdat.dictlcurtessinpt is None:
+            gdat.dictlcurtessinpt = dict()
 
-    if gdat.boolmodlpsys and (gdat.boolplotpopl or gdat.toiitarg is not None or gdat.ticitarg is not None):
+        # data validation (DV) report
+        ## list of dictionaries holding the paths and DV report positions of plots
+        if gdat.boolplot:
+            gdat.listdictdvrp = [[]]
+        
+        gdat.boolmodlcosc = 'cosc' in gdat.listtypemodl
+        gdat.boolmodlpsys = 'psys' in gdat.listtypemodl or 'psyspcur' in gdat.listtypemodl
+        gdat.boolmodlsyst = gdat.boolmodlpsys or gdat.boolmodlcosc
+        gdat.boolmodltran = 'psys' in gdat.listtypemodl or 'psyspcur' in gdat.listtypemodl or 'cosc' in gdat.listtypemodl
+        
+        if gdat.typeverb > 0:
+            print('gdat.boolmodlpsys')
+            print(gdat.boolmodlpsys)
+
+    if (gdat.boolplotpopl or gdat.booltserdata and gdat.boolmodlpsys) and (gdat.toiitarg is not None or gdat.ticitarg is not None):
         gdat.dictexof = ephesus.retr_dicttoii()
 
     # conversion factors
@@ -3131,22 +3165,21 @@ def init( \
     ## plotting
     gdat.numbcyclcolrplot = 300
     gdat.alphraww = 0.2
-    ### percentile for zoom plots of relative flux
-    gdat.pctlrflx = 95.
+    
     gdat.figrsize = [6, 4]
     gdat.figrsizeydob = [8., 4.]
     gdat.figrsizeydobskin = [8., 2.5]
-    boolpost = False
-    if boolpost:
-        gdat.figrsize /= 1.5
         
     gdat.listfeatstar = ['radistar', 'massstar', 'tmptstar', 'rascstar', 'declstar', 'vsiistar', 'jmagsyst']
     gdat.listfeatstarpopl = ['radicomp', 'masscomp', 'tmptplan', 'radistar', 'jmagsyst', 'kmagsyst', 'tmptstar']
     
-    gdat.liststrgpopl = ['exar']
-    if gdat.boolexofpopl:
-        gdat.liststrgpopl += ['exof']
-    gdat.numbpopl = len(gdat.liststrgpopl)
+    if gdat.boolplotpopl:
+        gdat.liststrgpopl = []
+        if gdat.boolmodlpsys:
+            gdat.liststrgpopl += ['exar']
+            if gdat.toiitarg is not None:
+                gdat.liststrgpopl += ['exof']
+        gdat.numbpopl = len(gdat.liststrgpopl)
     
     # determine target identifiers
     if gdat.ticitarg is not None:
@@ -3200,6 +3233,18 @@ def init( \
         if gdat.labltarg is None:
             raise Exception('')
     
+    if gdat.typetarg == 'tici' or gdat.typetarg == 'toii' or gdat.typetarg == 'mast':
+        # temp -- check that the closest TIC to a given TIC is itself
+        maxmradi = 1.
+        print('Querying the TIC within %d as to get the RA, DEC, Tmag, and TIC ID of the closest source to the MAST keywrod %s...' % (maxmradi, gdat.strgmast))
+        catalogData = astroquery.mast.Catalogs.query_region(gdat.strgmast, radius='%ds' % maxmradi, catalog="TIC")
+        print('Found %d TIC sources.' % len(catalogData))
+        if catalogData[0]['dstArcSec'] < 0.2:
+            gdat.ticitarg = int(catalogData[0]['ID'])
+            gdat.rasctarg = catalogData[0]['ra']
+            gdat.decltarg = catalogData[0]['dec']
+            gdat.tmagtarg = catalogData[0]['Tmag']
+
     if gdat.typeverb > 0:
         print('gdat.typetarg')
         print(gdat.typetarg)
@@ -3226,6 +3271,16 @@ def init( \
         print('gdat.toiitarg')
         print(gdat.toiitarg)
     
+    # priors
+    if gdat.typepriostar is None:
+        if gdat.radistar is not None:
+            gdat.typepriostar = 'inpt'
+        else:
+            gdat.typepriostar = 'tici'
+    
+    if gdat.typeverb > 0:
+        print('Stellar parameter prior type: %s' % gdat.typepriostar)
+    
     # number of Boolean signal outputs
     gdat.numbtypeposi = 4
     gdat.indxtypeposi = np.arange(gdat.numbtypeposi)
@@ -3241,7 +3296,6 @@ def init( \
         gdat.indxcompexar = np.arange(numbcompexar)
     
     if gdat.strgclus is None:
-        gdat.strgclus = ''
         gdat.pathclus = gdat.pathbase
     else:
         #gdat.strgclus += '/'
@@ -3253,9 +3307,6 @@ def init( \
         gdat.pathdataclus = gdat.pathclus + 'data/'
         gdat.pathimagclus = gdat.pathclus + 'imag/'
     
-    print('gdat.pathclus') 
-    print(gdat.pathclus)
-
     if gdat.labltarg is None:
         if gdat.typetarg == 'mast':
             gdat.labltarg = gdat.strgmast
@@ -3265,15 +3316,14 @@ def init( \
             gdat.labltarg = 'TIC %d' % gdat.ticitarg
         if gdat.typetarg == 'posi':
             gdat.labltarg = 'RA=%.4g, DEC=%.4g' % (gdat.rasctarg, gdat.decltarg)
-            gdat.strgtarg = 'RA%.4gDEC%.4g' % (gdat.rasctarg, gdat.decltarg)
-    
-    if gdat.typeverb > 0:
-        print('gdat.strgtarg')
-        print(gdat.strgtarg)
     
     # the string that describes the target
     if gdat.strgtarg is None:
         gdat.strgtarg = ''.join(gdat.labltarg.split(' '))
+    
+    if gdat.typeverb > 0:
+        print('gdat.strgtarg')
+        print(gdat.strgtarg)
     
     # the path for the target
     if gdat.pathtarg is None:
@@ -3292,7 +3342,6 @@ def init( \
         
         return gdat.dictmileoutp
 
-
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
         raise Exception('')
     
@@ -3305,36 +3354,32 @@ def init( \
     for name in ['strgtarg', 'pathtarg']:
         gdat.dictmileoutp[name] = getattr(gdat, name)
 
-    #if os.path.exists(gdat.pathtarg):
-    #    if gdat.typeverb > 0:
-    #        print('Path for the object exists... Returning.')
-    #    return
+    if gdat.booltserdata:
+        gdat.liststrgdatatser = ['lcur', 'rvel']
+        gdat.numbdatatser = len(gdat.liststrgdatatser)
+        gdat.indxdatatser = np.arange(gdat.numbdatatser)
 
-    gdat.liststrgdatatser = ['lcur', 'rvel']
-    gdat.numbdatatser = len(gdat.liststrgdatatser)
-    gdat.indxdatatser = np.arange(gdat.numbdatatser)
-
-    gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
-    gdat.indxinst = [[] for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        gdat.numbinst[b] = len(gdat.listlablinst[b])
-        gdat.indxinst[b] = np.arange(gdat.numbinst[b])
-    
-    if gdat.typeverb > 0:
-        print('gdat.numbinst')
-        print(gdat.numbinst)
-    
-    if gdat.liststrginst is None:
-        gdat.liststrginst = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
+        gdat.indxinst = [[] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                gdat.liststrginst[b][p] = ''.join(gdat.listlablinst[b][p].split(' '))
-    
-    if gdat.typeverb > 0:
-        print('gdat.liststrginst')
-        print(gdat.liststrginst)
+            gdat.numbinst[b] = len(gdat.listlablinst[b])
+            gdat.indxinst[b] = np.arange(gdat.numbinst[b])
+        
+        if gdat.typeverb > 0:
+            print('gdat.numbinst')
+            print(gdat.numbinst)
+        
+        if gdat.liststrginst is None:
+            gdat.liststrginst = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    gdat.liststrginst[b][p] = ''.join(gdat.listlablinst[b][p].split(' '))
+        
+        if gdat.typeverb > 0:
+            print('gdat.liststrginst')
+            print(gdat.liststrginst)
 
-    if gdat.typetarg != 'inpt' and 'TESS' in gdat.liststrginst[0]:
+    if gdat.typetarg != 'inpt':
         if gdat.typetarg == 'mast':
             strgmast = gdat.strgmast
             rasctarg = None
@@ -3355,224 +3400,216 @@ def init( \
             rasctarg = gdat.rasctarg
             decltarg = gdat.decltarg
             ticitarg = None
-        gdat.dictlcurtessinpt['ticitarg'] = ticitarg
-        gdat.dictlcurtessinpt['strgmast'] = strgmast
-        gdat.dictlcurtessinpt['rasctarg'] = rasctarg
-        gdat.dictlcurtessinpt['decltarg'] = decltarg
+    
+    if gdat.booltserdata:
         
-        gdat.dictlcurtessinpt['labltarg'] = gdat.labltarg
-        
-        gdat.dictlygoinpt['pathtarg'] = gdat.pathtarg + 'lygos/'
-        if not 'typepsfninfe' in gdat.dictlygoinpt:
-            gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
-        gdat.dictlcurtessinpt['dictlygoinpt'] = gdat.dictlygoinpt
+        # get data
+        if gdat.typetarg != 'inpt' and 'TESS' in gdat.liststrginst[0]:
+            gdat.dictlcurtessinpt['ticitarg'] = ticitarg
+            gdat.dictlcurtessinpt['strgmast'] = strgmast
+            gdat.dictlcurtessinpt['rasctarg'] = rasctarg
+            gdat.dictlcurtessinpt['decltarg'] = decltarg
+            gdat.dictlcurtessinpt['labltarg'] = gdat.labltarg
+            gdat.dictlygoinpt['pathtarg'] = gdat.pathtarg + 'lygos/'
+            if not 'typepsfninfe' in gdat.dictlygoinpt:
+                gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
+            gdat.dictlcurtessinpt['dictlygoinpt'] = gdat.dictlygoinpt
 
-        arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
-                              gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur, gdat.dictlygooutp = \
-                              ephesus.retr_lcurtess( \
-                                                    **gdat.dictlcurtessinpt, \
-                                                   )
+            arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
+                                  gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur, gdat.dictlygooutp = \
+                                  ephesus.retr_lcurtess( \
+                                                        **gdat.dictlcurtessinpt, \
+                                                       )
+            gdat.dictmileoutp['listtsec'] = gdat.listtsec
+            print('List of sectors for miletos:')
+            print(gdat.listtsec)
+            
+            if gdat.dictlygooutp is not None:
+                print('names in gdat.dictlygooutp that contain pathsaverflxtarg')
+                for name in gdat.dictlygooutp:
+                    if 'pathsaverflxtarg' in name:
+                        print(name)
+                    gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
+            
+        # check if there is any data
         if len(listarrylcurtess) == 0:
             if gdat.typeverb > 0:
                 print('No data found. Returning...')
             return gdat.dictmileoutp
-        
-        gdat.dictmileoutp['listtsec'] = gdat.listtsec
-        print('List of sectors for miletos:')
-        print(gdat.listtsec)
-        
-        if gdat.dictlygooutp is not None:
-            print('names in gdat.dictlygooutp')
-            for name in gdat.dictlygooutp:
-                print(name)
-                gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
             
-            raise Exception('')
+        if gdat.boolmodlpsys:
+            if gdat.strgexar is None:
+                gdat.strgexar = gdat.strgmast
+    
+            if gdat.typeverb > 0:
+                print('gdat.strgexar')
+                print(gdat.strgexar)
 
-    if gdat.typepriostar is None:
-        if gdat.radistar is not None:
-            gdat.typepriostar = 'inpt'
-        else:
-            gdat.typepriostar = 'tici'
-    
-    # priors
-    if gdat.typeverb > 0:
-        print('Stellar parameter prior type: %s' % gdat.typepriostar)
-    
-    if gdat.boolmodlpsys:
-        if gdat.strgexar is None:
-            gdat.strgexar = gdat.strgmast
-    
-        if gdat.typeverb > 0:
-            print('gdat.strgexar')
-            print(gdat.strgexar)
-
-        # grab object features from NASA Excoplanet Archive
-        gdat.dictexartarg = ephesus.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp')
-        
-        if gdat.typeverb > 0:
-            if gdat.dictexartarg is None:
-                print('The target name was **not** found in the NASA Exoplanet Archive planetary systems composite table.')
+            # grab object features from NASA Excoplanet Archive
+            gdat.dictexartarg = ephesus.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp')
+            
+            if gdat.typeverb > 0:
+                if gdat.dictexartarg is None:
+                    print('The target name was **not** found in the NASA Exoplanet Archive planetary systems composite table.')
+                else:
+                    print('The target name was found in the NASA Exoplanet Archive planetary systems composite table.')
+            
+            # grab object features from ExoFOP
+            if gdat.toiitarg is not None:
+                gdat.dictexoftarg = ephesus.retr_dicttoii(toiitarg=gdat.toiitarg)
             else:
-                print('The target name was found in the NASA Exoplanet Archive planetary systems composite table.')
-        
-        # grab object features from ExoFOP
-        if gdat.toiitarg is not None:
-            gdat.dictexoftarg = ephesus.retr_dicttoii(toiitarg=gdat.toiitarg)
-        else:
-            gdat.dictexoftarg = None
-        gdat.boolexof = gdat.toiitarg is not None and gdat.dictexoftarg is not None
-        gdat.boolexar = gdat.strgexar is not None and gdat.dictexartarg is not None
-        
-        if gdat.typepriocomp is None:
-            if gdat.epocprio is not None:
-                gdat.typepriocomp = 'inpt'
-            elif gdat.boolexar:
-                gdat.typepriocomp = 'exar'
-            elif gdat.boolexof:
-                gdat.typepriocomp = 'exof'
-            else:
-                gdat.typepriocomp = 'pdim'
+                gdat.dictexoftarg = None
+            gdat.boolexof = gdat.toiitarg is not None and gdat.dictexoftarg is not None
+            gdat.boolexar = gdat.strgexar is not None and gdat.dictexartarg is not None
+            
+            if gdat.typepriocomp is None:
+                if gdat.epocprio is not None:
+                    gdat.typepriocomp = 'inpt'
+                elif gdat.boolexar:
+                    gdat.typepriocomp = 'exar'
+                elif gdat.boolexof:
+                    gdat.typepriocomp = 'exof'
+                else:
+                    gdat.typepriocomp = 'pdim'
+
+            if gdat.typeverb > 0:
+                print('Companion prior type: %s' % gdat.typepriocomp)
+            
+            if not gdat.boolexar and gdat.typepriocomp == 'exar':
+                raise Exception('')
+    
+        ## list of analysis types
+        ### 'pdim': search for periodic dimmings
+        ### 'pinc': search for periodic increases
+        ### 'lspe': search for sinusoid variability
+        ### 'mfil': matched filter
+        gdat.listtypeanls = ['lspe']
+        if ('psys' in gdat.listtypemodl or 'psyspcur' in gdat.listtypemodl) and gdat.typepriocomp == 'pdim':
+            gdat.listtypeanls += ['pdim']
+        if 'cosc' in gdat.listtypemodl:
+            gdat.listtypeanls += ['pinc']
 
         if gdat.typeverb > 0:
-            print('Companion prior type: %s' % gdat.typepriocomp)
+            print('List of analysis types: %s' % gdat.listtypeanls)
+
+        ## Boolean flag to calculate the power spectral density
+        gdat.boolcalclspe = 'lspe' in gdat.listtypeanls
+
+        # Boolean flag to execute a search for periodic boxes
+        gdat.boolsrchpdim = 'pdim' in gdat.listtypeanls
+
+        # Boolean flag to execute a search for periodic boxes
+        gdat.boolsrchpinc = 'pinc' in gdat.listtypeanls
         
-        if not gdat.boolexar and gdat.typepriocomp == 'exar':
-            raise Exception('')
-    
-    else:
-        gdat.typepriocomp = None
-    
-    ## list of analysis types
-    ### 'pdim': search for periodic dimmings
-    ### 'pinc': search for periodic increases
-    ### 'lspe': search for sinusoid variability
-    ### 'mfil': matched filter
-    gdat.listtypeanls = ['lspe']
-    if ('psys' in gdat.listtypemodl or 'psyspcur' in gdat.listtypemodl) and gdat.typepriocomp == 'pdim':
-        gdat.listtypeanls += ['pdim']
-    if 'cosc' in gdat.listtypemodl:
-        gdat.listtypeanls += ['pinc']
+        gdat.boolsrchpbox = gdat.boolsrchpinc or gdat.boolsrchpdim
 
-    if gdat.typeverb > 0:
-        print('List of analysis types: %s' % gdat.listtypeanls)
+        # Boolean flag to execute a search for flares
+        if 'flar' in gdat.listtypemodl:
+            gdat.boolsrchflar = True
+        else:
+            gdat.boolsrchflar = False
+        if gdat.typeverb > 0:
+            print('gdat.boolcalclspe') 
+            print(gdat.boolcalclspe)
+            print('gdat.boolsrchpdim') 
+            print(gdat.boolsrchpdim)
+            print('gdat.boolsrchpinc') 
+            print(gdat.boolsrchpinc)
+            print('gdat.boolsrchpbox') 
+            print(gdat.boolsrchpbox)
+            print('gdat.boolsrchflar') 
+            print(gdat.boolsrchflar)
+        
+        if gdat.boolmodlpsys:
+            gdat.liststrgpdfn = [gdat.typepriocomp]
+        else:
+            gdat.liststrgpdfn = ['prio']
 
-    ## Boolean flag to calculate the power spectral density
-    gdat.boolcalclspe = 'lspe' in gdat.listtypeanls
-
-    # Boolean flag to execute a search for periodic boxes
-    gdat.boolsrchpdim = 'pdim' in gdat.listtypeanls
-
-    # Boolean flag to execute a search for periodic boxes
-    gdat.boolsrchpinc = 'pinc' in gdat.listtypeanls
-    
-    gdat.boolsrchpbox = gdat.boolsrchpinc or gdat.boolsrchpdim
-
-    # Boolean flag to execute a search for flares
-    if 'flar' in gdat.listtypemodl:
-        gdat.boolsrchflar = True
-    else:
-        gdat.boolsrchflar = False
-    if gdat.typeverb > 0:
-        print('gdat.boolcalclspe') 
-        print(gdat.boolcalclspe)
-        print('gdat.boolsrchpdim') 
-        print(gdat.boolsrchpdim)
-        print('gdat.boolsrchpinc') 
-        print(gdat.boolsrchpinc)
-        print('gdat.boolsrchpbox') 
-        print(gdat.boolsrchpbox)
-        print('gdat.boolsrchflar') 
-        print(gdat.boolsrchflar)
-    
-    if gdat.boolmodlpsys:
-        gdat.liststrgpdfn = [gdat.typepriocomp]
-    else:
-        gdat.liststrgpdfn = ['prio']
-
-    if gdat.typeverb > 0:
-        print('gdat.liststrgpdfn')
-        print(gdat.liststrgpdfn)
-    
-    if gdat.boolmodlpsys and gdat.boolplotpopl:
-        gdat.pathimagfeat = gdat.pathimagtarg + 'feat/'
-        for strgpdfn in gdat.liststrgpdfn:
-            pathimagpdfn = gdat.pathimagfeat + strgpdfn + '/'
-            setattr(gdat, 'pathimagfeatplan' + strgpdfn, pathimagpdfn + 'featplan/')
-            setattr(gdat, 'pathimagfeatsyst' + strgpdfn, pathimagpdfn + 'featsyst/')
-            setattr(gdat, 'pathimagdataplan' + strgpdfn, pathimagpdfn + 'dataplan/')
+        if gdat.typeverb > 0:
+            print('gdat.liststrgpdfn')
+            print(gdat.liststrgpdfn)
+        
+        if gdat.boolmodlpsys and gdat.boolplotpopl:
+            gdat.pathimagfeat = gdat.pathimagtarg + 'feat/'
+            for strgpdfn in gdat.liststrgpdfn:
+                pathimagpdfn = gdat.pathimagfeat + strgpdfn + '/'
+                setattr(gdat, 'pathimagfeatplan' + strgpdfn, pathimagpdfn + 'featplan/')
+                setattr(gdat, 'pathimagfeatsyst' + strgpdfn, pathimagpdfn + 'featsyst/')
+                setattr(gdat, 'pathimagdataplan' + strgpdfn, pathimagpdfn + 'dataplan/')
     
     # make folders
     for attr, valu in gdat.__dict__.items():
         if attr.startswith('path') and valu is not None and valu.endswith('/'):
             os.system('mkdir -p %s' % valu)
             
-    # determine number of chunks
-    gdat.numbchun = [np.empty(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            if gdat.typetarg == 'path':
-                gdat.numbchun[b][p] = len(gdat.listpathdatainpt[b][p])
-            elif gdat.typetarg == 'inpt':
-                gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
-            else:
-                if b == 0 and gdat.liststrginst[b][p] == 'TESS':
-                    gdat.numbchun[b][p] = len(listarrylcurtess)
-    
-    gdat.indxchun = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p], dtype=int)
-            
-    if gdat.liststrgchun is None:
-        gdat.liststrgchun = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    if gdat.booltserdata:
+        
+        # determine number of chunks
+        gdat.numbchun = [np.empty(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                for y in gdat.indxchun[b][p]:
-                    if gdat.liststrginst[b][p] == 'TESS' and gdat.listtsec is not None:
-                        gdat.liststrgchun[b][p][y] = 'sc%02d' % gdat.listtsec[y]
-                    else:
-                        gdat.liststrgchun[b][p][y] = 'ch%02d' % y
-    
-    # check the user-defined gdat.listpathdatainpt
-    if gdat.listpathdatainpt is not None:
+                if gdat.typetarg == 'path':
+                    gdat.numbchun[b][p] = len(gdat.listpathdatainpt[b][p])
+                elif gdat.typetarg == 'inpt':
+                    gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
+                else:
+                    if b == 0 and gdat.liststrginst[b][p] == 'TESS':
+                        gdat.numbchun[b][p] = len(listarrylcurtess)
+        
+        gdat.indxchun = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if not isinstance(gdat.listpathdatainpt[b][p], list):
-                    raise Exception('')
-    
-    # list of data types (real or mock) for each instrument for both light curve and RV data
-    if gdat.listdatatype is None:
-        gdat.listdatatype = [[] for b in gdat.indxdatatser]
-        for b in gdat.indxdatatser:
-            gdat.listdatatype[b] = ['real' for p in gdat.indxinst[b]]
-    
-    if gdat.dictdictallesett is None:
-        gdat.dictdictallesett = dict()
-        for typemodl in gdat.listtypemodl:
-            gdat.dictdictallesett[typemodl] = None
+                gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p], dtype=int)
+                
+        if gdat.liststrgchun is None:
+            gdat.liststrgchun = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    for y in gdat.indxchun[b][p]:
+                        if gdat.liststrginst[b][p] == 'TESS' and gdat.listtsec is not None:
+                            gdat.liststrgchun[b][p][y] = 'sc%02d' % gdat.listtsec[y]
+                        else:
+                            gdat.liststrgchun[b][p][y] = 'ch%02d' % y
+        
+        # check the user-defined gdat.listpathdatainpt
+        if gdat.listpathdatainpt is not None:
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    if not isinstance(gdat.listpathdatainpt[b][p], list):
+                        raise Exception('')
+        
+        # list of data types (real or mock) for each instrument for both light curve and RV data
+        if gdat.listdatatype is None:
+            gdat.listdatatype = [[] for b in gdat.indxdatatser]
+            for b in gdat.indxdatatser:
+                gdat.listdatatype[b] = ['real' for p in gdat.indxinst[b]]
+        
+        if gdat.dictdictallesett is None:
+            gdat.dictdictallesett = dict()
+            for typemodl in gdat.listtypemodl:
+                gdat.dictdictallesett[typemodl] = None
 
-    if gdat.dictdictallepara is None:
-        gdat.dictdictallepara = dict()
-        for typemodl in gdat.listtypemodl:
-            gdat.dictdictallepara[typemodl] = None
+        if gdat.dictdictallepara is None:
+            gdat.dictdictallepara = dict()
+            for typemodl in gdat.listtypemodl:
+                gdat.dictdictallepara[typemodl] = None
 
-    if gdat.boolnormphot:
-        gdat.labltserphot = 'Relative flux'
-    else:
-        gdat.labltserphot = 'ADC Counts [e$^-$/s]'
-    gdat.listlabltser = [gdat.labltserphot, 'Radial Velocity [km/s]']
-    gdat.liststrgtser = ['rflx', 'rvel']
-    gdat.liststrgtseralle = ['flux', 'rv']
-    
-    if gdat.typeverb > 0:
-        print('Light curve data: %s' % gdat.listlablinst[0])
-        print('RV data: %s' % gdat.listlablinst[1])
-    
-    if gdat.offstextatmoraditmpt is None:
-        gdat.offstextatmoraditmpt = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
-    if gdat.offstextatmoradimetr is None:
-        gdat.offstextatmoradimetr = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
+        if gdat.boolnormphot:
+            gdat.labltserphot = 'Relative flux'
+        else:
+            gdat.labltserphot = 'ADC Counts [e$^-$/s]'
+        gdat.listlabltser = [gdat.labltserphot, 'Radial Velocity [km/s]']
+        gdat.liststrgtser = ['rflx', 'rvel']
+        gdat.liststrgtseralle = ['flux', 'rv']
+        
+        if gdat.typeverb > 0:
+            print('Light curve data: %s' % gdat.listlablinst[0])
+            print('RV data: %s' % gdat.listlablinst[1])
+        
+        if gdat.offstextatmoraditmpt is None:
+            gdat.offstextatmoraditmpt = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
+        if gdat.offstextatmoradimetr is None:
+            gdat.offstextatmoradimetr = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
     
     if gdat.typetarg == 'inpt':
         if gdat.vmagsyst is None:
@@ -3587,7 +3624,91 @@ def init( \
     gdat.epocprio = None
     gdat.periprio = None
     gdat.duraprio = None
+    
+    # plot visibility of the target
+    if gdat.boolplotvisi:
         
+        # location object for LCO
+        objtlocalcoo = astropy.coordinates.EarthLocation(lat=gdat.latiobvt*astropy.units.deg, lon=gdat.longobvt*astropy.units.deg, height=gdat.heigobvt*astropy.units.m)
+        
+        # time object for the year
+        objttimenigh = astropy.time.Time(astropy.time.Time(gdat.strgtimeobvtnigh).jd, format='jd', location=objtlocalcoo)
+        objttimeyear = astropy.time.Time(astropy.time.Time(gdat.strgtimeobvtyear).jd + gdat.listdelttimeobvtyear, format='jd', location=objtlocalcoo)
+        timeside = objttimeyear.sidereal_time('mean')
+        
+        # alt-az coordinate object for the Sun
+        objtcoorsunnalazyear = astropy.coordinates.get_sun(objttimeyear)
+            
+        # delt time arry for night
+        timedeltscal = 0.5
+        timedelt = np.linspace(-12., 12. - timedeltscal, int(24. / timedeltscal))
+        
+        # time object for night at midnight
+        objttimenighcent = astropy.time.Time(int(objttimenigh.jd), format='jd', location=objtlocalcoo)
+        objttimenighcen1 = astropy.time.Time(int(objttimenigh.jd), format='jd', location=objtlocalcoo)
+        print('objttimenighcent.iso')
+        print(objttimenighcent.iso)
+        objttimenigh = objttimenighcent + (12. + timedelt - gdat.offstimeobvt) * astropy.units.hour
+        
+        # frame object for LCO at night
+        objtframlcoonigh = astropy.coordinates.AltAz(obstime=objttimenigh, location=objtlocalcoo)
+        
+        # alt-az coordinate object for the Sun
+        objtcoorsunnalaznigh = astropy.coordinates.get_sun(objttimenigh).transform_to(objtframlcoonigh)
+        # alt-az coordinate object for the Moon
+        objtcoormoonalaznigh = astropy.coordinates.get_moon(objttimenigh).transform_to(objtframlcoonigh)
+        
+        # alt-az coordinate object for the planet
+        objtcoorplanalaznigh = astropy.coordinates.SkyCoord(ra=gdat.rasctarg, dec=gdat.decltarg, frame='icrs', unit='deg').transform_to(objtframlcoonigh)
+        
+        strgtitl = '%s, %s/%s' % (gdat.labltarg, objttimenighcent.iso[:10], objttimenighcen1.iso[:10])
+
+        # plot air mass
+        figr, axis = plt.subplots(figsize=(8, 4))
+        massairr = objtcoorplanalaznigh.secz
+        
+        print('timedelt, massairr')
+        for ll in range(len(massairr)):
+            print('%g %g' % (timedelt[ll], massairr[ll]))
+
+        indx = np.where(np.isfinite(massairr) & (massairr > 0))[0]
+        plt.plot(timedelt[indx], massairr[indx])
+        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -0*astropy.units.deg, color='0.5', zorder=0)
+        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -18*astropy.units.deg, color='k', zorder=0)
+        axis.fill_between(timedelt, 0, 90, (massairr > 2.) | (massairr < 1.), color='r', alpha=0.3, zorder=0)
+        if gdat.offstimeobvt == 0:
+            labltime = 'Local time to Midnight [hour]'
+        else:
+            labltime = 'UTC to Midnight [hour]'
+        axis.set_xlabel(labltime)
+        axis.set_ylabel('Airmass')
+        limtxdat = [np.amin(timedelt), np.amax(timedelt)]
+        axis.set_title(strgtitl)
+        axis.set_xlim(limtxdat)
+        axis.set_ylim([1., 2.])
+        path = gdat.pathimagtarg + 'airmass_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
+        print('Writing to %s...' % path)
+        plt.savefig(path)
+        
+        # plot altitude
+        figr, axis = plt.subplots(figsize=(8, 4))
+        axis.plot(timedelt, objtcoorsunnalaznigh.alt, color='orange', label='Sun')
+        axis.plot(timedelt, objtcoormoonalaznigh.alt, color='gray', label='Moon')
+        axis.plot(timedelt, objtcoorplanalaznigh.alt, color='blue', label=gdat.labltarg)
+        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -0*astropy.units.deg, color='0.5', zorder=0)
+        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -18*astropy.units.deg, color='k', zorder=0)
+        axis.fill_between(timedelt, 0, 90, (massairr > 2.) | (massairr < 1.), color='r', alpha=0.3, zorder=0)
+        axis.legend(loc='upper left')
+        plt.ylim([0, 90])
+        axis.set_title(strgtitl)
+        axis.set_xlim(limtxdat)
+        axis.set_xlabel(labltime)
+        axis.set_ylabel('Altitude [deg]')
+        
+        path = gdat.pathimagtarg + 'altitude_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
+        print('Writing to %s...' % path)
+        plt.savefig(path)
+
     if gdat.boolmodlpsys:
     
         if gdat.typepriocomp == 'exar':
@@ -4051,9 +4172,6 @@ def init( \
     
     else:
         gdat.listarrytser['bdtrnotr'] = gdat.listarrytser['clip']
-    
-    if gdat.strgtarg == 'TIC61698163':
-        raise Exception('')
     
     if gdat.typeverb > 0:
         print('gdat.boolsrchpbox')
@@ -5187,12 +5305,24 @@ def init( \
         
         if boolappe:
             
+            print('gdat.dictmileoutp')
+            for name in gdat.dictmileoutp:
+                if 'path' in name:
+                    print(name)
+
             if boolmakehead:
                 print('Constructing the header...')
                 # if the header doesn't exist, make it
                 k = 0
                 listnamecols = []
                 for name, valu in gdat.dictmileoutp.items():
+                    
+                    if name.startswith('lygo_pathsaverflx'): 
+                        continue
+                    
+                    if name.startswith('lygo_strgtitlcntpplot'):
+                        continue
+                    
                     listnamecols.append(name)
                     if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
                         if k > 0:
@@ -5214,8 +5344,12 @@ def init( \
             
             objtfile.write('\n')
             k = 0
+            
             print('listnamecols')
-            print(listnamecols)
+            for name in listnamecols:
+                if 'path' in name:
+                    print(name)
+            
             for name in listnamecols:
                 valu = gdat.dictmileoutp[name]
                 if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
