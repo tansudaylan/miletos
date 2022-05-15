@@ -218,7 +218,7 @@ def cnfg_ADAP2022_AGNs():
                   )
     
 
-def cnfg_WD_GI():
+def cnfg_WhiteDwarfs():
     
     pathoutp = os.environ['MILETOS_DATA_PATH'] + '/data/WD/'
     os.system('mkdir -p %s' % pathoutp)
@@ -235,6 +235,7 @@ def cnfg_WD_GI():
             miletos.main.init( \
                  strgmast='TIC %d' % listtici[i], \
                  typepriocomp='pdim', \
+                 strgclus='WhiteDwarfs', \
                  #datatype='pand', \
                 )
 
@@ -423,17 +424,23 @@ def cnfg_Rafael():
         )
 
 
-def cnfg_KOI1003():
+def cnfg_allesfitter():
+    '''
+    Examples in the Allesfitter paper (Guenther & Daylan, 2021)
+    '''
     
-    factmsmj = 1048.
-    factrsrj = 9.95
-    miletos.main.init( \
-         strgmast='KOI-1003', \
-         #ticitarg=122374527, \
-         #labltarg='KOI 1003', \
-         radistar=2.445*factmsmj, \
-         massstar=1.343*factrsrj, \
-        )
+    #factmsmj = 1048.
+    #factrsrj = 9.95
+    
+    liststrgmast = ['Pi Mensae', 'TOI-216', 'WASP-18', 'KOI- 1003', 'GJ 1243']
+    for strgmast in liststrgmast:
+        miletos.main.init( \
+             strgmast=strgmast, \
+             #ticitarg=122374527, \
+             #labltarg='KOI 1003', \
+             #radistar=2.445*factmsmj, \
+             #massstar=1.343*factrsrj, \
+            )
 
 
 def cnfg_HD118203():
@@ -598,8 +605,9 @@ def cnfg_lindsey():
 
 def cnfg_ASASSN20qc():
     '''
-    13 July 2021, AGN from DJ
+    13 July 2021, 2020adgm, AGN from DJ
     '''
+    
     rasctarg = 63.260208 
     decltarg = -53.0727
 
@@ -615,9 +623,9 @@ def cnfg_ASASSN20qc():
     dictlygoinpt['boolfittoffs'] = True
     #dictlygoinpt['numbside'] = 9
     
-    listtsecsele = [32]
     dictlcurtessinpt = dict()
     dictlcurtessinpt['boolffimonly'] = True
+    #dictlcurtessinpt['listtsecsele'] = [32]
 
     #path = os.environ['LYGOS_DATA_PATH'] + '/data/lc_2020adgm_cleaned_ASASSN20qc'
     #print(path)
@@ -641,18 +649,16 @@ def cnfg_ASASSN20qc():
     #refrarrytser[:, 1] = linevalu[:, 2]
     #refrarrytser[:, 2] = linevalu[:, 3]
    
-    #dictmileinpt = dict()
-    #dictmileinpt['listtypemodl'] = ['supn']
-    #
-    ##dictmileinpt['listlimttimemask'] = [[[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]]
-    #dictmileinpt['listlimttimemask'] = [[[[2457000 + 2186.5, 2457000 + 2187.5]]]]
+    listtypemodl = ['supn']
+    listlimttimemask = [[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]
+    listlimttimemask = [[[[2457000 + 2186.5, 2457000 + 2187.5]]]]
 
     listnumbside = [7, 11, 15]
     for numbside in listnumbside:
         if numbside == 11:
-            dictmileinpt['listtimescalbdtrspln'] = [0., 0.1, 0.5]
+            listtimescalbdtrspln = [0., 0.1, 0.5]
         else:
-            dictmileinpt['listtimescalbdtrspln'] = [0.]
+            listtimescalbdtrspln = [0.]
         miletos.main.init( \
                       labltarg=labltarg, \
                       rasctarg=rasctarg, \
@@ -660,9 +666,8 @@ def cnfg_ASASSN20qc():
 
                       listtypemodl=listtypemodl, \
                       
-                      refrlistlabltser=refrlistlabltser, \
-                      refrarrytser=refrarrytser, \
-                      listtsecsele=listtsecsele, \
+                      #refrlistlabltser=refrlistlabltser, \
+                      #refrarrytser=refrarrytser, \
 
                       dictlcurtessinpt=dictlcurtessinpt, \
 

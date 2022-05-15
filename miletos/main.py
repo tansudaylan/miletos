@@ -10,10 +10,10 @@ import scipy.stats
 from tqdm import tqdm
 
 import astroquery
+
 import astropy
 import astropy.coordinates
 import astropy.units
-import astropy.units as u
 
 import pickle
 
@@ -161,7 +161,7 @@ def retr_lcurtess( \
         listpathspoc = np.array([])
     else:
         print('Retrieving the list of available TESS sectors for which there is SPOC light curve data...')
-        listtsecspoc, listpathspoc = retr_tsecticibase(ticitsec)
+        listtsecspoc, listpathspoc = ephesus.retr_tsecticibase(ticitsec)
         print('List of available sectors with SPOC light curve data:')
         print(listtsecspoc)
     numbtsecspoc = listtsecspoc.size
@@ -333,9 +333,9 @@ def retr_lcurtess( \
                 indx = np.where(listtsec[o] == listtsecspoc)[0][0]
                 path = listpathspoc[indx]
                 listarrylcursapp[o], listtsec[o], listtcam[o], listtccd[o] = \
-                                                       read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', boolmaskqual=boolmaskqual, boolnorm=boolnorm)
+                                                       ephesus.read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', boolmaskqual=boolmaskqual, boolnorm=boolnorm)
                 listarrylcurpdcc[o], listtsec[o], listtcam[o], listtccd[o] = \
-                                                       read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolmaskqual=boolmaskqual, boolnorm=boolnorm)
+                                                       ephesus.read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolmaskqual=boolmaskqual, boolnorm=boolnorm)
             
                 if typedataspoc == 'SAP':
                     arrylcur = listarrylcursapp[o]
@@ -2695,7 +2695,7 @@ def plot_popl(gdat, strgpdfn):
         #indxcompfilt['seti'] = np.where(dictpopl['boolterr'] & dictpopl['boolhabicons'] & dictpopl['boolunlo'] & \
                                                                                             #dictpopl['booleatp'] & dictpopl['boollive'])[0]
         dicttemp = dict()
-        dicttemptotl = dict()
+        dicttempmerg = dict()
         
         liststrgcutt = indxcompfilt.keys()
         
@@ -2741,17 +2741,33 @@ def plot_popl(gdat, strgpdfn):
         
         numbvarb = len(liststrgvarb)
         indxvarb = np.arange(numbvarb)
+            
+        # merge the target with the population
+        for k, strgxaxi in enumerate(liststrgvarb):
+            if not strgxaxi in dictpopl or not strgxaxi in gdat.dicterrr:
+                continue
+            dicttempmerg[strgxaxi] = np.concatenate([dictpopl[strgxaxi][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgxaxi][0, :]])
+            
         for k, strgxaxi in enumerate(liststrgvarb):
             
+            if strgxaxi == 'tmptplan':
+                print('strgxaxi in dictpopl')
+                print(strgxaxi in dictpopl)
+                print('strgxaxi in gdat.dicterrr')
+                print(strgxaxi in gdat.dicterrr)
+                raise Exception('')
+
             if not strgxaxi in dictpopl:
                 continue
 
             if not strgxaxi in gdat.dicterrr:
                 continue
 
-            # merge the target with the population
-            dicttemptotl[strgxaxi] = np.concatenate([dictpopl[strgxaxi][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgxaxi][0, :]])
-                
+            if not 'tmptplan' in dicttempmerg:
+                print('dicttempmerg')
+                print(dicttempmerg.keys())
+                raise Exception('')
+
             for m, strgyaxi in enumerate(liststrgvarb):
                 
                 booltemp = False
@@ -2763,7 +2779,7 @@ def plot_popl(gdat, strgpdfn):
                  
                 # to be deleted
                 #for strgfeat, valu in dictpopl.items():
-                    #dicttemptotl[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
+                    #dicttempmerg[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
                 
                 for strgcutt in liststrgcutt:
                     
@@ -2779,8 +2795,8 @@ def plot_popl(gdat, strgpdfn):
                         
                         if liststrgsort[y] != 'none':
                         
-                            indxgood = np.where(np.isfinite(dicttemp[liststrgsort[y]]))[0]
-                            indxsort = np.argsort(dicttemp[liststrgsort[y]][indxgood])[::-1]
+                            indxgood = np.where(np.isfinite(dicttempmerg[liststrgsort[y]]))[0]
+                            indxsort = np.argsort(dicttempmerg[liststrgsort[y]][indxgood])[::-1]
                             indxcompsort = indxgood[indxsort]
                             
                             path = gdat.pathdatatarg + '%s_%s_%s.csv' % (strgpopl, strgcutt, liststrgsort[y])
@@ -2795,9 +2811,9 @@ def plot_popl(gdat, strgpdfn):
                             cntr = 1
                             for l in indxcompsort:
                                 
-                                strgline = '%4d, %20s' % (cntr, dicttemp['nameplan'][l])
+                                strgline = '%4d, %20s' % (cntr, dicttempmerg['nameplan'][l])
                                 for strgfeatcsvv in liststrgfeatcsvv:
-                                    strgline += ', %12.4g' % dicttemp[strgfeatcsvv][l]
+                                    strgline += ', %12.4g' % dicttempmerg[strgfeatcsvv][l]
                                 strgline += '\n'
                                 
                                 objtfile.write(strgline)
@@ -2815,10 +2831,10 @@ def plot_popl(gdat, strgpdfn):
                         
                                 ## population
                                 if strgcutt == strgcuttmain:
-                                    axis.errorbar(dicttemptotl[strgxaxi], dicttemptotl[strgyaxi], ls='', ms=1, marker='o', color='k')
+                                    axis.errorbar(dicttempmerg[strgxaxi], dicttempmerg[strgyaxi], ls='', ms=1, marker='o', color='k')
                                 else:
-                                    axis.errorbar(dicttemptotl[strgxaxi], dicttemptotl[strgyaxi], ls='', ms=1, marker='o', color='k')
-                                    axis.errorbar(dicttemp[strgxaxi], dicttemp[strgyaxi], ls='', ms=2, marker='o', color='r')
+                                    axis.errorbar(dicttempmerg[strgxaxi], dicttempmerg[strgyaxi], ls='', ms=1, marker='o', color='k')
+                                    #axis.errorbar(dicttemp[strgxaxi], dicttemp[strgyaxi], ls='', ms=2, marker='o', color='r')
                                 
                                 ## this system
                                 for j in gdat.indxcomp:
@@ -2905,9 +2921,9 @@ def plot_popl(gdat, strgpdfn):
         
                                 axis.set_xlabel(listlablvarbtotl[k])
                                 axis.set_ylabel(listlablvarbtotl[m])
-                                if listscalvarb[k] == 'logt':
+                                if listscalpara[k] == 'logt':
                                     axis.set_xscale('log')
-                                if listscalvarb[m] == 'logt':
+                                if listscalpara[m] == 'logt':
                                     axis.set_yscale('log')
                                 
                                 plt.subplots_adjust(left=0.2)
