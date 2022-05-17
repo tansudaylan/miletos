@@ -59,7 +59,7 @@ def retr_lcurtess( \
               booltpxfonly=False, \
 
               # name of the data product of lygos indicating which analysis has been used for photometry
-              nameanlslygo = 'aper', \
+              nameanlslygo='psfn', \
 
               ## Boolean flag to use 20-sec TPF when available
               boolfasttpxf=True, \
@@ -236,6 +236,7 @@ def retr_lcurtess( \
         dictlygoinpt['labltarg'] = labltarg
         dictlygoinpt['listtsecsele'] = listtseclygo
         dictlygoinpt['booltpxflygo'] = booltpxflygo
+        dictlygoinpt['listnameanls'] = 'psfn'
         if not 'boolmaskqual' in dictlygoinpt:
             dictlygoinpt['boolmaskqual'] = boolmaskqual
         if not 'boolnorm' in dictlygoinpt:
@@ -252,11 +253,27 @@ def retr_lcurtess( \
         for o, tseclygo in enumerate(listtsec):
             indx = np.where(dictlygooutp['listtsec'] == tseclygo)[0]
             if indx.size > 0:
-                if len(dictlygooutp[namearry][indx[0]]) > 0:
-                    indxtimegood = np.where(np.isfinite(dictlygooutp[namearry][indx[0]][:, 1]) & np.isfinite(dictlygooutp[namearry][indx[0]][:, 2]))[0]
-                    listarrylcur[o] = dictlygooutp[namearry][indx[0]][indxtimegood, :]
-                    listtcam[o] = dictlygooutp['listtcam'][indx[0]]
-                    listtccd[o] = dictlygooutp['listtccd'][indx[0]]
+                indxtsecthis = indx[0]
+                if len(dictlygooutp[namearry][indxtsecthis]) > 0:
+                    
+                    # choose the current sector
+                    arry = dictlygooutp[namearry][indxtsecthis]
+                    
+                    print('arry[:, 0]')
+                    summgene(arry[:, 0])
+                    print('arry[:, 1]')
+                    summgene(arry[:, 1])
+                    print('arry[:, 2]')
+                    summgene(arry[:, 2])
+
+                    # find good times
+                    indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
+                    
+                    # filter for good times
+                    listarrylcur[o] = arry[indxtimegood, :]
+                    
+                    listtcam[o] = dictlygooutp['listtcam'][indxtsecthis]
+                    listtccd[o] = dictlygooutp['listtccd'][indxtsecthis]
                     
     listarrylcursapp = None
     listarrylcurpdcc = None
@@ -2743,11 +2760,20 @@ def plot_popl(gdat, strgpdfn):
         indxvarb = np.arange(numbvarb)
             
         # merge the target with the population
-        for k, strgxaxi in enumerate(liststrgvarb):
+        for k, strgxaxi in enumerate(liststrgvarb + ['nameplan']):
             if not strgxaxi in dictpopl or not strgxaxi in gdat.dicterrr:
                 continue
             dicttempmerg[strgxaxi] = np.concatenate([dictpopl[strgxaxi][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgxaxi][0, :]])
-            
+        
+        if not 'nameplan' in dictpopl:
+            raise Exception('')
+
+        #if not 'nameplan' in gdat.dicterrr:
+        #    raise Exception('')
+
+        if not 'nameplan' in dicttempmerg:
+            raise Exception('')
+
         for k, strgxaxi in enumerate(liststrgvarb):
             
             if strgxaxi == 'tmptplan':
@@ -3332,7 +3358,7 @@ def init( \
          ## 'flar': stellar flare
          ## 'agns': AGN
          ## 'spot': stellar spot
-         ## 'supn': supernova
+         ## 'rise': supernova
          listtypemodl=None, \
 
          ## priors
@@ -3813,6 +3839,14 @@ def init( \
                                   retr_lcurtess( \
                                                         **gdat.dictlcurtessinpt, \
                                                        )
+            
+            print('arrylcurtess[:, 0]')
+            summgene(arrylcurtess[:, 0])
+            print('arrylcurtess[:, 1]')
+            summgene(arrylcurtess[:, 1])
+            print('arrylcurtess[:, 2]')
+            summgene(arrylcurtess[:, 2])
+
             gdat.dictmileoutp['listtsec'] = gdat.listtsec
             print('List of sectors for miletos:')
             print(gdat.listtsec)
@@ -3820,8 +3854,6 @@ def init( \
             if gdat.dictlygooutp is not None:
                 print('names in gdat.dictlygooutp that contain pathsaverflxtarg')
                 for name in gdat.dictlygooutp:
-                    if 'pathsaverflxtarg' in name:
-                        print(name)
                     gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
             
         # check if there is any data
@@ -4468,7 +4500,8 @@ def init( \
                                                 (gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1] > lcurcliplowr))[0]
                         
                         if indxtimeclipkeep.size == 0:
-                            raise Exception('')
+                            print('No time samples left after clipping...')
+                            #raise Exception('')
                         
                         indxtimeclipmask = np.setdiff1d(np.arange(gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1].size), indxtimeclipkeep)
                         
@@ -4745,8 +4778,9 @@ def init( \
                                                                                             typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
                 
                 for p in gdat.indxinst[b]:
-                    strgextn = '%s_%s' % (gdat.liststrgtser[b], gdat.liststrginst[b][p]) 
-                    gdat.dictlspeoutp = ephesus.exec_lspe(gdat.arrytser['raww'][b][p], pathimag=pathimaglspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
+                    for strg in ['raww', 'bdtrnotr']:
+                        strgextn = '%s_%s_%s' % (strg, gdat.liststrgtser[b], gdat.liststrginst[b][p]) 
+                        gdat.dictlspeoutp = ephesus.exec_lspe(gdat.arrytser[strg][b][p], pathimag=pathimaglspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
                                                                                             typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
         
                 gdat.dictmileoutp['perilspempow'] = gdat.dictlspeoutp['perimpow']
@@ -5354,9 +5388,11 @@ def init( \
                 # list of parameter maxima
                 listmaxmpara = [195, 10., 10., 10.]
                     
-                dictsamp = tdpy.samp(gdat, gdat.pathimagtarg, gdat.numbsampwalk, retr_llik_mile, \
+                dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
                                                             listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
-                                                            numbsampburnwalk=gdat.numbsampburnwalk, strgextn=gdat.strgextn, boolplot=gdat.boolplot)
+                                                            numbsampburnwalk=gdat.numbsampburnwalk, strgextn=gdat.strgextn, boolplot=gdat.boolplot, \
+                                                            pathbase=gdat.pathtarg, \
+                                                            )
                 indxsampmpos = np.argmax(dictsamp['lpos'])
 
                 for b in gdat.indxdatatser:
@@ -5364,7 +5400,7 @@ def init( \
                         for y in gdat.indxchun[b][p]:
                             
                             if gdat.boolplottser:
-                                rflxmodl, dflxline, dflxrise = ephesus.retr_rflxmodlrise(gdat.time, dictsamp['timerise'][indxsampmpos], \
+                                rflxmodl, dflxline, dflxrise = ephesus.retr_rflxmodlrise(gdat.listarrytser['bdtr'][b][p][y][:, 0], dictsamp['timerise'][indxsampmpos], \
                                                                                                                             dictsamp['coeflinerise'][indxsampmpos], \
                                                                                                                             dictsamp['coefquadrise'][indxsampmpos], \
                                                                                                                             dictsamp['coefline'][indxsampmpos])

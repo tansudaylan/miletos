@@ -51,7 +51,9 @@ def cnfg_TargetsOfInterest():
     dictlygoinpt['boolplotcntp'] = True
     liststrgmast = [ \
                     # from Ben Rackham
-                    'Ross 619', \
+                    #'Ross 619', \
+                    # planetary system from PFS team
+                    'HD 140283', \
                     # from Prajwal
                     #'GJ 504', \
                     # NGTS target from Max
@@ -549,7 +551,7 @@ def cnfg_lindsey():
     os.system('mkdir -p %s' % pathdata)
     os.system('mkdir -p %s' % pathimag)
 
-    listtypemodl = ['supn']
+    listtypemodl = ['rise']
 
     for strgclus in [ \
                      'Cycle1-matched', \
@@ -611,7 +613,7 @@ def cnfg_ASASSN20qc():
     rasctarg = 63.260208 
     decltarg = -53.0727
 
-    listtypemodl = ['supn']
+    listtypemodl = ['rise']
     
     labltarg = 'ASASSN-20qc'
     
@@ -649,7 +651,7 @@ def cnfg_ASASSN20qc():
     #refrarrytser[:, 1] = linevalu[:, 2]
     #refrarrytser[:, 2] = linevalu[:, 3]
    
-    listtypemodl = ['supn']
+    listtypemodl = ['rise']
     listlimttimemask = [[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]
     listlimttimemask = [[[[2457000 + 2186.5, 2457000 + 2187.5]]]]
 
