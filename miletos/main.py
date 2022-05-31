@@ -3236,7 +3236,9 @@ def init( \
          # output
          # Boolean flag to search for and analyze time-domain data on the target
          booltserdata=True, \
-    
+        
+         # type of the data
+         typedata=None, \
         
          # visibility from an observatory
          ## latitude of the observatory for the visibility calculation
@@ -3293,7 +3295,7 @@ def init( \
          timeoffs=2457000., \
 
          # list of labels indicating instruments
-         listlablinst=[['TESS'], []], \
+         listlablinst=None, \
          # list of strings indicating instruments
          liststrginst=None, \
          # list of strings indicating chunks
@@ -3774,6 +3776,13 @@ def init( \
         gdat.dictmileoutp[name] = getattr(gdat, name)
 
     if gdat.booltserdata:
+        
+        if gdat.liststrginst is None:
+            gdat.liststrginst = [['tess'], []]
+        
+        if gdat.listlablinst is None:
+            gdat.listlablinst = [['TESS'], []]
+        
         gdat.liststrgdatatser = ['lcur', 'rvel']
         gdat.numbdatatser = len(gdat.liststrgdatatser)
         gdat.indxdatatser = np.arange(gdat.numbdatatser)
@@ -3857,10 +3866,11 @@ def init( \
                     gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
             
         # check if there is any data
-        if len(listarrylcurtess) == 0:
-            if gdat.typeverb > 0:
-                print('No data found. Returning...')
-            return gdat.dictmileoutp
+        print('temp: inhibiting the check for no data...')
+        #if len(listarrylcurtess) == 0:
+        #    if gdat.typeverb > 0:
+        #        print('No data found. Returning...')
+        #    return gdat.dictmileoutp
             
         if gdat.boolmodlpsys:
             if gdat.strgexar is None:
@@ -3977,10 +3987,13 @@ def init( \
                     gdat.numbchun[b][p] = len(gdat.listpathdatainpt[b][p])
                 elif gdat.typetarg == 'inpt':
                     gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
+                elif b == 0 and gdat.liststrginst[b][p] == 'TESS':
+                    gdat.numbchun[b][p] = len(listarrylcurtess)
                 else:
-                    if b == 0 and gdat.liststrginst[b][p] == 'TESS':
-                        gdat.numbchun[b][p] = len(listarrylcurtess)
-        
+                    print('')
+                    print('gdat.numbchun was not properly defined.')
+                    raise Exception('')
+                
         gdat.indxchun = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -4071,8 +4084,6 @@ def init( \
         # time object for night at midnight
         objttimenighcent = astropy.time.Time(int(objttimenigh.jd), format='jd', location=objtlocalcoo)
         objttimenighcen1 = astropy.time.Time(int(objttimenigh.jd), format='jd', location=objtlocalcoo)
-        print('objttimenighcent.iso')
-        print(objttimenighcent.iso)
         objttimenigh = objttimenighcent + (12. + timedelt - gdat.offstimeobvt) * astropy.units.hour
         
         # frame object for LCO at night
@@ -4094,17 +4105,14 @@ def init( \
         
         print('timedelt, massairr')
         for ll in range(len(massairr)):
-            print('%g %g' % (timedelt[ll], massairr[ll]))
+            print('%6g %6.3g' % (timedelt[ll], massairr[ll]))
 
         indx = np.where(np.isfinite(massairr) & (massairr > 0))[0]
         plt.plot(timedelt[indx], massairr[indx])
         axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -0*astropy.units.deg, color='0.5', zorder=0)
         axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -18*astropy.units.deg, color='k', zorder=0)
         axis.fill_between(timedelt, 0, 90, (massairr > 2.) | (massairr < 1.), color='r', alpha=0.3, zorder=0)
-        if gdat.offstimeobvt == 0:
-            labltime = 'Local time to Midnight [hour]'
-        else:
-            labltime = 'UTC to Midnight [hour]'
+        labltime = 'UTC to Midnight [hour]'
         axis.set_xlabel(labltime)
         axis.set_ylabel('Airmass')
         limtxdat = [np.amin(timedelt), np.amax(timedelt)]

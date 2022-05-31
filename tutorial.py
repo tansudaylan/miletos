@@ -51,9 +51,9 @@ def cnfg_TargetsOfInterest():
     dictlygoinpt['boolplotcntp'] = True
     liststrgmast = [ \
                     # from Ben Rackham
-                    #'Ross 619', \
+                    'Ross 619', \
                     # planetary system from PFS team
-                    'HD 140283', \
+                    #'HD 140283', \
                     # from Prajwal
                     #'GJ 504', \
                     # NGTS target from Max
@@ -496,6 +496,18 @@ def cnfg_NGTS11():
          epocprio=epocprio, \
          periprio=periprio, \
         )
+
+
+def cnfg_JWST_ERS():
+    
+    strgmast = 'WASP-39'
+    typedata = 'simugene'
+    listlablinst = [['jwst'], []]
+    miletos.main.init( \
+                      strgmast=strgmast, \
+                      typedata=typedata, \
+                      listlablinst=listlablinst, \
+                     )
 
 
 def cnfg_HATP19():
