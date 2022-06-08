@@ -502,11 +502,13 @@ def cnfg_JWST_ERS():
     
     strgmast = 'WASP-39'
     typedata = 'simugene'
-    listlablinst = [['jwst'], []]
+    listlablinst = [['JWST'], []]
+    liststrginst = listlablinst
     miletos.main.init( \
                       strgmast=strgmast, \
                       typedata=typedata, \
                       listlablinst=listlablinst, \
+                      liststrginst=liststrginst, \
                      )
 
 
@@ -634,12 +636,13 @@ def cnfg_ASASSN20qc():
     dictlygoinpt = dict()
     dictlygoinpt['boolplotrflx'] = True
     dictlygoinpt['boolplotcntp'] = True
-    dictlygoinpt['boolfittoffs'] = True
+    #dictlygoinpt['boolfittoffs'] = True
+    dictlygoinpt['boolplotquat'] = True
     #dictlygoinpt['numbside'] = 9
     
     dictlcurtessinpt = dict()
     dictlcurtessinpt['boolffimonly'] = True
-    #dictlcurtessinpt['listtsecsele'] = [32]
+    dictlcurtessinpt['listtsecsele'] = [32]
 
     #path = os.environ['LYGOS_DATA_PATH'] + '/data/lc_2020adgm_cleaned_ASASSN20qc'
     #print(path)
@@ -663,7 +666,9 @@ def cnfg_ASASSN20qc():
     #refrarrytser[:, 1] = linevalu[:, 2]
     #refrarrytser[:, 2] = linevalu[:, 3]
    
-    listtypemodl = ['rise']
+    #listtypemodl = ['rise']
+    listtypemodl = []
+    
     listlimttimemask = [[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]
     listlimttimemask = [[[[2457000 + 2186.5, 2457000 + 2187.5]]]]
 
