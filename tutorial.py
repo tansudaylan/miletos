@@ -1,10 +1,14 @@
-import miletos
 import sys
 import os
 import numpy as np
 import wget
 import pandas as pd
+
+import miletos
+import tdpy
 from tdpy.util import summgene
+
+import astropy
 
 def cnfg_toii():
     
@@ -20,10 +24,16 @@ def cnfg_multis():
     #for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
     dictlcurtessinpt = dict()
     dictlcurtessinpt['booltpxfonly'] = True
-    for strgmast in ['TOI-700']:
+    for strgmast in ['TOI-270']:
+        
+        if strgmast == 'TOI-270':
+            dictlcurtessinpt['listtsecsele'] = [3, 4, 5, 30, 32]
+            #dictlcurtessinpt['listtsecsele'] = [4]
+            
         miletos.main.init( \
                        strgmast=strgmast, \
                        dictlcurtessinpt=dictlcurtessinpt, \
+                       listtypemodl=['psys'], \
                       )
 
 
@@ -498,15 +508,73 @@ def cnfg_NGTS11():
         )
 
 
-def cnfg_JWST_ERS():
+def cnfg_JWST_ERS( \
+                  typedata='simugene', \
+                 ):
     
-    strgmast = 'WASP-39'
-    typedata = 'simugene'
-    listlablinst = [['JWST'], []]
+    
+    numbener = 10
+    indxener = np.arange(numbener)
+    #listlablinst = [[], []]
+    #for k in indxener:
+    #    listlablinst[0].append('JWST_NIRSpec_G395H_%04d' % k)
+    #    listlablinst[0].append('JWST_NIRSpec_G395H_%04d' % k)
+    listlablinst = [['JWST_NIRSpec_G395H'], []]
     liststrginst = listlablinst
+    
+    listtypemodl = ['psys']
+    
+    lablener = r'Wavelength [$\mu$m]'
+    listener = np.linspace(0.6,  5., 100)
+    if typedata == 'simuerss':
+        patherss = os.environ['DATA'] + '/other/ERS/'
+        path = patherss + 'NIRSpec/Stage2/jwdata0010010_11010_0001_NRS1_uncal_updatedHDR_MOD_injected_x1dints.fits'
+        
+        listarrytser = dict()
+        
+        #tdpy.read_fits(path)
+        
+        listhdun = astropy.io.fits.open(path)
+        wlen = listhdun[2].data['WAVELENGTH']
+        numbtime = len(listhdun) - 3
+        numbwlen = wlen.size
+        
+        listarrytser['raww'] = [[[np.empty((numbtime, numbwlen, 3))]]]
+        for k in range(2, len(listhdun) - 1):
+            t = k - 2
+            listarrytser['raww'][0][0][0][t, :, 0] = listhdun[k].data['WAVELENGTH']
+            listarrytser['raww'][0][0][0][t, :, 1] = listhdun[k].data['FLUX']
+            listarrytser['raww'][0][0][0][t, :, 2] = listhdun[k].data['FLUX_ERROR']
+            
+            medi = np.nanmedian(listarrytser['raww'][0][0][0][:, :, 1], axis=0)
+            listarrytser['raww'][0][0][0][:, :, 1:3] /= medi[None, :, None]
+
+        print('listarrytser[raww][0][0][0][:, :, 0]')
+        summgene(listarrytser['raww'][0][0][0][:, :, 0])
+        print('listarrytser[raww][0][0][0][:, :, 1]')
+        summgene(listarrytser['raww'][0][0][0][:, :, 1])
+        print('listarrytser[raww][0][0][0][:, :, 2]')
+        summgene(listarrytser['raww'][0][0][0][:, :, 2])
+        strgmast = None
+        labltarg = 'WASP-39'
+    
+    if typedata == 'simugene':
+        strgmast = 'WASP-39'
+        listarrytser = None
+        labltarg = None
+        
     miletos.main.init( \
                       strgmast=strgmast, \
+                      labltarg=labltarg, \
                       typedata=typedata, \
+                      
+                      listarrytser=listarrytser, \
+
+                      listtypemodl=listtypemodl, \
+                      
+                      listener=listener, \
+                      lablener=lablener, \
+
                       listlablinst=listlablinst, \
                       liststrginst=liststrginst, \
                      )
