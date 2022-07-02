@@ -1,4 +1,5 @@
 import sys
+from tqdm import tqdm
 import os
 import numpy as np
 import wget
@@ -480,6 +481,22 @@ def cnfg_HD118203():
         )
 
 
+def cnfg_transit_asymmetry():
+    '''
+    Search for asymmetric transits
+    '''
+    
+    # candidate with asymmetric transit from the TOI process
+    listtici = [86263325, 233462817]
+    
+    listtypeanls = ['asymtran']
+    for tici in listtici:
+        miletos.main.init( \
+                          ticitarg=tici, \
+                          listtypeanls=listtypeanls, \
+                         )
+
+
 def cnfg_TOI1233():
     
     toiitarg = 1233
@@ -509,7 +526,7 @@ def cnfg_NGTS11():
 
 
 def cnfg_JWST_ERS( \
-                  typedata='simugene', \
+                  strgtypedata='simugene', \
                  ):
     
     
@@ -522,11 +539,12 @@ def cnfg_JWST_ERS( \
     listlablinst = [['JWST_NIRSpec_G395H'], []]
     liststrginst = listlablinst
     
+    typeinpt = 'list'
     listtypemodl = ['psys']
     
     lablener = r'Wavelength [$\mu$m]'
     listener = np.linspace(0.6,  5., 100)
-    if typedata == 'simuerss':
+    if strgtypedata == 'simuerss':
         patherss = os.environ['DATA'] + '/other/ERS/'
         path = patherss + 'NIRSpec/Stage2/jwdata0010010_11010_0001_NRS1_uncal_updatedHDR_MOD_injected_x1dints.fits'
         
@@ -535,30 +553,84 @@ def cnfg_JWST_ERS( \
         #tdpy.read_fits(path)
         
         listhdun = astropy.io.fits.open(path)
-        wlen = listhdun[2].data['WAVELENGTH']
-        numbtime = len(listhdun) - 3
-        numbwlen = wlen.size
         
-        listarrytser['raww'] = [[[np.empty((numbtime, numbwlen, 3))]]]
-        for k in range(2, len(listhdun) - 1):
-            t = k - 2
-            listarrytser['raww'][0][0][0][t, :, 0] = listhdun[k].data['WAVELENGTH']
-            listarrytser['raww'][0][0][0][t, :, 1] = listhdun[k].data['FLUX']
-            listarrytser['raww'][0][0][0][t, :, 2] = listhdun[k].data['FLUX_ERROR']
-            
+        #time = listhdun[1].data['int_mid_BJD_TDB']
+        #print('time')
+        #summgene(time)
+        numbtime = len(listhdun) - 3
+        time = np.arange(numbtime).astype(float)
+        
+        wlen = listhdun[2].data['WAVELENGTH']
+        
+        print('len(listhdun)')
+        print(len(listhdun))
+        print('numbtime')
+        print(numbtime)
+        
+        numbwlen = wlen.size
+        indxwlen = np.arange(numbwlen)
+        
+        print('Number of energy bins in the file: %d' % numbwlen)
+
+        if typeinpt == 'arry':
+            listarrytser['raww'] = [[[np.empty((numbtime, numbwlen, 3))]]]
+            for k in range(2, len(listhdun) - 1):
+                t = k - 2
+                listarrytser['raww'][0][0][0][t, :, 0] = listhdun[k].data['EXPMID']
+                listarrytser['raww'][0][0][0][t, :, 1] = listhdun[k].data['FLUX']
+                listarrytser['raww'][0][0][0][t, :, 2] = listhdun[k].data['FLUX_ERROR']
+                
             medi = np.nanmedian(listarrytser['raww'][0][0][0][:, :, 1], axis=0)
+            print('medi')
+            summgene(medi)
+            print('listarrytser[raww][0][0][0]')
+            summgene(listarrytser['raww'][0][0][0])
             listarrytser['raww'][0][0][0][:, :, 1:3] /= medi[None, :, None]
 
-        print('listarrytser[raww][0][0][0][:, :, 0]')
-        summgene(listarrytser['raww'][0][0][0][:, :, 0])
-        print('listarrytser[raww][0][0][0][:, :, 1]')
-        summgene(listarrytser['raww'][0][0][0][:, :, 1])
-        print('listarrytser[raww][0][0][0][:, :, 2]')
-        summgene(listarrytser['raww'][0][0][0][:, :, 2])
+            print('listarrytser[raww][0][0][0][:, :, 0]')
+            summgene(listarrytser['raww'][0][0][0][:, :, 0])
+            print('listarrytser[raww][0][0][0][:, :, 1]')
+            summgene(listarrytser['raww'][0][0][0][:, :, 1])
+            print('listarrytser[raww][0][0][0][:, :, 2]')
+            summgene(listarrytser['raww'][0][0][0][:, :, 2])
+        
+        if typeinpt == 'list':
+            listarrytser['raww'] = [[[np.empty((numbtime, 1, 3))] for e in indxwlen]]
+            for k in tqdm(range(2, len(listhdun) - 1)):
+                t = k - 2
+                for e in indxwlen:
+                    listarrytser['raww'][0][e][0][t, 0, 0] = time[t]
+                    listarrytser['raww'][0][e][0][t, 0, 1] = listhdun[k].data['FLUX'][e]
+                    listarrytser['raww'][0][e][0][t, 0, 2] = listhdun[k].data['FLUX_ERROR'][e]
+            
+            print('Deleting energy bins, where light curve is all infinite...')
+            listarrytsertemp = dict()
+            listarrytsertemp['raww'] = [[]]
+            for e in indxwlen:
+                if (np.isfinite(listarrytser['raww'][0][e][0][:, 0, 1])).any():
+                    listarrytsertemp['raww'][0].append(listarrytser['raww'][0][e])
+            listarrytser['raww'] = listarrytsertemp['raww']
+
+            numbwlen = len(listarrytser['raww'][0])
+            indxwlen = np.arange(numbwlen)
+            for e in indxwlen:
+                print('e: %d' % e)
+                print('listarrytser[raww][0][e][0][:, 0, 0]')
+                summgene(listarrytser['raww'][0][e][0][:, 0, 0])
+                print('listarrytser[raww][0][e][0][:, 0, 1]')
+                summgene(listarrytser['raww'][0][e][0][:, 0, 1])
+                print('listarrytser[raww][0][e][0][:, 0, 2]')
+                summgene(listarrytser['raww'][0][e][0][:, 0, 2])
+                print('')
+        
+        print('Number of energy bins remaining: %d' % numbwlen)
+
+        #raise Exception('')
+
         strgmast = None
         labltarg = 'WASP-39'
     
-    if typedata == 'simugene':
+    if strgtypedata == 'simugene':
         strgmast = 'WASP-39'
         listarrytser = None
         labltarg = None
@@ -566,7 +638,7 @@ def cnfg_JWST_ERS( \
     miletos.main.init( \
                       strgmast=strgmast, \
                       labltarg=labltarg, \
-                      typedata=typedata, \
+                      strgtypedata=strgtypedata, \
                       
                       listarrytser=listarrytser, \
 
