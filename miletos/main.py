@@ -830,11 +830,6 @@ def calc_feat(gdat, strgpdfn):
                 else:
                     gdat.dictlist[strgfeat][:, j] = np.zeros(gdat.numbsamp) + allesfitter.config.BASEMENT.params[strg]
 
-    # allesfitter phase curve depths are in ppt
-    for strgfeat in gdat.liststrgfeat:
-        if strgfeat.startswith('ampl'):
-            gdat.dictlist[strgfeat] *= 1e-3
-    
     if gdat.typeverb > 0:
         print('Calculating derived variables...')
     # derived variables
@@ -3258,19 +3253,23 @@ def init( \
          # target identifiers
          ## string to search on MAST
          strgmast=None, \
+         
          ## TIC ID
          ticitarg=None, \
+         
          ## TOI ID
          toiitarg=None, \
+         
          ## RA
          rasctarg=None, \
+         
          ## Dec
          decltarg=None, \
 
-         # a string for the label of the target
+         ## a string for the label of the target
          labltarg=None, \
          
-         # a string for the folder name and file name extensions
+         ## a string for the folder name and file name extensions
          strgtarg=None, \
          
          # string indicating the cluster of targets
@@ -3282,96 +3281,122 @@ def init( \
          ## Boolean flag indicating whether the input photometric data will be median-normalized
          boolnormphot=True, \
 
-         # output
-         # Boolean flag to search for and analyze time-domain data on the target
-         booltserdata=True, \
-        
-         # target visibility from a given observatory over a given night and year
-         ## Boolean flag to calculate visibility of the target
-         boolcalcvisi=False, \
-         ## latitude of the observatory for the visibility calculation
-         latiobvt=None, \
-         ## longitude of the observatory for the visibility calculation
-         longobvt=None, \
-         ## height of the observatory for the visibility calculation
-         heigobvt=None, \
-         ## string of time for the night
-         strgtimeobvtnigh=None, \
-         ## string of time for the beginning of the year
-         strgtimeobvtyear=None, \
-         ## list of time difference samples for the year
-         listdelttimeobvtyear=None, \
-         ## local time offset for the visibility calculation
-         offstimeobvt=0., \
-
-         ## plotting
-         ## Boolean flag to make plots
-         boolplot=True, \
-         ## Boolean flag to plot target features along with the features of the parent population
-         boolplotpopl=False, \
-         ## Boolean flag to plot the time-series
-         boolplottser=None, \
-         ## Boolean flag to animate the orbit
-         boolanimorbt=False, \
-         ## time offset to subtract from the time axes, which is otherwise automatically estimated
-         timeoffs=None, \
          
+         # options changing the overall execution
          ## Boolean flag to enforce offline operation
          boolforcoffl=False, \
 
-         # the path of the folder in which the target folder will be placed
+         ## Boolean flag to search for and analyze time-domain data on the target
+         booltserdata=True, \
+        
+         
+         # target visibility from a given observatory over a given night and year
+         ## Boolean flag to calculate visibility of the target
+         boolcalcvisi=False, \
+         
+         ## Boolean flag to plot visibility of the target
+         boolplotvisi=None, \
+         
+         ## latitude of the observatory for the visibility calculation
+         latiobvt=None, \
+         
+         ## longitude of the observatory for the visibility calculation
+         longobvt=None, \
+         
+         ## height of the observatory for the visibility calculation
+         heigobvt=None, \
+         
+         ## string of time for the night
+         strgtimeobvtnigh=None, \
+         
+         ## string of time for the beginning of the year
+         strgtimeobvtyear=None, \
+         
+         ## list of time difference samples for the year
+         listdelttimeobvtyear=None, \
+         
+         ## local time offset for the visibility calculation
+         offstimeobvt=0., \
+
+         ## general plotting
+         ## Boolean flag to make plots
+         boolplot=True, \
+         
+         ## Boolean flag to plot target features along with the features of the parent population
+         boolplotpopl=False, \
+         
+         ## Boolean flag to plot the time-series
+         boolplottser=None, \
+         
+         ## Boolean flag to animate the orbit
+         boolanimorbt=False, \
+         
+         ## time offset to subtract from the time axes, which is otherwise automatically estimated
+         timeoffs=None, \
+         
+         ## file type of the plot
+         typefileplot='png', \
+
+         ## Boolean flag to write planet name on plots
+         boolwritplan=True, \
+         
+         ## Boolean flag to rasterize the raw time-series on plots
+         boolrastraww=True, \
+         
+         ## list of transit depths to indicate on the light curve and phase curve plots
+         listdeptdraw=None, \
+         
+         
+         # paths
+         ## the path of the folder in which the target folder will be placed
          pathbase=None, \
+         
          ## the path of the target folder
          pathtarg=None, \
-         # the path of the target data folder
+         
+         ## the path of the target data folder
          pathdatatarg=None, \
-         # the path of the target image folder
+         
+         ## the path of the target image folder
          pathimagtarg=None, \
          
          # data
-         ## list of data types
+         ## a string summarizing the type of data
+         strgtypedata=None, \
+
+         ## list of data types ('simugene', 'inpt', 'obsd') for each data set (each photometric and radial velocity instrument)
          listtypedata=None, \
 
-         ## Boolean flag to plot visibility of the target
-         boolplotvisi=None, \
-
-         # input data
          ## path of the CSV file containing the input data
          listpathdatainpt=None, \
-         ## input data
+         
+         ## input data as a dictionary of lists of numpy arrays
          listarrytser=None, \
+         
          ## list of TESS sectors for the input data
          listtsec=None, \
          
-         # list of values for the energy axis
+         ## list of values for the energy axis
          listener=None, \
          
-         # label for the energy axis
+         ## label for the energy axis
          lablener=None, \
          
-         # list of labels indicating instruments
+         ## list of labels indicating instruments
          listlablinst=None, \
-         # list of strings indicating instruments
+         
+         ## list of strings indicating instruments
          liststrginst=None, \
-         # list of strings indicating chunks
+         
+         ## list of strings indicating chunks
          liststrgchun=None, \
-         # list of chunk indices for each instrument
+         
+         ## list of chunk indices for each instrument
          listindxchuninst=None, \
          
-         # planet names
-         ## list of letters to be assigned to planets
-         liststrgcomp=None, \
-         ## list of colors to be assigned to planets
-         listcolrcomp=None, \
-         ## Boolean flag to assign them letters *after* ordering them in orbital period, unless liststrgcomp is specified by the user
-         boolordrplanname=True, \
-        
-         # population contexualization
-         ## Boolean flag to include the ExoFOP catalog in the comparisons to exoplanet population
-         boolexofpopl=True, \
-        
-         # input dictionary for lygos                                
+         ## input dictionary for lygos                                
          dictlygoinpt=None, \
+         
          
          # preprocessing
          ## Boolean flag to detrend the baseline of the photometric time-series
@@ -3393,7 +3418,7 @@ def init( \
          listlimttimemask=None, \
         
          # analyses
-         # list of types of models for time series data
+         ## list of types of analyses for time series data
          listtypeanls=None, \
          
          ## transit search
@@ -3403,6 +3428,10 @@ def init( \
          ### input dictionary to the search pipeline for single transits
          dictsrchtransinginpt=None, \
          
+         ## flare search
+         ### threshold percentile for detecting stellar flares
+         thrssigmflar=7., \
+
          ### input dictionary to the search pipeline for flares
          dictsrchflarinpt=dict(), \
          
@@ -3429,9 +3458,6 @@ def init( \
          ### maximum frequency (per day) for LS periodogram
          maxmfreqlspe=None, \
          
-         # string to pull the priors from the NASA Exoplanet Archive
-         strgexar=None, \
-
          # threshold BLS SDE for disposing the target as positive
          thrssdeecosc=10., \
                 
@@ -3444,9 +3470,6 @@ def init( \
          # type of priors for planets
          typepriocomp=None, \
          
-         # threshold percentile for detecting stellar flares
-         thrssigmflar=7., \
-
          # Boolean flag to turn on transit for each companion
          booltrancomp=None, \
 
@@ -3495,35 +3518,34 @@ def init( \
          stdvdeclstar=None, \
          stdvvsiistarprio=None, \
 
-         # type of inference
-         ## 'mile': native
-         ## 'alle': allesfitter
-         typeinfe='mile', \
-
          ## Boolean flag to perform inference on the phase-folded (onto the period of the first planet) and binned data
          boolinfefoldbind=False, \
          ## Boolean flag to model the out-of-transit data to learn a background model
          boolallebkgdgaus=False, \
-         # allesfitter settings
-         dictdictallesett=None, \
-         dictdictallepara=None, \
          # output
-
-         ## Boolean flag to write planet name on plots
-         boolwritplan=True, \
-         ## plotting
-         makeprioplot=True, \
-         ## Boolean flag to rasterize the raw time-series on plots
-         boolrastraww=True, \
-         ## list of transit depths to indicate on the light curve and phase curve plots
-         listdeptdraw=None, \
          ### list of offsets for the planet annotations in the TSM/ESM plot
          offstextatmoraditmpt=None, \
          offstextatmoradimetr=None, \
          
-         ## file type of the plot
-         typefileplot='png', \
+         # exoplanet specifics
+         # planet names
+         # string to pull the priors from the NASA Exoplanet Archive
+         strgexar=None, \
 
+         ## list of letters to be assigned to planets
+         liststrgcomp=None, \
+         
+         ## list of colors to be assigned to planets
+         listcolrcomp=None, \
+         
+         ## Boolean flag to assign them letters *after* ordering them in orbital period, unless liststrgcomp is specified by the user
+         boolordrplanname=True, \
+        
+         # population contexualization
+         ## Boolean flag to include the ExoFOP catalog in the comparisons to exoplanet population
+         boolexofpopl=True, \
+        
+         
          # Boolean flag to force rerun and overwrite previous data and plots 
          boolover=True, \
 
@@ -4138,7 +4160,7 @@ def init( \
         gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.listarrytser['bdtrnocl'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
-        if gdat.typedata == 'simugene':
+        if gdat.strgtypedata == 'simugene':
             gdat.true.time = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
@@ -4208,7 +4230,7 @@ def init( \
                 gdat.liststrgener[e] = ''
 
         # concatenate data across sectors
-        if gdat.typetarg == 'inpt' or gdat.typedata == 'simugene':
+        if gdat.typetarg == 'inpt' or gdat.strgtypedata == 'simugene':
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     
@@ -4262,16 +4284,6 @@ def init( \
             for b in gdat.indxdatatser:
                 gdat.listtypedata[b] = ['real' for p in gdat.indxinst[b]]
         
-        if gdat.dictdictallesett is None:
-            gdat.dictdictallesett = dict()
-            for typemodl in gdat.listtypemodl:
-                gdat.dictdictallesett[typemodl] = None
-
-        if gdat.dictdictallepara is None:
-            gdat.dictdictallepara = dict()
-            for typemodl in gdat.listtypemodl:
-                gdat.dictdictallepara[typemodl] = None
-
         if gdat.boolnormphot:
             gdat.labltserphot = 'Relative flux'
         else:
@@ -4416,10 +4428,6 @@ def init( \
             gdat.kmagsyst = listdictcatl[0]['Kmag']
             gdat.vmagsyst = listdictcatl[0]['Vmag']
     
-    
-    if gdat.boolinfe and gdat.typeinfe == 'alle':
-        gdat.pathallebase = gdat.pathdatatarg + 'allesfits/'
-        
     if gdat.booltserdata:
         # check availability of data 
         booldataaval = False
@@ -5546,35 +5554,6 @@ def init( \
             calc_feat(gdat, strgpdfn)
             plot_popl(gdat, strgpdfn)
     
-    if gdat.typeinfe == 'alle':
-        if gdat.boolallebkgdgaus:
-            # background allesfitter run
-            if gdat.typeverb > 0:
-                print('Setting up the background inference run...')
-            
-            if not gdat.boolalleprev['bkgd']['para']:
-                writ_filealle(gdat, 'params.csv', gdat.pathallebkgd, gdat.dictdictallepara[typemodl], dictalleparadefa)
-            
-            ## mask out the transits for the background run
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    path = gdat.pathallebkgd + gdat.liststrgchun[b][p][y]  + '.csv'
-                    if not os.path.exists(path):
-                        indxtimebkgd = np.setdiff1d(gdat.indxtime, np.concatenate(gdat.listindxtimemask[jj][b][p][0]))
-                        gdat.arrytserbkgd = gdat.listarrytser['bdtr'][b][p][y][indxtimebkgd, :]
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrytserbkgd, delimiter=',', header='time,%s,%s_err' % (gdat.liststrgtseralle[b], gdat.liststrgtseralle[b]))
-                    else:
-                        if gdat.typeverb > 0:
-                            print('OoT light curve available for the background inference run at %s.' % path)
-                    
-                    #liststrg = list(gdat.objtallebkgd.posterior_params.keys())
-                    #for k, strg in enumerate(liststrg):
-                    #   post = gdat.objtallebkgd.posterior_params[strg]
-                    #   linesplt = '%s' % gdat.objtallebkgd.posterior_params_at_maximum_likelihood[strg][0]
-    
-    
     if gdat.labltarg == 'WASP-121':
         # get Vivien's GCM model
         path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR.dat'
@@ -5599,309 +5578,293 @@ def init( \
             
             gdat.typemodl = typemodl
 
-            if gdat.typeinfe == 'mile':
-                
-                meangauspara = None
-                stdvgauspara = None
+            meangauspara = None
+            stdvgauspara = None
 
-                gdat.numbsampwalk = 40
-                gdat.numbsampburnwalkinit = 0
-                gdat.numbsampburnwalk = int(0.2 * gdat.numbsampwalk)
-                
-                gdat.time = gdat.arrytser['bdtr'][0][0][:, :, 0] - gdat.timeoffs
-                gdat.rflx = gdat.arrytser['bdtr'][0][0][:, :, 1]
-                gdat.stdvrflx = gdat.arrytser['bdtr'][0][0][:, :, 2]
-                gdat.varirflx = gdat.stdvrflx**2
-                
-                gdat.strgextn = gdat.strgcnfg
-                if typemodl == 'rise':
-                        
-                    # list of parameter names
-                    listnamepara = ['timerise', 'coeflinerise', 'coefquadrise', 'coefline']
-                    # list of parameter labels and units
-                    listlablpara = [['$T_0$', 'BJD-%d' % gdat.timeoffs], ['$u_0$', ''], ['$u_1$', ''], ['$c$', '']]
-                    # list of parameter scalings
-                    listscalpara = ['self', 'self', 'self', 'self']
-                    # list of parameter minima
-                    listminmpara = [188, 0., -10., -10.]
-                    # list of parameter maxima
-                    listmaxmpara = [195, 10., 10., 10.]
-                        
-                    dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
-                                                                listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
-                                                                numbsampburnwalk=gdat.numbsampburnwalk, strgextn=gdat.strgextn, boolplot=gdat.boolplot, \
-                                                                pathbase=gdat.pathdatatarg, \
-                                                                )
-                    indxsampmpos = np.argmax(dictsamp['lpos'])
-
-                    for b in gdat.indxdatatser:
-                        for p in gdat.indxinst[b]:
-                            for y in gdat.indxchun[b][p]:
-                                
-                                if gdat.boolplottser:
-                                    rflxmodl, dflxline, dflxrise = ephesus.retr_rflxmodlrise(gdat.listarrytser['bdtr'][b][p][y][:, 0], dictsamp['timerise'][indxsampmpos], \
-                                                                                                                                dictsamp['coeflinerise'][indxsampmpos], \
-                                                                                                                                dictsamp['coefquadrise'][indxsampmpos], \
-                                                                                                                                dictsamp['coefline'][indxsampmpos])
-                                    #rflxline = 1. + dflxline
-                                    rflxrise = 1. + dflxrise
-
-                                    dictmodl = dict()
-                                    #dictmodl['medimodl'] = {'lcur': rflxmodl, 'time': gdat.time + gdat.timeoffs, 'labl': 'Model'}
-                                    #dictmodl['mediline'] = {'lcur': rflxline, 'time': gdat.time + gdat.timeoffs, 'labl': 'Trend'}
-                                    dictmodl['medirise'] = {'lcur': rflxrise, 'time': gdat.time + gdat.timeoffs, 'labl': 'Model'}
-                                    
-                                    strgextn = gdat.strgextn + '_fitt'
-                                    timedata = gdat.time + gdat.timeoffs
-                                    lcurdata = gdat.listarrytser['bdtr'][b][p][y][:, 1] - dflxline
-                                    
-                                    pathplot = ephesus.plot_lcur(gdat.pathimagtarg, timedata=timedata, timeoffs=gdat.timeoffs, lcurdata=lcurdata, strgextn=strgextn, dictmodl=dictmodl)
-
-
-
-
-                elif typemodl == 'agns':
-
-                    pass
-
-
-                elif typemodl == 'spot':
-
-                    # for each spot multiplicity, fit the spot model
-                    for gdat.numbspot in listindxnumbspot:
-                        
-                        if gdat.typeverb > 0:
-                            print('gdat.numbspot')
-                            print(gdat.numbspot)
-
-                        # list of parameter labels and units
-                        listlablpara = [['$u_1$', ''], ['$u_2$', ''], ['$P$', 'days'], ['$i$', 'deg'], ['$\\rho$', ''], ['$C$', '']]
-                        # list of parameter scalings
-                        listscalpara = ['self', 'self', 'self', 'self', 'self', 'self']
-                        # list of parameter minima
-                        listminmpara = [-1., -1., 0.2,   0.,  0.,-1e-1]
-                        # list of parameter maxima
-                        listmaxmpara = [ 3.,  3., 0.4, 89.9, 0.6, 1e-1]
-                        
-                        for numbspottemp in range(gdat.numbspot):
-                            listlablpara += [['$\\theta_{%d}$' % numbspottemp, 'deg'], ['$\\phi_{%d}$' % numbspottemp, 'deg'], ['$R_{%d}$' % numbspottemp, '']]
-                            listscalpara += ['self', 'self', 'self']
-                            listminmpara += [-90.,   0.,  0.]
-                            listmaxmpara += [ 90., 360., 0.4]
-                            if gdat.boolevol:
-                                listlablpara += [['$T_{s;%d}$' % numbspottemp, 'day'], ['$\\sigma_{s;%d}$' % numbspottemp, '']]
-                                listscalpara += ['self', 'self']
-                                listminmpara += [gdat.minmtime, 0.1]
-                                listmaxmpara += [gdat.maxmtime, 20.]
-                                
-                        dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
-                                                                    listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
-                                                                    pathbase=gdat.pathdatatarg, \
-                                                                    numbsampburnwalk=gdat.numbsampburnwalk, strgextn=gdat.strgextn, boolplot=gdat.boolplot)
-
-                        # plot light curve
-                        figr, axis = plt.subplots(figsize=(8, 4))
-                        # plot samples from the posterior
-                        ## the sample indices which will be plotted
-                        gdat.numbsampplot = 10
-                        indxsampplot = np.random.choice(gdat.indxsamp, size=gdat.numbsampplot, replace=False)
-                        indxsampplot = np.sort(indxsampplot)
-                        listlcurmodl = np.empty((gdat.numbsampplot, gdat.numbtime))
-                        listlcurmodlevol = np.empty((gdat.numbsampplot, gdat.numbspot, gdat.numbtime))
-                        listlcurmodlspot = np.empty((gdat.numbsampplot, gdat.numbspot, gdat.numbtime))
-                        for kk, k in enumerate(indxsampplot):
-                            # calculate the model light curve for this parameter vector
-                            listlcurmodl[kk, :], listlcurmodlevol[kk, :, :], listlcurmodlspot[kk, :, :] = ephesus.retr_rflxmodl(gdat, listpost[k, :])
-                            axis.plot(gdat.time, listlcurmodl[kk, :], color='b', alpha=0.1)
-                        
-                        # plot components of each sample
-                        for kk, k in enumerate(indxsampplot):
-                            dictpara = pars_para(gdat, listpost[k, :])
-                            plot_totl(gdat, k, listlcurmodl[kk, :], listlcurmodlevol[kk, :, :], listlcurmodlspot[kk, :, :], dictpara)
-
-                        # plot map
-                        figr, axis = plt.subplots(figsize=(8, 4))
-                        gdat.numbside = 2**10
-                        
-                        lati = np.empty((gdat.numbsamp, gdat.numbspot))
-                        lngi = np.empty((gdat.numbsamp, gdat.numbspot))
-                        rrat = np.empty((gdat.numbsamp, gdat.numbspot))
-                        for n in gdat.indxsamp:
-                            dictpara = pars_para(gdat, listpost[n, :])
-                            lati[n, :] = dictpara['lati']
-                            lngi[n, :] = dictpara['lngi']
-                            rrat[n, :] = dictpara['rrat']
-                        lati = np.median(lati, 0)
-                        lngi = np.median(lngi, 0)
-                        rrat = np.median(rrat, 0)
-
-                        plot_moll(gdat, lati, lngi, rrat)
-                        
-                        #for k in indxsampplot:
-                        #    lati = listpost[k, 1+0*gdat.numbparaspot+0]
-                        #    lngi = listpost[k, 1+0*gdat.numbparaspot+1]
-                        #    rrat = listpost[k, 1+0*gdat.numbparaspot+2]
-                        #    plot_moll(gdat, lati, lngi, rrat)
-
-                        for sp in ['right', 'top']:
-                            axis.spines[sp].set_visible(False)
-
-                        path = gdat.pathimagtarg + 'smap%s_ns%02d.%s' % (strgtarg, gdat.numbspot, gdat.typefileplot)
-                        gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0., 0.05, 1., 0.1]})
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
-
-
-                elif typemodl == 'psys' or typemodl == 'cosc' or typemodl == 'psyspcur':
-                    
-                    print('gdat.dictmileoutp[boolposianls]')
-                    print(gdat.dictmileoutp['boolposianls'])
-
-                    for j in gdat.indxcomp:
-                        
-                        if not gdat.dictmileoutp['boolposianls'][j]:
-                            
-                            print('Skipping the forward modeling of this prior transiting object...')
-                            
-                            continue
-
-                        listminmpara = []
-                        listmaxmpara = []
-                        gdat.listnamepara = []
-                        gdat.dictindxpara = dict()
-                        cntr = 0
-                        
-                        gdat.listnamepara += ['radistar']
-                        listminmpara.append(0.1)
-                        listmaxmpara.append(10.)
-                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                        cntr += 1
-                        
-                        # define arrays of parameter indices for companions
-                        for namepara in ['rsmacomp', 'pericomp', 'epocmtracomp', 'cosicomp']:
-                            gdat.dictindxpara[namepara] = []
-                        if typemodl == 'psys':
-                            gdat.dictindxpara['rratcomp'] = []
-                        if typemodl == 'cosc':
-                            gdat.dictindxpara['masscomp'] = []
-                        
-                        # define parameter limits
-                        if typemodl == 'cosc':
-                            gdat.listnamepara += ['radistar']
-                            listminmpara.append(0.1)
-                            listmaxmpara.append(100.)
-                            gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                            cntr += 1
-                        
-                            gdat.listnamepara += ['massstar']
-                            listminmpara.append(0.1)
-                            listmaxmpara.append(100.)
-                            gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                            cntr += 1
-                        
-                        k = gdat.liststrgcomp[j]
-                        
-                        gdat.listnamepara += ['rsmacom%s' % k]
-                        listminmpara.append(0.)
-                        listmaxmpara.append(1.)
-                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                        gdat.dictindxpara['rsmacomp'].append(cntr)
-                        cntr += 1
-
-                        gdat.listnamepara += ['pericom%s' % k]
-                        listminmpara.append(0.)
-                        listmaxmpara.append(10.)
-                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                        gdat.dictindxpara['pericomp'].append(cntr)
-                        cntr += 1
-                        
-                        gdat.listnamepara += ['epoccom%s' % k]
-                        listminmpara.append(0.)
-                        listmaxmpara.append(10.)
-                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                        gdat.dictindxpara['epocmtracomp'].append(cntr)
-                        cntr += 1
-                        
-                        gdat.listnamepara += ['cosicom%s' % k]
-                        listminmpara.append(0.)
-                        listmaxmpara.append(1.)
-                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                        gdat.dictindxpara['cosicomp'].append(cntr)
-                        cntr += 1
-                        
-                        if typemodl == 'psys':
-                            gdat.listnamepara += ['rratcom%s' % k]
-                            listminmpara.append(0.)
-                            listmaxmpara.append(1.)
-                            gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                            gdat.dictindxpara['rratcomp'].append(cntr)
-                            cntr += 1
-                        
-                        if typemodl == 'cosc':
-                            gdat.listnamepara += ['masscom%s' % k]
-                            listminmpara.append(0.1)
-                            listmaxmpara.append(100.)
-                            gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
-                            gdat.dictindxpara['masscomp'].append(cntr)
-                            cntr += 1
-                        
-                        listminmpara = np.array(listminmpara)
-                        listmaxmpara = np.array(listmaxmpara)
-                        
-                        listlablpara, listscalpara = tdpy.retr_listlablscalpara(gdat.listnamepara)
-                        listlablparatotl = tdpy.retr_labltotl(listlablpara)
-                        
-                        gdat.numbpara = len(gdat.listnamepara)
-                        gdat.meanpara = np.empty(gdat.numbpara)
-                        gdat.stdvpara = np.empty(gdat.numbpara)
-        
-                        gdat.bfitperi = 4.25 # [days]
-                        gdat.stdvperi = 1e-2 * gdat.bfitperi # [days]
-                        gdat.bfitduratran = 0.45 * 24. # [hours]
-                        gdat.stdvduratran = 1e-1 * gdat.bfitduratran # [hours]
-                        gdat.bfitamplslen = 0.14 # [relative]
-                        gdat.stdvamplslen = 1e-1 * gdat.bfitamplslen # [relative]
-                        
-                        #listlablpara = [['$R_s$', 'R$_{\odot}$'], ['$P$', 'days'], ['$M_c$', 'M$_{\odot}$'], ['$M_s$', 'M$_{\odot}$']]
-                        #listlablparaderi = [['$A$', ''], ['$D$', 'hours'], ['$a$', 'R$_{\odot}$'], ['$R_{Sch}$', 'R$_{\odot}$']]
-                        #listlablpara += [['$M$', '$M_E$'], ['$T_{0}$', 'BJD'], ['$P$', 'days']]
-                        #listminmpara = np.concatenate([listminmpara, np.array([ 10., minmtime,  50.])])
-                        #listmaxmpara = np.concatenate([listmaxmpara, np.array([1e4, maxmtime, 200.])])
-                        meangauspara = None
-                        stdvgauspara = None
-                        numbpara = len(listlablpara)
-                        indxpara = np.arange(numbpara)
-                        
-                        strgextn = gdat.strgextn + typemodl + 'co%02d' % j
-                        print('gdat.listnamepara')
-                        print(gdat.listnamepara)
-                        dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
-                                                                        gdat.listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
-                                                                        pathbase=gdat.pathdatatarg, \
-                                                                        numbsampburnwalk=gdat.numbsampburnwalk, strgextn=strgextn, boolplot=gdat.boolplot)
-
-
-                else:
-                    print('A model type was not defined.')
-                    print('typemodl')
-                    print(typemodl)
-                    raise Exception('')
-
-            if gdat.typeinfe == 'alle':
-
-                proc_alle(gdat, typemodl)
+            gdat.numbsampwalk = 40
+            gdat.numbsampburnwalkinit = 0
+            gdat.numbsampburnwalk = int(0.2 * gdat.numbsampwalk)
             
-                gdat.arrytsermodlinit = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.time = gdat.arrytser['bdtr'][0][0][:, :, 0] - gdat.timeoffs
+            gdat.rflx = gdat.arrytser['bdtr'][0][0][:, :, 1]
+            gdat.stdvrflx = gdat.arrytser['bdtr'][0][0][:, :, 2]
+            gdat.varirflx = gdat.stdvrflx**2
+            
+            gdat.strgextn = gdat.strgcnfg
+            if typemodl == 'rise':
+                    
+                # list of parameter names
+                listnamepara = ['timerise', 'coeflinerise', 'coefquadrise', 'coefline']
+                # list of parameter labels and units
+                listlablpara = [['$T_0$', 'BJD-%d' % gdat.timeoffs], ['$u_0$', ''], ['$u_1$', ''], ['$c$', '']]
+                # list of parameter scalings
+                listscalpara = ['self', 'self', 'self', 'self']
+                # list of parameter minima
+                listminmpara = [188, 0., -10., -10.]
+                # list of parameter maxima
+                listmaxmpara = [195, 10., 10., 10.]
+                    
+                dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
+                                                            listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
+                                                            numbsampburnwalk=gdat.numbsampburnwalk, strgextn=gdat.strgextn, boolplot=gdat.boolplot, \
+                                                            pathbase=gdat.pathdatatarg, \
+                                                            )
+                indxsampmpos = np.argmax(dictsamp['lpos'])
+
                 for b in gdat.indxdatatser:
                     for p in gdat.indxinst[b]:
-                        gdat.arrytsermodlinit[b][p] = np.empty((gdat.arrytser['bdtr'][b][p].shape[0], 3))
-                        gdat.arrytsermodlinit[b][p][:, 0] = gdat.arrytser['bdtr'][b][p][:, 0]
-                        gdat.arrytsermodlinit[b][p][:, 1] = gdat.objtalle[typemodl].get_initial_guess_model(gdat.liststrginst[b][p], 'flux', \
-                                                                                                                        xx=gdat.arrytser['bdtr'][b][p][:, 0])
-                        gdat.arrytsermodlinit[b][p][:, 2] = 0.
+                        for y in gdat.indxchun[b][p]:
+                            
+                            if gdat.boolplottser:
+                                rflxmodl, dflxline, dflxrise = ephesus.retr_rflxmodlrise(gdat.listarrytser['bdtr'][b][p][y][:, 0], dictsamp['timerise'][indxsampmpos], \
+                                                                                                                            dictsamp['coeflinerise'][indxsampmpos], \
+                                                                                                                            dictsamp['coefquadrise'][indxsampmpos], \
+                                                                                                                            dictsamp['coefline'][indxsampmpos])
+                                #rflxline = 1. + dflxline
+                                rflxrise = 1. + dflxrise
 
+                                dictmodl = dict()
+                                #dictmodl['medimodl'] = {'lcur': rflxmodl, 'time': gdat.time + gdat.timeoffs, 'labl': 'Model'}
+                                #dictmodl['mediline'] = {'lcur': rflxline, 'time': gdat.time + gdat.timeoffs, 'labl': 'Trend'}
+                                dictmodl['medirise'] = {'lcur': rflxrise, 'time': gdat.time + gdat.timeoffs, 'labl': 'Model'}
+                                
+                                strgextn = gdat.strgextn + '_fitt'
+                                timedata = gdat.time + gdat.timeoffs
+                                lcurdata = gdat.listarrytser['bdtr'][b][p][y][:, 1] - dflxline
+                                
+                                pathplot = ephesus.plot_lcur(gdat.pathimagtarg, timedata=timedata, timeoffs=gdat.timeoffs, lcurdata=lcurdata, strgextn=strgextn, dictmodl=dictmodl)
+
+
+
+
+            elif typemodl == 'agns':
+
+                pass
+
+
+            elif typemodl == 'spot':
+
+                # for each spot multiplicity, fit the spot model
+                for gdat.numbspot in listindxnumbspot:
+                    
+                    if gdat.typeverb > 0:
+                        print('gdat.numbspot')
+                        print(gdat.numbspot)
+
+                    # list of parameter labels and units
+                    listlablpara = [['$u_1$', ''], ['$u_2$', ''], ['$P$', 'days'], ['$i$', 'deg'], ['$\\rho$', ''], ['$C$', '']]
+                    # list of parameter scalings
+                    listscalpara = ['self', 'self', 'self', 'self', 'self', 'self']
+                    # list of parameter minima
+                    listminmpara = [-1., -1., 0.2,   0.,  0.,-1e-1]
+                    # list of parameter maxima
+                    listmaxmpara = [ 3.,  3., 0.4, 89.9, 0.6, 1e-1]
+                    
+                    for numbspottemp in range(gdat.numbspot):
+                        listlablpara += [['$\\theta_{%d}$' % numbspottemp, 'deg'], ['$\\phi_{%d}$' % numbspottemp, 'deg'], ['$R_{%d}$' % numbspottemp, '']]
+                        listscalpara += ['self', 'self', 'self']
+                        listminmpara += [-90.,   0.,  0.]
+                        listmaxmpara += [ 90., 360., 0.4]
+                        if gdat.boolevol:
+                            listlablpara += [['$T_{s;%d}$' % numbspottemp, 'day'], ['$\\sigma_{s;%d}$' % numbspottemp, '']]
+                            listscalpara += ['self', 'self']
+                            listminmpara += [gdat.minmtime, 0.1]
+                            listmaxmpara += [gdat.maxmtime, 20.]
+                            
+                    dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
+                                                                listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
+                                                                pathbase=gdat.pathdatatarg, \
+                                                                numbsampburnwalk=gdat.numbsampburnwalk, strgextn=gdat.strgextn, boolplot=gdat.boolplot)
+
+                    # plot light curve
+                    figr, axis = plt.subplots(figsize=(8, 4))
+                    # plot samples from the posterior
+                    ## the sample indices which will be plotted
+                    gdat.numbsampplot = 10
+                    indxsampplot = np.random.choice(gdat.indxsamp, size=gdat.numbsampplot, replace=False)
+                    indxsampplot = np.sort(indxsampplot)
+                    listlcurmodl = np.empty((gdat.numbsampplot, gdat.numbtime))
+                    listlcurmodlevol = np.empty((gdat.numbsampplot, gdat.numbspot, gdat.numbtime))
+                    listlcurmodlspot = np.empty((gdat.numbsampplot, gdat.numbspot, gdat.numbtime))
+                    for kk, k in enumerate(indxsampplot):
+                        # calculate the model light curve for this parameter vector
+                        listlcurmodl[kk, :], listlcurmodlevol[kk, :, :], listlcurmodlspot[kk, :, :] = ephesus.retr_rflxmodl(gdat, listpost[k, :])
+                        axis.plot(gdat.time, listlcurmodl[kk, :], color='b', alpha=0.1)
+                    
+                    # plot components of each sample
+                    for kk, k in enumerate(indxsampplot):
+                        dictpara = pars_para(gdat, listpost[k, :])
+                        plot_totl(gdat, k, listlcurmodl[kk, :], listlcurmodlevol[kk, :, :], listlcurmodlspot[kk, :, :], dictpara)
+
+                    # plot map
+                    figr, axis = plt.subplots(figsize=(8, 4))
+                    gdat.numbside = 2**10
+                    
+                    lati = np.empty((gdat.numbsamp, gdat.numbspot))
+                    lngi = np.empty((gdat.numbsamp, gdat.numbspot))
+                    rrat = np.empty((gdat.numbsamp, gdat.numbspot))
+                    for n in gdat.indxsamp:
+                        dictpara = pars_para(gdat, listpost[n, :])
+                        lati[n, :] = dictpara['lati']
+                        lngi[n, :] = dictpara['lngi']
+                        rrat[n, :] = dictpara['rrat']
+                    lati = np.median(lati, 0)
+                    lngi = np.median(lngi, 0)
+                    rrat = np.median(rrat, 0)
+
+                    plot_moll(gdat, lati, lngi, rrat)
+                    
+                    #for k in indxsampplot:
+                    #    lati = listpost[k, 1+0*gdat.numbparaspot+0]
+                    #    lngi = listpost[k, 1+0*gdat.numbparaspot+1]
+                    #    rrat = listpost[k, 1+0*gdat.numbparaspot+2]
+                    #    plot_moll(gdat, lati, lngi, rrat)
+
+                    for sp in ['right', 'top']:
+                        axis.spines[sp].set_visible(False)
+
+                    path = gdat.pathimagtarg + 'smap%s_ns%02d.%s' % (strgtarg, gdat.numbspot, gdat.typefileplot)
+                    gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0., 0.05, 1., 0.1]})
+                    if gdat.typeverb > 0:
+                        print('Writing to %s...' % path)
+                    plt.savefig(path)
+                    plt.close()
+
+
+            elif typemodl == 'psys' or typemodl == 'cosc' or typemodl == 'psyspcur':
+                
+                print('gdat.dictmileoutp[boolposianls]')
+                print(gdat.dictmileoutp['boolposianls'])
+
+                for j in gdat.indxcomp:
+                    
+                    if not gdat.dictmileoutp['boolposianls'][j]:
+                        
+                        print('Skipping the forward modeling of this prior transiting object...')
+                        
+                        continue
+
+                    listminmpara = []
+                    listmaxmpara = []
+                    gdat.listnamepara = []
+                    gdat.dictindxpara = dict()
+                    cntr = 0
+                    
+                    gdat.listnamepara += ['radistar']
+                    listminmpara.append(0.1)
+                    listmaxmpara.append(10.)
+                    gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                    cntr += 1
+                    
+                    # define arrays of parameter indices for companions
+                    for namepara in ['rsmacomp', 'pericomp', 'epocmtracomp', 'cosicomp']:
+                        gdat.dictindxpara[namepara] = []
+                    if typemodl == 'psys':
+                        gdat.dictindxpara['rratcomp'] = []
+                    if typemodl == 'cosc':
+                        gdat.dictindxpara['masscomp'] = []
+                    
+                    # define parameter limits
+                    if typemodl == 'cosc':
+                        gdat.listnamepara += ['radistar']
+                        listminmpara.append(0.1)
+                        listmaxmpara.append(100.)
+                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                        cntr += 1
+                    
+                        gdat.listnamepara += ['massstar']
+                        listminmpara.append(0.1)
+                        listmaxmpara.append(100.)
+                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                        cntr += 1
+                    
+                    k = gdat.liststrgcomp[j]
+                    
+                    gdat.listnamepara += ['rsmacom%s' % k]
+                    listminmpara.append(0.)
+                    listmaxmpara.append(1.)
+                    gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                    gdat.dictindxpara['rsmacomp'].append(cntr)
+                    cntr += 1
+
+                    gdat.listnamepara += ['pericom%s' % k]
+                    listminmpara.append(0.)
+                    listmaxmpara.append(10.)
+                    gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                    gdat.dictindxpara['pericomp'].append(cntr)
+                    cntr += 1
+                    
+                    gdat.listnamepara += ['epoccom%s' % k]
+                    listminmpara.append(0.)
+                    listmaxmpara.append(10.)
+                    gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                    gdat.dictindxpara['epocmtracomp'].append(cntr)
+                    cntr += 1
+                    
+                    gdat.listnamepara += ['cosicom%s' % k]
+                    listminmpara.append(0.)
+                    listmaxmpara.append(1.)
+                    gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                    gdat.dictindxpara['cosicomp'].append(cntr)
+                    cntr += 1
+                    
+                    if typemodl == 'psys':
+                        gdat.listnamepara += ['rratcom%s' % k]
+                        listminmpara.append(0.)
+                        listmaxmpara.append(1.)
+                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                        gdat.dictindxpara['rratcomp'].append(cntr)
+                        cntr += 1
+                    
+                    if typemodl == 'cosc':
+                        gdat.listnamepara += ['masscom%s' % k]
+                        listminmpara.append(0.1)
+                        listmaxmpara.append(100.)
+                        gdat.dictindxpara[gdat.listnamepara[-1]] = cntr
+                        gdat.dictindxpara['masscomp'].append(cntr)
+                        cntr += 1
+                    
+                    listminmpara = np.array(listminmpara)
+                    listmaxmpara = np.array(listmaxmpara)
+                    
+                    listlablpara, listscalpara = tdpy.retr_listlablscalpara(gdat.listnamepara)
+                    listlablparatotl = tdpy.retr_labltotl(listlablpara)
+                    
+                    gdat.numbpara = len(gdat.listnamepara)
+                    gdat.meanpara = np.empty(gdat.numbpara)
+                    gdat.stdvpara = np.empty(gdat.numbpara)
+        
+                    gdat.bfitperi = 4.25 # [days]
+                    gdat.stdvperi = 1e-2 * gdat.bfitperi # [days]
+                    gdat.bfitduratran = 0.45 * 24. # [hours]
+                    gdat.stdvduratran = 1e-1 * gdat.bfitduratran # [hours]
+                    gdat.bfitamplslen = 0.14 # [relative]
+                    gdat.stdvamplslen = 1e-1 * gdat.bfitamplslen # [relative]
+                    
+                    #listlablpara = [['$R_s$', 'R$_{\odot}$'], ['$P$', 'days'], ['$M_c$', 'M$_{\odot}$'], ['$M_s$', 'M$_{\odot}$']]
+                    #listlablparaderi = [['$A$', ''], ['$D$', 'hours'], ['$a$', 'R$_{\odot}$'], ['$R_{Sch}$', 'R$_{\odot}$']]
+                    #listlablpara += [['$M$', '$M_E$'], ['$T_{0}$', 'BJD'], ['$P$', 'days']]
+                    #listminmpara = np.concatenate([listminmpara, np.array([ 10., minmtime,  50.])])
+                    #listmaxmpara = np.concatenate([listmaxmpara, np.array([1e4, maxmtime, 200.])])
+                    meangauspara = None
+                    stdvgauspara = None
+                    numbpara = len(listlablpara)
+                    indxpara = np.arange(numbpara)
+                    
+                    strgextn = gdat.strgextn + typemodl + 'co%02d' % j
+                    print('gdat.listnamepara')
+                    print(gdat.listnamepara)
+                    dictsamp = tdpy.samp(gdat, gdat.numbsampwalk, retr_llik_mile, \
+                                                                    gdat.listnamepara, listlablpara, listscalpara, listminmpara, listmaxmpara, \
+                                                                    pathbase=gdat.pathdatatarg, \
+                                                                    numbsampburnwalk=gdat.numbsampburnwalk, strgextn=strgextn, boolplot=gdat.boolplot)
+
+
+            else:
+                print('A model type was not defined.')
+                print('typemodl')
+                print(typemodl)
+                raise Exception('')
 
     # measure final time
     gdat.timefinl = modutime.time()
