@@ -503,7 +503,7 @@ def retr_llik_mile(para, gdat):
     print('llik')
     print(llik)
     print('')
-    raise Exception('')
+    #raise Exception('')
 
     return llik
 
@@ -4181,6 +4181,14 @@ def init( \
                         print('temp')
                         if (gdat.listarrytser['raww'][b][p][y][:, :, 1] == 1).all():
                             raise Exception('')
+                        
+                        print('gdat.listarrytser[raww][b][p][y][:, :, 0]')
+                        summgene(gdat.listarrytser['raww'][b][p][y][:, :, 0])
+                        print('gdat.listarrytser[raww][b][p][y][:, :, 1]')
+                        summgene(gdat.listarrytser['raww'][b][p][y][:, :, 2])
+                        print('gdat.listarrytser[raww][b][p][y][:, :, 1]')
+                        summgene(gdat.listarrytser['raww'][b][p][y][:, :, 2])
+                        raise Exception('')
 
                         gdat.listarrytser['raww'][b][p][y][:, :, 1] += np.random.randn(gdat.true.time[b][p][y].size * gdat.numbener).reshape((gdat.true.time[b][p][y].size, \
                                                                                                                         gdat.numbener)) * \
