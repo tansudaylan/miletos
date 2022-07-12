@@ -7,6 +7,9 @@ import miletos
 import tdpy
 from tdpy.util import summgene
 
+import xarray as xr
+import json
+
 import astropy
 
 '''
@@ -44,7 +47,7 @@ listtypemodl = ['psys']
 lablwlen = r'Wavelength [$\mu$m]'
 
 # values of the wavelength axis [um]
-listwlen = np.linspace(0.6,  5., 4)
+listwlen = np.linspace(0.6,  5., 2)
 
 if strgtyperuns == 'simuerss':
     patherss = os.environ['DATA'] + '/other/ERS/'
@@ -56,6 +59,8 @@ if strgtyperuns == 'simuerss':
     
     listhdun = astropy.io.fits.open(path)
     
+    ds_ex = xr.open_dataset("stellar_spectra_target_FAKE_mode_G395H_code_eureka.nc")
+
     #time = listhdun[1].data['int_mid_BJD_TDB']
     #print('time')
     #summgene(time)
@@ -135,7 +140,7 @@ if strgtyperuns == 'SimGeneWhite':
     listarrytser = None
     labltarg = None
     
-miletos.main.init( \
+dictoutp = miletos.main.init( \
                   strgmast=strgmast, \
                   labltarg=labltarg, \
                   strgtyperuns=strgtyperuns, \
@@ -153,6 +158,50 @@ miletos.main.init( \
                  )
 
 
+# write the output to xarray for the ERS Team
+
+ds = xr.Dataset( \
+                data_vars=dict(
+                               transit_depth=(["central_wavelength"], transit_depth, {'units': '(R_jup*R_jup)/(R_jup*R_jup)'}),
+                               
+                               transit_depth_error=(["central_wavelength"], transit_depth_error, {'units': '(R_jup*R_jup)/(R_jup*R_jup)'}),
+                              ),
+                
+                coords=dict(
+                            central_wavelength=(["central_wavelength"], central_wavelength,{'units': 'micron'}),#required*
+                            
+                            bin_half_width=(["bin_half_width"], bin_half_width,{'units': 'micron'})#required*
+                           ),
+                
+                attrs=dict(
+                           author="Tansu Daylan",
+                           
+                           contact="tansu.daylan@gmail.com",
+                           
+                           code="miletos, https://github.com/tdaylan/miletos",
+                           
+                           data_origin=json.dumps({
+                                                   'stellar_spec': 'zenodo.org/xxxx',
+                                                   'raw_light_curve': 'www.drive.google.com/someonegavemethis',
+                                                   'fitted_light_curve': 'malam@carnegiescience.edu'
+                                                 }),
+                           
+                           doi="",
+                           
+                           system_params=json.dumps({ 
+                                                     'rp': 1*u.Unit('R_jup'), 
+                                                     'rs':1*u.Unit('R_sun'), 
+                                                     'a_rs':0.1, 
+                                                     'tc':0.9
+                                                    },
+                                                    cls=JsonCustomEncoder),
+                           
+                           limb_darkening_params=json.dumps({'u1':1, 'u2':1,'u3':1, 'u4':1}) #optional in accordance with model runs
+                          )
+               )
+
+
+ds.to_netcdf("fitted-light-lurve_target_W39_mode_G395H_code_miletos_author_Daylan.nc")
 
 
 

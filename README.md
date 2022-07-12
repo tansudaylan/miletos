@@ -12,7 +12,7 @@ It is written in python3.
 
 
 ## Input Data
-The time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and James Webb Space Telescope (JWST), Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
+The time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
 
 
 ## Analysis
