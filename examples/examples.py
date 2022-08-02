@@ -8,10 +8,11 @@ import pandas as pd
 import miletos
 import tdpy
 from tdpy.util import summgene
+import ephesus
 
 import astropy
 
-def cnfg_toii():
+def cnfg_All_TOIs():
     
     for k in range(101, 5000):
         miletos.main.init( \
@@ -36,6 +37,32 @@ def cnfg_multis():
                        dictlcurtessinpt=dictlcurtessinpt, \
                        listtypemodl=['psys'], \
                       )
+
+
+def cnfg_Interesting_TICs_psys():
+    
+    listtici = [ \
+                
+                # the random transiter (HD 139139; Rappaport+2019)
+                61253912, \
+                
+                # A Sextuply-Eclipsing Sextuple Star System (Powell+2021)
+                168789840, \
+
+                # eclipsing brown dwarf binary (Triaud+2020)
+                61253912, \
+                
+                # ramped bottom
+                #85791385, \
+                
+               ]
+
+    for tici in listtici:
+        miletos.main.init( \
+                          ticitarg=tici, \
+                          strgclus='Interesting_TICs', \
+                          listtypemodl=['psys'], \
+                         )
 
 
 def cnfg_TICsFromGV():
@@ -420,6 +447,41 @@ def cnfg_GJ299():
          massstar=massstar, \
         )
 
+
+def cnfg_TOI_lists(name):
+    '''
+    Gran-Unified Hot Jupiter Survey
+    '''
+
+    # MuSCAT2
+    if name == 'MuSCAT2':
+        listhosttoiithis = np.array([1752, 2079, 2278, 2431, 3884, 3984, 4107, 4114, 4325, 4363, 4616, 4643])
+
+    # Gran-Unified Hot Jupiter Survey (GUHJS2)
+    if name == 'GUHJS2':
+        listhosttoiithis = np.array([1937, 2364, 2583, 2587, 2796, 2803, 2818, 2842, 2977, 3023, 3364, 3688, 3807, 3819, 3912, 3976, 3980, 4087, 4145, 4463, 4791])
+    
+    listtoiifstr = ephesus.retr_toiifstr()
+    listtoiifstr = listtoiifstr.astype(float)
+    listhosttoiifstr = listtoiifstr.astype(int)
+    
+    listhosttoiithisfstr = []
+    for hosttoii in listhosttoiithis:
+        if hosttoii in listhosttoiifstr:
+            listhosttoiithisfstr.append(hosttoii)
+    listhosttoiithisfstr = np.array(listhosttoiithisfstr)
+    
+    
+    print('listhosttoiithis')
+    summgene(listhosttoiithis)
+    print('listhosttoiifstr')
+    summgene(listhosttoiifstr)
+    print('listhosttoiithisfstr')
+    summgene(listhosttoiithisfstr)
+    
+    print('Intersection')
+    for hosttoii in listhosttoiithisfstr:
+        print(hosttoii)
 
 
 def cnfg_Michelle():
