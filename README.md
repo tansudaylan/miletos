@@ -22,38 +22,37 @@ The suite of analyses are Lomb-Scargle periodograms (via astropy) and Box Least 
 
 
 ## Model
-The suite of light curve models is obtained via [Ephesus](https://github.com/tdaylan/ephesus). They include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
+Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesus](https://github.com/tdaylan/ephesus). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
+
+### limb darkening
+Stars manifest a darkening towards their limbs beyond that expected from Lambertian scattering. Even though simulations of stellar atmospheres allow the prediction of the limb darkening, the failure of these models to accurately interpolate stellar parameters can significantly bias inference when a wrong limb darkening model is used. Miletos allows the user to marginalize over the limb darkening using an parametrization that is efficient to sample from (Kipping 2013).
 
 ### red noise
-Data collected in the real Universe, unlike many of our simulations, contain features and components that are not drawn from, and hence cannot be explained by, our fitting models. This requires a prescription for modeling unknown components in a way that is minimally degenerate with the signal of interest. Miletos uses Gaussian Processes (GP) as implemented in celerite to model the baseline of the time-series data to account for systematics in the form of red noise.
+Data collected in the real Universe, unlike many of our simulations, contain features that are not drawn from, and hence cannot be explained by, our fitting models. This requires a prescription for modeling unknown components in a way that is minimally degenerate with the signal of interest. Miletos uses Gaussian Processes (GP) as implemented in [celerite](https://github.com/dfm/celerite) (Foreman-Mackey et al. 2017) to model the baseline of the time-series data to account for systematics in the form of red noise.
 
 
 ### priors
-Miletos either performs fast analyses on the time-series to obtain priors on the model parameters or fetches those priors from relevant data bases.
+In order to determine the priors on the model parameters, Miletos either performs fast analyses on the time-series or fetches those priors from relevant databases.
 
 When modeling exoplanetary systems (e.g., known exoplanets or TESS Objects of Interest) Miletos can either perform a box least squares (BLS) search to find candidates of transiting exoplanets and perform an Lomb-Scargle search to find radial-velocity candidates, querry the NASA Exoplanet Archive or the TOI catalog, respectively, to retrieve priors on the epoch of mid-transit time and orbital period.
 
 
 ## Implementation and performance
-As a high-level pipeline, it is written in python3. However, models evaluations, which are the bottle-neck of forward-modeling, are accelerated with just-in-time compiling or GPUs when necessary.
+As a high-level pipeline, Miletos is conveniently written in python3. However, models evaluations, which are the bottle-neck of forward-modeling, are accelerated with just-in-time compiling or GPUs when necessary.
 
 
 ## Usage
 
 ### JWST Early Release Science (ERS)
 
-Miletos's functionality has been significantly enhanced for it as part of the JWST Early Release Science (ERS) to serve the JWST exoplanet research community with a fast and robust analysis and modeling tool for time-series data from NIRSpec and NIRISS.
+Miletos's functionality has been significantly enhanced as part of the JWST Early Release Science (ERS) effort in order to provide the JWST exoplanet research community with a fast and robust analysis and modeling tool for time-series data from NIRSpec and NIRISS. Used in this mode, Miletos first performs a fit of the white light curve on a given target, obtaining the posterior on the system parameters. Then, it uses these posteriors as priors to the system parameters in subsequent fits to data at each wavelength. Note that Miletos does not perform Stage 1 or 2 reductions, which can be separately performed by the JWST pipeline. The functionality of Miletos is focused on the accurate modeling of the resulting spectral light curves.
 
-Used in this model, Miletos first performs a Bayesian model of the white light curve on a given target
-
-Note that Miletos does not perform Stage 1 or 2 reductions, which can be separately performed by the JWST pipeline. The functionality of Miletos is focused on the accurate modeling of the resulting spectral light curves.
-
-When fitting spectral light curves over a wavelength interval, An important consideration is the modeling of limb darkening. Miletos marganilizes over the limb darkening parameters. In NIRSpec, this marginalization is more important in modeling Prism data compard to NIRSpec 395H with a smaller wavelength coverage. 
+When fitting spectral light curves over a wavelength interval, an important consideration is the modeling of limb darkening and how it changes with wavelength. In NIRSpec, the marginalization provided by Miletos is more important in modeling Prism data compard to NIRSpec 395H with a smaller wavelength coverage. 
 
 
 ### JWST ERS Observations of WASP-39b
 
-Coming soon...
+Will be public soon...
 
 
 ### TESS Observations of WASP-121b
