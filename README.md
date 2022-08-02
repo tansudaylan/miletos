@@ -1,29 +1,28 @@
 # Miletos
 
 ## Introduction
-Miletos is a pipeline to analyze and forward-model time-series astrophysical data. Using these time-series data, it can be used to partially characterize (i.e., to the extent allowed by the information content in the time-series data at hand)
+Miletos is a pipeline to analyze and forward-model time-series data in astrophysics. Using time-series data, it can be used to partially characterize (i.e., to the extent allowed by the information content in the provided time-series data)
 - systems of planets, stars, and compact objects including their
-    - orbits (e.g., periods, semi-major axes, inclination, spin-orbit alignments), bulk structural features (e.g., radii, masses, densities), and surface brightness distributions of the planets and stars and
+    - orbits (e.g., periods, semi-major axes, inclinations, spin-orbit alignments), bulk structural features (e.g., radii, masses, densities), and surface brightness distributions of the bodies and
     - properties of spots and flares on the stars (e.g., sizes and evolution time scales);
 - explosive astrophysical phenomena such as supernovae including
     - brightnening profile and the size of any companions.
 
 
-Miletos is an end-to-end pipeline that takes its inputs and configuration parameters from the user in a single function call, fetches the data, performs the relevant analyses and modeling, plots and saves the results to the disk, and returns a dictionary that contains all of the relevant intermediate and output variables. Therefore, running Miletos requires a single function even though the arguments to the function make it possible to extensively customize the behavior of the pipeline.
-
+Miletos is an end-to-end pipeline that takes its inputs and configuration parameters from the user in a single function call, fetches the data, performs the relevant analyses and modeling, plots and saves the results to the disk, and returns a dictionary that contains all of the relevant intermediate and output variables. Versatile function arguments make it possible to extensively customize the behavior of the pipeline.
 
 
 ## Input Data
-The time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
+The input time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
 
 
 
-## Analysis
-The suite of analyses are Lomb-Scargle periodograms (via astropy) and Box Least Squares (BLS) via ephesus. The outcome of these analyses are used as priors for generative modeling of the data. But before that, the results of the analyses are plotted, written on the disc, and eventually returned to the user. 
+## Analyses
+The suite of analyses are Lomb-Scargle periodograms (via astropy) and Box Least Squares (BLS) via [Ephesus](https://github.com/tdaylan/ephesus). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
 
 ## Model
-The suite of models include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions. It uses my Ephesus library to forward-model transiting systems with potentially flaring or spotted stars.
+The suite of light curve models is obtained via [Ephesus](https://github.com/tdaylan/ephesus). They include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
 
 ### red noise
 Data collected in the real Universe, unlike many of our simulations, contain features and components that are not drawn from, and hence cannot be explained by, our fitting models. This requires a prescription for modeling unknown components in a way that is minimally degenerate with the signal of interest. Miletos uses Gaussian Processes (GP) as implemented in celerite to model the baseline of the time-series data to account for systematics in the form of red noise.
@@ -54,6 +53,7 @@ When fitting spectral light curves over a wavelength interval, An important cons
 
 ### JWST ERS Observations of WASP-39b
 
+Coming soon...
 
 
 ### TESS Observations of WASP-121b
