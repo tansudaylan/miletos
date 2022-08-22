@@ -1,5 +1,6 @@
 import sys
 from tqdm import tqdm
+import inspect
 import os
 import numpy as np
 import wget
@@ -12,21 +13,20 @@ import ephesus
 
 import astropy
 
-def cnfg_All_TOIs():
+def cnfg_TOIs():
     
     for k in range(101, 5000):
         miletos.main.init( \
                    toiitarg=k, \
-                   typepriocomp='pdim', \
+                   strgclus='TOIs', \
                   )
 
 
-def cnfg_multis():
+def cnfg_TOIs_multi():
 
-    #for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
     dictlcurtessinpt = dict()
     dictlcurtessinpt['booltpxfonly'] = True
-    for strgmast in ['TOI-270']:
+    for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
         
         if strgmast == 'TOI-270':
             dictlcurtessinpt['listtsecsele'] = [3, 4, 5, 30, 32]
@@ -36,6 +36,7 @@ def cnfg_multis():
                        strgmast=strgmast, \
                        dictlcurtessinpt=dictlcurtessinpt, \
                        listtypemodl=['psys'], \
+                       strgclus='TOIs', \
                       )
 
 
@@ -68,8 +69,6 @@ def cnfg_Interesting_TICs_psys():
 def cnfg_TICsFromGV():
     
     listtici = [ \
-                # 30 September 2021, small star
-                #1400704733, \
                 # potential target for Redyan
                 318180448, \
                ]
@@ -100,6 +99,8 @@ def cnfg_TargetsOfInterest():
                     #'TIC 233965332', \
                    ]
     
+    strgclus = inspect.stack()[0][3][5:]
+    
     dictlcurtessinpt = {'typelcurtpxftess': 'lygos'}
     dictlygoinpt['numbside'] = 17
     for strgmast in liststrgmast:
@@ -115,6 +116,7 @@ def cnfg_TargetsOfInterest():
         miletos.main.init( \
                           strgmast=strgmast, \
                           dictlygoinpt=dictlygoinpt, \
+                          strgclus=strgclus, \
                          )
 
 
@@ -258,11 +260,14 @@ def cnfg_ADAP2022_AGNs():
                   )
     
 
-def cnfg_WhiteDwarfs():
+def cnfg_WhiteDwarfs_Candidates_TESS_GI():
     
     pathoutp = os.environ['MILETOS_DATA_PATH'] + '/data/WD/'
     os.system('mkdir -p %s' % pathoutp)
     listisec = np.arange(27, 28)
+    
+    listtypemodl = ['psys']
+
     for isec in listisec:
         path = 'https://heasarc.gsfc.nasa.gov/docs/tess/data/target_lists/sector%03d_targets_lists/GI_20s_S%03d.csv' % (isec, isec)
         pathfile = wget.download(path, out=pathoutp)
@@ -274,18 +279,29 @@ def cnfg_WhiteDwarfs():
             
             miletos.main.init( \
                  strgmast='TIC %d' % listtici[i], \
+                 listtypemodl=listtypemodl, \
                  typepriocomp='pdim', \
                  strgclus='WhiteDwarfs', \
-                 #datatype='pand', \
                 )
 
 
-def cnfg_WD_candidates():
+def cnfg_WhiteDwarf_Candidates_TOI_Process():
     
-    listticitarg = [686072378]
+    listticitarg = [ \
+                    
+                    #686072378, \
+                    
+                    # from TOI vetting, small (subdwarf) star, 30 September 2021
+                    1400704733, \
+                   ]
+    
+    listtypemodl = ['psys']
+
     for ticitarg in listticitarg:
         miletos.main.init( \
              ticitarg=ticitarg, \
+             strgclus='cnfg_WhiteDwarf_Candidates_TOI_Process', \
+             listtypemodl=listtypemodl, \
             )
 
 
@@ -295,7 +311,6 @@ def cnfg_V563Lyr():
          strgmast='V563 Lyr', \
          typepriocomp='pdim', \
          massstar=1., \
-         datatype='pand', \
         )
 
 
@@ -484,13 +499,31 @@ def cnfg_TOI_lists(name):
         print(hosttoii)
 
 
-def cnfg_Michelle():
+def cnfg_TTL5_simugene():
+    
+    liststrginst = [['TESS', 'TTL5'], []]
+
+    liststrgtypedata = [['SimGenTPF', 'SimGenTPF'], []]
+    
+    dicttrue = dict()
+    dicttrue['epocmtracomp'] = np.array([2459000.])
+    dicttrue['pericomp'] = np.array([1.])
+    dicttrue['rratcomp'] = np.array([0.1])
+    dicttrue['cosicomp'] = np.array([0.03])
+    dicttrue['rsmacomp'] = np.array([0.1])
     
     miletos.main.init( \
-         ticitarg=126803899, \
+         #toiitarg=1233, \
+         
+         liststrginst=liststrginst, \
+         
+         dicttrue=dicttrue, \
+         liststrgtypedata=liststrgtypedata, \
+
+         strgclus='TTL5_psys', \
         )
 
-    
+
 def cnfg_Rafael():
     
     miletos.main.init( \
@@ -604,32 +637,157 @@ def cnfg_WD1856():
 
     strgmast = 'WD1856+534'
     ticitarg = 267574918
-    #strgmast = 'TIC 267574918'
-    #labltarg = 'WD-1856'
     
-    print('HACKING! MAKING UP THE STAR RADIUS')
     miletos.main.init( \
-         #labltarg=labltarg, \
          strgmast=strgmast, \
          #boolmakeanim=True, \
-         #makeprioplot=False, \
-
-         #infetype='trap', \
          #dilucorr=0.01, \
-         #jmag=15.677, \
-         #contrati=10, \
-         # temp
-         #datatype='sapp', \
-         radistar=1.4/11.2, \
-         stdvradistar=0, \
-         stdvmassstar=0, \
-         stdvtmptstar=0, \
-         massstar=0.518*1047, \
-         tmptstar=4710., \
         )
 
 
-def cnfg_lindsey():
+def cnfg_SNeIa_Comp(strgruns):
+    
+    dictlygoinpt = dict()
+    #dictlygoinpt['typepsfninfe'] = 'fixd'
+    #dictlygoinpt['boolplotrflx'] = True
+    #dictlygoinpt['boolplotcntp'] = True
+    #dictlygoinpt['numbside'] = 5
+    dictlygoinpt['typenorm'] = 'mediinit'
+    #dictlygoinpt['booldetrcbvs'] = False
+    #dictlygoinpt['boolfittoffs'] = True
+
+    listtypemodl = ['supn']
+    dictlcurtessinpt = dict() 
+    
+    dictfitt = dict()
+    dicttrue = dict()
+    
+    typeinfe = 'samp'
+
+    if strgruns == 'totl':
+        liststrgruns = [ \
+                        # fitting simulated data no bump using a model with quadratic SN but without a bump
+                        'simugenelcur_cons_quad_none_none_none', \
+                        # fitting simulated data with a bump using a model with quadratic SN but without a bump
+                        'simugenelcur_cons_quad_none_none_bump', \
+                        # fitting simulated data with a bump using a model with quadratic SN and a bump
+                        'simugenelcur_cons_quad_bump_none_bump', \
+                        
+                        # fitting simulated data with a bump *and red noise* using a model with a bump
+                        'simugenelcur_cons_quad_bump_gpro_bump', \
+                        # fitting simulated data with a bump *and red noise* using a model with a bump and GP baseline
+                        'simugenelcur_gpro_quad_bump_gpro_bump', \
+
+                        # fitting real data using a model with a SN
+                        'real_cons_quad_none', \
+                        # fitting real data using a model with a SN and bump
+                        'real_cons_quad_bump', \
+                        # fitting real data using a model with a SN, bump, and GP baseline
+                        'real_gpro_quad_bump', \
+                       ]
+    else:
+        liststrgruns = [strgruns]
+
+    for strgruns in liststrgruns:
+        strgrunssplt = strgruns.split('_')
+        strgtypedata = strgrunssplt[0]
+        dictfitt['typemodlbase'] = strgrunssplt[1]
+        dictfitt['typemodlsupn'] = strgrunssplt[2]
+        dictfitt['typemodlexcs'] = strgrunssplt[3]
+        
+        dictlygoinpt['boolanim'] = strgruns == 'real_samp_cons_quad_none'
+
+        if strgtypedata == 'simugenelcur':
+            dicttrue['typemodlbase'] = strgrunssplt[4]
+            dicttrue['typemodlexcs'] = strgrunssplt[5]
+            liststrgtypedata = [['simugenelcur'], []]
+            
+            numbtarg = 1
+            for k in range(numbtarg):
+                listlabltarg = ['Target %04d' % k]
+        
+        else:
+            liststrgtypedata = None
+
+            liststrgmast = [ \
+                            # disfavor
+                            'SN2018fub', \
+                            'SN2020tld', \
+                            'SN2020swy', \
+                            'SN2021udg', \
+                            'SN2021zny', \
+                            'SN2022eyw', \
+                            
+                            #'SN2020tld', \
+                            #'SN2021zny', \
+                            'SN2018hib', \
+                            'SN2020ftl', \
+
+                            # positives
+                            'SN2018hkx', \
+                            'SN2020aoi', \
+                            'SN2020abqu', \
+                            'SN021ahmz', \
+                            'SN2022ajw', \
+
+                           ]
+                
+            numbtarg = len(liststrgmast)
+
+        indxtarg = np.arange(numbtarg)
+        for k in indxtarg:    
+            
+            if strgtypedata == 'real':
+                if liststrgmast[k] == 'SN2018fub':
+                    limttimefitt = [[[-np.inf, 2458368.]], []]
+                elif liststrgmast[k] == 'SN2020swy':
+                    limttimefitt = [[[-np.inf, 2459110.]], []]
+                #elif liststrgmast[k] == 'SN2020swy':
+                #    limttimefitt = [[[-np.inf, np.inf]], []]
+                else:
+                    limttimefitt = None
+                    
+                strgmast = liststrgmast[k]
+                labltarg = None
+                strgtarg = None
+            else:
+                limttimefitt = None
+                strgmast = None
+                labltarg = 'Simulated Target'
+                strgtarg = 'targsimu%04d' % k
+            
+            strgcnfg = '%s_%s_%s' % (dictfitt['typemodlbase'], dictfitt['typemodlsupn'], dictfitt['typemodlexcs'])
+            if strgtypedata == 'real':
+                if liststrgmast[k] == 'SN2018fub':
+                    dictlcurtessinpt['listtsecsele'] = [2]
+                if liststrgmast[k] == 'SN2020swy':
+                    dictlcurtessinpt['listtsecsele'] = [29]
+                if liststrgmast[k] == 'SN2022ajw':
+                    dictlcurtessinpt['listtsecsele'] = [47]
+            else:
+                strgcnfg += '_%s_%s' % (dicttrue['typemodlbase'], dicttrue['typemodlexcs'])
+                dictlcurtessinpt['listtsecsele'] = None
+            
+            dictmileoutp = miletos.main.init( \
+                                             strgmast=strgmast, \
+                                             dictlcurtessinpt=dictlcurtessinpt, \
+                                             strgclus='SNeIa_Comp', \
+                                             liststrgtypedata=liststrgtypedata, \
+                                             limttimefitt=limttimefitt, \
+                                             strgtarg=strgtarg, \
+                                             labltarg=labltarg, \
+                                             dictfitt=dictfitt, \
+                                             dicttrue=dicttrue, \
+                                             typeinfe=typeinfe, \
+                                             strgcnfg=strgcnfg, \
+                                             listtypeanls=[], \
+                                             dictlygoinpt=dictlygoinpt, \
+                                             boolplotdvrp=False, \
+                                             listtypemodl=listtypemodl, \
+                                            )
+            
+
+def cnfg_SNeIa():
     
     from astropy import units as u
     from astropy.coordinates import SkyCoord
@@ -640,15 +798,21 @@ def cnfg_lindsey():
     os.system('mkdir -p %s' % pathdata)
     os.system('mkdir -p %s' % pathimag)
 
-    listtypemodl = ['rise']
+    listtypemodl = ['supn']
 
-    for strgclus in [ \
+    for strgfile in [ \
                      'Cycle1-matched', \
                      'Cycle2-matched', \
                      'Cycle3-matched', \
                     ]:
 
-        pathcsvv = pathdata + '%s.csv' % strgclus
+        pathcsvv = pathdata + '%s.csv' % strgfile
+        
+        #if strgfile == 'Cycle1-matched':
+        #    strgclus = 'SNIa_Cycle1'
+        
+        strgclus = 'SNIa_' + strgfile.split('-')[0]
+        
         print('Reading from %s...' % pathcsvv)
         objtfile = open(pathcsvv, 'r')
         k = 0
@@ -702,7 +866,7 @@ def cnfg_ASASSN20qc():
     rasctarg = 63.260208 
     decltarg = -53.0727
 
-    listtypemodl = ['rise']
+    listtypemodl = ['supn']
     
     labltarg = 'ASASSN-20qc'
     
@@ -741,7 +905,7 @@ def cnfg_ASASSN20qc():
     #refrarrytser[:, 1] = linevalu[:, 2]
     #refrarrytser[:, 2] = linevalu[:, 3]
    
-    #listtypemodl = ['rise']
+    #listtypemodl = ['supn']
     listtypemodl = []
     
     listlimttimemask = [[[-np.inf, 2457000 + 2175], [2457000 + 2186.5, 2457000 + 2187.5]]]
