@@ -647,6 +647,22 @@ def cnfg_WD1856():
 
 def cnfg_SNeIa_Comp(strgruns):
     
+
+    pathbase = os.environ['DATA'] + '/other/Type_Ia_TNS/'
+    
+    numbiter = 12
+    indxiter = np.arange(numbiter)
+    listdicttrns = [[] for k in indxiter]
+    for k in indxiter:
+        path = pathbase + 'tns_search-%d.csv' % (k + 1)
+        print('Reading from %s...' % path)
+        listdicttrns[k] = pd.read_csv(path, skiprows=0, delimiter=',').to_dict(orient='list')
+    
+    dicttrns = dict()
+    for name in ['Name', 'RA', 'DEC']:
+        listtemp = [listdicttrns[k][name] for k in indxiter]
+        dicttrns[name] = np.concatenate(listtemp)
+    
     dictlygoinpt = dict()
     #dictlygoinpt['typepsfninfe'] = 'fixd'
     #dictlygoinpt['boolplotrflx'] = True
@@ -711,24 +727,24 @@ def cnfg_SNeIa_Comp(strgruns):
 
             liststrgmast = [ \
                             # disfavor
-                            'SN2018fub', \
-                            'SN2020tld', \
-                            'SN2020swy', \
-                            'SN2021udg', \
-                            'SN2021zny', \
-                            'SN2022eyw', \
+                            'SN 2018fub', \
+                            'SN 2020tld', \
+                            'SN 2020swy', \
+                            'SN 2021udg', \
+                            'SN 2021zny', \
+                            'SN 2022eyw', \
                             
-                            #'SN2020tld', \
-                            #'SN2021zny', \
-                            'SN2018hib', \
-                            'SN2020ftl', \
+                            #'SN 2020tld', \
+                            #'SN 2021zny', \
+                            'SN 2018hib', \
+                            'SN 2020ftl', \
 
                             # positives
-                            'SN2018hkx', \
-                            'SN2020aoi', \
-                            'SN2020abqu', \
-                            'SN021ahmz', \
-                            'SN2022ajw', \
+                            'SN 2018hkx', \
+                            'SN 2020aoi', \
+                            'SN 2020abqu', \
+                            'SN 2021ahmz', \
+                            'SN 2022ajw', \
 
                            ]
                 
@@ -764,11 +780,37 @@ def cnfg_SNeIa_Comp(strgruns):
                     dictlcurtessinpt['listtsecsele'] = [29]
                 if liststrgmast[k] == 'SN2022ajw':
                     dictlcurtessinpt['listtsecsele'] = [47]
+                
+                print('dicttrns[Name]')
+                print(dicttrns['Name'])
+                print('liststrgmast[k]')
+                print(liststrgmast[k])
+                indx = np.where(dicttrns['Name'] == liststrgmast[k])[0]
+                if indx.size != 1:
+                    raise Exception('')
+                rasctarg = dicttrns['RA'][indx[0]]
+                decltarg = dicttrns['DEC'][indx[0]]
+                print('rasctarg')
+                print(rasctarg)
+                print('decltarg')
+                print(decltarg)
+                objtcoor = astropy.coordinates.SkyCoord('%s %s' % (rasctarg, decltarg), unit=(astropy.units.hourangle, astropy.units.deg))
+
+                #objttimenigh = astropy.time.Time(astropy.time.Time(gdat.strgtimeobvtnigh).jd, format='jd', location=objtlocaobvt)
+                #timeyear = astropy.time.Time(gdat.strgtimeobvtyear).jd + gdat.listdelttimeobvtyear
+                #objttimeyear = astropy.time.Time(timeyear, format='jd', location=objtlocaobvt)
+                rasctarg = objtcoor.ra.degree
+                decltarg = objtcoor.dec.degree
+                strgmast = None
             else:
                 strgcnfg += '_%s_%s' % (dicttrue['typemodlbase'], dicttrue['typemodlexcs'])
                 dictlcurtessinpt['listtsecsele'] = None
+                rasctarg = None
+                decltarg = None
             
             dictmileoutp = miletos.main.init( \
+                                             rasctarg=rasctarg, \
+                                             decltarg=decltarg, \
                                              strgmast=strgmast, \
                                              dictlcurtessinpt=dictlcurtessinpt, \
                                              strgclus='SNeIa_Comp', \

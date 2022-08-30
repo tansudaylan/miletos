@@ -120,7 +120,6 @@ strgmast = 'WASP-39'
 ## 'opti': find the maximum likelihood solution (much faster)
 ## 'samp': sample from the posterior (slow)
 typeinfe = 'opti'
-#typeinfe = 'samp'
 
 # instrument label for the data set
 listlablinst = [[typeinst], []]
@@ -140,40 +139,31 @@ dictfitt = dict()
 # make the fitting baseline 'step', which is a smooth step function
 dictfitt['typemodlbase'] = 'step'
 
+# turn off LS periodogram and BLS spectrum analyses for estimating the priors
+listtypeanls = []
+
+# turn off light curve detrending for estimating the priors
+boolbdtr = False
+
+# turn on neglecting the lowest likelihood data sample (outlier rejection)
+boolrejeoutlllik = True
+
 dictoutp = miletos.main.init( \
                              strgmast=strgmast, \
-                             
                              listlablinst=listlablinst, \
-                             
                              liststrgtypedata=liststrgtypedata, \
-
                              strgcnfg=strgcnfg, \
-                             
-                             # turn off LS periodogram and BLS analysis for estimating the priors
-                             listtypeanls=[], \
-                             
-                             # turn off light curve detrending for estimating the priors
-                             boolbdtr=False, \
-                               
+                             listtypeanls=listtypeanls, \
+                             boolbdtr=boolbdtr, \
                              typeinfe=typeinfe, \
-                             
-                             # turn on neglecting the lowest likelihood data sample (outlier rejection)
-                             boolrejeoutlllik=True, \
-
+                             boolrejeoutlllik=boolrejeoutlllik, \
                              boolwritover=boolwritover, \
-                             
                              dictfitt=dictfitt, \
-
                              listarrytser=listarrytser, \
-                               
                              typemodlener=typemodlener, \
-
                              listtypemodl=listtypemodl, \
-                             
                              listener=wlen, \
-                             
                              lablener=lablwlen, \
-                             
                             )
 
 

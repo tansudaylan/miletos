@@ -5783,10 +5783,13 @@ def init( \
                 gdat.timefineconc[b] = np.concatenate(gdat.timefine[b])
 
         # sampling rate
-        gdat.ratesamp = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        ## temporal
+        gdat.ratesamptime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                gdat.ratesamp[b][p] = np.amin(gdat.timeconc[0][1:] - gdat.timeconc[0][:-1])
+                gdat.ratesamptime[b][p] = np.amin(gdat.timeconc[0][1:] - gdat.timeconc[0][:-1])
+        if gdat.numbener > 1:
+            gdat.ratesampener = np.amin(gdat.listener[1:] - gdat.listener[:-1])
         
         # rebinning
         gdat.numbrebn = 100
@@ -5794,7 +5797,7 @@ def init( \
         gdat.listdeltrebn = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                gdat.minmdeltrebn = 2. * gdat.ratesamp[b][p]
+                gdat.minmdeltrebn = 2. * gdat.ratesamptime[b][p]
                 gdat.maxmdeltrebn = min(100. * gdat.minmdeltrebn, 0.1 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0]))
                 gdat.listdeltrebn[b][p] = np.linspace(gdat.minmdeltrebn, gdat.maxmdeltrebn, gdat.numbrebn)
         
@@ -7087,6 +7090,12 @@ def init( \
                                     pmedrratcompspec[e] = gdat.listdictmlik[e+1]['rratcom0' + gdat.liststrgener[e]]
                                     perrrratcompspec[e] = gdat.listdictmlik[e+1]['stdvrratcom0' + gdat.liststrgener[e]]
                         axis.plot(gdat.listener, pmedrratcompspec, ls='', marker='o')
+                        # plot binned spectrum
+                        #    arry = np.zeros((dictvarbderi['rflxresi'][:, e].size, 3))
+                        #    arry[:, 0] = gdat.timethisfitt
+                        #    arry[:, 1] = dictvarbderi['rflxresi'][:, e]
+                        #    stdvrflxresi = np.nanstd(ephesus.rebn_tser(arry, delt=gdat.listdeltrebn[b][p])[:, 1])
+                        axis.plot(gdat.listener, pmedrratcompspec, ls='', marker='o')
                         axis.set_ylabel('$R_p/R_*$')
                         axis.set_xlabel('Wavelength [$\mu$m]')
                         plt.tight_layout()
@@ -7100,15 +7109,36 @@ def init( \
                         gdat.dictmileoutp['perrrratcompspec'] = perrrratcompspec
 
                         # detrend the spectrum
-                        gdat.rratcompspecbdtrregi, gdat.listindxenerregi, gdat.indxenerregioutt, gdat.listobjtspln, gdat.listenerbrek = \
-                            ephesus.bdtr_tser(gdat.listener, pmedrratcompspec, \
-                                              stdvlcur=perrrratcompspec, \
-                                              timescalbdtrspln=gdat.enerscalbdtr, \
-                                              typeverb=gdat.typeverb, \
-                                              timebrekregi=gdat.timebrekregi, \
-                                              boolbrekregi=gdat.boolbrekregi, \
-                                              typebdtr=gdat.typebdtr, \
-                                             )
+                        #gdat.rratcompspecbdtrregi, gdat.listindxenerregi, gdat.indxenerregioutt, gdat.listobjtspln, gdat.listenerbrek = \
+                        #    ephesus.bdtr_tser(gdat.listener, pmedrratcompspec, \
+                        #                      stdvlcur=perrrratcompspec, \
+                        #                      timescalbdtrspln=gdat.enerscalbdtr, \
+                        #                      typeverb=gdat.typeverb, \
+                        #                      timebrekregi=gdat.timebrekregi, \
+                        #                      boolbrekregi=gdat.boolbrekregi, \
+                        #                      typebdtr=gdat.typebdtr, \
+                        #                     )
+                        #
+                        #path = gdat.pathimagtarg + 'stdvrebnener%s.%s' % (gdat.strgcnfg, gdat.typefileplot)
+                        #if not os.path.exists(path):
+                        #    figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
+                        #    arry = np.zeros((dictvarbderi['rflxresi'][:, e].size, 3))
+                        #    arry[:, 0] = gdat.timethisfitt
+                        #    arry[:, 1] = dictvarbderi['rflxresi'][:, e]
+                        #    for k in gdat.indxrebn:
+                        #    stdvrflxresi = np.nanstd(ephesus.rebn_tser(arry, delt=gdat.listdeltrebn[b][p])[:, 1])
+                        #    axis.loglog(gdat.listdeltrebn[b][p], stdvrflxresi * 1e6, ls='', marker='o', ms=1, label='Binned Std. Dev')
+                        #    axis.axvline(gdat.ratesampener, ls='--', label='Sampling rate')
+                        #    axis.axvline(gdat.enerscalbdtr, ls='--', label='Detrending scale')
+                        #    axis.set_ylabel('RMS [ppm]')
+                        #    axis.set_xlabel('Bin width [$\mu$m]')
+                        #    axis.legend()
+                        #    plt.tight_layout()
+                        #    if gdat.typeverb > 0:
+                        #        print('Writing to %s...' % path)
+                        #    plt.savefig(path)
+                        #    plt.close()
+
 
                     if gdat.boolplottser:
                         for y in gdat.indxchun[b][p]:
@@ -7118,7 +7148,7 @@ def init( \
                             for ee in gdat.indxeneriter:
                                 
                                 lcurdata = gdat.rflxthisfitt[:, ee]
-                                
+
                                 if ee >= 10:
                                     continue
                                 
@@ -7138,7 +7168,6 @@ def init( \
                                             lcurtemp = gdat.dictmlik[namecompmodlextn][:, ee]
                                         else:
                                             lcurtemp = gdat.listdictmlik[ee][namecompmodlextn][:, 0]
-                                            lcurdata = lcurtemp / medilcurdata
                                     if namecompmodl == 'totl':
                                         colr = 'b'
                                         labl = 'Total Model'
@@ -7269,7 +7298,6 @@ def init( \
                                 # plot the binned RMS
                                 path = gdat.pathimagtarg + 'stdvrebn%s%s.%s' % (gdat.strgcnfg, gdat.liststrgeneriter[ee], gdat.typefileplot)
                                 if not os.path.exists(path):
-                                    figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
                                     if gdat.typeinfe == 'samp':
                                         if gdat.typemodlener == 'full':
                                             stdvrflxresi = np.median(gdat.dictsamp['stdvrflxresi'][:, :, e], 0)
@@ -7280,8 +7308,10 @@ def init( \
                                             stdvrflxresi = gdat.dictmlik['stdvrflxresi'][:, e]
                                         else:
                                             stdvrflxresi = gdat.listdictmlik[ee]['stdvrflxresi'][:, 0]
+                                
+                                    figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
                                     axis.loglog(gdat.listdeltrebn[b][p] * 24., stdvrflxresi * 1e6, ls='', marker='o', ms=1, label='Binned Std. Dev')
-                                    axis.axvline(gdat.ratesamp[b][p] * 24., ls='--', label='Sampling rate')
+                                    axis.axvline(gdat.ratesamptime[b][p] * 24., ls='--', label='Sampling rate')
                                     axis.set_ylabel('RMS [ppm]')
                                     axis.set_xlabel('Bin width [hour]')
                                     axis.legend()
@@ -7290,7 +7320,7 @@ def init( \
                                         print('Writing to %s...' % path)
                                     plt.savefig(path)
                                     plt.close()
-
+                                
     # measure final time
     gdat.timefinl = modutime.time()
     gdat.timeexec = gdat.timefinl - gdat.timeinit
