@@ -3770,7 +3770,7 @@ def retr_namebdtrclip(e, r):
     return strgarrybdtrinpt, strgarryclipoutp, strgarrybdtroutp, strgarryclipinpt, strgarrybdtrblin
 
 
-def setp_para(gdat, nameparabase, minmpara, maxmpara, lablpara, cntr, strgener=None, strgcomp=None, strglmdk=None):
+def setp_para(gdat, nameparabase, minmpara, maxmpara, lablpara, strgener=None, strgcomp=None, strglmdk=None):
     
     nameparabasefinl = nameparabase
     
@@ -3788,7 +3788,7 @@ def setp_para(gdat, nameparabase, minmpara, maxmpara, lablpara, cntr, strgener=N
             print('%s has been fixed to %g...' % (nameparabasefinl, getattr(gdat.fitt, nameparabasefinl)))
     else:
         gdat.listnamepara += [nameparabasefinl]
-        gdat.dictindxpara[nameparabasefinl] = cntr
+        gdat.dictindxpara[nameparabasefinl] = gdat.cntr
         gdat.listlablpara.append(lablpara)
         gdat.listminmpara.append(minmpara)
         gdat.listmaxmpara.append(maxmpara)
@@ -3802,25 +3802,23 @@ def setp_para(gdat, nameparabase, minmpara, maxmpara, lablpara, cntr, strgener=N
         
         if strgcomp is not None and strgener is not None:
             if gdat.typemodlener == 'full':
-                gdat.dictindxpara[nameparabase + 'compener'][int(strgcomp[-1]), intg] = cntr
+                gdat.dictindxpara[nameparabase + 'compener'][int(strgcomp[-1]), intg] = gdat.cntr
             else:
-                gdat.dictindxpara[nameparabase + 'compener'][int(strgcomp[-1]), 0] = cntr
+                gdat.dictindxpara[nameparabase + 'compener'][int(strgcomp[-1]), 0] = gdat.cntr
         elif strglmdk is not None and strgener is not None:
             if strglmdk == 'linr':
                 intglmdk = 0
             if strglmdk == 'quad':
                 intglmdk = 1
-            gdat.dictindxpara[nameparabase + 'ener'][intglmdk, intg] = cntr
+            gdat.dictindxpara[nameparabase + 'ener'][intglmdk, intg] = gdat.cntr
         elif strgener is not None:
-            gdat.dictindxpara[nameparabase + 'ener'][intg] = cntr
+            gdat.dictindxpara[nameparabase + 'ener'][intg] = gdat.cntr
         elif strgcomp is not None:
-            gdat.dictindxpara[nameparabase + 'comp'][int(strgcomp[-1])] = cntr
+            gdat.dictindxpara[nameparabase + 'comp'][int(strgcomp[-1])] = gdat.cntr
         
-        cntr += 1
+        gdat.cntr += 1
     gdat.listnameparafull += [nameparabasefinl]
     
-    return cntr
-
 
 def proc_modl(gdat, strgextn):
     
@@ -3972,6 +3970,94 @@ def setp_para_defa(gdat, strgmodl, strgvarb, valuvarb):
     
     setattr(gmod, strgvarb, valuvarbdefa)
 
+
+def init_modl(gdat):
+    
+    gdat.dictindxpara = dict()
+    gdat.dictfeatpara = dict()
+    gdat.dictfeatpara['scal'] = []
+    
+    gdat.listlablpara = []
+    gdat.listminmpara = []
+    gdat.listmaxmpara = []
+    gdat.listnamepara = []
+    gdat.listnameparafull = []
+            
+    # counter for the parameter index
+    gdat.cntr = 0
+
+
+def setp_modlbase(gdat, e, ee):
+    
+    # type of baseline offset
+    setp_para_defa(gdat, 'fitt', 'typemodlbase', 'cons')
+    
+    gdat.listnamecompgpro = ['totl']
+    if gdat.fitt.typemodlbase == 'gpro':
+        gdat.listnamecompgpro.append('base')
+    
+    gdat.fitt.listnamecompmodl = ['base']
+    if gdat.fitt.typemodl == 'supn':
+        gdat.fitt.listnamecompmodl += ['supn']
+        if gdat.fitt.typemodlexcs != 'none':
+            gdat.fitt.listnamecompmodl += ['excs']
+    
+    if gdat.fitt.typemodl == 'psys':
+        gdat.fitt.listnamecompmodl += ['tran']
+    
+    if len(gdat.fitt.listnamecompmodl) > 1:
+        gdat.fitt.listnamecompmodl += ['totl']
+
+    if gdat.fitt.typemodlbase == 'gpro':
+        gdat.fitt.listnameparabase = ['sigmgprobase', 'rhoogprobase']
+    if gdat.fitt.typemodlbase == 'cons':
+        gdat.fitt.listnameparabase = ['cons']
+    if gdat.fitt.typemodlbase == 'step':
+        gdat.fitt.listnameparabase = ['consfrst', 'consseco', 'timestep', 'scalstep']
+    for nameparabase in gdat.fitt.listnameparabase:
+        gdat.dictindxpara[nameparabase + 'ener'] = np.empty(gdat.numbenerthismodl, dtype=int)
+        if nameparabase.startswith('sigmgprobase'):
+            minmpara = 0.01 # [ppt]
+            maxmpara = 4. # [ppt]
+            lablpara = ['$\sigma_{GP}$', '']
+        if nameparabase.startswith('rhoogprobase'):
+            minmpara = 1e-3
+            maxmpara = 0.3
+            lablpara = [r'$\rho_{GP}$', '']
+        if nameparabase.startswith('cons'):
+            if nameparabase == 'consfrst':
+                lablpara = ['$C_1$', 'ppt']
+                minmpara = -20. # [ppt]
+                maxmpara = 20. # [ppt]
+            elif nameparabase == 'consseco':
+                lablpara = ['$C_2$', 'ppt']
+                minmpara = -20. # [ppt]
+                maxmpara = -4. # [ppt]
+            else:
+                lablpara = ['$C$', 'ppt']
+                minmpara = -20. # [ppt]
+                maxmpara = 20. # [ppt]
+        if nameparabase.startswith('timestep'):
+            minmpara = 791.11
+            maxmpara = 791.13
+            lablpara = '$T_s$'
+        if nameparabase.startswith('scalstep'):
+            minmpara = 0.0001
+            maxmpara = 0.002
+            lablpara = '$A_s$'
+
+        if gdat.numbener > 1 and gdat.typemodlener == 'full':
+            for e in gdat.indxener:
+                setp_para(gdat, nameparabasefinl, minmpara, maxmpara, lablpara, strgener=gdat.liststrgener[e])
+        else:
+            setp_para(gdat, nameparabase, minmpara, maxmpara, lablpara, strgener=gdat.liststrgeneriter[ee])
+   
+    if ee > 0:
+        setattr(gdat.fitt, 'timestep' + gdat.liststrgeneriter[ee], 791.12)
+    
+    if ee > 0:
+        setattr(gdat.fitt, 'scalstep' + gdat.liststrgeneriter[ee], 0.00125147)
+                        
 
 def init( \
          
@@ -4597,7 +4683,7 @@ def init( \
         raise Exception('List of TESS sectors can only be input when typetarg is "inpt".')
     
     # check if any GPU is available
-    import gputil
+    import GPUtil
     temp = GPUtil.getGPUs()
     print('temp')
     print(temp)
@@ -5841,8 +5927,8 @@ def init( \
         gdat.listdeltrebn = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                gdat.minmdeltrebn = 2. * gdat.ratesamptime[b][p]
-                gdat.maxmdeltrebn = min(100. * gdat.minmdeltrebn, 0.1 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0]))
+                gdat.minmdeltrebn = max(100. * gdat.ratesamptime[b][p], 0.1 * 0.3 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0]))
+                gdat.maxmdeltrebn =  0.3 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0])
                 gdat.listdeltrebn[b][p] = np.linspace(gdat.minmdeltrebn, gdat.maxmdeltrebn, gdat.numbrebn)
         
         # search for periodic boxes
@@ -6634,10 +6720,8 @@ def init( \
         if gdat.typefittttvr is None:
             gdat.typefittttvr = 'globfull'
 
-        for typemodl in gdat.listtypemodl:
+        for gdat.fitt.typemodl in gdat.listtypemodl:
             
-            gdat.fitt.typemodl = typemodl
-
             meangauspara = None
             stdvgauspara = None
 
@@ -6645,7 +6729,7 @@ def init( \
             gdat.numbsampburnwalkinit = 0
             gdat.numbsampburnwalk = int(0.3 * gdat.numbsampwalk)
             
-            if typemodl.startswith('psys') or typemodl == 'cosc':
+            if gdat.fitt.typemodl.startswith('psys') or gdat.fitt.typemodl == 'cosc':
                 # number of terms in the LD law
                 if gdat.typemodllmdkterm == 'line':
                     gdat.numbcoeflmdkterm = 1
@@ -6680,7 +6764,7 @@ def init( \
                     gdat.indxinstthis = p
                     
                     if gdat.limttimefitt is None:
-                        #if typemodl == 'supn':
+                        #if gdat.fitt.typemodl == 'supn':
                         #    indxtimetemp = np.argmin(abs(gdat.rflxthis[:, 0] - np.percentile(gdat.rflxthis, 1.) + \
                         #                                                                        0.5 * (np.percentile(gdat.rflxthis, 99.) - np.percentile(gdat.rflxthis, 1.))))
                         #    gdat.indxtimefitt = np.where(gdat.timethis < gdat.timethis[indxtimetemp])[0]
@@ -6719,7 +6803,7 @@ def init( \
                             gdat.liststrgeneritermlikdone = np.array([])
                                         
                     if gdat.typeverb > 0:
-                        if typemodl == 'psys' or typemodl == 'cosc' or typemodl == 'psyspcur':
+                        if gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur':
                         
                             print('gdat.dictmileoutp[boolposianls]')
                             print(gdat.dictmileoutp['boolposianls'])
@@ -6733,19 +6817,6 @@ def init( \
                         print(gdat.numbener)
                                 
                     for ee in gdat.indxeneriter:
-                    
-                        gdat.dictindxpara = dict()
-                        gdat.dictfeatpara = dict()
-                        gdat.dictfeatpara['scal'] = []
-                        
-                        gdat.listlablpara = []
-                        gdat.listminmpara = []
-                        gdat.listmaxmpara = []
-                        gdat.listnamepara = []
-                        gdat.listnameparafull = []
-                                
-                        # counter for the parameter index
-                        cntr = 0
                         
                         # Boolean flag indicating whether white light curve is modeled as opposed to spectral light curves
                         if ee == 0:
@@ -6767,77 +6838,12 @@ def init( \
                             print('gdat.indxeneriterthis')
                             print(gdat.indxeneriterthis)
                     
-                        if ee > 0:
-                            setattr(gdat.fitt, 'timestep' + gdat.liststrgeneriter[ee], 791.12)
-                        
-                        if ee > 0:
-                            setattr(gdat.fitt, 'scalstep' + gdat.liststrgeneriter[ee], 0.00125147)
-                        
-                        # type of baseline offset
-                        setp_para_defa(gdat, 'fitt', 'typemodlbase', 'cons')
-                        
-                        gdat.listnamecompgpro = ['totl']
-                        if gdat.fitt.typemodlbase == 'gpro':
-                            gdat.listnamecompgpro.append('base')
-                        
-                        gdat.fitt.listnamecompmodl = ['base']
-                        if typemodl == 'supn':
-                            gdat.fitt.listnamecompmodl += ['supn']
-                            if gdat.fitt.typemodlexcs != 'none':
-                                gdat.fitt.listnamecompmodl += ['excs']
-                        
-                        if typemodl == 'psys':
-                            gdat.fitt.listnamecompmodl += ['tran']
-                        
-                        if len(gdat.fitt.listnamecompmodl) > 1:
-                            gdat.fitt.listnamecompmodl += ['totl']
+                        if gdat.fitt.typemodl == 'supn':
+                            
+                            init_modl(gdat)
 
-                        if gdat.fitt.typemodlbase == 'gpro':
-                            gdat.fitt.listnameparabase = ['sigmgprobase', 'rhoogprobase']
-                        if gdat.fitt.typemodlbase == 'cons':
-                            gdat.fitt.listnameparabase = ['cons']
-                        if gdat.fitt.typemodlbase == 'step':
-                            gdat.fitt.listnameparabase = ['consfrst', 'consseco', 'timestep', 'scalstep']
-                        for nameparabase in gdat.fitt.listnameparabase:
-                            gdat.dictindxpara[nameparabase + 'ener'] = np.empty(gdat.numbenerthismodl, dtype=int)
-                            if nameparabase.startswith('sigmgprobase'):
-                                minmpara = 0.01 # [ppt]
-                                maxmpara = 4. # [ppt]
-                                lablpara = ['$\sigma_{GP}$', '']
-                            if nameparabase.startswith('rhoogprobase'):
-                                minmpara = 1e-3
-                                maxmpara = 0.3
-                                lablpara = [r'$\rho_{GP}$', '']
-                            if nameparabase.startswith('cons'):
-                                if nameparabase == 'consfrst':
-                                    lablpara = ['$C_1$', 'ppt']
-                                    minmpara = -20. # [ppt]
-                                    maxmpara = 20. # [ppt]
-                                elif nameparabase == 'consseco':
-                                    lablpara = ['$C_2$', 'ppt']
-                                    minmpara = -20. # [ppt]
-                                    maxmpara = -4. # [ppt]
-                                else:
-                                    lablpara = ['$C$', 'ppt']
-                                    minmpara = -20. # [ppt]
-                                    maxmpara = 20. # [ppt]
-                            if nameparabase.startswith('timestep'):
-                                minmpara = 791.11
-                                maxmpara = 791.13
-                                lablpara = '$T_s$'
-                            if nameparabase.startswith('scalstep'):
-                                minmpara = 0.0001
-                                maxmpara = 0.002
-                                lablpara = '$A_s$'
-
-                            if gdat.numbener > 1 and gdat.typemodlener == 'full':
-                                for e in gdat.indxener:
-                                    cntr = setp_para(gdat, nameparabasefinl, minmpara, maxmpara, lablpara, cntr, strgener=gdat.liststrgener[e])
-                            else:
-                                cntr = setp_para(gdat, nameparabase, minmpara, maxmpara, lablpara, cntr, strgener=gdat.liststrgeneriter[ee])
-                                
-                        if typemodl == 'supn':
-                                
+                            setp_modlbase(gdat, e, ee)
+                    
                             # list of parameter labels and units
                             #gdat.listlablpara = [['$T_0$', 'BJD-%d' % gdat.timeoffs], ['$u_0$', ''], ['$u_1$', '']]
                            
@@ -6856,30 +6862,38 @@ def init( \
                                 maxmtimesupn = 363.
                             
                             lablpara = ['$T_0$', 'BJD-%d' % gdat.timeoffs]
-                            cntr = setp_para(gdat, 'timesupn', minmtimesupn, maxmtimesupn, lablpara, cntr)
+                            setp_para(gdat, 'timesupn', minmtimesupn, maxmtimesupn, lablpara)
                             
                             if gdat.fitt.typemodlexcs == 'bump':
-                                cntr = setp_para(gdat, 'timebumpoffs', 0., 1., ['$T_b$', ''], cntr)
-                                cntr = setp_para(gdat, 'amplbump', 0., 50., [r'$A_b$', ''], cntr) # [ppt]
-                                cntr = setp_para(gdat, 'scalbump', 0.01, 0.5, [r'$u_b$', ''], cntr)
+                                setp_para(gdat, 'timebumpoffs', 0., 1., ['$T_b$', ''])
+                                setp_para(gdat, 'amplbump', 0., 50., [r'$A_b$', '']) # [ppt]
+                                setp_para(gdat, 'scalbump', 0.01, 0.5, [r'$u_b$', ''])
                             
-                            cntr = setp_para(gdat, 'coeflinesupn', -20., 50., ['$c_1$', 'ppt'], cntr)
+                            setp_para(gdat, 'coeflinesupn', -20., 50., ['$c_1$', 'ppt'])
                             if gdat.fitt.typemodlsupn == 'quad':
-                                cntr = setp_para(gdat, 'coefquadsupn', -20., 50., ['$c_2$', 'ppt'], cntr)
+                                setp_para(gdat, 'coefquadsupn', -20., 50., ['$c_2$', 'ppt'])
 
-                            strgextn = gdat.strgcnfg + typemodl
+                            strgextn = gdat.strgcnfg + gdat.fitt.typemodl
                             proc_modl(gdat, strgextn)
                                 
-                        elif typemodl == 'agns':
+                        elif gdat.fitt.typemodl == 'agns':
 
+                            init_modl(gdat)
+
+                            setp_modlbase(gdat, e, ee)
+                    
                             proc_modl(gdat, strgextn)
 
 
-                        elif typemodl == 'spot':
+                        elif gdat.fitt.typemodl == 'spot':
 
                             # for each spot multiplicity, fit the spot model
                             for gdat.numbspot in listindxnumbspot:
                                 
+                                init_modl(gdat)
+
+                                setp_modlbase(gdat, e, ee)
+                    
                                 if gdat.typeverb > 0:
                                     print('gdat.numbspot')
                                     print(gdat.numbspot)
@@ -6894,7 +6908,8 @@ def init( \
                                 gdat.listmaxmpara = [ 3.,  3., 0.4, 89.9, 0.6, 1e-1]
                                 
                                 for numbspottemp in range(gdat.numbspot):
-                                    gdat.listlablpara += [['$\\theta_{%d}$' % numbspottemp, 'deg'], ['$\\phi_{%d}$' % numbspottemp, 'deg'], ['$R_{%d}$' % numbspottemp, '']]
+                                    gdat.listlablpara += [['$\\theta_{%d}$' % numbspottemp, 'deg'], \
+                                                                ['$\\phi_{%d}$' % numbspottemp, 'deg'], ['$R_{%d}$' % numbspottemp, '']]
                                     listscalpara += ['self', 'self', 'self']
                                     gdat.listminmpara += [-90.,   0.,  0.]
                                     gdat.listmaxmpara += [ 90., 360., 0.4]
@@ -6959,9 +6974,9 @@ def init( \
                                 plt.close()
 
 
-                        elif typemodl == 'psys' or typemodl == 'cosc' or typemodl == 'psyspcur' or typemodl == 'psysttvr':
+                        elif gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr':
                             
-                            if typemodl == 'psysttvr':
+                            if gdat.fitt.typemodl == 'psysttvr':
                                 numbtran = len(gdat.listindxtimetranindi[j][b][p])
                                 if gdat.typefittttvr == 'userindi':
                                     numbiterfitt = numbtran
@@ -6975,10 +6990,15 @@ def init( \
                             indxiterfitt = np.arange(numbiterfitt)
                             
                             for ll in indxiterfitt:
+                                
+                                init_modl(gdat)
+
+                                setp_modlbase(gdat, e, ee)
+                    
                                 # list of companion parameter names
                                 gdat.listnameparacomp = []
                                 
-                                if typemodl == 'psysttvr':
+                                if gdat.fitt.typemodl == 'psysttvr':
                                     if gdat.typefittttvr == 'lineindi' and ll == 0 or gdat.typefittttvr == 'glob' or gdat.typefittttvr == 'globfull':
                                         gdat.listnameparacomp += ['peri', 'epocmtra']
                                     if gdat.typefittttvr == 'glob':
@@ -6987,9 +7007,9 @@ def init( \
                                     else:
                                         gdat.listnameparacomp += ['ttvr%04d' % ll]
                                 
-                                if typemodl == 'psys' or typemodl == 'psysttvr' and gdat.typefittttvr == 'globfull':
+                                if gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psysttvr' and gdat.typefittttvr == 'globfull':
                                     gdat.listnameparacomp += ['rsma', 'peri', 'epocmtra', 'cosi', 'rrat']
-                                if typemodl == 'cosc':
+                                if gdat.fitt.typemodl == 'cosc':
                                     gdat.listnameparacomp += ['mass']
                                 
                                 # define arrays of parameter indices for companions
@@ -7018,7 +7038,7 @@ def init( \
                                         for e in gdat.indxener:
                                             #setattr(gdat.fitt, 'coeflmdklinr' + gdat.liststrgener[e], 0.2)
                                             #setattr(gdat.fitt, 'coeflmdkquad' + gdat.liststrgener[e], 0.4)
-                                            cntr = setp_para(gdat, '', minmpara, maxmpara, None, cntr, strgener=gdat.liststrgener[e], strglmdk=strglmdk)
+                                            setp_para(gdat, '', minmpara, maxmpara, None, strgener=gdat.liststrgener[e], strglmdk=strglmdk)
                                     else:
 
                                         if gdat.typemodllmdkener == 'cons' or gdat.typemodllmdkener == 'ener':
@@ -7029,19 +7049,19 @@ def init( \
                                                 #if ee > 0:
                                                 #    setattr(gdat.fitt, 'coeflmdklinr' + gdat.liststrgeneriter[ee], 0.4)
                                                 # add linear coefficient
-                                                cntr = setp_para(gdat, 'coeflmdk', 0., 0.15, None, cntr, strglmdk='linr', strgener=strgener)
+                                                setp_para(gdat, 'coeflmdk', 0., 0.15, None, strglmdk='linr', strgener=strgener)
                                                 
                                             if gdat.typemodllmdkterm == 'quad':
                                                 #if ee > 0:
                                                 #    setattr(gdat.fitt, 'coeflmdkquad' + gdat.liststrgeneriter[ee], 0.25)
-                                                cntr = setp_para(gdat, 'coeflmdk', 0., 0.3, None, cntr, strglmdk='quad', strgener=strgener)
+                                                setp_para(gdat, 'coeflmdk', 0., 0.3, None, strglmdk='quad', strgener=strgener)
                                                 
                                         elif gdat.typemodllmdkener == 'line':
                                             if gdat.typemodllmdkterm != 'none':
-                                                cntr = setp_para(gdat, 'ratecoeflmdklinr', 0., 1., None, cntr)
+                                                setp_para(gdat, 'ratecoeflmdklinr', 0., 1., None)
                                             
                                             if gdat.typemodllmdkterm == 'quad':
-                                                cntr = setp_para(gdat, 'ratecoeflmdkquad', 0., 1., None, cntr)
+                                                setp_para(gdat, 'ratecoeflmdkquad', 0., 1., None)
                                         else:
                                             raise Exception('')
 
@@ -7057,9 +7077,9 @@ def init( \
                                 for j in gdat.indxcomp:
                                     
                                     # define parameter limits
-                                    if typemodl == 'cosc':
-                                        cntr = setp_para(gdat, 'radistar', 0.1, 100., ['$R_*$', ''], cntr)
-                                        cntr = setp_para(gdat, 'massstar', 0.1, 100., ['$M_*$', ''], cntr)
+                                    if gdat.fitt.typemodl == 'cosc':
+                                        setp_para(gdat, 'radistar', 0.1, 100., ['$R_*$', ''])
+                                        setp_para(gdat, 'massstar', 0.1, 100., ['$M_*$', ''])
                                     
                                     strgcomp = 'com%d' % j
                                     
@@ -7068,51 +7088,52 @@ def init( \
                                         #gdat.fitt.rsmacom0 = (14.34 / gdat.dictfact['rsre'] + 0.939) / (0.04828 * gdat.dictfact['aurs'])
                                         if ee > 0:
                                             gdat.fitt.rsmacom0 = 0.10248
-                                        cntr = setp_para(gdat, 'rsma', 0.06, 0.14, None, cntr, strgcomp=strgcomp)
+                                        setp_para(gdat, 'rsma', 0.06, 0.14, None, strgcomp=strgcomp)
                                     
                                     if 'peri' in gdat.listnameparacomp:
-                                        cntr = setp_para(gdat, 'peri', gdat.periprio[j] - 0.01 * gdat.periprio[j], \
-                                                                            gdat.periprio[j] + 0.01 * gdat.periprio[j], None, cntr, strgcomp=strgcomp)
+                                        setp_para(gdat, 'peri', gdat.periprio[j] - 0.01 * gdat.periprio[j], \
+                                                                            gdat.periprio[j] + 0.01 * gdat.periprio[j], None, strgcomp=strgcomp)
                                     
                                     if 'epocmtra' in gdat.listnameparacomp:
                                         #gdat.fitt.epocmtracomp = np.array([791.11])
                                         if ee > 0:
                                             gdat.fitt.epocmtracom0 = 791.112
-                                        cntr = setp_para(gdat, 'epocmtra', 791.10, 791.13, None, cntr, strgcomp=strgcomp)
+                                        setp_para(gdat, 'epocmtra', 791.10, 791.13, None, strgcomp=strgcomp)
                                     
                                     if 'cosi' in gdat.listnameparacomp:
                                         #gdat.fitt.cosicomp = np.array([np.cos(87.32 / 180. * np.pi)]) # Macini+2018
                                         if ee > 0:
                                             gdat.fitt.cosicom0 = 0.0414865
-                                        cntr = setp_para(gdat, 'cosi', 0., 0.08, None, cntr, strgcomp=strgcomp)
+                                        setp_para(gdat, 'cosi', 0., 0.08, None, strgcomp=strgcomp)
                                     
                                     if 'rrat' in gdat.listnameparacomp:
                                         minmpara = 0.11
                                         maxmpara = 0.19
                                         if gdat.numbener > 1 and gdat.typemodlener == 'full':
                                             for e in gdat.indxener:
-                                                cntr = setp_para(gdat, 'rrat', minmpara, maxmpara, None, cntr, strgener=gdat.liststrgener[e], strgcomp=strgcomp)
+                                                setp_para(gdat, 'rrat', minmpara, maxmpara, None, strgener=gdat.liststrgener[e], strgcomp=strgcomp)
                                         else:
-                                            cntr = setp_para(gdat, 'rrat', minmpara, maxmpara, None, cntr, strgener=gdat.liststrgeneriter[ee], strgcomp=strgcomp)
+                                            setp_para(gdat, 'rrat', minmpara, maxmpara, None, strgener=gdat.liststrgeneriter[ee], strgcomp=strgcomp)
                                         
-                                    if typemodl == 'cosc':
-                                        cntr = setp_para(gdat, 'mass', 0.1, 100., ['$M_c$', ''], cntr, strgcomp=strgcomp)
+                                    if gdat.fitt.typemodl == 'cosc':
+                                        setp_para(gdat, 'mass', 0.1, 100., ['$M_c$', ''], strgcomp=strgcomp)
                                     
-                                    strgextn = gdat.strgcnfg + typemodl + 'co%02d' % j
-                                    if gdat.typemodlener == 'iter':
-                                        strgextn += gdat.liststrgeneriter[gdat.indxeneriterthis[0]]
-                                    
-                                    proc_modl(gdat, strgextn)
+                                strgextn = gdat.strgcnfg + gdat.fitt.typemodl
+                                if gdat.typemodlener == 'iter':
+                                    strgextn += gdat.liststrgeneriter[gdat.indxeneriterthis[0]]
+                                proc_modl(gdat, strgextn)
 
-                                    print('gdat.typemodlener')
-                                    print(gdat.typemodlener)
-                                
-                        elif typemodl == 'stargpro':
+                        elif gdat.fitt.typemodl == 'stargpro':
+                            
+                            init_modl(gdat)
+
+                            setp_modlbase(gdat, e, ee)
+                    
                             pass
                         else:
                             print('A model type was not defined.')
-                            print('typemodl')
-                            print(typemodl)
+                            print('gdat.fitt.typemodl')
+                            print(gdat.fitt.typemodl)
                             raise Exception('')
                     
                     #print('gdat.listnamepara')
@@ -7126,8 +7147,8 @@ def init( \
                     #print('gdat.listmaxmpara')
                     #print(gdat.listmaxmpara)
                     
-                    # do not continue if there is no trigget
-                    if (typemodl == 'psys' or typemodl == 'cosc' or typemodl == 'psyspcur') and not boolinfethis:
+                    # do not continue if there is no trigger
+                    if (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur') and not boolinfethis:
                         continue
 
                     if gdat.typeinfe == 'samp':
@@ -7144,7 +7165,7 @@ def init( \
                     
                     boolbrekmodl = False
 
-                    if gdat.numbener > 1 and (typemodl == 'psys' or typemodl == 'cosc' or typemodl == 'psyspcur'):
+                    if gdat.numbener > 1 and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur'):
                         # plot the radius ratio spectrum
                         path = gdat.pathimagtarg + 'spec%s.%s' % (gdat.strgcnfg, gdat.typefileplot)
                         figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
