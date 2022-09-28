@@ -148,6 +148,9 @@ boolbdtr = False
 # turn on neglecting the lowest likelihood data sample (outlier rejection)
 boolrejeoutlllik = True
 
+# period for WASP-39b
+periprio = np.array([4.0552941]) # [days] Macini+2018
+
 dictoutp = miletos.main.init( \
                              strgmast=strgmast, \
                              listlablinst=listlablinst, \
@@ -159,6 +162,9 @@ dictoutp = miletos.main.init( \
                              boolrejeoutlllik=boolrejeoutlllik, \
                              boolwritover=boolwritover, \
                              dictfitt=dictfitt, \
+                             
+                             periprio=periprio, \
+
                              listarrytser=listarrytser, \
                              typemodlener=typemodlener, \
                              listtypemodl=listtypemodl, \

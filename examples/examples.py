@@ -22,7 +22,7 @@ def cnfg_TOIs():
                   )
 
 
-def cnfg_TOIs_multi():
+def cnfg_TOI_multis():
 
     dictlcurtessinpt = dict()
     dictlcurtessinpt['booltpxfonly'] = True
@@ -36,7 +36,7 @@ def cnfg_TOIs_multi():
                        strgmast=strgmast, \
                        dictlcurtessinpt=dictlcurtessinpt, \
                        listtypemodl=['psys'], \
-                       strgclus='TOIs', \
+                       strgclus='TOI_multis', \
                       )
 
 
@@ -63,6 +63,27 @@ def cnfg_Interesting_TICs_psys():
                           ticitarg=tici, \
                           strgclus='Interesting_TICs', \
                           listtypemodl=['psys'], \
+                         )
+
+
+def cnfg_TOI_Host_Variability():
+    '''
+    Analyze the variability of the host star
+    ''' 
+    
+    listtoii = [ \
+                270, \
+               ]
+
+    dictpboxinpt = {'boolmult': True}
+    dictlcurtessinpt = {'typelcurtpxftess': 'SPOC'}
+    for toii in listtoii:
+        miletos.main.init( \
+                          toiitarg=toii, \
+                          strgclus='TOI_Host_Variability', \
+                          listtypemodl=['stargpro'], \
+                          dictpboxinpt=dictpboxinpt, \
+                          dictlcurtessinpt=dictlcurtessinpt, \
                          )
 
 
@@ -423,10 +444,13 @@ def cnfg_TOI1431():
 
 def cnfg_WASP18():
     
+    dictlcurtessinpt = {'typelcurtpxftess': 'SPOC'}
     miletos.main.init( \
-                   pcurtype='sinu', \
-                   toiitarg=185, \
-                  )
+                      strgmast='WASP-18', \
+                      listtypemodl=['psysttvr'], \
+                      booldiag=True, \
+                      dictlcurtessinpt=dictlcurtessinpt, \
+                     )
 
 
 def cnfg_TOI193():
@@ -592,11 +616,20 @@ def cnfg_transit_asymmetry():
                          )
 
 
+def cnfg_Cygnus1():
+    
+    miletos.main.init( \
+                      strgmast='Cygnus-1', \
+                     )
+
+
 def cnfg_TOI1233():
     
     toiitarg = 1233
+    dictlcurtessinpt = {'typelcurtpxftess': 'SPOC'}
     miletos.main.init( \
                       toiitarg=toiitarg, \
+                      dictlcurtessinpt=dictlcurtessinpt, \
                       boolplotpopl=True, \
                      )
 
