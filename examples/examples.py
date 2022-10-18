@@ -442,15 +442,19 @@ def cnfg_TOI1431():
                   )
 
 
-def cnfg_WASP18():
+def cnfg_WASP(strgiwas):
     
+    iwas = int(strgiwas)
+    #listiwas = [18, 46]
+    #for iwas in listiwas:
     dictlcurtessinpt = {'typelcurtpxftess': 'SPOC'}
+    strgmast = 'WASP-%d' % iwas
     miletos.main.init( \
-                      strgmast='WASP-18', \
-                      listtypemodl=['psysttvr'], \
-                      booldiag=True, \
-                      dictlcurtessinpt=dictlcurtessinpt, \
-                     )
+                  strgmast=strgmast, \
+                  listtypemodl=['psysttvr'], \
+                  booldiag=True, \
+                  dictlcurtessinpt=dictlcurtessinpt, \
+                 )
 
 
 def cnfg_TOI193():
@@ -616,6 +620,20 @@ def cnfg_transit_asymmetry():
                          )
 
 
+def cnfg_LSST_psys():
+    
+    dicttrue = dict()
+    dicttrue['typemodl'] = 'psys'
+    
+    miletos.main.init( \
+                      strgmast='HD 209458', \
+                      dicttrue=dicttrue, \
+                      listtypemodl=['psys'], \
+                      liststrginst=[['LSST'], []], \
+                      liststrgtypedata=[['simutoyy'], []], \
+                     )
+
+
 def cnfg_Cygnus1():
     
     miletos.main.init( \
@@ -625,12 +643,48 @@ def cnfg_Cygnus1():
 
 def cnfg_TOI1233():
     
+    path = os.environ['DATA'] + '/general/TOI1233/HD108236_PFS_20220627.vels'
+    print('Reading from %s...' % path)
+    listtime = []
+    listrvel = []
+    liststdvrvel = []
+    for line in open(path, 'r'):
+        listlinesplt = line.split(' ')
+        k = 0
+        for line in listlinesplt:
+            if line == ' ':
+                continue
+            if line == '':
+                continue
+            
+            valu = float(line)
+            if k == 0:
+                listtime.append(valu)
+            if k == 1:
+                listrvel.append(valu)
+            if k == 2:
+                liststdvrvel.append(valu)
+            k += 1
+    listtime = np.array(listtime)
+    
+    listarrytser = dict()
+    listarrytser['raww'] = [None ,[[[]]]]
+    listarrytser['raww'][1][0][0] = np.empty((listtime.size, 1, 3))
+    listarrytser['raww'][1][0][0][:, 0, 0] = listtime
+    listarrytser['raww'][1][0][0][:, 0, 1] = np.array(listrvel)
+    listarrytser['raww'][1][0][0][:, 0, 2] = np.array(liststdvrvel)
+
     toiitarg = 1233
     dictlcurtessinpt = {'typelcurtpxftess': 'SPOC'}
     miletos.main.init( \
                       toiitarg=toiitarg, \
+                      listtypemodl=['psys'], \
+                      strgexar='HD 108236', \
+                      listarrytser=listarrytser, \
+                      typepriocomp='exar', \
                       dictlcurtessinpt=dictlcurtessinpt, \
                       boolplotpopl=True, \
+                      booldiag=True, \
                      )
 
 
