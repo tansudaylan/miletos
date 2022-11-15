@@ -184,6 +184,47 @@ def cnfg_WASP121():
                       )
 
 
+def cnfg_WASP43():
+    
+    liststrgtypedata = [['simugene'], []]
+    
+    miletos.main.init( \
+                   strgmast='WASP-43', \
+                   listtypemodl=['psyspcur'], \
+                   liststrgtypedata=liststrgtypedata, \
+                  )
+
+
+def cnfg_ATEL15755():
+    
+    # https://www.astronomerstelegram.org/?read=15755
+    # X-ray transient LXT 221107A
+    labltarg = 'HD 251108'
+    rasctarg = 91.062625
+    decltarg = 12.764722
+
+    miletos.main.init( \
+                  labltarg=labltarg, \
+                  rasctarg=rasctarg, \
+                  decltarg=decltarg, \
+                  
+                  #listtypemodl=listtypemodl, \
+                  
+                  #refrlistlabltser=refrlistlabltser, \
+                  #refrarrytser=refrarrytser, \
+                  #dictlcurtessinpt=dictlcurtessinpt, \
+                  #dictlygoinpt=dictlygoinpt, \
+                 )
+
+
+def target(strgmast):
+    '''
+    Execute miletos on a target from command line.
+    '''
+
+
+
+
 def cnfg_WASP12():
 
     miletos.main.init( \
