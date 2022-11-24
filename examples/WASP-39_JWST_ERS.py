@@ -33,82 +33,82 @@ patherss = os.environ['DATA'] + '/other/JWST_ERS/WASP-39b/'
 typeinst = sys.argv[1]
 
 # read the data (wavelengths, times, relative fluxes, and relative flux errors)
-if typeinst == 'JWST_NIRCam':
+#if typeinst == 'JWST_NIRCam':
+#
+#    # flux
+#    path = patherss + 'NIRCam/star1_flux_resampled.pickle'
+#    objtfile = open(path, 'rb')
+#    flux = pickle.load(objtfile, )
+#    
+#    # flux error
+#    path = patherss + 'NIRCam/star1_error_resampled.pickle'
+#    objtfile = open(path, 'rb')
+#    errr = pickle.load(objtfile)
+#    
+#    # wavelength solution [um]
+#    path = patherss + 'NIRCam/wvl_solution.pickle'
+#    objtfile = open(path, 'rb')
+#    wlen = pickle.load(objtfile)
+#    
+#    # times [BJD]
+#    path = patherss + 'NIRCam/BJD_TDB_time.pickle'
+#    objtfile = open(path, 'rb')
+#    time = pickle.load(objtfile) + 2.4e6
+#
+#elif typeinst.startswith('JWST_NIRSpec'):
+#    
+#    strg = typeinst.split('_')[3]
+#    
+#    path = patherss + 'NIRSpec/raw-binned-light-curves-W39-G395H-%s-10pix-custom-Alam_v4.xc' % strg 
+#    
+#    print('Reading from %s...' % path)
+#    objt = xr.open_dataset(path)
+#    
+#    # wavelength solution [um]
+#    wlen = objt['central_wavelength'].values
+#    # flux
+#    flux = objt['raw_flux'].T.values
+#    # flux error
+#    errr = objt['raw_flux_error'].T.values
+#    
+#    # times [BJD]
+#    time = objt['time_flux'].values - 59000.
+#
+#else:
+#    print('An argument is needed: JWST_NIRCAM, JWST_NIRSpec_Prism, JWST_NIRSpec_NRS1, or JWST_NIRSpec_NRS2.')
+#    raise Exception('')
 
-    # flux
-    path = patherss + 'NIRCam/star1_flux_resampled.pickle'
-    objtfile = open(path, 'rb')
-    flux = pickle.load(objtfile, )
-    
-    # flux error
-    path = patherss + 'NIRCam/star1_error_resampled.pickle'
-    objtfile = open(path, 'rb')
-    errr = pickle.load(objtfile)
-    
-    # wavelength solution [um]
-    path = patherss + 'NIRCam/wvl_solution.pickle'
-    objtfile = open(path, 'rb')
-    wlen = pickle.load(objtfile)
-    
-    # times [BJD]
-    path = patherss + 'NIRCam/BJD_TDB_time.pickle'
-    objtfile = open(path, 'rb')
-    time = pickle.load(objtfile) + 2.4e6
-
-elif typeinst.startswith('JWST_NIRSpec'):
-    
-    strg = typeinst.split('_')[3]
-    
-    path = patherss + 'NIRSpec/raw-binned-light-curves-W39-G395H-%s-10pix-custom-Alam_v4.xc' % strg 
-    
-    print('Reading from %s...' % path)
-    objt = xr.open_dataset(path)
-    
-    # wavelength solution [um]
-    wlen = objt['central_wavelength'].values
-    # flux
-    flux = objt['raw_flux'].T.values
-    # flux error
-    errr = objt['raw_flux_error'].T.values
-    
-    # times [BJD]
-    time = objt['time_flux'].values - 59000.
-
-else:
-    print('An argument is needed: JWST_NIRCAM, JWST_NIRSpec_Prism, JWST_NIRSpec_NRS1, or JWST_NIRSpec_NRS2.')
-    raise Exception('')
-
-numbener = 5
-wlen = wlen[:numbener]
-flux = flux[:, :numbener]
-errr = errr[:, :numbener]
-
-# number of time samples
-numbtime = time.size
-# indices of the time samples
-indxtime = np.arange(numbtime)
-
-# number of wavelength samples
-numbwlen = wlen.size
-# indices of the wavelength samples
-indxwlen = np.arange(numbwlen)
-
-print('Number of time bins in the file: %d' % numbtime)
-print('Number of wavelength bins in the file: %d' % numbwlen)
-
-# put the data into a format suitable for miletos
-listarrytser = dict()
-listarrytser['raww'] = [[[np.empty((numbtime, numbwlen, 3))]], []]
-listarrytser['raww'][0][0][0][:, :, 0] = time[:, None]
-listarrytser['raww'][0][0][0][:, :, 1] = flux
-listarrytser['raww'][0][0][0][:, :, 2] = errr
-
-# normalize the spectral light curve by the medians
-medi = np.nanmedian(listarrytser['raww'][0][0][0][:int(time.size/10), :, 1], axis=0)
-listarrytser['raww'][0][0][0][:, :, 1:3] /= medi[None, :, None]
-
-# half of the wavelenth bin width
-diffwlenhalf = (wlen[1:] - wlen[:-1]) / 2.
+#numbener = 5
+#wlen = wlen[:numbener]
+#flux = flux[:, :numbener]
+#errr = errr[:, :numbener]
+#
+## number of time samples
+#numbtime = time.size
+## indices of the time samples
+#indxtime = np.arange(numbtime)
+#
+## number of wavelength samples
+#numbwlen = wlen.size
+## indices of the wavelength samples
+#indxwlen = np.arange(numbwlen)
+#
+#print('Number of time bins in the file: %d' % numbtime)
+#print('Number of wavelength bins in the file: %d' % numbwlen)
+#
+## put the data into a format suitable for miletos
+#listarrytser = dict()
+#listarrytser['raww'] = [[[np.empty((numbtime, numbwlen, 3))]], []]
+#listarrytser['raww'][0][0][0][:, :, 0] = time[:, None]
+#listarrytser['raww'][0][0][0][:, :, 1] = flux
+#listarrytser['raww'][0][0][0][:, :, 2] = errr
+#
+## normalize the spectral light curve by the medians
+#medi = np.nanmedian(listarrytser['raww'][0][0][0][:int(time.size/10), :, 1], axis=0)
+#listarrytser['raww'][0][0][0][:, :, 1:3] /= medi[None, :, None]
+#
+## half of the wavelenth bin width
+#diffwlenhalf = (wlen[1:] - wlen[:-1]) / 2.
 
 # type of iteration over energy bins
 typemodlener = 'iter'
@@ -149,10 +149,10 @@ boolbdtr = False
 boolrejeoutlllik = True
 
 # priors for WASP-39b
-pericompprio = np.array([4.0552941]) # [days] Macini+2018
-rsmacompprio = np.array([(14.34 / gdat.dictfact['rsre'] + 0.939) / (0.04828 * gdat.dictfact['aurs'])]) (0.103125)
-epocmtracompprio = np.array([791.112])
-cosicompprio = np.array([0.0414865])
+#pericompprio = np.array([4.0552941]) # [days] Macini+2018
+#rsmacompprio = np.array([(14.34 / gdat.dictfact['rsre'] + 0.939) / (0.04828 * gdat.dictfact['aurs'])]) (0.103125)
+#epocmtracompprio = np.array([791.112])
+#cosicompprio = np.array([0.0414865])
 
 dictoutp = miletos.main.init( \
                              strgmast=strgmast, \
@@ -166,16 +166,16 @@ dictoutp = miletos.main.init( \
                              boolwritover=boolwritover, \
                              dictfitt=dictfitt, \
                              
-                             pericompprio=pericompprio, \
-                             epocmtracompprio=epocmtracompprio, \
-                             rsmacompprio=rsmacompprio, \
-                             cosicompprio=cosicompprio, \
+                             #pericompprio=pericompprio, \
+                             #epocmtracompprio=epocmtracompprio, \
+                             #rsmacompprio=rsmacompprio, \
+                             #cosicompprio=cosicompprio, \
 
-                             listarrytser=listarrytser, \
+                             #listarrytser=listarrytser, \
                              typemodlener=typemodlener, \
                              listtypemodl=listtypemodl, \
-                             listener=wlen, \
-                             lablener=lablwlen, \
+                             #listener=wlen, \
+                             #lablener=lablwlen, \
                             )
 
 

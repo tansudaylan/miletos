@@ -43,20 +43,17 @@ Given a target, miletos is an time-domain astronomy tool that allows
 """
 
 
-def retr_lcurtess( \
+def retr_lcur( \
                   
-                  # global object
-                  boolsrchmast, \
+                  # type of data to be retrieved
+                  strgtypedata='obsd', \
+                
+                  # TIC ID
+                  ticitarg=None, \
 
                   # keyword string for MAST search
                   strgmast=None, \
                   
-                  # type of data to be retrieved
-                  strgtypedata='obsd', \
-
-                  # TIC ID
-                  ticitarg=None, \
-
                   # RA for tesscut search
                   rasctarg=None, \
     
@@ -106,26 +103,16 @@ def retr_lcurtess( \
                   typeverb=1, \
                  ):
     '''
-    Pipeline to retrieve TESS light curve of a target.
+    Pipeline to retrieve TESS, Kepler, HST, and JWST light curves of a target using MAST or via lygos.
     '''
     
-    #strgmast, rasctarg, decltarg = setp_coorstrgmast(rasctarg, decltarg, strgmast)
-    
-    print('Running the pipeline to retrieve the TESS light curve of the target...')
+    print('Running the pipeline to retrieve the TESS, Kepler, HST, and JWST light curves of the target...')
 
     if not (strgmast is not None and ticitarg is None and rasctarg is None and decltarg is None or \
             strgmast is None and ticitarg is not None and rasctarg is None and decltarg is None or \
             strgmast is None and ticitarg is None and rasctarg is not None and decltarg is not None):
-                    print('strgmast')
-                    print(strgmast)
-                    print('ticitarg')
-                    print(ticitarg)
-                    print('rasctarg')
-                    print(rasctarg)
-                    print('decltarg')
-                    print(decltarg)
-                    raise Exception('')
-    
+        raise Exception('')
+
     if boolnorm is not None and 'boolnorm' in dictlygoinpt:
         raise Exception('')
     
@@ -134,21 +121,21 @@ def retr_lcurtess( \
     
     ticitsec = None
     if strgmast is not None or ticitarg is not None:
-        # determine the MAST keyword to be used for the target
-        if strgmast is not None:
-            strgmasttemp = strgmast
-        if ticitarg is not None:
-            strgmasttemp = 'TIC %d' % ticitarg
-    
-        maxmradisrchmast = 10. # arcsec
-        strgradi = '%gs' % maxmradisrchmast
         
         # determine the TIC ID to be used to search for available sectors
-        if ticitarg is None and not boolsrchmast:
+        if ticitarg is None:
+            
+            # determine the MAST keyword to be used for the target
+            if strgmast is not None:
+                strgmasttemp = strgmast
+            if ticitarg is not None:
+                strgmasttemp = 'TIC %d' % ticitarg
+            maxmradisrchmast = 10. # arcsec
+            strgradi = '%gs' % maxmradisrchmast
+    
             print('Will determine the TIC ID of the target using MAST keyword %s.' % strgmasttemp)
             print('Querying the TIC for sources within %s of %s...' % (strgradi, strgmasttemp))
             listdictticinear = astroquery.mast.Catalogs.query_object(strgmasttemp, catalog='TIC', radius=strgradi)
-            boolsrchmast = True
             if len(listdictticinear) > 0 and listdictticinear[0]['dstArcSec'] < 1.:
                 ticitsec = int(listdictticinear[0]['ID'])
             else:
@@ -280,26 +267,38 @@ def retr_lcurtess( \
                                        **dictlygoinpt, \
                                       )
         
-        namearry = 'listarry' + nameanlslygo
-
+        print('dictlygooutp[isttsec]')
+        summgene(dictlygooutp['listtsec'])
         for o, tseclygo in enumerate(listtsec):
-            indx = np.where(dictlygooutp['listtsec'] == tseclygo)[0]
+            indx = np.where(dictlygooutp['listtsec'][0] == tseclygo)[0]
+            print('tseclygo')
+            print(tseclygo)
             if indx.size > 0:
                 indxtsecthis = indx[0]
-                if len(dictlygooutp[namearry][indxtsecthis]) > 0:
+                if len(dictlygooutp['arryrflx'][nameanlslygo][0][indxtsecthis]) > 0:
                     
                     # choose the current sector
-                    arry = dictlygooutp[namearry][indxtsecthis]
+                    arry = dictlygooutp['arryrflx'][nameanlslygo][0][indxtsecthis]
                     
                     # find good times
+                    print('arry')
+                    summgene(arry)
+                    print('indxtsecthis')
+                    print(indxtsecthis)
                     indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
                     
                     # filter for good times
                     listarrylcur[o] = arry[indxtimegood, :]
                     
+                    print('listarrylcur[o]')
+                    summgene(listarrylcur[o])
+                    
                     listtcam[o] = dictlygooutp['listtcam'][indxtsecthis]
                     listtccd[o] = dictlygooutp['listtccd'][indxtsecthis]
-                    
+    
+    print('listarrylcur')
+    print(listarrylcur)
+
     listarrylcursapp = None
     listarrylcurpdcc = None
     arrylcursapp = None
@@ -473,6 +472,11 @@ def retr_lcurtess( \
             print('indxbadd')
             summgene(indxbadd)
             raise Exception('')
+    
+    print('arrylcur')
+    print(arrylcur)
+    print('listarrylcur')
+    print(listarrylcur)
 
     return arrylcur, arrylcursapp, arrylcurpdcc, listarrylcur, listarrylcursapp, listarrylcurpdcc, listtsec, listtcam, listtccd, listpath2min, dictlygooutp
    
@@ -4668,7 +4672,7 @@ def init( \
          
          
          ## Boolean flag to mask bad data
-         dictlcurtessinpt=None, \
+         dictretrlcurinpt=None, \
          
          ## time limits to mask
          listlimttimemask=None, \
@@ -4961,6 +4965,9 @@ def init( \
     if gdat.typeverb > 0:
         print('List of model types: %s' % gdat.listtypemodl)
     
+    gdat.maxmradisrchmast = 10. # arcsec
+    gdat.strgradi = '%gs' % gdat.maxmradisrchmast
+    
     # Boolean flag to perform inference
     gdat.boolinfe = len(gdat.listtypemodl) > 0
     if gdat.booltserdata:
@@ -4973,8 +4980,8 @@ def init( \
         if gdat.dictlygoinpt is None:
             gdat.dictlygoinpt = dict()
         
-        if gdat.dictlcurtessinpt is None:
-            gdat.dictlcurtessinpt = dict()
+        if gdat.dictretrlcurinpt is None:
+            gdat.dictretrlcurinpt = dict()
 
         # data validation (DV) report
         ## list of dictionaries holding the paths and DV report positions of plots
@@ -5114,8 +5121,8 @@ def init( \
     if (gdat.typetarg == 'tici' or gdat.typetarg == 'toii' or gdat.typetarg == 'mast') and not boolsrchmast:
         # temp -- check that the closest TIC to a given TIC is itself
         if gdat.typeverb > 0:
-            print('Querying the TIC within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source to the MAST keywrod %s...' % (strgradi, gdat.strgmast))
-        listdictticinear = astroquery.mast.Catalogs.query_region(gdat.strgmast, radius=strgradi, catalog="TIC")
+            print('Querying the TIC within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source to the MAST keywrod %s...' % (gdat.strgradi, gdat.strgmast))
+        listdictticinear = astroquery.mast.Catalogs.query_region(gdat.strgmast, radius=gdat.strgradi, catalog="TIC")
         boolsrchmast = True
         if gdat.typeverb > 0:
             print('Found %d TIC sources.' % len(listdictticinear))
@@ -5334,44 +5341,50 @@ def init( \
             print(gdat.liststrgtypedata)
 
         # get data
-        gdat.boolretrtess = False
+        gdat.boolretrlcurmast = False
         gdat.boolsimurflx = False
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 if gdat.liststrgtypedata[b][p].startswith('simu'):
                     gdat.boolsimurflx = True
                 if gdat.liststrginst[b][p] == 'TESS' and not gdat.liststrgtypedata[b][p].startswith('simugenelcur') and \
-                                                                                    not gdat.liststrgtypedata[b][p].startswith('inpt'):
-                    gdat.boolretrtess = True
+                                                                                    not gdat.liststrgtypedata[b][p].startswith('inpt') or \
+                                             gdat.liststrginst[b][p] == 'Kepler' or gdat.liststrginst[b][p] == 'HST' or gdat.liststrginst[b][p].startswith('JWST'):
+                    gdat.boolretrlcurmast = True
         
         if gdat.typeverb > 0:
             print('gdat.boolsimurflx')
             print(gdat.boolsimurflx)
-            print('gdat.boolretrtess')
-            print(gdat.boolretrtess)
+            print('gdat.boolretrlcurmast')
+            print(gdat.boolretrlcurmast)
         
-        if gdat.boolretrtess:
-            gdat.dictlcurtessinpt['ticitarg'] = ticitarg
-            gdat.dictlcurtessinpt['strgmast'] = strgmast
-            gdat.dictlcurtessinpt['rasctarg'] = rasctarg
+        if gdat.boolretrlcurmast:
+            gdat.dictretrlcurinpt['ticitarg'] = ticitarg
+            gdat.dictretrlcurinpt['strgmast'] = strgmast
+            gdat.dictretrlcurinpt['rasctarg'] = rasctarg
             
             if gdat.boolsimurflx:
-                gdat.dictlcurtessinpt['strgtypedata'] = 'simugenelcur'
+                gdat.dictretrlcurinpt['strgtypedata'] = 'simugenelcur'
             else:
-                gdat.dictlcurtessinpt['strgtypedata'] = 'obsd'
-            gdat.dictlcurtessinpt['decltarg'] = decltarg
-            gdat.dictlcurtessinpt['labltarg'] = gdat.labltarg
-            gdat.dictlcurtessinpt['booldiag'] = gdat.booldiag
+                gdat.dictretrlcurinpt['strgtypedata'] = 'obsd'
+            gdat.dictretrlcurinpt['decltarg'] = decltarg
+            gdat.dictretrlcurinpt['labltarg'] = gdat.labltarg
+            gdat.dictretrlcurinpt['booldiag'] = gdat.booldiag
             gdat.dictlygoinpt['pathtarg'] = gdat.pathtargruns + 'lygos/'
+            
+            if not 'liststrginst' in gdat.dictlygoinpt:
+                gdat.dictlygoinpt['liststrginst'] = gdat.liststrginst[0]
+            
             if not 'typepsfninfe' in gdat.dictlygoinpt:
                 gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
                 #gdat.dictlygoinpt['maxmradisrchmast'] = maxmradisrchmast
-            gdat.dictlcurtessinpt['dictlygoinpt'] = gdat.dictlygoinpt
+            
+            gdat.dictretrlcurinpt['dictlygoinpt'] = gdat.dictlygoinpt
 
             arrylcurtess, gdat.arrytsersapp, gdat.arrytserpdcc, listarrylcurtess, gdat.listarrytsersapp, gdat.listarrytserpdcc, \
                                   gdat.listtsec, gdat.listtcam, gdat.listtccd, listpathdownspoclcur, gdat.dictlygooutp = \
-                                  retr_lcurtess( \
-                                                        **gdat.dictlcurtessinpt, \
+                                  retr_lcur( \
+                                                        **gdat.dictretrlcurinpt, \
                                                        )
             
             gdat.dictmileoutp['listtsec'] = gdat.listtsec
@@ -5572,7 +5585,7 @@ def init( \
                 print(gdat.strgmast)
             
             if not gdat.boolforcoffl and gdat.strgmast is not None and not boolsrchmast:
-                listdictticinear = astroquery.mast.Catalogs.query_object(gdat.strgmast, catalog='TIC', radius=strgradi)
+                listdictticinear = astroquery.mast.Catalogs.query_object(gdat.strgmast, catalog='TIC', radius=gdat.strgradi)
                 boolsrchmast = True
                 if listdictticinear[0]['dstArcSec'] > 0.1:
                     if gdat.typeverb > 0:
@@ -5772,17 +5785,31 @@ def init( \
                         gdat.listarrytser['raww'][b][p][y] = gdat.listarrytser['raww'][b][p][y][indx, :, :]
                         gdat.listisec = None
         
-        if gdat.listarrytser['raww'][0] is None:
+        print('gdat.listarrytser')
+        print(gdat.listarrytser)
+        print('gdat.liststrginst')
+        print(gdat.liststrginst)
+        print('gdat.boolretrlcurmast')
+        print(gdat.boolretrlcurmast)
+        print('gdat.typetarg')
+        print(gdat.typetarg)
+        #if len(gdat.listarrytser['raww'][0]) == 0:
             
-            gdat.listarrytser['raww'][0] = [[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
+            #gdat.listarrytser['raww'][0] = [[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
 
-            # load TESS data
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    if gdat.typetarg != 'inpt' and b == 0 and gdat.liststrginst[b][p] == 'TESS' and gdat.boolretrtess:
-                        #gdat.arrytser['raww'][b][p] = arrylcurtess[:, None, :]
-                        for y in gdat.indxchun[b][p]:
-                            gdat.listarrytser['raww'][b][p][y] = listarrylcurtess[y][:, None, :]
+        # load TESS data
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                print('gdat.liststrginst')
+                print(gdat.liststrginst)
+                print('gdat.boolretrlcurmast')
+                print(gdat.boolretrlcurmast)
+                print('gdat.typetarg')
+                print(gdat.typetarg)
+                if gdat.typetarg != 'inpt' and b == 0 and gdat.liststrginst[b][p] == 'TESS' and gdat.boolretrlcurmast:
+                    #gdat.arrytser['raww'][b][p] = arrylcurtess[:, None, :]
+                    for y in gdat.indxchun[b][p]:
+                        gdat.listarrytser['raww'][b][p][y] = listarrylcurtess[y][:, None, :]
         
         if gdat.boolsimurflx:
 
