@@ -246,6 +246,13 @@ def retr_lcur( \
     dictlygooutp = None
 
     listarrylcur = [[] for o in indxtsec]
+    
+    print('hey')
+    print('listarrylcur')
+    print(listarrylcur)
+    print('indxtsec')
+    summgene(indxtsec)
+
     if len(listtseclygo) > 0:
         
         dictlygoinpt['strgmast'] = strgmast
@@ -267,12 +274,8 @@ def retr_lcur( \
                                        **dictlygoinpt, \
                                       )
         
-        print('dictlygooutp[isttsec]')
-        summgene(dictlygooutp['listtsec'])
         for o, tseclygo in enumerate(listtsec):
             indx = np.where(dictlygooutp['listtsec'][0] == tseclygo)[0]
-            print('tseclygo')
-            print(tseclygo)
             if indx.size > 0:
                 indxtsecthis = indx[0]
                 if len(dictlygooutp['arryrflx'][nameanlslygo][0][indxtsecthis]) > 0:
@@ -280,25 +283,21 @@ def retr_lcur( \
                     # choose the current sector
                     arry = dictlygooutp['arryrflx'][nameanlslygo][0][indxtsecthis]
                     
-                    # find good times
+                    print('o')
+                    print(o)
                     print('arry')
                     summgene(arry)
-                    print('indxtsecthis')
-                    print(indxtsecthis)
+                    print('')
+
+                    # find good times
                     indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
                     
                     # filter for good times
                     listarrylcur[o] = arry[indxtimegood, :]
                     
-                    print('listarrylcur[o]')
-                    summgene(listarrylcur[o])
-                    
                     listtcam[o] = dictlygooutp['listtcam'][indxtsecthis]
                     listtccd[o] = dictlygooutp['listtccd'][indxtsecthis]
     
-    print('listarrylcur')
-    print(listarrylcur)
-
     listarrylcursapp = None
     listarrylcurpdcc = None
     arrylcursapp = None
@@ -307,6 +306,7 @@ def retr_lcur( \
     if typeverb > 0:
         print('listtsecspoc')
         print(listtsecspoc)
+    
     if len(listtsecspoc) > 0 and typelcurtpxftess == 'SPOC':
         
         pathdatatess = os.environ['TESS_DATA_PATH'] + '/'
@@ -472,11 +472,6 @@ def retr_lcur( \
             print('indxbadd')
             summgene(indxbadd)
             raise Exception('')
-    
-    print('arrylcur')
-    print(arrylcur)
-    print('listarrylcur')
-    print(listarrylcur)
 
     return arrylcur, arrylcursapp, arrylcurpdcc, listarrylcur, listarrylcursapp, listarrylcurpdcc, listtsec, listtcam, listtccd, listpath2min, dictlygooutp
    
@@ -5785,14 +5780,6 @@ def init( \
                         gdat.listarrytser['raww'][b][p][y] = gdat.listarrytser['raww'][b][p][y][indx, :, :]
                         gdat.listisec = None
         
-        print('gdat.listarrytser')
-        print(gdat.listarrytser)
-        print('gdat.liststrginst')
-        print(gdat.liststrginst)
-        print('gdat.boolretrlcurmast')
-        print(gdat.boolretrlcurmast)
-        print('gdat.typetarg')
-        print(gdat.typetarg)
         #if len(gdat.listarrytser['raww'][0]) == 0:
             
             #gdat.listarrytser['raww'][0] = [[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
@@ -5864,8 +5851,6 @@ def init( \
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for y in gdat.indxchun[b][p]:
-                        print('gdat.listarrytser[raww][b][p][y]')
-                        summgene(gdat.listarrytser['raww'][b][p][y])
                         timeoffs += np.sum(gdat.listarrytser['raww'][b][p][y][:, 0, 0])
                         cntr += gdat.listarrytser['raww'][b][p][y].shape[0]
             timeoffs /= cntr
