@@ -13,10 +13,6 @@ This example shows how miletos can be called to analyze and model JWST data.
 It uses the Early Release Science (ERS) data collected on WASP-39b as an example.
 '''
 
-# choose the type of forward-model for the time-series data
-## in this case, the only model is 'psys', which stands for planetary system
-listtypemodl = ['psys']
-
 # label for the wavelength axis
 lablwlen = r'Wavelength [$\mu$m]'
 
@@ -110,9 +106,6 @@ typeinst = sys.argv[1]
 ## half of the wavelenth bin width
 #diffwlenhalf = (wlen[1:] - wlen[:-1]) / 2.
 
-# type of iteration over energy bins
-typemodlener = 'iter'
-
 # a string used to search for the target on MAST
 strgmast = 'WASP-39'
 
@@ -136,8 +129,18 @@ boolwritover = False
 # dictionary for the fitting model
 dictfitt = dict()
 
+# choose the type of forward-model for the time-series data
+## in this case, the only model is 'psys', which stands for planetary system
+dictfitt['listtypemodl'] = ['psys']
+
 # make the fitting baseline 'step', which is a smooth step function
 dictfitt['typemodlbase'] = 'step'
+
+# type of iteration over energy bins
+dictfitt['typemodlener'] = 'iter'
+
+# list of strings indicating the experiments
+liststrgexpr = ['JWST_NIRSpec']
 
 # turn off LS periodogram and BLS spectrum analyses for estimating the priors
 listtypeanls = []
@@ -157,23 +160,23 @@ boolrejeoutlllik = True
 dictoutp = miletos.main.init( \
                              strgmast=strgmast, \
                              listlablinst=listlablinst, \
-                             liststrgtypedata=liststrgtypedata, \
+                             #liststrgtypedata=liststrgtypedata, \
                              strgcnfg=strgcnfg, \
                              listtypeanls=listtypeanls, \
                              boolbdtr=boolbdtr, \
+                             liststrgexpr=liststrgexpr, \
                              typeinfe=typeinfe, \
                              boolrejeoutlllik=boolrejeoutlllik, \
                              boolwritover=boolwritover, \
                              dictfitt=dictfitt, \
-                             
+                             booldiag=True, \
                              #pericompprio=pericompprio, \
                              #epocmtracompprio=epocmtracompprio, \
                              #rsmacompprio=rsmacompprio, \
                              #cosicompprio=cosicompprio, \
 
                              #listarrytser=listarrytser, \
-                             typemodlener=typemodlener, \
-                             listtypemodl=listtypemodl, \
+                             #typemodlener=typemodlener, \
                              #listener=wlen, \
                              #lablener=lablwlen, \
                             )
