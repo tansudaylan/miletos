@@ -185,10 +185,45 @@ def cnfg_Sirius():
     dictlygoinpt['maxmtmagcatl'] = 9.
     miletos.init( \
          strgmast='Sirius', \
-         liststrginst=['TESS'], \
+         booldiag=True, \
+         listlablinst=['TESS'], \
          dictlygoinpt=dictlygoinpt, \
         )
         
+
+def cnfg_TRAPPIST1():
+    
+    dictretrlcurinpt = dict()
+    #dictretrlcurinpt['listtsecsele'] = [7, 33, 34]
+    
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'psysttvr'
+    
+    liststrgtypedata = [['simugene'], []]
+    liststrgtypedata = None
+    
+    #liststrgexpr = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
+    liststrgexpr = ['TESS', 'Kepler', 'K2']
+    #liststrgexpr = ['JWST']
+
+    dictretrlcurinpt['typelcurtpxftess'] = 'SPOC'
+    miletos.main.init( \
+                   strgmast='TRAPPIST-1', \
+                   #boolplotpopl=True, \
+                   
+                   boolforcoffl=True, \
+                   
+                   liststrgtypedata=liststrgtypedata, \
+
+                   liststrgexpr=liststrgexpr, \
+
+                   booldiag=True, \
+                   
+                   dictfitt=dictfitt, \
+                   #typepriocomp='pdim', \
+                   #dictretrlcurinpt=dictretrlcurinpt, \
+                  )
+
 
 def cnfg_WASP18():
     
@@ -198,12 +233,15 @@ def cnfg_WASP18():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
+    liststrgtypedata = [['simugene'], []]
     dictretrlcurinpt['typelcurtpxftess'] = 'SPOC'
     miletos.main.init( \
                    strgmast='WASP-18', \
                    #boolplotpopl=True, \
+                   boolforcoffl=True, \
+                   liststrgtypedata=liststrgtypedata, \
+                   #booldiag=True, \
                    
-                   booldiag=True, \
                    dictfitt=dictfitt, \
                    #typepriocomp='pdim', \
                    #dictretrlcurinpt=dictretrlcurinpt, \
@@ -242,6 +280,9 @@ def cnfg_WASP43():
     miletos.main.init( \
                    strgmast='WASP-43', \
                    dictfitt=dictfitt, \
+                   
+                   boolforcoffl=True, \
+                   
                    dicttrue=dicttrue, \
                    booldiag=True, \
                    liststrgtypedata=liststrgtypedata, \
@@ -256,6 +297,8 @@ def cnfg_ATEL15755():
     rasctarg = 91.062625
     decltarg = 12.764722
     
+    liststrgtypedata = [['simugene'], []]
+    
     dictfitt = dict()
     dictfitt['typemodl'] = 'flar'
     miletos.main.init( \
@@ -265,6 +308,8 @@ def cnfg_ATEL15755():
                   
                   dictfitt=dictfitt, \
                   booldiag=True, \
+                  
+                  liststrgtypedata=liststrgtypedata, \
 
                   #refrlistlabltser=refrlistlabltser, \
                   #refrarrytser=refrarrytser, \
@@ -475,7 +520,7 @@ def cnfg_AlphaCen():
     miletos.main.init( \
                    # data
                    listpathdatainpt=listpathdatainpt, \
-                   liststrginst=['ASTERIA'], \
+                   listlablinst=['ASTERIA'], \
                    
                    # priors
                    ## stellar
@@ -642,7 +687,7 @@ def cnfg_TOI_lists(name):
 
 def cnfg_TTL5_simugene():
     
-    liststrginst = [['TESS', 'TTL5'], []]
+    listlablinst = [['TESS', 'TTL5'], []]
 
     liststrgtypedata = [['SimGenTPF', 'SimGenTPF'], []]
     
@@ -656,7 +701,7 @@ def cnfg_TTL5_simugene():
     miletos.main.init( \
          #toiitarg=1233, \
          
-         liststrginst=liststrginst, \
+         listlablinst=listlablinst, \
          
          dicttrue=dicttrue, \
          liststrgtypedata=liststrgtypedata, \
@@ -739,14 +784,32 @@ def cnfg_LSST_psys():
     dicttrue['typemodl'] = 'psys'
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    dictfitt['typemodl'] = 'psys'
+    
+    liststrgtypedata = [[], []]
+    listlablinst = [[], []]
+    liststrglsst = ['u', 'g', 'r', 'i', 'z', 'y']
+    for strglsst in liststrglsst:
+        listlablinst[0].append('LSST %s' % strglsst)
+        liststrgtypedata[0].append('simuhypo')
+    
+    rratcompprio = [np.array([0.2]), np.array([0.5]), np.array([0.2]), np.array([0.2]), np.array([0.2]), np.array([0.2])]
+    epocmtracompprio = np.array([0.])
+    pericompprio = np.array([3.])
+    rsmacompprio = np.array([0.1])
+    cosicompprio = np.array([0.])
     
     miletos.main.init( \
-                      strgmast='HD 209458', \
+                      labltarg='Simulated SETI Target', \
                       dicttrue=dicttrue, \
                       dictfitt=dictfitt, \
-                      liststrginst=[['LSST'], []], \
-                      liststrgtypedata=[['simutoyy'], []], \
+                      rratcompprio=rratcompprio, \
+                      epocmtracompprio=epocmtracompprio, \
+                      pericompprio=pericompprio, \
+                      cosicompprio=cosicompprio, \
+                      rsmacompprio=rsmacompprio, \
+                      listlablinst=listlablinst, \
+                      liststrgtypedata=liststrgtypedata, \
                      )
 
 
