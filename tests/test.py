@@ -9,7 +9,7 @@ import pandas as pd
 import miletos
 import tdpy
 from tdpy.util import summgene
-import ephesus
+import ephesos
 
 import astropy
 
@@ -24,20 +24,13 @@ def cnfg_TOIs():
 
 def cnfg_TOI_multis():
 
-    dictretrlcurinpt = dict()
-    dictretrlcurinpt['booltpxfonly'] = True
-        
     dictfitt = dict()
     dictfitt['typemodl'] = 'psys'
     
     for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
         
-        if strgmast == 'TOI-270':
-            dictretrlcurinpt['listtsecsele'] = [3, 4, 5, 30, 32]
-            #dictretrlcurinpt['listtsecsele'] = [4]
         miletos.main.init( \
                        strgmast=strgmast, \
-                       dictretrlcurinpt=dictretrlcurinpt, \
                        dictfitt=dictfitt, \
                        strgclus='TOI_multis', \
                       )
@@ -85,14 +78,12 @@ def cnfg_TOI_Host_Variability():
     dictfitt['typemodl'] = 'stargpro'
     
     dictpboxinpt = {'boolmult': True}
-    dictretrlcurinpt = {'typelcurtpxftess': 'SPOC'}
     for toii in listtoii:
         miletos.main.init( \
                           toiitarg=toii, \
                           strgclus='TOI_Host_Variability', \
                           dictfitt=dictfitt, \
                           dictpboxinpt=dictpboxinpt, \
-                          dictretrlcurinpt=dictretrlcurinpt, \
                          )
 
 
@@ -109,6 +100,31 @@ def cnfg_TICsFromGV():
                           ticitarg=tici, \
                           strgclus='TICsFromGV', \
                           dictpboxinpt=dictpboxinpt, \
+                         )
+
+
+def cnfg_FermiLAT_AGN():
+    
+    liststrgmast = []
+    path = os.environ['MILETOS_DATA_PATH'] + '/data/ListVariability_AssN_BanafshehManel.txt'
+    k = 0
+    for line in open(path, 'r'):
+        if k == 0:
+            k += 1
+            continue
+        liststrgmast.append(line[1:18])
+        k += 1
+
+    print('liststrgmast')
+    print(liststrgmast)
+
+    strgclus = 'FermiLAT_AGN'
+    
+    for strgmast in liststrgmast:
+        
+        miletos.main.init( \
+                          strgmast=strgmast, \
+                          strgclus=strgclus, \
                          )
 
 
@@ -131,7 +147,6 @@ def cnfg_TargetsOfInterest():
     
     strgclus = inspect.stack()[0][3][5:]
     
-    dictretrlcurinpt = {'typelcurtpxftess': 'lygos'}
     dictlygoinpt['numbside'] = 17
     for strgmast in liststrgmast:
         
@@ -193,9 +208,6 @@ def cnfg_Sirius():
 
 def cnfg_TRAPPIST1():
     
-    dictretrlcurinpt = dict()
-    #dictretrlcurinpt['listtsecsele'] = [7, 33, 34]
-    
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
@@ -206,13 +218,13 @@ def cnfg_TRAPPIST1():
     liststrgexpr = ['TESS', 'Kepler', 'K2']
     #liststrgexpr = ['JWST']
 
-    dictretrlcurinpt['typelcurtpxftess'] = 'SPOC'
     miletos.main.init( \
                    strgmast='TRAPPIST-1', \
                    #boolplotpopl=True, \
                    
                    boolforcoffl=True, \
                    
+                   typelcurtpxftess='SPOC', \
                    liststrgtypedata=liststrgtypedata, \
 
                    liststrgexpr=liststrgexpr, \
@@ -221,20 +233,15 @@ def cnfg_TRAPPIST1():
                    
                    dictfitt=dictfitt, \
                    #typepriocomp='pdim', \
-                   #dictretrlcurinpt=dictretrlcurinpt, \
                   )
 
 
 def cnfg_WASP18():
     
-    dictretrlcurinpt = dict()
-    #dictretrlcurinpt['listtsecsele'] = [7, 33, 34]
-    
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
     liststrgtypedata = [['simugene'], []]
-    dictretrlcurinpt['typelcurtpxftess'] = 'SPOC'
     miletos.main.init( \
                    strgmast='WASP-18', \
                    #boolplotpopl=True, \
@@ -244,26 +251,21 @@ def cnfg_WASP18():
                    
                    dictfitt=dictfitt, \
                    #typepriocomp='pdim', \
-                   #dictretrlcurinpt=dictretrlcurinpt, \
                   )
 
 
 def cnfg_WASP121():
     
-    dictretrlcurinpt = dict()
-    dictretrlcurinpt['listtsecsele'] = [7, 33, 34]
-    
     dictfitt = dict()
     dictfitt['typemodl'] = 'psyspcur'
     
     for strg in ['SPOC', 'lygos']:
-        dictretrlcurinpt['typelcurtpxftess'] = strg
         miletos.main.init( \
                        strgmast='WASP-121', \
                        boolplotpopl=True, \
+                       typelcurtpxftess=strg, \
                        dictfitt=dictfitt, \
                        typepriocomp='pdim', \
-                       dictretrlcurinpt=dictretrlcurinpt, \
                       )
 
 
@@ -297,34 +299,36 @@ def cnfg_ATEL15755():
     rasctarg = 91.062625
     decltarg = 12.764722
     
-    liststrgtypedata = [['simugene'], []]
-    
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'flar'
-    miletos.main.init( \
-                  labltarg=labltarg, \
-                  rasctarg=rasctarg, \
-                  decltarg=decltarg, \
-                  
-                  dictfitt=dictfitt, \
-                  booldiag=True, \
-                  
-                  liststrgtypedata=liststrgtypedata, \
+    for a in range(2):
+        if a == 0:
+            lablcnfg = 'Simulated'
+            strgcnfg = 'simu'
+            liststrgtypedata = [['simugene'], []]
+            dicttrue = dict()
+            dicttrue['typemodl'] = 'flar'
+        else:
+            lablcnfg = ''
+            strgcnfg = 'real'
+        dictfitt = dict()
+        dictfitt['typemodl'] = 'flar'
+        miletos.main.init( \
+                      labltarg=labltarg, \
+                      rasctarg=rasctarg, \
+                      decltarg=decltarg, \
+                      
+                      lablcnfg=lablcnfg, \
+                      strgcnfg=strgcnfg, \
 
-                  #refrlistlabltser=refrlistlabltser, \
-                  #refrarrytser=refrarrytser, \
-                  #dictretrlcurinpt=dictretrlcurinpt, \
-                  #dictlygoinpt=dictlygoinpt, \
-                 )
-    dictfitt['typemodl'] = 'spot'
+                      dictfitt=dictfitt, \
+                      dicttrue=dicttrue, \
+                      booldiag=True, \
+                      
+                      liststrgtypedata=liststrgtypedata, \
 
-
-def target(strgmast):
-    '''
-    Execute miletos on a target from command line.
-    '''
-
-
+                      #refrlistlabltser=refrlistlabltser, \
+                      #refrarrytser=refrarrytser, \
+                      #dictlygoinpt=dictlygoinpt, \
+                     )
 
 
 def cnfg_WASP12():
@@ -340,8 +344,6 @@ def cnfg_WASP12():
 
 
 def cnfg_PhotCalibPPAStars():
-    
-    dictretrlcurinpt = dict()
     
     listtici = [381979590, 264221449, 233160374, 289572157, 165553746]
     
@@ -367,21 +369,20 @@ def cnfg_PhotCalibPPAStars():
 
         if tici == 381979590:
             listtsecsele = np.concatenate((np.arange(1, 28), np.arange(29, 33), np.arange(34, 50)))
-            dictretrlcurinpt['listtsecsele'] = listtsecsele
-        dictretrlcurinpt['boolnorm'] = boolnormphot
-        dictretrlcurinpt['boolffimonly'] = True
     
         # temp
         print('temp')
-        dictretrlcurinpt['listtsecsele'] = [40]
-        
+        listtsecsele = [40]
+
         # TESS EM2 proposal continuous-viewing zone target
         miletos.main.init( \
                        ticitarg=tici, \
                        dictlygoinpt=dictlygoinpt, \
                        boolnormphot=boolnormphot, \
+                       listtsecsele=listtsecsele, \
+                       boolffimonly=True, \
+                       boolnorm=boolnormphot, \
                        strgclus='PhotCalibPPAStars', \
-                       dictretrlcurinpt=dictretrlcurinpt, \
                        dictfitt=dictfitt, \
                        #boolbdtr=False, \
                        #boolplotpopl=True, \
@@ -601,7 +602,6 @@ def cnfg_WASP(strgiwas):
     iwas = int(strgiwas)
     #listiwas = [18, 46]
     #for iwas in listiwas:
-    dictretrlcurinpt = {'typelcurtpxftess': 'SPOC'}
     strgmast = 'WASP-%d' % iwas
     
     dictfitt = dict()
@@ -611,7 +611,6 @@ def cnfg_WASP(strgiwas):
                   strgmast=strgmast, \
                   dictfitt=dictfitt, \
                   booldiag=True, \
-                  dictretrlcurinpt=dictretrlcurinpt, \
                  )
 
 
@@ -662,7 +661,7 @@ def cnfg_TOI_lists(name):
     if name == 'GUHJS2':
         listhosttoiithis = np.array([1937, 2364, 2583, 2587, 2796, 2803, 2818, 2842, 2977, 3023, 3364, 3688, 3807, 3819, 3912, 3976, 3980, 4087, 4145, 4463, 4791])
     
-    listtoiifstr = ephesus.retr_toiifstr()
+    listtoiifstr = ephesos.retr_toiifstr()
     listtoiifstr = listtoiifstr.astype(float)
     listhosttoiifstr = listtoiifstr.astype(int)
     
@@ -853,21 +852,22 @@ def cnfg_TOI1233():
     listarrytser['raww'][1][0][0][:, 0, 1] = np.array(listrvel)
     listarrytser['raww'][1][0][0][:, 0, 2] = np.array(liststdvrvel)
 
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    listtypemodl = ['psys', 'psysttvr']
     
-    toiitarg = 1233
-    dictretrlcurinpt = {'typelcurtpxftess': 'SPOC'}
-    miletos.main.init( \
-                      toiitarg=toiitarg, \
-                      dictfitt=dictfitt, \
-                      strgexar='HD 108236', \
-                      listarrytser=listarrytser, \
-                      typepriocomp='exar', \
-                      dictretrlcurinpt=dictretrlcurinpt, \
-                      boolplotpopl=True, \
-                      booldiag=True, \
-                     )
+    for typemodl in listtypemodl:
+        dictfitt = dict()
+        dictfitt['typemodl'] = typemodl
+        
+        toiitarg = 1233
+        miletos.main.init( \
+                          toiitarg=toiitarg, \
+                          dictfitt=dictfitt, \
+                          strgexar='HD 108236', \
+                          listarrytser=listarrytser, \
+                          typepriocomp='exar', \
+                          boolplotpopl=True, \
+                          booldiag=True, \
+                         )
 
 
 def cnfg_NGTS11():
@@ -914,6 +914,21 @@ def cnfg_WD1856():
         )
 
 
+def cnfg_Faint():
+
+    liststrgexpr = ['TESS']
+    #liststrgtypedata = [['simugenetdim'], []]
+    
+    dicttrue = dict()
+    dicttrue['typemodl'] = 'psys'
+    
+    miletos.main.init( \
+                      dicttrue=dicttrue, \
+                      liststrgexpr=liststrgexpr, \
+                      #liststrgtypedata=liststrgtypedata, \
+                     )
+
+
 def cnfg_SNeIa_Comp(strgruns):
     
 
@@ -941,8 +956,6 @@ def cnfg_SNeIa_Comp(strgruns):
     #dictlygoinpt['booldetrcbvs'] = False
     #dictlygoinpt['boolfittoffs'] = True
 
-    dictretrlcurinpt = dict() 
-    
     dictfitt = dict()
     dictfitt['typemodl'] = 'supn'
     dicttrue = dict()
@@ -1044,11 +1057,11 @@ def cnfg_SNeIa_Comp(strgruns):
             strgcnfg = '%s_%s_%s' % (dictfitt['typemodlbase'], dictfitt['typemodlsupn'], dictfitt['typemodlexcs'])
             if strgtypedata == 'real':
                 if liststrgmast[k] == 'SN2018fub':
-                    dictretrlcurinpt['listtsecsele'] = [2]
+                    listtsecsele = [2]
                 if liststrgmast[k] == 'SN2020swy':
-                    dictretrlcurinpt['listtsecsele'] = [29]
+                    listtsecsele = [29]
                 if liststrgmast[k] == 'SN2022ajw':
-                    dictretrlcurinpt['listtsecsele'] = [47]
+                    listtsecsele = [47]
                 
                 print('dicttrns[Name]')
                 print(dicttrns['Name'])
@@ -1073,7 +1086,7 @@ def cnfg_SNeIa_Comp(strgruns):
                 strgmast = None
             else:
                 strgcnfg += '_%s_%s' % (dicttrue['typemodlbase'], dicttrue['typemodlexcs'])
-                dictretrlcurinpt['listtsecsele'] = None
+                listtsecsele = None
                 rasctarg = None
                 decltarg = None
             
@@ -1081,10 +1094,10 @@ def cnfg_SNeIa_Comp(strgruns):
                                              rasctarg=rasctarg, \
                                              decltarg=decltarg, \
                                              strgmast=strgmast, \
-                                             dictretrlcurinpt=dictretrlcurinpt, \
                                              strgclus='SNeIa_Comp', \
                                              liststrgtypedata=liststrgtypedata, \
                                              limttimefitt=limttimefitt, \
+                                             listtsecsele=listtsecsele, \
                                              strgtarg=strgtarg, \
                                              labltarg=labltarg, \
                                              dicttrue=dicttrue, \
@@ -1191,9 +1204,7 @@ def cnfg_ASASSN20qc():
     dictlygoinpt['boolplotquat'] = True
     #dictlygoinpt['numbside'] = 9
     
-    dictretrlcurinpt = dict()
-    dictretrlcurinpt['boolffimonly'] = True
-    dictretrlcurinpt['listtsecsele'] = [32]
+    listtsecsele = [32]
 
     #path = os.environ['LYGOS_DATA_PATH'] + '/data/lc_2020adgm_cleaned_ASASSN20qc'
     #print(path)
@@ -1232,11 +1243,10 @@ def cnfg_ASASSN20qc():
                       decltarg=decltarg, \
 
                       dictfitt=dictfitt, \
-                      
+                      listtsecsele=listtsecsele, \
+
                       #refrlistlabltser=refrlistlabltser, \
                       #refrarrytser=refrarrytser, \
-
-                      dictretrlcurinpt=dictretrlcurinpt, \
 
                       dictlygoinpt=dictlygoinpt, \
                      )

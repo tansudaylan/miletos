@@ -16,16 +16,19 @@ Miletos is an end-to-end pipeline that takes its inputs and configuration parame
 The input time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
 
 
+## Data gathering
+Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Kepler, HST, and JWST).
+
 
 ## Analyses
-The suite of analyses are Lomb-Scargle periodograms (via astropy) and Box Least Squares (BLS) via [Ephesus](https://github.com/tdaylan/ephesus). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
+Miletos performs prelimiary analyses such as detrending, phase-folding, producing  Lomb-Scargle periodograms (via astropy) and performing Box Least Squares (BLS) searches via [Knidos](https://github.com/tdaylan/knidos). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
 
 ## Model
-Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesus](https://github.com/tdaylan/ephesus). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
+Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tdaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
 
-### limb darkening
-Stars manifest a darkening towards their limbs beyond that expected from Lambertian scattering. Even though simulations of stellar atmospheres allow the prediction of the limb darkening, the failure of these models to accurately interpolate stellar parameters can significantly bias inference when a wrong limb darkening model is used. Miletos allows the user to marginalize over the limb darkening using an parametrization that is efficient to sample from (Kipping 2013).
+Miletos allows the user to marginalize over the model parameters, including those that characterize limb darkening using an parametrization that is efficient to sample from (Kipping 2013).
+
 
 ### red noise
 Data collected in the real Universe, unlike many of our simulations, contain features that are not drawn from, and hence cannot be explained by, our fitting models. This requires a prescription for modeling unknown components in a way that is minimally degenerate with the signal of interest. Miletos uses Gaussian Processes (GP) as implemented in [celerite](https://github.com/dfm/celerite) (Foreman-Mackey et al. 2017) to model the baseline of the time-series data to account for systematics in the form of red noise.
