@@ -201,7 +201,7 @@ def cnfg_Sirius():
     miletos.init( \
          strgmast='Sirius', \
          booldiag=True, \
-         listlablinst=['TESS'], \
+         listlablinst=[['TESS'], []], \
          dictlygoinpt=dictlygoinpt, \
         )
         
@@ -273,19 +273,18 @@ def cnfg_WASP43():
     
     liststrgtypedata = [['simugene'], []]
     
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'psyspcur'
-    
     dicttrue = dict()
     dicttrue['typemodl'] = 'psyspcur'
     
+    listener = [np.linspace(0.5, 5., 10)]
     miletos.main.init( \
                    strgmast='WASP-43', \
-                   dictfitt=dictfitt, \
+                   dicttrue=dicttrue, \
                    
                    boolforcoffl=True, \
                    
-                   dicttrue=dicttrue, \
+                   listener=listener, \
+
                    booldiag=True, \
                    liststrgtypedata=liststrgtypedata, \
                   )

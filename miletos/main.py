@@ -99,7 +99,7 @@ def pars_para_mile(para, gdat, strgmodl):
     gmod = getattr(gdat, strgmodl)
     
     #if gdat.fitt.typemodlenerfitt == 'full':
-    #    dictparainpt['cons'] = para[gmod.dictindxpara['cons']]
+    #    dictparainpt['consbase'] = para[gmod.dictindxpara['consbase']]
     #else:
     #    for nameparabase in gmod.listnameparabase:
     #        strg = nameparabase + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]
@@ -133,7 +133,7 @@ def pars_para_mile(para, gdat, strgmodl):
         for name in ['radistar', 'masscomp', 'massstar']:
             dictparainpt[name] = None
 
-    if gmod.typemodlbase == 'gpro':
+    if gmod.typemodlbaseshap == 'gpro':
         for name in ['sigmgprobase', 'rhoogprobase']:
             dictparainpt[name] = para[gmod.dictindxpara[name]]
     
@@ -238,22 +238,40 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
 
         for p in gdat.indxinst[0]:
             
+            if gmod.boolmodlpsys:
+                rratcomp = np.empty((gmod.numbcomp, gdat.numbenerefes))
+                if gdat.numbener[p] > 1:
+                    rratcomp = np.empty((gmod.numbcomp, gdat.numbeneriter))
+                else:
+                    rratcomp = np.empty(gmod.numbcomp)
+            else:
+                rratcomp = None
+            
+            # limb darkening
+            if gmod.typemodllmdkener == 'ener':
+                coeflmdk = np.empty((2, gdat.numbener[p]))
+                for e in gdat.indxener[p]:
+                    coeflmdk[0, e] = dictparainpt['coeflmdklinr' + gdat.liststrgener[p][e]]
+                    coeflmdk[1, e] = dictparainpt['coeflmdkquad' + gdat.liststrgener[p][e]]
+            elif gmod.typemodllmdkener == 'linr':
+                coeflmdk = np.empty((2, gdat.numbener[p]))
+            elif gmod.typemodllmdkener == 'cons':
+                coeflmdklinr = dictparainpt['coeflmdklinr']
+                coeflmdkquad = dictparainpt['coeflmdkquad']
+                coeflmdk = np.array([coeflmdklinr, coeflmdkquad])
+
+            if gmod.typemodllmdkener == 'line':
+                coeflmdk *= ratiline
+                
             for e in gdat.indxener[p]:
         
-                if not (gmod.typemodl == 'cosc' or gmod.typemodl == 'supn'):
-                    rratcomp = np.empty(gmod.numbcomp)
+                if gmod.boolmodlpsys:
                     for j in gmod.indxcomp:
-                        rratcomp[j] = np.array([dictparainpt['rratcom%d%s' % (j, gdat.liststrgener[p][e])]])
-                else:
-                    rratcomp = None
+                        rratcomp[j, e] = np.array([dictparainpt['rratcom%d%s' % (j, gdat.liststrgener[p][e])]])
+                print('rratcomp')
+                summgene(rratcomp)
+                print(rratcomp)
 
-                coeflmdklinr = dictparainpt['coeflmdklinr' + gdat.liststrgdataiter[e]]
-                coeflmdkquad = dictparainpt['coeflmdkquad' + gdat.liststrgdataiter[e]]
-                coeflmdk = np.array([coeflmdklinr, coeflmdkquad])
-                
-                if gmod.typemodllmdkener == 'line':
-                    coeflmdk *= ratiline
-                
                 dictoutpmodl = ephesos.eval_modl(time[0][p], \
                                                          pericomp=pericomp, \
                                                          epocmtracomp=epocmtracomp, \
@@ -277,6 +295,10 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                          typeverb=0, \
                                                         )
             
+                print('e')
+                print(e)
+                print('dictlistmodl[tran][0][p]')
+                summgene(dictlistmodl['tran'][0][p])
                 dictlistmodl['tran'][0][p][:, e] = dictoutpmodl['rflx']
                 dictlistmodl['sgnl'][0][p][:, e] = dictoutpmodl['rflx']
             
@@ -310,29 +332,33 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                     dictlistmodl['sgnl'][0][p] += dictlistmodl['excs'][0][p] - 1.
         
     # baseline
-    if gmod.typemodlbase == 'cons':
+    if gmod.typemodlbaseshap == 'cons':
         for p in gdat.indxinst[0]:
             if strgmodl == 'true' or gdat.fitt.typemodlenerfitt == 'full':
                 dictlistmodl['base'][0][p] = np.empty((time[0][p].size, gdat.numbener[p]))
-                for e in gdat.indxener[p]:
-                    dictlistmodl['base'][0][p][:, e] = dictparainpt['consener%04d' % e] * 1e-3 * np.ones_like(time[0][p])
-    if gmod.typemodlbase == 'step':
+                if gdat.numbener[p] > 1:
+                    for e in gdat.indxener[p]:
+                        dictlistmodl['base'][0][p][:, e] = dictparainpt['consbaseener%04d' % e] * 1e-3 * np.ones_like(time[0][p])
+                else:
+                    dictlistmodl['base'][0][p][:, 0] = dictparainpt['consbase'] * 1e-3 * np.ones_like(time[0][p])
+    
+    if gmod.typemodlbaseshap == 'step':
         for p in gdat.indxinst[0]:
             rflxbase = np.zeros_like(dictlistmodl['sgnl'][0][p])
             if gdat.fitt.typemodlenerfitt == 'full':
-                consfrst = dictparainpt['consfrst'][None, :] * 1e-3
-                consseco = dictparainpt['consseco'][None, :] * 1e-3
+                consfrst = dictparainpt['consbasefrst'][None, :] * 1e-3
+                consseco = dictparainpt['consbaseseco'][None, :] * 1e-3
                 timestep = dictparainpt['timestep'][None, :]
             
             else:
-                consfrst = np.full((time[0][p].size, 1), dictparainpt['consfrst' + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]]) * 1e-3
-                consseco = np.full((time[0][p].size, 1), dictparainpt['consseco' + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]]) * 1e-3
+                consfrst = np.full((time[0][p].size, 1), dictparainpt['consbasefrst' + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]]) * 1e-3
+                consseco = np.full((time[0][p].size, 1), dictparainpt['consbaseseco' + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]]) * 1e-3
                 timestep = np.full((time[0][p].size, 1), dictparainpt['timestep' + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]])
                 scalstep = np.full((time[0][p].size, 1), dictparainpt['scalstep' + gdat.liststrgdataiter[gdat.indxdataiterthis[0]]])
                 
             dictlistmodl['base'][0][p] = (consseco - consfrst) / (1. + np.exp(-(time[0][p][:, None] - timestep) / scalstep)) + consfrst
         
-    if gmod.typemodlbase != 'gpro':
+    if gmod.typemodlbaseshap != 'gpro':
         for p in gdat.indxinst[0]:
             # total model
             dictlistmodl['totl'][0][p] = dictlistmodl['sgnl'][0][p] + dictlistmodl['base'][0][p] + 1.
@@ -448,12 +474,10 @@ def setp_gpro(gdat, dictparainpt, strgmodl):
     gmod = getattr(gdat, strgmodl)
     
     ## construct the kernel object
-    if gmod.typemodlbase == 'gpro':
+    if gmod.typemodlbaseshap == 'gpro':
         dictobjtkern['base'] = celerite.terms.Matern32Term(log_sigma=np.log(dictparainpt['sigmgprobase']*1e-3), log_rho=np.log(dictparainpt['rhoogprobase']))
     
     k = 0
-    #print('gmod.typemodlbase')
-    #print(gmod.typemodlbase)
     #print('strgmodl')
     #print(strgmodl)
     #print('dictobjtkern')
@@ -3557,8 +3581,7 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
 
     if hasattr(gmod, nameparabasefinl):
         if gdat.typeverb > 0:
-            print('%s has been fixed for %s to...' % (nameparabasefinl, strgmodl))
-            print(getattr(gmod, nameparabasefinl))
+            print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
     gmod.listlablpara.append(lablpara)
     gmod.listminmpara.append(minmpara)
@@ -3568,6 +3591,19 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
     # add the name of the parameter to the list of the parameters of the model
     ## all parameters
     gmod.listnameparafull += [nameparabasefinl]
+    if gdat.booldiag:
+        if strgmodl == 'true':
+            if not hasattr(gdat.true, nameparabasefinl):
+                print('')
+                print('')
+                print('')
+                print('The true model parameter you are defining lacks the default value!')
+                print('gmod.typemodlbaseshap')
+                print(gmod.typemodlbaseshap)
+                print('nameparabasefinl')
+                print(nameparabasefinl)
+                raise Exception('')
+
     if boolvari and strgmodl == 'fitt':
         ## varied parameters
         gmod.listnameparafullvari += [nameparabasefinl]
@@ -4036,7 +4072,6 @@ def setp_modlinit(gdat, strgmodl):
     print('gmod.boolmodlpcur')
     print(gmod.boolmodlpcur)
     
-    tdpy.setp_para_defa(gdat, strgmodl, 'typemodlbase', 'cons')
     if gmod.typemodl == 'supn':
         # 'linr': quadratic
         # 'quad': quadratic
@@ -4051,6 +4086,14 @@ def setp_modlinit(gdat, strgmodl):
     gmod.listnameparafullfixd = []
     gmod.listnameparafullvari = []
 
+    # type of baseline shape
+    tdpy.setp_para_defa(gdat, strgmodl, 'typemodlbaseshap', 'cons')
+    
+    # type of baseline energy dependence
+    typemodlbaseener = ['cons' for p in gdat.indxinst[0]]
+    for p in gdat.indxinst[0]:
+        tdpy.setp_para_defa(gdat, strgmodl, 'typemodlbaseener', typemodlbaseener)
+    
 
 # this will likely be merged with setp_modlbase()
 def init_modl(gdat, strgmodl):
@@ -4077,11 +4120,20 @@ def setp_modlbase(gdat, strgmodl, r=None):
     
     gmod = getattr(gdat, strgmodl)
     
+    print('gmod.typemodl')
+    print(gmod.typemodl)
+
     gmod.boolmodlcomp = 'psys' in gmod.typemodl
             
     tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkener', 'cons')
     tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkterm', 'quad')
     
+    if gdat.typeverb > 0:
+        print('gmod.typemodllmdkener')
+        print(gmod.typemodllmdkener)
+        print('gmod.typemodllmdkterm')
+        print(gmod.typemodllmdkterm)
+
     gmod.listnamecompmodl = ['sgnl', 'base']
     #if gmod.typemodl == 'flar':
     #    gmod.listnamecompmodl += ['flar']
@@ -4099,9 +4151,6 @@ def setp_modlbase(gdat, strgmodl, r=None):
         
         gmod.indxcomp = np.arange(gmod.numbcomp)
      
-    # type of baseline
-    tdpy.setp_para_defa(gdat, strgmodl, 'typemodlbase', 'cons')
-    
     if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
         # number of terms in the LD law
         if gmod.typemodllmdkterm == 'line':
@@ -4116,7 +4165,7 @@ def setp_modlbase(gdat, strgmodl, r=None):
             gmod.numbcoeflmdkener = 1
             
     gdat.listnamecompgpro = ['totl']
-    if gmod.typemodlbase == 'gpro':
+    if gmod.typemodlbaseshap == 'gpro':
         gdat.listnamecompgpro.append('base')
     
     if gmod.typemodl == 'supn':
@@ -4128,12 +4177,23 @@ def setp_modlbase(gdat, strgmodl, r=None):
         gmod.listnamecompmodl += ['totl']
     
     # baseline
-    if gmod.typemodlbase == 'gpro':
-        gmod.listnameparabase = ['sigmgprobase', 'rhoogprobase']
-    if gmod.typemodlbase == 'cons':
-        gmod.listnameparabase = ['cons']
-    if gmod.typemodlbase == 'step':
-        gmod.listnameparabase = ['consfrst', 'consseco', 'timestep', 'scalstep']
+    for p in gdat.indxinst[0]:
+        if gmod.typemodlbaseshap == 'gpro':
+            gmod.listnameparabase = ['sigmgprobase', 'rhoogprobase']
+        if gmod.typemodlbaseshap == 'cons':
+            if gdat.numbener[p] > 1:
+                gmod.listnameparabase = []
+                for e in gdat.indxener[p]:
+                    gmod.listnameparabase += ['consbaseener%04d' % e]
+            else:
+                gmod.listnameparabase = ['consbase']
+        if gmod.typemodlbaseshap == 'step':
+            gmod.listnameparabase = ['consbasefrst', 'consbaseseco', 'timestep', 'scalstep']
+    
+
+    print('gmod.listnameparabase')
+    print(gmod.listnameparabase)
+    
     for nameparabase in gmod.listnameparabase:
         
         # collect group of parameters
@@ -4147,12 +4207,12 @@ def setp_modlbase(gdat, strgmodl, r=None):
             minmpara = 1e-3
             maxmpara = 0.3
             lablpara = [r'$\rho_{GP}$', '']
-        if nameparabase.startswith('cons'):
-            if nameparabase == 'consfrst':
+        if nameparabase.startswith('consbase'):
+            if nameparabase == 'consbasefrst':
                 lablpara = ['$C_1$', 'ppt']
                 minmpara = -20. # [ppt]
                 maxmpara = 20. # [ppt]
-            elif nameparabase == 'consseco':
+            elif nameparabase == 'consbaseseco':
                 lablpara = ['$C_2$', 'ppt']
                 minmpara = -20. # [ppt]
                 maxmpara = -4. # [ppt]
@@ -4171,29 +4231,7 @@ def setp_modlbase(gdat, strgmodl, r=None):
 
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if strgmodl == 'true':
-                    if gdat.numbener[p] > 1:
-                        for e in gdat.indxener[p]:
-                            print('')
-                            print('nameparabase')
-                            print(nameparabase)
-                            print('gdat.liststrgener[p][e]')
-                            print(gdat.liststrgener[p][e])
-                            print('minmpara')
-                            print(minmpara)
-                            print('maxmpara')
-                            print(maxmpara)
-                            setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgener=gdat.liststrgener[p][e])
-                    else:
-                        setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara)
-                else:
-                    if gdat.numbener[p] > 1 and gdat.fitt.typemodlenerfitt == 'full':
-                        for e in gdat.indxener[p]:
-                            setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgener=gdat.liststrgener[p][e])
-                    elif gdat.numbener[p] == 1:
-                        setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara)
-                    else:
-                        setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgener=gdat.liststrgdataiter[e])
+                setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara)
         
     gmod.listindxdatainsteneriter = []
     for b in gdat.indxdatatser:
@@ -4223,15 +4261,21 @@ def setp_modlbase(gdat, strgmodl, r=None):
             setp_para(gdat, strgmodl, 'tsclflar%04d' % k, 0., 12., ['$t_{s,%d}$' % k, 'hour'])
             setp_para(gdat, strgmodl, 'timeflar%04d' % k, 0., 0.15, ['$t_{f,%d}$' % k, 'day'])
 
-    # to be deleted
-    #if gmod.typemodl == 'psys' or gmod.typemodl == 'cosc' or gmod.typemodl == 'psysttvr' and gmod.typemodlttvr == 'globlineflot':
-    #    gmod.listnameparacomp += ['rsma', 'peri', 'epocmtra', 'cosi']
-        #for k in gmod.indxcomp:
-        #    setp_para(gdat, strgmodl, 'rsmacom%d' % k, 0., 0.15, None)#, strglmdk='linr', strgener=strgener)
-        #    setp_para(gdat, strgmodl, 'pericom%d' % k, 0., 0.15, None)#, strglmdk='linr', strgener=strgener)
-        #    setp_para(gdat, strgmodl, 'epocmtracom%d' % k, 0., 0.15, None)#, strglmdk='linr', strgener=strgener)
-        #    setp_para(gdat, strgmodl, 'cosicom%d' % k, 0., 0.15, None)#, strglmdk='linr', strgener=strgener)
-        
+    if strgmodl == 'true':
+        if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+            if gdat.true.typemodllmdkener == 'linr':
+                pass
+            elif gdat.true.typemodllmdkener == 'cons':
+                print('dsmlsvkvs fsvs')
+                tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinr', 0.4)
+                tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquad', 0.25)
+            elif gdat.true.typemodllmdkener == 'ener':
+                tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinrwhit', 0.4)
+                tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquadwhit', 0.25)
+                for p in gdat.indxinst[0]:
+                    tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinr' % strginst, 0.4)
+                    tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquad' % strginst, 0.25)
+            
     if gmod.typemodl == 'psys' or gmod.typemodl == 'cosc' or gmod.typemodl == 'psysttvr' or gmod.typemodl == 'psyspcur':
         
         #gmod.listnameparasyst = []
@@ -4261,10 +4305,12 @@ def setp_modlbase(gdat, strgmodl, r=None):
                 if not namepara in gmod.listnameparacomp[jj]:
                     boolgood = False
             if boolgood:
-                gmod.dictindxpara[namepara + 'comp'] = np.empty(gmod.numbcomp, dtype=int)
+                pass
+                if gdat.numbener[p] > 1:
+                    gmod.dictindxpara[namepara + 'comp'] = np.empty(gmod.numbcomp, dtype=int)
 
-        if gdat.numbener[p] > 1 and gdat.fitt.typemodlenerfitt == 'full':
-            gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
+                if gdat.numbener[p] > 1 and gdat.fitt.typemodlenerfitt == 'full':
+                    gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
     
         # limb darkening
         if gmod.typemodllmdkterm != 'none':
@@ -4279,14 +4325,18 @@ def setp_modlbase(gdat, strgmodl, r=None):
             print('setp_para calls relevant to coeflmdk...')
 
             if gdat.numbener[p] > 1:
-                if gdat.fitt.typemodlenerfitt == 'full':
+                if gmod.typemodllmdkener == 'cons':
+                    setp_para(gdat, strgmodl, 'coeflmdklinr', 0., 1., None)
+                    setp_para(gdat, strgmodl, 'coeflmdkquad', 0., 1., None)
+                elif gdat.fitt.typemodlenerfitt == 'full':
                     for e in gdat.indxener[p]:
                         #setattr(gmod, 'coeflmdklinr' + gdat.liststrgener[p][e], 0.2)
                         #setattr(gmod, 'coeflmdkquad' + gdat.liststrgener[p][e], 0.4)
-                        setp_para(gdat, strgmodl, '', minmpara, maxmpara, None, strgener=gdat.liststrgener[p][e], strglmdk=strglmdk)
+                        setp_para(gdat, strgmodl, 'coeflmdklinr', 0., 1., None, strgener=gdat.liststrgener[p][e])
                 else:
                     
                     if gmod.typemodllmdkener == 'cons':
+                        raise Exception('')
                     #or gmod.typemodllmdkener == 'ener':
                     #    
                     #    strgener = gdat.liststrgdataiter[e]
@@ -4319,30 +4369,21 @@ def setp_modlbase(gdat, strgmodl, r=None):
             
             strgcomp = 'com%d' % j
             
-            #if 'rsma' in gmod.listnameparacomp:
             setp_para(gdat, strgmodl, 'rsma', 0.06, 0.14, None, strgcomp=strgcomp)
-            
-            #if 'peri' in gmod.listnameparacomp:
             setp_para(gdat, strgmodl, 'peri', gdat.pericompprio[j] - 0.01 * gdat.pericompprio[j], \
                                                     gdat.pericompprio[j] + 0.01 * gdat.pericompprio[j], None, strgcomp=strgcomp)
             
-            #if 'epocmtra' in gmod.listnameparacomp:
-            setp_para(gdat, strgmodl, 'epocmtra', 791.10, 791.13, None, strgcomp=strgcomp)
-            
-            #if 'cosi' in gmod.listnameparacomp:
+            setp_para(gdat, strgmodl, 'epocmtra', np.amin(gdat.timeconc[0]), np.amax(gdat.timeconc[0]), None, strgcomp=strgcomp)
             setp_para(gdat, strgmodl, 'cosi', 0., 0.08, None, strgcomp=strgcomp)
             
-            #if 'rrat' in gmod.listnameparacomp:
             minmpara = 0.11
             maxmpara = 0.19
-            if gdat.numbener[p] > 1 and gdat.fitt.typemodlenerfitt == 'full':
+            if gdat.numbener[p] > 1 and (strgmodl == 'true' or gdat.fitt.typemodlenerfitt == 'full'):
                 for e in gdat.indxener[p]:
                     setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgener=gdat.liststrgener[p][e], strgcomp=strgcomp)
-            elif gdat.numbener[p] == 1:
-                setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgcomp=strgcomp)
             else:
-                setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgener=gdat.liststrgdataiter[e], strgcomp=strgcomp)
-                
+                setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgcomp=strgcomp)
+            
             if gmod.typemodl == 'cosc':
                 setp_para(gdat, strgmodl, 'mass', 0.1, 100., ['$M_c$', ''], strgcomp=strgcomp)
 
@@ -4877,11 +4918,22 @@ def init( \
         # labels of the instruments
         if gdat.listlablinst is None:
             gdat.listlablinst = [['TESS'], []]
-    
+        
+        if gdat.booldiag:
+            if len(gdat.listlablinst) != 2:
+                print('')
+                print('gdat.listlablinst should be a list with two elements.')
+                raise Exception('')
+
         # instruments
         gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
         gdat.indxinst = [[] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
+            print('b')
+            print(b)
+            print('gdat.listlablinst')
+            print(gdat.listlablinst)
+
             gdat.numbinst[b] = len(gdat.listlablinst[b])
             gdat.indxinst[b] = np.arange(gdat.numbinst[b])
         
@@ -5030,7 +5082,7 @@ def init( \
         # type of likelihood
         ## 'sing': assume model is a single realization
         ## 'gpro': assume model is a Gaussian Process (GP)
-        if gdat.fitt.typemodlbase == 'gpro':
+        if gdat.fitt.typemodlbaseshap == 'gpro':
             gdat.typellik = 'gpro'
         else:
             gdat.typellik = 'sing'
@@ -5251,15 +5303,22 @@ def init( \
 
     if gdat.booltserdata:
         
+        if gdat.listener is None:
+            gdat.listener = [[] for p in gdat.indxinst[0]]
+        else:
+            if gdat.booldiag:
+                if np.isscalar(gdat.listener[0]):
+                    print('')
+                    print('gdat.listener should be a list of arrays.')
+                    print('gdat.listener')
+                    print(gdat.listener)
+                    raise Exception('')
+        
         if gdat.typeverb > 0:
             print('gdat.listlablinst')
             print(gdat.listlablinst)
-        
-        if gdat.typeverb > 0:
             print('gdat.numbinst')
             print(gdat.numbinst)
-        
-        if gdat.typeverb > 0:
             print('gdat.strgcnfg')
             print(gdat.strgcnfg)
             print('gdat.liststrginst')
@@ -5383,14 +5442,12 @@ def init( \
             print('liststrginst')
             print(liststrginst)
             
-            gdat.listarrylcurmast = [[[] for strgexpr in gdat.liststrginst] for b in gdat.indxdatatser]
+            gdat.listarrylcurmast = [[] for strgexpr in gdat.liststrginst[0]]
             
             print('gdat.indxinst')
             print(gdat.indxinst)
             print('gdat.listlablinst')
             print(gdat.listlablinst)
-            if gdat.listener is None:
-                gdat.listener = [[] for p in gdat.indxinst[0]]
             print('gdat.listener')
             print(gdat.listener)
             gdat.liststrginstfinl = []
@@ -5608,12 +5665,12 @@ def init( \
                             #if path.endswith('allslits_x1d.fits') or path.endswith('s1600a1_x1d.fits') or 
                             
                             if 'tess' in path:
-                                gdat.listarrylcurmast[0][mm], tsec, tcam, tccd = \
+                                gdat.listarrylcurmast[mm], tsec, tcam, tccd = \
                                     ephesos.read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
                                                                              booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
                                 
                                 
-                                gdat.listarrylcurmast[0][mm] = [gdat.listarrylcurmast[0][mm][:, None, :]]
+                                gdat.listarrylcurmast[mm] = [gdat.listarrylcurmast[mm][:, None, :]]
                             
                             elif 'niriss' in path or path.endswith('nis_x1dints.fits'):
                                 pass
@@ -5686,7 +5743,7 @@ def init( \
                                 print('arry[:, :, 2]')
                                 summgene(arry[:, :, 2])
                                 raise Exception('')
-                                gdat.listarrylcurmast[0][mm] = [arry]
+                                gdat.listarrylcurmast[mm] = [arry]
 
                             print('')
                             print('')
@@ -5816,7 +5873,7 @@ def init( \
                             indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
                             
                             # filter for good times
-                            gdat.listarrylcurmast[o] = arry[indxtimegood, :]
+                            gdat.listarrylcurmast[p][o] = arry[indxtimegood, :]
                             
                             listtcam[o] = gdat.dictlygooutp['listtcam'][indxtsecthis]
                             listtccd[o] = gdat.dictlygooutp['listtccd'][indxtsecthis]
@@ -5867,17 +5924,12 @@ def init( \
                                     summgene(arrylcur)
                                     raise Exception('')
 
-                            gdat.listarrylcurmast[o] = arrylcur
+                            gdat.listarrylcurmast[p][o] = arrylcur
                         
                     # merge light curves from different sectors
                     arrylcursapp = np.concatenate([arry for arry in gdat.listarrylcurmastsapp if len(arry) > 0], 0)
                     arrylcurpdcc = np.concatenate([arry for arry in gdat.listarrylcurmastpdcc if len(arry) > 0], 0)
             
-            boolbadd = False
-            for arrylcur in gdat.listarrylcurmast:
-                if len(arrylcur) == 0:
-                    boolbadd = True
-
             if typeverb > 0:
                 if numbtsec > 0:
                     if numbtsec == 1:
@@ -5888,58 +5940,28 @@ def init( \
                     print('listtsec')
                     print(listtsec)
             
-            if boolbadd:
-                if typeverb > 0:
-                    print('gdat.listarrylcurmast contains at least one empty element (i.e., sector with no data). Will remove all such elements.')
-                gdat.listarrylcurmasttemp = []
-                listindxtsecgood = []
-                for o in indxtsec:
-                    if len(gdat.listarrylcurmast[o]) > 0:
-                        listindxtsecgood.append(o)
-                listindxtsecgood = np.array(listindxtsecgood, dtype=int)
-                listtsec = listtsec[listindxtsecgood]
-                listtcam = listtcam[listindxtsecgood]
-                listtccd = listtccd[listindxtsecgood]
-                for indxtsecgood in listindxtsecgood:
-                    gdat.listarrylcurmasttemp.append(gdat.listarrylcurmast[indxtsecgood])
-                gdat.listarrylcurmast = gdat.listarrylcurmasttemp
+            # check if gdat.listarrylcurmast contains any empty sectors
+            for p in gdat.indxinst[b]:
+                boolbadd = False
+                for arrylcur in gdat.listarrylcurmast[p]:
+                    if len(arrylcur) == 0:
+                        boolbadd = True
+                if boolbadd:
+                    if typeverb > 0:
+                        print('gdat.listarrylcurmast contains at least one empty element (i.e., sector with no data). Will remove all such elements.')
+                    listarrylcurmasttemp = []
+                    listindxtsecgood = []
+                    for o in indxtsec:
+                        if len(gdat.listarrylcurmast[p][o]) > 0:
+                            listindxtsecgood.append(o)
+                    listindxtsecgood = np.array(listindxtsecgood, dtype=int)
+                    listtsec = listtsec[listindxtsecgood]
+                    listtcam = listtcam[listindxtsecgood]
+                    listtccd = listtccd[listindxtsecgood]
+                    for indxtsecgood in listindxtsecgood:
+                        listarrylcurmasttemp.append(gdat.listarrylcurmast[p][indxtsecgood])
+                    gdat.listarrylcurmast[p] = listarrylcurmasttemp
                 
-            print('gdat.listarrylcurmast')
-            print(gdat.listarrylcurmast)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             gdat.dictmileoutp['listtsec'] = gdat.listtsec
             print('List of sectors for miletos:')
             print(gdat.listtsec)
@@ -5950,17 +5972,22 @@ def init( \
             
         if gdat.boolsimurflx:
             
-            if gdat.listener is None:
-                gdat.listener = [[] for p in gdat.indxinst[0]]
-                gdat.listener[0] = np.arange(1) 
             print('gdat.listener')
             print(gdat.listener)
             gdat.indxener = [[] for p in gdat.indxinst[0]]
             for p in gdat.indxinst[0]:
-                if gdat.listener[p] is not None:
+                if gdat.listener[p] is not None and len(gdat.listener[p]) > 0:
+                    print('gdat.listener[p]')
+                    print(gdat.listener[p])
                     gdat.numbener[p] = gdat.listener[p].size
                 else:
                     gdat.numbener[p] = 1
+                print('p')
+                print(p)
+                print('gdat.numbener')
+                print(gdat.numbener)
+                print('gdat.listener')
+                print(gdat.listener)
                 gdat.indxener[p] = np.arange(gdat.numbener[p])
             
             tdpy.setp_para_defa(gdat, 'true', 'typemodl', 'psys')
@@ -5998,18 +6025,6 @@ def init( \
             gdat.boolexof = gdat.toiitarg is not None and gdat.dictexoftarg is not None
             gdat.boolexar = gdat.strgexar is not None and gdat.dictexartarg is not None or gdat.typepriocomp == 'exar'
             
-            print('gdat.dictexoftarg')
-            print(gdat.dictexoftarg)
-            print('gdat.dictexartarg')
-            print(gdat.dictexartarg)
-            print('gdat.toiitarg')
-            print(gdat.toiitarg)
-            print('gdat.strgexar')
-            print(gdat.strgexar)
-            print('gdat.boolexof')
-            print(gdat.boolexof)
-            print('gdat.boolexar')
-            print(gdat.boolexar)
             if gdat.typepriocomp is None:
                 if gdat.epocmtracompprio is not None:
                     gdat.typepriocomp = 'inpt'
@@ -6229,61 +6244,51 @@ def init( \
             # type of baseline
             ## 'cons': constant
             ## 'step': step function
-            gdat.true.typemodlbase = 'cons'
+            gdat.true.typemodlbaseshap = 'cons'
 
-            tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
-            
-            tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinrwhit', 0.4)
-            tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquadwhit', 0.25)
-            
             for p in gdat.indxinst[0]:
                 for e in range(gdat.numbener[p]):
                     gdat.liststrgener[p].append('ener%04d' % e)
             
-            for p in gdat.indxinst[0]:
-                for e in range(gdat.numbener[p]):
-                    tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinr%s' % gdat.liststrgener[p][e], 0.4)
-                    tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquad%s' % gdat.liststrgener[p][e], 0.25)
-            
-            #raise Exception('')
-            
-            if gdat.true.typemodlbase == 'cons':
+            if gdat.true.typemodlbaseshap == 'cons':
                 for p in gdat.indxinst[0]:
-                    for e in range(gdat.numbener[p]):
-                        tdpy.setp_para_defa(gdat, 'true', 'cons%s' % gdat.liststrgener[p][e], np.array([0.]))
+                    if gdat.numbener[p] > 1 and gdat.true.typemodlbaseener == 'ener':
+                        for e in range(gdat.numbener[p]):
+                            tdpy.setp_para_defa(gdat, 'true', 'consbase%s' % gdat.liststrgener[p][e], np.array([0.]))
+                    else:
+                        tdpy.setp_para_defa(gdat, 'true', 'consbase', np.array([0.]))
                         
-            elif gdat.true.typemodlbase == 'step':
-                tdpy.setp_para_defa(gdat, 'true', 'consfrst', np.array([0.]))
-                tdpy.setp_para_defa(gdat, 'true', 'consseco', np.array([0.]))
+            elif gdat.true.typemodlbaseshap == 'step':
+                tdpy.setp_para_defa(gdat, 'true', 'consbasefrst', np.array([0.]))
+                tdpy.setp_para_defa(gdat, 'true', 'consbaseseco', np.array([0.]))
                 tdpy.setp_para_defa(gdat, 'true', 'timestep', np.array([0.]))
                 tdpy.setp_para_defa(gdat, 'true', 'scalstep', np.array([1.]))
             
             if gdat.true.typemodl.startswith('psys') or gdat.true.typemodl == 'cosc':
                 tdpy.setp_para_defa(gdat, 'true', 'numbcomp', 1)
 
+                tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
+            
                 gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
             
-                print('gdat.true.typemodl')
-                print(gdat.true.typemodl)
-                for namepara in ['epocmtra', 'peri', 'rsma', 'rrat']:
+                for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
                     for j in gdat.true.indxcomp:
-                        print('namepara')
-                        print(namepara)
                         tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, getattr(gdat, namepara + 'compprio')[j])
 
                 if gdat.true.boolmodlpsys:
                     for j in gdat.true.indxcomp:
+                        print('getattr(gdat, rratcompprio)')
+                        print(getattr(gdat, 'rratcompprio'))
                         tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[j])
                         for e in range(gdat.numbener[p]):
-                            print('rratcom%dener%04d % (j, e)')
-                            print('rratcom%dener%04d' % (j, e))
                             tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, e), getattr(gdat, 'rratcompprio')[j])
-                        print('gdat.numbener')
-                        print(gdat.numbener)
-                
-                tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinr', 0.4)
-                tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquad', 0.25)
-                
+                        
+                        print('gdat.true.rratcom0ener0000')
+                        print(gdat.true.rratcom0ener0000)
+                        print('gdat.true.rratcom0ener0001')
+                        print(gdat.true.rratcom0ener0001)
+                        #raise Exception('')
+
                 if gdat.true.typemodl == 'cosc':
                     tdpy.setp_para_defa(gdat, 'true', 'radistar', 1.)
                     tdpy.setp_para_defa(gdat, 'true', 'massstar', 1.)
@@ -6319,8 +6324,8 @@ def init( \
                 elif gdat.liststrgtypedata[b][p] == 'inpt':
                     gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
                 elif b == 0 and (gdat.liststrginst[b][p] == 'TESS' or gdat.liststrginst[b][p].startswith('JWST')):
-                    gdat.numbchun[b][p] = len(gdat.listarrylcurmast[b][p])
-                    #gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[b][p]
+                    gdat.numbchun[b][p] = len(gdat.listarrylcurmast[p])
+                    #gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[p]
                     if gdat.booldiag and gdat.numbchun[b][p] <= 0:
                         print('')
                         print('')
@@ -6328,13 +6333,13 @@ def init( \
                         print('')
                         print('bp')
                         print(b, p)
-                        print('len(gdat.listarrylcurmast[b][p])')
-                        print(len(gdat.listarrylcurmast[b][p]))
-                        print('gdat.listarrylcurmast[b][p]')
-                        print(gdat.listarrylcurmast[b][p])
-                        for y in range(len(gdat.listarrylcurmast[b][p])):
-                            print('gdat.listarrylcurmast[b][p][y]')
-                            print(gdat.listarrylcurmast[b][p][y])
+                        print('len(gdat.listarrylcurmast[p])')
+                        print(len(gdat.listarrylcurmast[p]))
+                        print('gdat.listarrylcurmast[p]')
+                        print(gdat.listarrylcurmast[p])
+                        for y in range(len(gdat.listarrylcurmast[p])):
+                            print('gdat.listarrylcurmast[p][y]')
+                            print(gdat.listarrylcurmast[p][y])
                         raise Exception('')
 
                 if gdat.booldiag and gdat.numbchun[b][p] <= 0:
@@ -6381,31 +6386,34 @@ def init( \
             print('gdat.fitt.typemodlenerfitt')
             print(gdat.fitt.typemodlenerfitt)
                         
-        if gdat.boolretrlcurmast:
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    for y in gdat.indxchun[b][p]:
-                        print('bpy')
-                        print(b, p, y)
-                        print('gdat.listarrylcurmast[b][p][y]')
-                        summgene(gdat.listarrylcurmast[b][p][y])
-                        print('gdat.listarrylcurmast[b][p][y][:, :, 0]')
-                        summgene(gdat.listarrylcurmast[b][p][y][:, :, 0])
-                        print('gdat.listarrylcurmast[b][p][y][:, :, 1]')
-                        summgene(gdat.listarrylcurmast[b][p][y][:, :, 1])
-                        print('gdat.listarrylcurmast[b][p][y][:, :, 2]')
-                        summgene(gdat.listarrylcurmast[b][p][y][:, :, 2])
-                        print('')
+            if gdat.boolretrlcurmast:
+                for b in gdat.indxdatatser:
+                    for p in gdat.indxinst[b]:
+                        for y in gdat.indxchun[b][p]:
+                            print('bpy')
+                            print(b, p, y)
+                            print('gdat.listarrylcurmast[p][y]')
+                            summgene(gdat.listarrylcurmast[p][y])
+                            print('gdat.listarrylcurmast[p][y][:, :, 0]')
+                            summgene(gdat.listarrylcurmast[p][y][:, :, 0])
+                            print('gdat.listarrylcurmast[p][y][:, :, 1]')
+                            summgene(gdat.listarrylcurmast[p][y][:, :, 1])
+                            print('gdat.listarrylcurmast[p][y][:, :, 2]')
+                            summgene(gdat.listarrylcurmast[p][y][:, :, 2])
+                            print('')
 
         if gdat.numbener[p] == 1:
             gdat.numbenermodl = 1
             gdat.numbeneriter = 1
+            gdat.numbenerefes = 1
         elif gdat.fitt.typemodlenerfitt == 'full':
             gdat.numbenermodl = gdat.numbener[p]
             gdat.numbeneriter = 2
+            gdat.numbenerefes = 2
         else:
             gdat.numbenermodl = 1
             gdat.numbeneriter = gdat.numbener[p] + 1
+            gdat.numbenerefes = gdat.numbener[p] + 1
         gdat.indxdataiter = np.arange(gdat.numbeneriter)
         gdat.indxenermodl = np.arange(gdat.numbenermodl)
 
@@ -6450,7 +6458,7 @@ def init( \
         if gdat.boolretrlcurmast:
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[b][p]
+                    gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[p]
         
         ## user-input data
         if gdat.listpathdatainpt is not None:
@@ -6560,7 +6568,7 @@ def init( \
                     raise Exception('')
             gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
             
-            if gdat.true.typemodlbase == 'gpro':
+            if gdat.true.typemodlbaseshap == 'gpro':
                 dictrflx = retr_rflxmodl_mile_gpro(gdat, 'true', gdat.true.time, dictparainpt)
                 gdat.true.dictrflxmodl['base'] = dictrflx['base']
 
@@ -7997,10 +8005,10 @@ def init( \
                 print(gdat.dictmileoutp['boolposianls'])
             
         if gdat.typeverb > 0:
-            print('gmod.typemodlbase')
-            print(gmod.typemodlbase)
-            print('gdat.numbener[p]')
-            print(gdat.numbener[p])
+            print('gmod.typemodlbaseshap')
+            print(gmod.typemodlbaseshap)
+            print('gmod.typemodlbaseener')
+            print(gmod.typemodlbaseener)
         
         # iterate over different subsets of data
         for e in gdat.indxdataiter:
