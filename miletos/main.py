@@ -3,7 +3,6 @@ import time as modutime
 import os, fnmatch
 import sys, datetime
 import numpy as np
-import pandas as pd
 import scipy.interpolate
 import scipy.stats
 
@@ -11,20 +10,25 @@ from tqdm import tqdm
 
 from numba import jit, prange
 
+import pandas as pd
+
+import h5py
+
 import astroquery
 
 import astropy
 import astropy.coordinates
 import astropy.units
+from astropy.coordinates import SkyCoord
 
 import pickle
     
 import celerite
 #from celerite import terms
 
+from functools import partial
 
 import matplotlib
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 #import seaborn as sns
@@ -489,6 +493,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 if gdat.numbener[p] > 1 and gmod.typemodlblinener[p] == 'ener':
                     for e in gdat.indxener[p]:
                         dictlistmodl['blin'][0][p][:, e] = dictparainpt['consblinener%04d' % e] * 1e-3 * np.ones_like(time[0][p])
+                        print('dictlistmodl[blin][0][p][:, e]')
+                        summgene(dictlistmodl['blin'][0][p][:, e])
                 else:
                     dictlistmodl['blin'][0][p][:, 0] = dictparainpt['consblin'] * 1e-3 * np.ones_like(time[0][p])
     
@@ -510,10 +516,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
         
     if gmod.typemodlblinshap != 'gpro':
         for p in gdat.indxinst[0]:
-            print('dictlistmodl[sgnl][0][p]')
-            summgene(dictlistmodl['sgnl'][0][p])
-            print('dictlistmodl[blin][0][p]')
-            summgene(dictlistmodl['blin'][0][p])
             # total model
             dictlistmodl['totl'][0][p] = dictlistmodl['sgnl'][0][p] + dictlistmodl['blin'][0][p] + 1.
             
@@ -522,18 +524,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             
             # add unity to signal component
             dictlistmodl['sgnl'][0][p] += 1.
-
-    #print('strgmodl')
-    #print(strgmodl)
-    #for name in dictlistmodl.keys():
-    #    for b in gdat.indxdatatser:
-    #        for p in gdat.indxinst[b]:
-    #            print('name')
-    #            print(name)
-    #            print('dictlistmodl[name][0][p]')
-    #            summgene(dictlistmodl[name][0][p])
-    #            print('')
-    #raise Exception('')
 
     if gdat.booldiag:
         for name in dictlistmodl.keys():
@@ -553,10 +543,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         summgene(dictlistmodl[name][0][p])
                         raise Exception('not np.isfinite(dictlistmodl[name][0][p]).all()')
         
-    if gdat.booldiag:
-        for name in dictlistmodl.keys():
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
                     if dictlistmodl[name][0][p].shape[0] != time[0][p].size:
                         print('')
                         print('')
@@ -3459,11 +3445,13 @@ def plot_tsercore(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=True, boo
     if gdat.booldiag:
         if len(arrytser) == 0:
             print('')
+            print('')
+            print('')
             print('strgarry')
             print(strgarry)
             print('arrytser')
             print(arrytser)
-            raise Exception('')
+            raise Exception('len(arrytser) == 0')
     
     # determine name of the file
     ## string indicating the prior on the transit ephemerides
@@ -3474,7 +3462,7 @@ def plot_tsercore(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=True, boo
     if boolcolrtran:
         strgcolr = '_colr'
     strgchun = ''
-    if boolchun:
+    if boolchun and gdat.numbchun[b][p] > 1:
         strgchun = '_' + gdat.liststrgchun[b][p][y]
     path = gdat.pathvisutarg + '%s%s_%s%s_%s%s_%s%s.%s' % \
                     (gdat.liststrgtser[b], gdat.strgcnfg, strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, strgprioplan, gdat.typefileplot)
@@ -3538,19 +3526,6 @@ def plot_tsercore(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=True, boo
                           gdat.listarrytser['bdtrmedi'][b][p][y][:, 0, 1], \
                           color='g', marker='.', ls='', ms=1, rasterized=True)
                 
-                print('heeeey')
-                print('heeeey')
-                print('heeeey')
-                print('heeeey')
-                print('heeeey')
-                print('heeeey')
-                print('gdat.listarrytser[bdtrmedi][b][p][y]')
-                summgene(gdat.listarrytser['bdtrmedi'][b][p][y])
-                print('heeeey')
-                print('heeeey')
-                print('heeeey')
-                print('heeeey')
-                
                 axis.fill_between(gdat.listarrytser['bdtrmedi'][b][p][y][:, 0, 0] - gdat.timeoffs, \
                                   gdat.listarrytser['bdtrlowr'][b][p][y][:, 0, 1], \
                                   gdat.listarrytser['bdtruppr'][b][p][y][:, 0, 1], \
@@ -3594,7 +3569,7 @@ def plot_tsercore(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=True, boo
                 color = plt.cm.rainbow(e / (gdat.numbener[p] - 1))
                 axis.plot(arrytser[:, e, 0] - gdat.timeoffs, arrytser[:, e, 1] + listdiffrflxener[e], color=color, marker='.', ls='', ms=1, rasterized=True)
             
-            if boolcolrtran:
+            if boolcolrtran and hasattr(gdat, 'listindxtimetran'):
                 # color and name transits
                 ylim = axis.get_ylim()
                 listtimetext = []
@@ -5576,6 +5551,1339 @@ def srch_pbox(arry, \
     return dictpboxoutp
 
 
+def anim_tmptdete(timefull, lcurfull, meantimetmpt, lcurtmpt, pathvisu, listindxtimeposimaxm, corrprod, corr, strgextn='', \
+                  ## file type of the plot
+                  typefileplot='png', \
+                  colr=None):
+    
+    numbtimefull = timefull.size
+    numbtimekern = lcurtmpt.size
+    numbtimefullruns = numbtimefull - numbtimekern
+    indxtimefullruns = np.arange(numbtimefullruns)
+    
+    listpath = []
+    gdat.cmndmakeanim = 'convert -delay 20'
+    
+    numbtimeanim = min(200, numbtimefullruns)
+    indxtimefullrunsanim = np.random.choice(indxtimefullruns, size=numbtimeanim, replace=False)
+    indxtimefullrunsanim = np.sort(indxtimefullrunsanim)
+
+    for tt in indxtimefullrunsanim:
+        
+        path = pathvisu + 'lcur%s_%08d.%s' % (strgextn, tt, typefileplot)
+        listpath.append(path)
+        if not os.path.exists(path):
+            plot_tmptdete(timefull, lcurfull, tt, meantimetmpt, lcurtmpt, path, listindxtimeposimaxm, corrprod, corr)
+        gdat.cmndmakeanim += ' %s' % path
+    
+    pathanim = pathvisu + 'lcur%s.gif' % strgextn
+    gdat.cmndmakeanim += ' %s' % pathanim
+    print('gdat.cmndmakeanim')
+    print(gdat.cmndmakeanim)
+    os.system(gdat.cmndmakeanim)
+    gdat.cmnddeleimag = 'rm'
+    for path in listpath:
+        gdat.cmnddeleimag += ' ' + path
+    os.system(gdat.cmnddeleimag)
+
+
+def plot_tmptdete(timefull, lcurfull, tt, meantimetmpt, lcurtmpt, path, listindxtimeposimaxm, corrprod, corr):
+    
+    numbtimekern = lcurtmpt.size
+    indxtimekern = np.arange(numbtimekern)
+    numbtimefull = lcurfull.size
+    numbtimefullruns = numbtimefull - numbtimekern
+    indxtimefullruns = np.arange(numbtimefullruns)
+    difftime = timefull[1] - timefull[0]
+    
+    figr, axis = plt.subplots(5, 1, figsize=(8, 11))
+    
+    # plot the whole light curve
+    proc_axiscorr(timefull, lcurfull, axis[0], listindxtimeposimaxm)
+    
+    # plot zoomed-in light curve
+    minmindx = max(0, tt - int(numbtimekern / 4))
+    maxmindx = min(numbtimefullruns - 1, tt + int(5. * numbtimekern / 4))
+    indxtime = np.arange(minmindx, maxmindx + 1)
+    print('indxtime')
+    summgene(indxtime)
+    proc_axiscorr(timefull, lcurfull, axis[1], listindxtimeposimaxm, indxtime=indxtime)
+    
+    # plot template
+    axis[2].plot(timefull[0] + meantimetmpt + tt * difftime, lcurtmpt, color='b', marker='v')
+    axis[2].set_ylabel('Template')
+    axis[2].set_xlim(axis[1].get_xlim())
+
+    # plot correlation
+    axis[3].plot(timefull[0] + meantimetmpt + tt * difftime, corrprod[tt, :], color='red', marker='o')
+    axis[3].set_ylabel('Correlation')
+    axis[3].set_xlim(axis[1].get_xlim())
+    
+    # plot the whole total correlation
+    print('indxtimefullruns')
+    summgene(indxtimefullruns)
+    print('timefull')
+    summgene(timefull)
+    print('corr')
+    summgene(corr)
+    axis[4].plot(timefull[indxtimefullruns], corr, color='m', marker='o', ms=1, rasterized=True)
+    axis[4].set_ylabel('Total correlation')
+    
+    titl = 'C = %.3g' % corr[tt]
+    axis[0].set_title(titl)
+
+    limtydat = axis[0].get_ylim()
+    axis[0].fill_between(timefull[indxtimekern+tt], limtydat[0], limtydat[1], alpha=0.4)
+    print('Writing to %s...' % path)
+    plt.savefig(path)
+    plt.close()
+    
+
+def proc_axiscorr(time, lcur, axis, listindxtimeposimaxm, indxtime=None, colr='k', timeoffs=2457000):
+    
+    if indxtime is None:
+        indxtimetemp = np.arange(time.size)
+    else:
+        indxtimetemp = indxtime
+    axis.plot(time[indxtimetemp], lcur[indxtimetemp], ls='', marker='o', color=colr, rasterized=True, ms=0.5)
+    maxmydat = axis.get_ylim()[1]
+    for kk in range(len(listindxtimeposimaxm)):
+        if listindxtimeposimaxm[kk] in indxtimetemp:
+            axis.plot(time[listindxtimeposimaxm[kk]], maxmydat, marker='v', color='b')
+    #print('timeoffs')
+    #print(timeoffs)
+    #axis.set_xlabel('Time [BJD-%d]' % timeoffs)
+    axis.set_ylabel('Relative flux')
+    
+
+def srch_flar(time, lcur, \
+              # type of verbosity
+              ## -1: absolutely no text
+              ##  0: no text output except critical warnings
+              ##  1: minimal description of the execution
+              ##  2: detailed description of the execution
+              typeverb=1, \
+
+              strgextn='', numbkern=3, minmscalfalltmpt=None, maxmscalfalltmpt=None, \
+                                                                    pathvisu=None, boolplot=True, boolanim=False, thrs=None):
+
+    minmtime = np.amin(time)
+    timeflartmpt = 0.
+    amplflartmpt = 1.
+    scalrisetmpt = 0. / 24.
+    difftime = np.amin(time[1:] - time[:-1])
+    
+    if minmscalfalltmpt is None:
+        minmscalfalltmpt = 3 * difftime
+    
+    if maxmscalfalltmpt is None:
+        maxmscalfalltmpt = 3. / 24.
+    
+    if typeverb > 1:
+        print('lcurtmpt')
+        summgene(lcurtmpt)
+    
+    indxscalfall = np.arange(numbkern)
+    listscalfalltmpt = np.linspace(minmscalfalltmpt, maxmscalfalltmpt, numbkern)
+    print('listscalfalltmpt')
+    print(listscalfalltmpt)
+    listcorr = []
+    listlcurtmpt = [[] for k in indxscalfall]
+    meantimetmpt = [[] for k in indxscalfall]
+    for k in indxscalfall:
+        numbtimekern = 3 * int(listscalfalltmpt[k] / difftime)
+        print('numbtimekern')
+        print(numbtimekern)
+        meantimetmpt[k] = np.arange(numbtimekern) * difftime
+        print('meantimetmpt[k]')
+        summgene(meantimetmpt[k])
+        if numbtimekern == 0:
+            raise Exception('')
+        listlcurtmpt[k] = retr_lcurmodl_flarsing(meantimetmpt[k], timeflartmpt, amplflartmpt, scalrisetmpt, listscalfalltmpt[k])
+        if not np.isfinite(listlcurtmpt[k]).all():
+            raise Exception('')
+        
+    corr, listindxtimeposimaxm, timefull, lcurfull = corr_tmpt(time, lcur, meantimetmpt, listlcurtmpt, thrs=thrs, boolanim=boolanim, boolplot=boolplot, \
+                                                                                            typeverb=typeverb, strgextn=strgextn, pathvisu=pathvisu)
+
+    #corr, listindxtimeposimaxm, timefull, rflxfull = corr_tmpt(gdat.timethis, gdat.rflxthis, gdat.listtimetmpt, gdat.listdflxtmpt, \
+    #                                                                    thrs=gdat.thrstmpt, boolanim=gdat.boolanimtmpt, boolplot=gdat.boolplottmpt, \
+     #                                                               typeverb=gdat.typeverb, strgextn=gdat.strgextnthis, pathvisu=gdat.pathtargimag)
+                
+    return corr, listindxtimeposimaxm, meantimetmpt, timefull, lcurfull
+
+
+# template matching
+
+#@jit(nopython=True, parallel=True, fastmath=True, nogil=True)
+def corr_arryprod(lcurtemp, lcurtmpt, numbkern):
+    
+    # for each size, correlate
+    corrprod = [[] for k in range(numbkern)]
+    for k in range(numbkern):
+        corrprod[k] = lcurtmpt[k] * lcurtemp[k]
+    
+    return corrprod
+
+
+#@jit(parallel=True)
+def corr_copy(indxtimefullruns, lcurstan, indxtimekern, numbkern):
+    '''
+    Make a matrix with rows as the shifted and windowed copies of the time series.
+    '''
+    
+    listlcurtemp = [[] for k in range(numbkern)]
+    
+    # loop over kernel sizes
+    for k in range(numbkern):
+        numbtimefullruns = indxtimefullruns[k].size
+        numbtimekern = indxtimekern[k].size
+        listlcurtemp[k] = np.empty((numbtimefullruns, numbtimekern))
+        
+        # loop over time
+        for t in range(numbtimefullruns):
+            listlcurtemp[k][t, :] = lcurstan[indxtimefullruns[k][t]+indxtimekern[k]]
+    
+    return listlcurtemp
+
+
+def corr_tmpt(time, lcur, meantimetmpt, listlcurtmpt, \
+              # type of verbosity
+              ## -1: absolutely no text
+              ##  0: no text output except critical warnings
+              ##  1: minimal description of the execution
+              ##  2: detailed description of the execution
+              typeverb=1, \
+
+              thrs=None, strgextn='', pathvisu=None, boolplot=True, \
+              ## file type of the plot
+              typefileplot='png', \
+              boolanim=False, \
+             ):
+    
+    timeoffs = np.amin(time) // 1000
+    timeoffs *= 1000
+    time -= timeoffs
+    
+    if typeverb > 1:
+        timeinit = timemodu.time()
+    
+    print('corr_tmpt()')
+    
+    if lcur.ndim > 1:
+        raise Exception('')
+    
+    for lcurtmpt in listlcurtmpt:
+        if not np.isfinite(lcurtmpt).all():
+            raise Exception('')
+
+    if not np.isfinite(lcur).all():
+        raise Exception('')
+
+    numbtime = lcur.size
+    
+    numbkern = len(listlcurtmpt)
+    indxkern = np.arange(numbkern)
+    
+    # count gaps
+    difftime = time[1:] - time[:-1]
+    minmdifftime = np.amin(difftime)
+    difftimesort = np.sort(difftime)[::-1]
+    print('difftimesort')
+    for k in range(difftimesort.size):
+        print(difftimesort[k] / minmdifftime)
+        if k == 20:
+             break
+    
+    boolthrsauto = thrs is None
+    
+    print('temp: setting boolthrsauto')
+    thrs = 1.
+    boolthrsauto = False
+    
+    # number of time samples in the kernel
+    numbtimekern = np.empty(numbkern, dtype=int)
+    indxtimekern = [[] for k in indxkern]
+    
+    # take out the mean
+    listlcurtmptstan = [[] for k in indxkern]
+    for k in indxkern:
+        listlcurtmptstan[k] = np.copy(listlcurtmpt[k])
+        listlcurtmptstan[k] -= np.mean(listlcurtmptstan[k])
+        numbtimekern[k] = listlcurtmptstan[k].size
+        indxtimekern[k] = np.arange(numbtimekern[k])
+
+    minmtimechun = 3 * 3. / 24. / 60. # [days]
+    print('minmdifftime * 24 * 60')
+    print(minmdifftime * 24 * 60)
+    listlcurfull = []
+    indxtimebndr = np.where(difftime > minmtimechun)[0]
+    indxtimebndr = np.concatenate([np.array([0]), indxtimebndr, np.array([numbtime - 1])])
+    numbchun = indxtimebndr.size - 1
+    indxchun = np.arange(numbchun)
+    corrchun = [[[] for k in indxkern] for l in indxchun]
+    listindxtimeposimaxm = [[[] for k in indxkern] for l in indxchun]
+    listlcurchun = [[] for l in indxchun]
+    listtimechun = [[] for l in indxchun]
+    print('indxtimebndr')
+    print(indxtimebndr)
+    print('numbchun')
+    print(numbchun)
+    for l in indxchun:
+        
+        print('Chunk %d...' % l)
+        
+        minmindxtimeminm = 0
+        minmtime = time[indxtimebndr[l]+1]
+        print('minmtime')
+        print(minmtime)
+        print('indxtimebndr[l]')
+        print(indxtimebndr[l])
+        maxmtime = time[indxtimebndr[l+1]]
+        print('maxmtime')
+        print(maxmtime)
+        numb = int(round((maxmtime - minmtime) / minmdifftime))
+        print('numb')
+        print(numb)
+        
+        if numb == 0:
+            print('Skipping due to chunk with single point...')
+            continue
+
+        timechun = np.linspace(minmtime, maxmtime, numb)
+        listtimechun[l] = timechun
+        print('timechun')
+        summgene(timechun)
+        
+        if float(indxtimebndr[l+1] - indxtimebndr[l]) / numb < 0.8:
+            print('Skipping due to undersampled chunk...')
+            continue
+
+        numbtimefull = timechun.size
+        print('numbtimefull')
+        print(numbtimefull)
+        
+        indxtimechun = np.arange(indxtimebndr[l], indxtimebndr[l+1] + 1)
+        
+        print('time[indxtimechun]')
+        summgene(time[indxtimechun])
+        
+        # interpolate
+        lcurchun = scipy.interpolate.interp1d(time[indxtimechun], lcur[indxtimechun])(timechun)
+        
+        if indxtimechun.size != timechun.size:
+            print('time[indxtimechun]')
+            if timechun.size < 50:
+                for timetemp in time[indxtimechun]:
+                    print(timetemp)
+            summgene(time[indxtimechun])
+            print('timechun')
+            if timechun.size < 50:
+                for timetemp in timechun:
+                    print(timetemp)
+            summgene(timechun)
+            #raise Exception('')
+
+        # take out the mean
+        lcurchun -= np.mean(lcurchun)
+        
+        listlcurchun[l] = lcurchun
+        
+        # size of the full grid minus the kernel size
+        numbtimefullruns = np.empty(numbkern, dtype=int)
+        indxtimefullruns = [[] for k in indxkern]
+        
+        # find the correlation
+        for k in indxkern:
+            print('Kernel %d...' % k)
+            
+            if numb < numbtimekern[k]:
+                print('Skipping due to chunk shorther than the kernel...')
+                continue
+            
+            # find the total correlation (along the time delay axis)
+            corrchun[l][k] = scipy.signal.correlate(lcurchun, listlcurtmptstan[k], mode='valid')
+            print('corrchun[l][k]')
+            summgene(corrchun[l][k])
+        
+            numbtimefullruns[k] = numbtimefull - numbtimekern[k] + 1
+            indxtimefullruns[k] = np.arange(numbtimefullruns[k])
+        
+            print('numbtimekern[k]')
+            print(numbtimekern[k])
+            print('numbtimefullruns[k]')
+            print(numbtimefullruns[k])
+
+            if boolthrsauto:
+                perclowrcorr = np.percentile(corr[k],  1.)
+                percupprcorr = np.percentile(corr[k], 99.)
+                indx = np.where((corr[k] < percupprcorr) & (corr[k] > perclowrcorr))[0]
+                medicorr = np.median(corr[k])
+                thrs = np.std(corr[k][indx]) * 7. + medicorr
+
+            if not np.isfinite(corrchun[l][k]).all():
+                raise Exception('')
+
+            # determine the threshold on the maximum correlation
+            if typeverb > 1:
+                print('thrs')
+                print(thrs)
+
+            # find triggers
+            listindxtimeposi = np.where(corrchun[l][k] > thrs)[0]
+            if typeverb > 1:
+                print('listindxtimeposi')
+                summgene(listindxtimeposi)
+            
+            # cluster triggers
+            listtemp = []
+            listindxtimeposiptch = []
+            for kk in range(len(listindxtimeposi)):
+                listtemp.append(listindxtimeposi[kk])
+                if kk == len(listindxtimeposi) - 1 or listindxtimeposi[kk] != listindxtimeposi[kk+1] - 1:
+                    listindxtimeposiptch.append(np.array(listtemp))
+                    listtemp = []
+            
+            if typeverb > 1:
+                print('listindxtimeposiptch')
+                summgene(listindxtimeposiptch)
+
+            listindxtimeposimaxm[l][k] = np.empty(len(listindxtimeposiptch), dtype=int)
+            for kk in range(len(listindxtimeposiptch)):
+                indxtemp = np.argmax(corrchun[l][k][listindxtimeposiptch[kk]])
+                listindxtimeposimaxm[l][k][kk] = listindxtimeposiptch[kk][indxtemp]
+            
+            if typeverb > 1:
+                print('listindxtimeposimaxm[l][k]')
+                summgene(listindxtimeposimaxm[l][k])
+            
+            if boolplot or boolanim:
+                strgextntotl = strgextn + '_kn%02d' % k
+        
+            if boolplot:
+                if numbtimefullruns[k] <= 0:
+                    continue
+                numbdeteplot = min(len(listindxtimeposimaxm[l][k]), 10)
+                figr, axis = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
+                
+                #proc_axiscorr(time[indxtimechun], lcur[indxtimechun], axis[0], listindxtimeposimaxm[l][k])
+                proc_axiscorr(timechun, lcurchun, axis[0], listindxtimeposimaxm[l][k])
+                
+                axis[1].plot(timechun[indxtimefullruns[k]], corrchun[l][k], color='m', ls='', marker='o', ms=1, rasterized=True)
+                axis[1].set_ylabel('C')
+                axis[1].set_xlabel('Time [BJD-%d]' % timeoffs)
+                
+                path = pathvisu + 'lcurflar_ch%02d%s.%s' % (l, strgextntotl, gdat.typefileplot)
+                plt.subplots_adjust(left=0.2, bottom=0.2, hspace=0)
+                print('Writing to %s...' % path)
+                plt.savefig(path)
+                plt.close()
+                
+                for n in range(numbdeteplot):
+                    figr, axis = plt.subplots(figsize=(8, 4), sharex=True)
+                    for i in range(numbdeteplot):
+                        indxtimeplot = indxtimekern[k] + listindxtimeposimaxm[l][k][i]
+                        proc_axiscorr(timechun, lcurchun, axis, listindxtimeposimaxm[l][k], indxtime=indxtimeplot, timeoffs=timeoffs)
+                    path = pathvisu + 'lcurflar_ch%02d%s_det.%s' % (l, strgextntotl, gdat.typefileplot)
+                    print('Writing to %s...' % path)
+                    plt.savefig(path)
+                    plt.close()
+                
+            print('Done with the plot...')
+            if False and boolanim:
+                path = pathvisu + 'lcur%s.gif' % strgextntotl
+                if not os.path.exists(path):
+                    anim_tmptdete(timefull, lcurfull, meantimetmpt[k], listlcurtmpt[k], pathvisu, \
+                                                                listindxtimeposimaxm[l][k], corrprod[k], corrchun[l][k], strgextn=strgextntotl)
+                else:
+                    print('Skipping animation for kernel %d...' % k)
+    if typeverb > 1:
+        print('Delta T (corr_tmpt, rest): %g' % (timemodu.time() - timeinit))
+
+    return corrchun, listindxtimeposimaxm, listtimechun, listlcurchun
+
+
+def read_qlop(path, pathcsvv=None, stdvcons=None):
+    
+    print('Reading QLP light curve from %s...' % path)
+    objtfile = h5py.File(path, 'r')
+    time = objtfile['LightCurve/BJD'][()] + 2457000.
+    tmag = objtfile['LightCurve/AperturePhotometry/Aperture_002/RawMagnitude'][()]
+    flux = 10**(-(tmag - np.nanmedian(tmag)) / 2.5)
+    flux /= np.nanmedian(flux) 
+    arry = np.empty((flux.size, 3))
+    arry[:, 0] = time
+    arry[:, 1] = flux
+    if stdvcons is None:
+        stdvcons = 1e-3
+        print('Assuming a constant photometric precision of %g for the QLP light curve.' % stdvcons)
+    stdv = np.zeros_like(flux) + stdvcons
+    arry[:, 2] = stdv
+    
+    # filter out bad data
+    indx = np.where((objtfile['LightCurve/QFLAG'][()] == 0) & np.isfinite(flux) & np.isfinite(time) & np.isfinite(stdv))[0]
+    arry = arry[indx, :]
+    if not np.isfinite(arry).all():
+        print('arry')
+        summgene(arry)
+        raise Exception('Light curve is not finite')
+    if arry.shape[0] == 0:
+        print('arry')
+        summgene(arry)
+        raise Exception('Light curve has no data points')
+
+    if pathcsvv is not None:
+        print('Writing to %s...' % pathcsvv)
+        np.savetxt(pathcsvv, arry, delimiter=',')
+
+    return arry
+
+
+# transits
+def retr_indxtran(time, epoc, peri, duratrantotl=None):
+    '''
+    Find the transit indices for a given time axis, epoch, period, and optionally transit duration.
+    '''
+    
+    if np.isfinite(peri):
+        if duratrantotl is None:
+            duratemp = 0.
+        else:
+            duratemp = duratrantotl
+        intgminm = np.ceil((np.amin(time) - epoc - duratemp / 48.) / peri)
+        intgmaxm = np.ceil((np.amax(time) - epoc - duratemp / 48.) / peri)
+        indxtran = np.arange(intgminm, intgmaxm)
+    else:
+        indxtran = np.arange(1)
+    
+    return indxtran
+
+
+def retr_listepoctran(time, epoc, peri, duratrantotl=None):
+    '''
+    Find the list of epochs inside the time-series for a given ephemerides
+    '''
+
+    indxtran = retr_indxtran(time, epoc, peri, duratrantotl=duratrantotl)
+    listepoc = epoc + indxtran * peri
+
+    return listepoc
+
+    
+def retr_indxtimetran(time, epoc, peri, \
+                      
+                      # total transit duration [hours]
+                      duratrantotl, \
+                      
+                      # full transit duration [hours]
+                      duratranfull=None, \
+                      
+                      # type of the in-transit phase interval
+                      typeineg=None, \
+                      
+                      # Boolean flag to find time indices of individual transits
+                      boolindi=False, \
+
+                      # Boolean flag to return the out-of-transit time indices instead
+                      booloutt=False, \
+                      
+                      # Boolean flag to return the secondary transit time indices instead
+                      boolseco=False, \
+                     ):
+    '''
+    Return the indices of times during transit.
+    '''
+
+    if not np.isfinite(time).all():
+        raise Exception('')
+    
+    if not np.isfinite(duratrantotl).all():
+        print('duratrantotl')
+        print(duratrantotl)
+        raise Exception('')
+    
+    if booloutt and boolindi:
+        raise Exception('')
+
+    indxtran = retr_indxtran(time, epoc, peri, duratrantotl)
+    
+    # phase offset
+    if boolseco:
+        offs = 0.5
+    else:
+        offs = 0.
+
+    listindxtimetran = []
+    for n in indxtran:
+        timetotlinit = epoc + (n + offs) * peri - duratrantotl / 48.
+        timetotlfinl = epoc + (n + offs) * peri + duratrantotl / 48.
+        if duratranfull is not None:
+            timefullinit = epoc + (n + offs) * peri - duratranfull / 48.
+            timefullfinl = epoc + (n + offs) * peri + duratranfull / 48.
+            timeingrhalf = (timetotlinit + timefullinit) / 2.
+            timeeggrhalf = (timetotlfinl + timefullfinl) / 2.
+            if typeineg == 'inge':
+                indxtime = np.where((time > timetotlinit) & (time < timefullinit) | (time > timefullfinl) & (time < timetotlfinl))[0]
+            if typeineg == 'ingr':
+                indxtime = np.where((time > timetotlinit) & (time < timefullinit))[0]
+            if typeineg == 'eggr':
+                indxtime = np.where((time > timefullfinl) & (time < timetotlfinl))[0]
+            if typeineg == 'ingrinit':
+                indxtime = np.where((time > timetotlinit) & (time < timeingrhalf))[0]
+            if typeineg == 'ingrfinl':
+                indxtime = np.where((time > timeingrhalf) & (time < timefullinit))[0]
+            if typeineg == 'eggrinit':
+                indxtime = np.where((time > timefullfinl) & (time < timeeggrhalf))[0]
+            if typeineg == 'eggrfinl':
+                indxtime = np.where((time > timeeggrhalf) & (time < timetotlfinl))[0]
+        else:
+            indxtime = np.where((time > timetotlinit) & (time < timetotlfinl))[0]
+        if indxtime.size > 0:
+            listindxtimetran.append(indxtime)
+    
+    if boolindi:
+        return listindxtimetran
+    else:
+        if len(listindxtimetran) > 0:
+            indxtimetran = np.concatenate(listindxtimetran)
+            indxtimetran = np.unique(indxtimetran)
+        else:
+            indxtimetran = np.array([])
+
+    if booloutt:
+        indxtimeretr = np.setdiff1d(np.arange(time.size), indxtimetran)
+    else:
+        indxtimeretr = indxtimetran
+    
+    return indxtimeretr
+    
+
+def retr_timeedge(time, lcur, timebrekregi, \
+                  # Boolean flag to add breaks at discontinuties
+                  booladdddiscbdtr, \
+                  timescal, \
+                 ):
+    
+    difftime = time[1:] - time[:-1]
+    indxtimebrekregi = np.where(difftime > timebrekregi)[0]
+    
+    if booladdddiscbdtr:
+        listindxtimebrekregiaddi = []
+        dif1 = lcur[:-1] - lcur[1:]
+        indxtimechec = np.where(dif1 > 20. * np.std(dif1))[0]
+        for k in indxtimechec:
+            if np.mean(lcur[-3+k:k]) - np.mean(lcur[k:k+3]) < np.std(np.concatenate((lcur[-3+k:k], lcur[k:k+3]))):
+                listindxtimebrekregiaddi.append(k)
+
+            #diff = lcur[k] - lcur[k-1]
+            #if abs(diff) > 5 * np.std(lcur[k-3:k]) and abs(diff) > 5 * np.std(lcur[k:k+3]):
+            #    listindxtimebrekregiaddi.append(k)
+            #    #print('k')
+            #    #print(k)
+            #    #print('diff')
+            #    #print(diff)
+            #    #print('np.std(lcur[k:k+3])')
+            #    #print(np.std(lcur[k:k+3]))
+            #    #print('np.std(lcur[k-3:k])')
+            #    #print(np.std(lcur[k-3:k]))
+            #    #print('')
+        listindxtimebrekregiaddi = np.array(listindxtimebrekregiaddi, dtype=int)
+        indxtimebrekregi = np.concatenate([indxtimebrekregi, listindxtimebrekregiaddi])
+        indxtimebrekregi = np.unique(indxtimebrekregi)
+
+    timeedge = [0, np.inf]
+    for k in indxtimebrekregi:
+        timeedgeprim = (time[k] + time[k+1]) / 2.
+        timeedge.append(timeedgeprim)
+    timeedge = np.array(timeedge)
+    timeedge = np.sort(timeedge)
+
+    return timeedge
+
+
+def retr_lliknegagpro(listparagpro, lcur, objtgpro):
+    '''
+    Compute the negative loglikelihood of the GP model
+    '''
+    
+    objtgpro.set_parameter_vector(listparagpro)
+    
+    return -objtgpro.log_likelihood(lcur)
+
+
+def retr_gradlliknegagpro(listparagpro, lcur, objtgpro):
+    '''
+    Compute the gradient of the negative loglikelihood of the GP model
+    '''
+    
+    objtgpro.set_parameter_vector(listparagpro)
+    
+    return -objtgpro.grad_log_likelihood(lcur)[1]
+
+
+def bdtr_tser( \
+              # times in days at which the time-series data have been collected
+              time, \
+              
+              # time-series data to be detrended
+              lcur, \
+              
+              # standard-deviation of the time-series data to be detrended
+              stdvlcur, \
+
+              # masking before detrending
+              ## list of midtransit epochs in BJD for which the time-series will be masked before detrending
+              epocmask=None, \
+
+              ## list of epochs in days for which the time-series will be masked before detrending
+              perimask=None, \
+
+              ## list of durations in hours for which the time-series will be masked before detrending
+              duramask=None, \
+              
+              # Boolean flag to break the time-series into regions
+              boolbrekregi=True, \
+            
+              # times to break the time-series into regions
+              timeedge=None, \
+
+              # minimum gap to break the time-series into regions
+              timebrekregi=None, \
+              
+              # Boolean flag to add breaks at vertical discontinuties
+              booladdddiscbdtr=True, \
+              
+              # type of baseline detrending
+              ## 'gpro': Gaussian process
+              ## 'medi': median
+              ## 'spln': spline
+              typebdtr=None, \
+              
+              # order of the spline
+              ordrspln=None, \
+              
+              # time scale of the spline detrending
+              timescalbdtrspln=None, \
+              
+              # time scale of the median detrending
+              timescalbdtrmedi=None, \
+              
+              # type of verbosity
+              ## -1: absolutely no text
+              ##  0: no text output except critical warnings
+              ##  1: minimal description of the execution
+              ##  2: detailed description of the execution
+              typeverb=1, \
+              
+             ):
+    '''
+    Detrend input time-series data.
+    '''
+    
+    if typebdtr is None:
+        typebdtr = 'gpro'
+    
+    if boolbrekregi and timebrekregi is None:
+        timebrekregi = 0.1 # [day]
+    if ordrspln is None:
+        ordrspln = 3
+    if timescalbdtrspln is None:
+        timescalbdtrspln = 0.5 # [days]
+    if timescalbdtrmedi is None:
+        timescalbdtrmedi = 0.5 # [days]
+    
+    if typebdtr == 'spln' or typebdtr == 'gpro':
+        timescal = timescalbdtrspln
+    else:
+        timescal = timescalbdtrmedi
+    if typeverb > 0:
+        print('Detrending the light curve with at a time scale of %.g days...' % timescal)
+        if epocmask is not None:
+            print('Using a specific ephemeris to mask out transits while detrending...')
+    
+    if timeedge is not None and len(timeedge) > 2 and not boolbrekregi:
+        raise Exception('')
+
+    if boolbrekregi:
+        # determine the times at which the light curve will be broken into pieces
+        if timeedge is None:
+            timeedge = retr_timeedge(time, lcur, timebrekregi, booladdddiscbdtr, timescal)
+        numbedge = len(timeedge)
+        numbregi = numbedge - 1
+    else:
+        timeedge = [np.amin(time), np.amax(time)]
+        numbregi = 1
+    
+    if typeverb > 1:
+        print('timebrekregi')
+        print(timebrekregi)
+        print('Number of regions: %d' % numbregi)
+        print('Times at the edges of the regions:')
+        print(timeedge)
+
+    indxregi = np.arange(numbregi)
+    lcurbdtrregi = [[] for i in indxregi]
+    indxtimeregi = [[] for i in indxregi]
+    indxtimeregioutt = [[] for i in indxregi]
+    listobjtspln = [[] for i in indxregi]
+    for i in indxregi:
+        if typeverb > 1:
+            print('Region %d' % i)
+        # find times inside the region
+        indxtimeregi[i] = np.where((time >= timeedge[i]) & (time <= timeedge[i+1]))[0]
+        timeregi = time[indxtimeregi[i]]
+        lcurregi = lcur[indxtimeregi[i]]
+        stdvlcurregi = stdvlcur[indxtimeregi[i]]
+        
+        # mask out the transits
+        if epocmask is not None and len(epocmask) > 0 and duramask is not None and perimask is not None:
+            # find the out-of-transit times
+            indxtimetran = []
+            for k in range(epocmask.size):
+                if np.isfinite(duramask[k]):
+                    indxtimetran.append(retr_indxtimetran(timeregi, epocmask[k], perimask[k], duramask[k]))
+            
+            indxtimetran = np.concatenate(indxtimetran)
+            indxtimeregioutt[i] = np.setdiff1d(np.arange(timeregi.size), indxtimetran)
+        else:
+            indxtimeregioutt[i] = np.arange(timeregi.size)
+            
+        if typeverb > 1:
+            print('lcurregi[indxtimeregioutt[i]]')
+            summgene(lcurregi[indxtimeregioutt[i]])
+        
+        if typebdtr == 'medi':
+            listobjtspln = None
+            size = int(timescalbdtrmedi / np.amin(timeregi[1:] - timeregi[:-1]))
+            if size == 0:
+                print('timescalbdtrmedi')
+                print(timescalbdtrmedi)
+                print('np.amin(timeregi[1:] - timeregi[:-1])')
+                print(np.amin(timeregi[1:] - timeregi[:-1]))
+                print('lcurregi')
+                summgene(lcurregi)
+                raise Exception('')
+            lcurbdtrregi[i] = 1. + lcurregi - scipy.ndimage.median_filter(lcurregi, size=size)
+        
+        if typebdtr == 'gpro':
+            # fit a Gaussian Process (GP) model to the data as baseline
+            ## construct the kernel object
+            objtkern = celerite.terms.Matern32Term(log_sigma=np.log(np.std(4. * lcurregi[indxtimeregioutt[i]])), log_rho=np.log(timescalbdtrspln))
+            print('sigma for GP')
+            print(np.std(lcurregi[indxtimeregioutt[i]]))
+            print('rho for GP [days]')
+            print(timescalbdtrspln)
+
+            ## construct the GP model object
+            objtgpro = celerite.GP(objtkern, mean=np.mean(lcurregi[indxtimeregioutt[i]]))
+            
+            # compute the covariance matrix
+            objtgpro.compute(timeregi[indxtimeregioutt[i]], yerr=stdvlcurregi[indxtimeregioutt[i]])
+            
+            # get the initial parameters of the GP model
+            #parainit = objtgpro.get_parameter_vector()
+            
+            # get the bounds on the GP model parameters
+            #limtparagpro = objtgpro.get_parameter_bounds()
+            
+            # minimize the negative loglikelihood
+            #objtmini = scipy.optimize.minimize(retr_lliknegagpro, parainit, jac=retr_gradlliknegagpro, method="L-BFGS-B", bounds=limtparagpro, args=(lcurregi[indxtimeregioutt[i]], objtgpro))
+            
+            #print('GP Matern 3/2 parameters with maximum likelihood:')
+            #print(objtmini.x)
+
+            # update the GP model with the parameters that minimize the negative loglikelihood
+            #objtgpro.set_parameter_vector(objtmini.x)
+            
+            # get the GP model mean baseline
+            lcurbase = objtgpro.predict(lcurregi[indxtimeregioutt[i]], t=timeregi, return_cov=False, return_var=False)#[0]
+            
+            # subtract the baseline from the data
+            lcurbdtrregi[i] = 1. + lcurregi - lcurbase
+
+            listobjtspln[i] = objtgpro
+        if typebdtr == 'spln':
+            # fit the spline
+            if lcurregi[indxtimeregioutt[i]].size > 0:
+                if timeregi[indxtimeregioutt[i]].size < 4:
+                    print('Warning! Only %d points available for spline! This will result in a trivial baseline-detrended light curve (all 1s).' \
+                                                                                                                % timeregi[indxtimeregioutt[i]].size)
+                    print('numbregi')
+                    print(numbregi)
+                    print('indxtimeregioutt[i]')
+                    summgene(indxtimeregioutt[i])
+                    for ii in indxregi:
+                        print('indxtimeregioutt[ii]')
+                        summgene(indxtimeregioutt[ii])
+                        
+                    #raise Exception('')
+
+                    listobjtspln[i] = None
+                    lcurbdtrregi[i] = np.ones_like(lcurregi)
+                else:
+                    
+                    minmtime = np.amin(timeregi[indxtimeregioutt[i]])
+                    maxmtime = np.amax(timeregi[indxtimeregioutt[i]])
+                    numbknot = int((maxmtime - minmtime) / timescalbdtrspln) + 1
+                    
+                    timeknot = np.linspace(minmtime, maxmtime, numbknot)
+                    #timeknot = timeknot[1:-1]
+                    numbknot = timeknot.size
+
+                    indxknotregi = np.digitize(timeregi[indxtimeregioutt[i]], timeknot) - 1
+
+                    if typeverb > 1:
+                        print('minmtime')
+                        print(minmtime)
+                        print('maxmtime')
+                        print(maxmtime)
+                        print('timescalbdtrspln')
+                        print(timescalbdtrspln)
+                        print('%d knots used (exclduing the end points).' % (numbknot))
+                        if numbknot > 1:
+                            print('Knot separation: %.3g hours' % (24 * (timeknot[1] - timeknot[0])))
+                    
+                    if numbknot > 0:
+                        objtspln = scipy.interpolate.LSQUnivariateSpline(timeregi[indxtimeregioutt[i]], lcurregi[indxtimeregioutt[i]], timeknot, k=ordrspln)
+                        lcurbdtrregi[i] = lcurregi - objtspln(timeregi) + 1.
+                        listobjtspln[i] = objtspln
+                    else:
+                        lcurbdtrregi[i] = lcurregi - np.median(lcurregi) + 1.
+                        listobjtspln[i] = None
+                    
+            else:
+                lcurbdtrregi[i] = lcurregi
+                listobjtspln[i] = None
+            
+            if typeverb > 1:
+                print('lcurbdtrregi[i]')
+                summgene(lcurbdtrregi[i])
+                print('')
+
+    return lcurbdtrregi, indxtimeregi, indxtimeregioutt, listobjtspln, timeedge
+
+
+def retr_stdvwind(ydat, sizewind, boolcuttpeak=True):
+    '''
+    Return the standard deviation of a series inside a running windown.
+    '''
+    
+    numbdata = ydat.size
+    
+    if sizewind % 2 != 1 or sizewind > numbdata:
+        raise Exception('')
+
+    sizewindhalf = int((sizewind - 1) / 2)
+    
+    indxdata = np.arange(numbdata)
+    
+    stdv = np.empty_like(ydat)
+    for k in indxdata:
+        
+
+
+        minmindx = max(0, k - sizewindhalf)
+        maxmindx = min(numbdata - 1, k + sizewindhalf)
+        
+        if boolcuttpeak:
+            indxdatawind = np.arange(minmindx, maxmindx+1)
+            #indxdatawind = indxdatawind[np.where(ydat[indxdatawind] < np.percentile(ydat[indxdatawind], 99.999))]
+            indxdatawind = indxdatawind[np.where(ydat[indxdatawind] != np.amax(ydat[indxdatawind]))]
+        
+        else:
+            if k > minmindx and k+1 < maxmindx:
+                indxdatawind = np.concatenate((np.arange(minmindx, k), np.arange(k+1, maxmindx+1)))
+            elif k > minmindx:
+                indxdatawind = np.arange(minmindx, k)
+            elif k+1 < maxmindx:
+                indxdatawind = np.arange(k+1, maxmindx+1)
+
+        stdv[k] = np.std(ydat[indxdatawind])
+    
+    return stdv
+
+
+def retr_booltpxf(listtsec, listtsecspoc):
+
+    ## number of sectors for which TESS data are available
+    numbtsec = len(listtsec)
+    ## Boolean flags to indicate that TPFs exist at 2-min
+    booltpxf = np.zeros(numbtsec, dtype=bool)
+    for k, tsec in enumerate(listtsec):
+        if tsec in listtsecspoc:
+            booltpxf[k] = True
+    
+    return booltpxf
+
+
+def plot_lcur( \
+              
+              # path in which the plot will be placed
+              pathvisu, \
+              
+              # a string that will be tagged onto the filename
+              strgextn, \
+              
+              # dictionary holding the model time-series
+              dictmodl=None, \
+              
+              # the times at which the data time-series have been collected
+              timedata=None, \
+              
+              # data time-series
+              lcurdata=None, \
+              
+              timedatabind=None, \
+              
+              lcurdatabind=None, \
+              
+              lcurdatastdvbind=None, \
+              
+              # Boolean flag to break the line of the model when separation is very large
+              boolbrekmodl=True, \
+              
+              # Boolean flag to ignore any existing files and overwrite
+              boolwritover=False, \
+              
+              # label for the horizontal axis, including the unit
+              lablxaxi=None, \
+              
+              # label for the vertical axis, including the unit
+              lablyaxi=None, \
+              
+              # size of the figure
+              sizefigr=None, \
+              
+              # list of x-values to draw vertical dashed lines at
+              listxdatvert=None, \
+
+              # colors of the vertical dashed lines at
+              listcolrvert=None, \
+
+              timeoffs=0., \
+              
+              # limits for the horizontal axis in the form of a two-tuple
+              limtxaxi=None, \
+              
+              # limits for the vertical axis in the form of a two-tuple
+              limtyaxi=None, \
+              
+              # type of signature for the generating code
+              typesigncode=None, \
+
+              # title for the plot
+              strgtitl='', \
+              
+              # Boolean flag to diagnose
+              booldiag=True, \
+                      
+              ## file type of the plot
+              typefileplot='png', \
+             ):
+    '''
+    Plot a list of data and model time-series
+    '''
+    
+    if strgextn == '':
+        print('')
+        print('')
+        print('')
+        raise Exception('strgextn should not be an empty string.')
+    
+    if strgextn[0] == '_':
+        strgextn = strgextn[1:]
+
+    dicttdpy = tdpy.retr_dictstrg()
+
+    path = pathvisu + '%s_%s.%s' % (dicttdpy['lcur'], strgextn, typefileplot)
+    
+    # skip plotting
+    if not boolwritover and os.path.exists(path):
+        print('Plot already exists at %s. Skipping...' % path)
+        return path
+    
+    boollegd = False
+    
+    if sizefigr is None:
+        sizefigr = [8., 2.5]
+
+    figr, axis = plt.subplots(figsize=sizefigr)
+    
+    # raw data
+    if timedata is not None:
+        axis.plot(timedata - timeoffs, lcurdata, color='gray', ls='', marker='o', ms=1, rasterized=True)
+    
+    # binned data
+    if timedatabind is not None:
+        axis.errorbar(timedatabind, lcurdatabind, yerr=lcurdatastdvbind, color='k', ls='', marker='o', ms=2)
+    
+    # model
+    if dictmodl is not None:
+        
+        k = 0
+        for attr in dictmodl:
+            if 'lsty' in dictmodl[attr]:
+                ls = dictmodl[attr]['lsty']
+            else:
+                ls = None
+            
+            if 'colr' in dictmodl[attr]:
+                color = dictmodl[attr]['colr']
+            else:
+                color = None
+                
+            if 'alph' in dictmodl[attr]:
+                alpha = dictmodl[attr]['alph']
+            else:
+                alpha = None
+                
+            if boolbrekmodl:
+                diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
+                
+                indxtimebrekregi = np.where(diftimemodl > 2 * np.amin(diftimemodl))[0] + 1
+                indxtimebrekregi = np.concatenate([np.array([0]), indxtimebrekregi, np.array([dictmodl[attr]['time'].size - 1])])
+                numbtimebrekregi = indxtimebrekregi.size
+                numbtimechun = numbtimebrekregi - 1
+
+                xdat = []
+                ydat = []
+                for n in range(numbtimechun):
+                    xdat.append(dictmodl[attr]['time'][indxtimebrekregi[n]:indxtimebrekregi[n+1]])
+                    ydat.append(dictmodl[attr]['lcur'][indxtimebrekregi[n]:indxtimebrekregi[n+1]])
+                    
+            else:
+                xdat = [dictmodl[attr]['time']]
+                ydat = [dictmodl[attr]['lcur']]
+            numbchun = len(xdat)
+            
+            for n in range(numbchun):
+                if n == 0 and 'labl' in dictmodl[attr]:
+                    label = dictmodl[attr]['labl']
+                    boollegd = True
+                else:
+                    label = None
+                
+                axis.plot(xdat[n] - timeoffs, ydat[n], color=color, lw=1, label=label, ls=ls, alpha=alpha)
+            k += 1
+    
+    if lablxaxi is None:
+        if timeoffs == 0:
+            lablxaxi = 'Time [days]'
+        else:
+            lablxaxi = 'Time [BJD-%d]' % timeoffs
+    
+    axis.set_xlabel(lablxaxi)
+    
+    if limtxaxi is not None:
+        if not np.isfinite(limtxaxi).all():
+            print('limtxaxi')
+            print(limtxaxi)
+            raise Exception('')
+
+        axis.set_xlim(limtxaxi)
+    
+    if listxdatvert is not None:
+        for k, xdatvert in enumerate(listxdatvert):
+            if listcolrvert is None:
+                colr = 'gray'
+            else:
+                colr = listcolrvert[k]
+            axis.axvline(xdatvert, ls='--', color=colr, alpha=0.4)
+    
+    if limtyaxi is not None:
+        axis.set_ylim(limtyaxi)
+
+    if lablyaxi is None:
+        lablyaxi = 'Relative flux'
+    
+    axis.set_ylabel(lablyaxi)
+    axis.set_title(strgtitl)
+    
+    if typesigncode is not None:
+        tdpy.sign_code(axis, typesigncode)
+
+    if boollegd:
+        axis.legend()
+
+    plt.subplots_adjust(bottom=0.2)
+    print('Writing to %s...' % path)
+    plt.savefig(path, dpi=300)
+    plt.close()
+    
+    return path
+
+
+def plot_pcur(pathvisu, arrylcur=None, arrypcur=None, arrypcurbind=None, phascent=0., boolhour=False, epoc=None, peri=None, strgextn='', \
+              ## file type of the plot
+              typefileplot='png', \
+                                                            boolbind=True, timespan=None, booltime=False, numbbins=100, limtxdat=None):
+    
+    if arrypcur is None:
+        arrypcur = fold_tser(arrylcur, epoc, peri)
+    if arrypcurbind is None and boolbind:
+        arrypcurbind = rebn_tser(arrypcur, numbbins)
+    
+    if strgextn[0] == '_':
+        strgextn = strgextn[1:]
+
+    # phase on the horizontal axis
+    figr, axis = plt.subplots(1, 1, figsize=(8, 4))
+    
+    # time on the horizontal axis
+    if booltime:
+        lablxaxi = 'Time [hours]'
+        if boolhour:
+            fact = 24.
+        else:
+            fact = 1.
+        xdat = arrypcur[:, 0] * peri * fact
+        if boolbind:
+            xdatbind = arrypcurbind[:, 0] * peri * fact
+    else:
+        lablxaxi = 'Phase'
+        xdat = arrypcur[:, 0]
+        if boolbind:
+            xdatbind = arrypcurbind[:, 0]
+    axis.set_xlabel(lablxaxi)
+    
+    axis.plot(xdat, arrypcur[:, 1], color='gray', alpha=0.2, marker='o', ls='', ms=0.5, rasterized=True)
+    if boolbind:
+        axis.plot(xdatbind, arrypcurbind[:, 1], color='k', marker='o', ls='', ms=2)
+    
+    axis.set_ylabel('Relative Flux')
+    
+    # adjust the x-axis limits
+    if limtxdat is not None:
+        axis.set_xlim(limtxdat)
+    
+    plt.subplots_adjust(hspace=0., bottom=0.25, left=0.25)
+    path = pathvisu + 'pcur%s.%s' % (strgextn, typefileplot)
+    print('Writing to %s...' % path)
+    plt.savefig(path)
+    plt.close()
+            
+
+def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5, booldiag=True):
+    
+    arryfold = np.empty_like(arry)
+    
+    xdat = (((arry[:, 0, 0] - epoc) % peri) / peri + phasshft) % 1. - phasshft
+    
+    if boolxdattime:
+        xdat *= peri
+    
+    arryfold[:, 0, 0] = xdat
+    
+    arryfold[:, ..., 1:3] = arry[:, ..., 1:3]
+    
+    if boolsort:
+        indx = np.argsort(xdat)
+        arryfold = arryfold[indx, :]
+    
+    return arryfold
+
+
+def read_tesskplr_fold(pathfold, pathwrit, boolmaskqual=True, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolnorm=None):
+    '''
+    Reads all TESS or Kepler light curves in a folder and returns a data cube with time, flux and flux error.
+    '''
+
+    listpath = fnmatch.filter(os.listdir(pathfold), '%s*' % typeinst)
+    listarry = []
+    for path in listpath:
+        arry = read_tesskplr_file(pathfold + path + '/' + path + '_lc.fits', typeinst=typeinst, strgtypelcur=strgtypelcur, boolmaskqual=boolmaskqual, boolnorm=boolnorm)
+        listarry.append(arry)
+    
+    # merge sectors
+    arry = np.concatenate(listarry, axis=0)
+    
+    # sort in time
+    indxsort = np.argsort(arry[:, 0])
+    arry = arry[indxsort, :]
+    
+    # save
+    pathoutp = '%s/%s.csv' % (pathwrit, typeinst)
+    np.savetxt(pathoutp, arry, delimiter=',')
+
+    return arry 
+
+
+def read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolmaskqual=True, boolmasknann=True, boolnorm=None, booldiag=True, \
+                       # type of verbosity
+                       ## -1: absolutely no text
+                       ##  0: no text output except critical warnings
+                       ##  1: minimal description of the execution
+                       ##  2: detailed description of the execution
+                       typeverb=1, \
+                      ):
+    '''
+    Read a TESS or Kepler light curve file and returns a data cube with time, flux and flux error.
+    '''
+    
+    if boolnorm is None:
+        boolnorm = True
+    
+    if typeverb > 0:
+        print('Reading from %s...' % path)
+    listhdun = fits.open(path)
+    
+    tsec = listhdun[0].header['SECTOR']
+    tcam = listhdun[0].header['CAMERA']
+    tccd = listhdun[0].header['CCD']
+    
+    # Boolean flag indicating whether the target file is a light curve or target pixel file
+    boollcur = 'lc.fits' in path
+    
+    # indices of times where the quality flag is not raised (i.e., good quality)
+    if boollcur:
+        indxtimequalgood = np.where((listhdun[1].data['QUALITY'] == 0) & np.isfinite(listhdun[1].data[strgtypelcur]))[0]
+    else:
+        indxtimequalgood = np.where((listhdun[1].data['QUALITY'] == 0) & np.isfinite(listhdun[1].data['TIME']))[0]
+    time = listhdun[1].data['TIME']
+    
+    if boollcur:
+        strgtype = strgtypelcur
+
+        time = listhdun[1].data['TIME'] + 2457000
+        if typeinst == 'TESS':
+            time += 2457000
+        if typeinst == 'kplr':
+            time += 2454833
+    
+        flux = listhdun[1].data[strgtype]
+        stdv = listhdun[1].data[strgtype+'_ERR']
+        #print(listhdun[1].data.names)
+        
+        if boolmaskqual:
+            # filtering for good quality
+            if typeverb > 0:
+                print('Masking out bad data... %d temporal samples (%.3g%%) will survive.' % (indxtimequalgood.size, 100. * indxtimequalgood.size / time.size))
+            time = time[indxtimequalgood]
+            flux = flux[indxtimequalgood, ...]
+            if boollcur:
+                stdv = stdv[indxtimequalgood]
+    
+        numbtime = time.size
+        arry = np.empty((numbtime, 3))
+        arry[:, 0] = time
+        arry[:, 1] = flux
+        arry[:, 2] = stdv
+        
+        #indxtimenanngood = np.where(~np.any(np.isnan(arry), axis=1))[0]
+        #if boolmasknann:
+        #    arry = arry[indxtimenanngood, :]
+        
+        # normalize
+        if boolnorm:
+            factnorm = np.median(arry[:, 1])
+            arry[:, 1] /= factnorm
+            arry[:, 2] /= factnorm
+        
+        return arry, tsec, tcam, tccd
+    else:
+        return listhdun, indxtimequalgood, tsec, tcam, tccd
+
+
 def init( \
          
          # a label distinguishing the run to be used in the plots
@@ -6425,7 +7733,7 @@ def init( \
         # data path for the cluster of targets
         gdat.pathclus = gdat.pathbase + '%s/' % gdat.strgclus
         gdat.pathdataclus = gdat.pathclus + 'data/'
-        gdat.pathvisuclus = gdat.pathclus + 'visu/'
+        gdat.pathvisuclus = gdat.pathclus + 'visuals/'
     
     if gdat.labltarg is None:
         if gdat.typetarg == 'mast':
@@ -6480,7 +7788,7 @@ def init( \
                 raise Exception('')
         
         gdat.pathdatatarg = gdat.pathtargruns + 'data/'
-        gdat.pathvisutarg = gdat.pathtargruns + 'visu/'
+        gdat.pathvisutarg = gdat.pathtargruns + 'visuals/'
 
     if gdat.typeverb > 0:
         print('gdat.strgtarg')
@@ -6851,6 +8159,7 @@ def init( \
                                 
                                 gdat.listtsecspoc.append(tsec)
                                 gdat.listarrylcurmast[mm].append(arrylcur[:, None, :])
+                                gdat.liststrginst[0].append('TESS_S%d' % tsec)
                                 print('cntrtess')
                                 print(cntrtess)
                             elif 'niriss' in path or path.endswith('nis_x1dints.fits'):
