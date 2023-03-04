@@ -271,18 +271,19 @@ def cnfg_WASP121():
 
 def cnfg_WASP43():
     
-    liststrgtypedata = [['simugene'], []]
+    liststrgtypedata = [['simutargpart'], []]
     
     dicttrue = dict()
     dicttrue['typemodl'] = 'psyspcur'
-    
+    listlablinst = [['JWST'], []]
+
     listener = [np.linspace(0.5, 5., 10)]
     miletos.main.init( \
                    strgmast='WASP-43', \
                    dicttrue=dicttrue, \
                    
-                   boolforcoffl=True, \
-                   
+                   #boolforcoffl=True, \
+                   listlablinst=listlablinst, \
                    listener=listener, \
 
                    booldiag=True, \
@@ -1249,6 +1250,24 @@ def cnfg_ASASSN20qc():
 
                       dictlygoinpt=dictlygoinpt, \
                      )
+
+
+
+def cnfg_TESS_EB_Catalog():
+
+    # random TICs from the TESS EB Catalog ()
+    listtici = [91961, 101462, 120016, 627436, 737546]
+    
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'psys'
+    
+    for tici in listtici:
+        miletos.main.init( \
+             ticitarg=tici, \
+             strgclus='TESS_EB_Catalog', \
+             dictfitt=dictfitt, \
+            )
+
 
 
 def target(strgmast):
