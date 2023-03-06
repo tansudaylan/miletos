@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 
 import tdpy
 from tdpy.util import summgene
-
+import chalcedon
 import lygos
 
 import ephesos
@@ -6825,7 +6825,7 @@ def read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolma
     
     if typeverb > 0:
         print('Reading from %s...' % path)
-    listhdun = fits.open(path)
+    listhdun = astropy.io.fits.open(path)
     
     tsec = listhdun[0].header['SECTOR']
     tcam = listhdun[0].header['CAMERA']
@@ -7539,7 +7539,7 @@ def init( \
         
     if (gdat.boolcalcvisi or gdat.boolplotpopl or gdat.booltserdata) and (gdat.toiitarg is not None or gdat.ticitarg is not None) \
                                                                                                          and gdat.fitt.typemodl != 'supn':
-        gdat.dictexof = ephesos.retr_dicttoii()
+        gdat.dictexof = chalcedon.retr_dicttoii()
 
     # conversion factors
     gdat.dictfact = tdpy.retr_factconv()
@@ -7721,7 +7721,7 @@ def init( \
     
     ## NASA Exoplanet Archive
     if gdat.boolplotpopl:
-        gdat.dictexar = ephesos.retr_dictexar(strgelem='comp', typeverb=gdat.typeverb)
+        gdat.dictexar = chalcedon.retr_dictexar(strgelem='comp', typeverb=gdat.typeverb)
     
     if gdat.strgclus is None:
         gdat.pathclus = gdat.pathbase
@@ -8154,7 +8154,7 @@ def init( \
                             if 'tess' in path:
                                 gdat.listpathspocmast.append(path)
                                 arrylcur, tsec, tcam, tccd = \
-                                    ephesos.read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
+                                    read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
                                                                              booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
                                 
                                 gdat.listtsecspoc.append(tsec)
@@ -8330,7 +8330,7 @@ def init( \
                 listtccd = np.empty(numbtsec, dtype=int)
             
                 # determine for each sector whether a TFP is available
-                booltpxf = ephesos.retr_booltpxf(gdat.listtsec, gdat.listtsecspoc)
+                booltpxf = retr_booltpxf(gdat.listtsec, gdat.listtsecspoc)
             
                 if typeverb > 0:
                     print('booltpxf')
@@ -8447,12 +8447,12 @@ def init( \
                             if typeverb > 0:
                                 print('Reading the SAP light curves...')
                             gdat.listarrylcurmastsapp[o], gdat.listtsecsapp[o], listtcam[o], listtccd[o] = \
-                                                   ephesos.read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', \
+                                                   read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', \
                                                                                 booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
                             if typeverb > 0:
                                 print('Reading the PDC light curves...')
                             gdat.listarrylcurmastpdcc[o], gdat.listtsecpdcc[o], listtcam[o], listtccd[o] = \
-                                                   ephesos.read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
+                                                   read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
                                                                                 booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
                             
                             # to be deleted
@@ -8579,7 +8579,7 @@ def init( \
                 print(gdat.strgexar)
 
             # grab object features from NASA Excoplanet Archive
-            gdat.dictexartarg = ephesos.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp', typeverb=gdat.typeverb)
+            gdat.dictexartarg = chalcedon.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp', typeverb=gdat.typeverb)
             
             if gdat.typeverb > 0:
                 if gdat.dictexartarg is None:
@@ -8589,7 +8589,7 @@ def init( \
             
             # grab object features from ExoFOP
             if gdat.toiitarg is not None:
-                gdat.dictexoftarg = ephesos.retr_dicttoii(toiitarg=gdat.toiitarg)
+                gdat.dictexoftarg = chalcedon.retr_dicttoii(toiitarg=gdat.toiitarg)
             else:
                 gdat.dictexoftarg = None
             gdat.boolexof = gdat.toiitarg is not None and gdat.dictexoftarg is not None
