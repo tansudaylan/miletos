@@ -6519,24 +6519,27 @@ def retr_booltpxf(listtsec, listtsecspoc):
 def plot_lcur( \
               
               # path in which the plot will be placed
-              pathvisu, \
+              pathvisu=None, \
               
               # a string that will be tagged onto the filename
-              strgextn, \
+              strgextn=None, \
               
               # dictionary holding the model time-series
               dictmodl=None, \
               
-              # the times at which the data time-series have been collected
+              # the time stamps of time-series data
               timedata=None, \
               
-              # data time-series
+              # values of the time-series data
               lcurdata=None, \
               
+              # time stamps of the binned time-series data
               timedatabind=None, \
               
+              # values of the binned time-series data
               lcurdatabind=None, \
               
+              # uncertainties of the binned time-series data
               lcurdatastdvbind=None, \
               
               # Boolean flag to break the line of the model when separation is very large
@@ -6554,12 +6557,13 @@ def plot_lcur( \
               # size of the figure
               sizefigr=None, \
               
-              # list of x-values to draw vertical dashed lines at
+              # list of times at which to draw vertical dashed lines
               listxdatvert=None, \
 
-              # colors of the vertical dashed lines at
+              # colors of the vertical dashed lines
               listcolrvert=None, \
-
+              
+              # time offset
               timeoffs=0., \
               
               # limits for the horizontal axis in the form of a two-tuple
@@ -6581,14 +6585,14 @@ def plot_lcur( \
               typefileplot='png', \
              ):
     '''
-    Plot a list of data and model time-series
+    Plot time-series data and model
     '''
     
-    if strgextn == '':
+    if pathvisu is not None and (strgextn is None or strgextn == ''):
         print('')
         print('')
         print('')
-        raise Exception('strgextn should not be an empty string.')
+        raise Exception('strgextn should not be an empty string or None.')
     
     if strgextn[0] == '_':
         strgextn = strgextn[1:]
