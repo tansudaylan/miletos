@@ -7480,15 +7480,20 @@ def init( \
                 if gdat.liststrgtypedata[b][p].startswith('simu'):
                     gdat.boolsimurflx = True
         
+        ## Boolean flag to query IRSA for ZTF
+        gdat.boolretrlcurzwtf = False
+        
         ## Boolean flag to query MAST
         gdat.boolretrlcurmast = False
+        
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if (gdat.liststrginst[b][p] == 'TESS' or gdat.liststrginst[b][p] == 'K2' or \
-                           gdat.liststrginst[b][p] == 'Kepler' or gdat.liststrginst[b][p] == 'HST' or gdat.liststrginst[b][p].startswith('JWST')) \
-                                                                                and not gdat.liststrgtypedata[b][p].startswith('simugene') \
-                                                                                and not gdat.liststrgtypedata[b][p].startswith('inpt'):
-                    gdat.boolretrlcurmast = True
+                
+                if not gdat.liststrgtypedata[b][p].startswith('simugene') and not gdat.liststrgtypedata[b][p].startswith('inpt'):
+                    if gdat.liststrginst[b][p] in ['TESS', 'K2', 'Kepler', 'HST'] or gdat.liststrginst[b][p].startswith('JWST'):
+                        gdat.boolretrlcurmast = True
+                    if gdat.liststrginst[b][p] == 'ZTF':
+                        gdat.boolretrlcurzwtf = True
         
         # list of models to be fitted to the data
         gdat.liststrgmodl = ['fitt']
@@ -7654,12 +7659,16 @@ def init( \
         gdat.boolsrchmastdone = True
         if gdat.typeverb > 0:
             print('Found %d TIC sources.' % len(listdictticinear))
-        if listdictticinear[0]['dstArcSec'] < 0.2:
+        maxmanglmtch = 0.2 # [arcsecond]
+        if listdictticinear[0]['dstArcSec'] < maxmanglmtch:
+            print('The closest match via the MAST query was within %.g arcseconds. Will associate the TIC ID of the closest match to the target.' % maxmanglmtch)
             gdat.ticitarg = int(listdictticinear[0]['ID'])
             gdat.rasctarg = listdictticinear[0]['ra']
             gdat.decltarg = listdictticinear[0]['dec']
             gdat.tmagtarg = listdictticinear[0]['Tmag']
-    
+        else:
+            print('The closest match via the MAST query was not within %.g arcseconds. Will not associate the TIC ID of the closest match to the target.' % maxmanglmtch)
+
     print('gdat.typetarg')
     print(gdat.typetarg)
     print('gdat.typetarg')
@@ -7861,6 +7870,20 @@ def init( \
             print('gdat.boolretrlcurmast')
             print(gdat.boolretrlcurmast)
         
+        if gdat.boolretrlcurzwtf:
+            fram = lightcurve.LCQuery.download_data(circle=[gdat.rasctarg, gdat.decltarg, 0.01])
+
+            print('listrascdata')
+            summgene(listrascdata)
+            
+            magt = fram['mag'].to_numpy()
+            time = fram['mjd'].to_numpy()
+            
+            print('time')
+            summgene(time)
+            print('magt')
+            summgene(magt)
+
         if gdat.boolretrlcurmast:
             #if gdat.boolsimurflx:
             #    gdat.dictretrlcurinpt['strgtypedata'] = 'simugenelcur'
