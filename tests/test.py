@@ -792,21 +792,33 @@ def cnfg_LSST_psys():
         listlablinst[0].append('LSST %s' % strglsst)
         liststrgtypedata[0].append('simuhypo')
     
-    rratcompprio = [np.array([0.2]), np.array([0.5]), np.array([0.2]), np.array([0.2]), np.array([0.2]), np.array([0.2])]
+    rratcompprio = [np.array([0.2]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1])]
     epocmtracompprio = np.array([0.])
     pericompprio = np.array([3.])
     rsmacompprio = np.array([0.1])
     cosicompprio = np.array([0.])
     
+    listtypeanls = ['outlperi']
+    listtypeanls = ['pdim']
+
     miletos.main.init( \
-                      labltarg='Simulated SETI Target', \
+                      #labltarg='Simulated SETI Target', \
+                      labltarg='Simulated Jupiter', \
                       dicttrue=dicttrue, \
                       dictfitt=dictfitt, \
+                      listtypeanls=listtypeanls, \
                       rratcompprio=rratcompprio, \
                       epocmtracompprio=epocmtracompprio, \
+                      
                       pericompprio=pericompprio, \
                       cosicompprio=cosicompprio, \
                       rsmacompprio=rsmacompprio, \
+                      umagsyst=20., \
+                      gmagsyst=20., \
+                      rmagsyst=20., \
+                      imagsyst=20., \
+                      zmagsyst=20., \
+                      ymagsyst=20., \
                       listlablinst=listlablinst, \
                       liststrgtypedata=liststrgtypedata, \
                      )
