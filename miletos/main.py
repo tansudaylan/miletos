@@ -342,7 +342,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 if indxtime.size > 0:
                     rflxmodl[indxtime, 0, kk] = amplflar * np.exp(-(time[0][p][indxtime] - timeflar) / tsclflar)
                 
-            dictlistmodl['sgnl'][0][p] = np.sum(rflxmodl, -1)
+            dictlistmodl['flar'][0][p] = np.sum(rflxmodl, -1)
+            #dictlistmodl['sgnl'][0][p] = np.sum(rflxmodl, -1)
     
     timeredu = None
                             
@@ -355,9 +356,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 numbener = gdat.numbener[p]
             else:
                 numbener = 1
-            dictlistmodl['sgnl'][0][p] = np.empty((time[0][p].size, numbener))
-        
-            dictlistmodl['tran'][0][p] = np.empty_like(dictlistmodl['sgnl'][0][p])
+            dictlistmodl['tran'][0][p] = np.empty((time[0][p].size, numbener))
+            #dictlistmodl['sgnl'][0][p] = np.empty((time[0][p].size, numbener))
         
         # temp
         pericomp = np.empty(gmod.numbcomp)
@@ -462,10 +462,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                          typeverb=0, \
                                                         )
                 
-                #print('dictoutpmodl[rflx]')
-                #for valu in dictoutpmodl['rflx']:
-                #    print(valu)
-                #raise Exception('')
+                dictlistmodl['tran'][0][p] = dictoutpmodl['rflx']
 
                 if gdat.booldiag:
                     if np.amin(dictlistmodl['tran'][0][p]) < 0:
@@ -478,8 +475,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         summgene(rratcomp)
                         raise Exception('dictlistmodl[tran][0][p] has gone negative.')
                 
-                dictlistmodl['tran'][0][p] = dictoutpmodl['rflx']
-                dictlistmodl['sgnl'][0][p] = dictoutpmodl['rflx']
+                #dictlistmodl['sgnl'][0][p] = dictoutpmodl['rflx']
             
             timeredu = dictoutpmodl['timeredu']
 
@@ -540,7 +536,9 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     if gmod.typemodlblinshap != 'gpro':
         for p in gdat.indxinst[0]:
             # total model
-            dictlistmodl['totl'][0][p] = dictlistmodl['sgnl'][0][p] + dictlistmodl['blin'][0][p] - 1.
+            if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+                sgnl = dictlistmodl['tran'][0][p]
+            dictlistmodl['totl'][0][p] = sgnl + dictlistmodl['blin'][0][p] - 1.
             
     if gdat.booldiag:
         for name in dictlistmodl.keys():
@@ -559,7 +557,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         print('dictlistmodl[name][0][p]')
                         summgene(dictlistmodl[name][0][p])
                         raise Exception('not np.isfinite(dictlistmodl[name][0][p]).all()')
-        
+                    
                     if dictlistmodl[name][0][p].shape[0] != time[0][p].size:
                         print('')
                         print('')
@@ -1498,7 +1496,7 @@ def calc_feat(gdat, strgpdfn):
                                      retr_llik_spec, \
                                      gmod.listlablpara, listscalpara, gmod.listminmpara, gmod.listmaxmpara, \
                                      meangauspara, stdvgauspara, numbdata, strgextn=strgextn, \
-                                     pathbase=gdat.pathtargruns, \
+                                     pathbase=gdat.pathtargcnfg, \
                                      typeverb=gdat.typeverb, \
                                      numbsampburnwalk=numbsampburnwalk, boolplot=gdat.boolplot, \
                                     )
@@ -2446,7 +2444,7 @@ def proc_alle(gdat, typemodl):
                     strgextn = 'albbepsi'
                     listpostheat = tdpy.samp(gdat, numbsampwalk, retr_llik_albbepsi, \
                                              gmod.listlablpara, listscalpara, gmod.listminmpara, gmod.listmaxmpara, boolplot=gdat.boolplot, \
-                                             pathbase=gdat.pathtargruns, \
+                                             pathbase=gdat.pathtargcnfg, \
                                              typeverb=gdat.typeverb, \
                                              numbsampburnwalk=numbsampburnwalk, strgextn=strgextn, \
                                             )
@@ -3965,7 +3963,7 @@ def proc_modl(gdat, strgmodl, strgextn, r):
                                   gdat.numbsampwalk, \
                                   retr_llik_mile, \
                                   gdat.fitt.listnameparafullvari, gmod.listlablpara, listscalpara, gmod.listminmpara, gmod.listmaxmpara, \
-                                  pathbase=gdat.pathtargruns, \
+                                  pathbase=gdat.pathtargcnfg, \
                                   retr_dictderi=retr_dictderi_mile, \
                                   numbsampburnwalk=gdat.numbsampburnwalk, \
                                   strgextn=strgextn, \
@@ -4414,7 +4412,7 @@ def setp_modlbase(gdat, strgmodl, r=None):
         print('gmod.typemodllmdkterm')
         print(gmod.typemodllmdkterm)
 
-    gmod.listnamecompmodl = ['sgnl', 'blin']
+    gmod.listnamecompmodl = ['blin']
     #if gmod.typemodl == 'flar':
     #    gmod.listnamecompmodl += ['flar']
     if gmod.typemodl == 'cosc' or gmod.typemodl == 'psys' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
@@ -7819,7 +7817,6 @@ def init( \
     if gdat.strgclus is None:
         gdat.pathclus = gdat.pathbase
     else:
-        #gdat.strgclus += '/'
         if gdat.typeverb > 0:
             print('gdat.strgclus')
             print(gdat.strgclus)
@@ -7827,7 +7824,11 @@ def init( \
         gdat.pathclus = gdat.pathbase + '%s/' % gdat.strgclus
         gdat.pathdataclus = gdat.pathclus + 'data/'
         gdat.pathvisuclus = gdat.pathclus + 'visuals/'
-    
+        
+        if gdat.typeverb > 0:
+            print('Path for the cluster:')
+            print(gdat.pathclus)
+
     if gdat.labltarg is None:
         if gdat.typetarg == 'mast':
             gdat.labltarg = gdat.strgmast
@@ -7867,21 +7868,25 @@ def init( \
         else:
             strgcnfgtemp = gdat.strgcnfg + '/'
         
-        gdat.pathtargruns = gdat.pathtarg + strgcnfgtemp
+        gdat.pathtargcnfg = gdat.pathtarg + strgcnfgtemp
         
         if gdat.booldiag:
-            if gdat.pathtargruns.endswith('//'):
+            if gdat.pathtargcnfg.endswith('//'):
                 print('')
                 print('')
                 print('')
-                print('gdat.pathtargruns')
-                print(gdat.pathtargruns)
+                print('gdat.pathtargcnfg')
+                print(gdat.pathtargcnfg)
                 print('strgcnfgtemp')
                 print(strgcnfgtemp)
                 raise Exception('')
         
-        gdat.pathdatatarg = gdat.pathtargruns + 'data/'
-        gdat.pathvisutarg = gdat.pathtargruns + 'visuals/'
+        gdat.pathdatatarg = gdat.pathtargcnfg + 'data/'
+        gdat.pathvisutarg = gdat.pathtargcnfg + 'visuals/'
+
+        if gdat.typeverb > 0:
+            print('Path for this run configuration on the target:')
+            print(gdat.pathtargcnfg)
 
     if gdat.typeverb > 0:
         print('gdat.strgtarg')
@@ -7967,7 +7972,7 @@ def init( \
             summgene(magt)
 
         if gdat.boolretrlcurmast:
-            gdat.dictlygoinpt['pathtarg'] = gdat.pathtargruns + 'lygos/'
+            gdat.dictlygoinpt['pathtarg'] = gdat.pathtargcnfg + 'lygos/'
             
             #if gdat.liststrginst is None:
             #    gdat.liststrginst = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
