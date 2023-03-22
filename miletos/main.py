@@ -4686,22 +4686,8 @@ def setp_modlbase(gdat, strgmodl, r=None):
 
     if gmod.boolmodltran:
         booltrancomp = np.zeros(gmod.numbcomp, dtype=bool)
-        print('gdat.duraprio')
-        summgene(gdat.duraprio)
         booltrancomp[np.where(np.isfinite(gdat.duraprio))] = True
         tdpy.setp_para_defa(gdat, strgmodl, 'booltrancomp', booltrancomp)
-
-    print('gmod.listnameparafull')
-    print(gmod.listnameparafull)
-    print('gmod.listnameparafullfixd')
-    print(gmod.listnameparafullfixd)
-    print('gmod.listnameparafullvari')
-    print(gmod.listnameparafullvari)
-    print('gmod.dictindxpara')
-    if gdat.booldiag:
-        for strgtemp, valutemp in gmod.dictindxpara.items():
-            print(strgtemp)
-            print(valutemp)
 
 
 def exec_lspe(arrylcur, pathvisu=None, pathdata=None, strgextn='', factnyqt=None, \
@@ -9221,7 +9207,17 @@ def init( \
                                 print(gdat.liststrginst[b][p])
                                 raise Exception('')
                         gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
-            
+                    
+                    if gdat.booldiag:
+                        for y in gdat.indxchun[b][p]:
+                            if len(gdat.true.listtime[b][p][y]) == 0:
+                                print('')
+                                print('')
+                                print('')
+                                print('gdat.liststrgtypedata[b][p]')
+                                print(gdat.liststrgtypedata[b][p])
+                                raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
+
             gdat.time = gdat.true.time
             gdat.timeconc = [[] for b in gdat.indxdatatser]
             gdat.minmtimeconc = np.empty(gdat.numbdatatser)
@@ -9229,8 +9225,9 @@ def init( \
             for b in gdat.indxdatatser:
                 if len(gdat.time[b]) > 0:
                     gdat.timeconc[b] = np.concatenate(gdat.time[b])
-                    gdat.minmtimeconc[b] = np.amin(gdat.timeconc[b])
-                    gdat.maxmtimeconc[b] = np.amax(gdat.timeconc[b])
+                    if len(gdat.timeconc[b]) > 0:
+                        gdat.minmtimeconc[b] = np.amin(gdat.timeconc[b])
+                        gdat.maxmtimeconc[b] = np.amax(gdat.timeconc[b])
             
             if gdat.true.typemodl == 'flar':
                 tdpy.setp_para_defa(gdat, 'true', 'numbflar', 1)
