@@ -790,7 +790,7 @@ def cnfg_LSST_psys():
     liststrglsst = ['u', 'g', 'r', 'i', 'z', 'y']
     for strglsst in liststrglsst:
         listlablinst[0].append('LSST %s' % strglsst)
-        liststrgtypedata[0].append('simuhypo')
+        liststrgtypedata[0].append('simutargsynt')
     
     rratcompprio = [np.array([0.2]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1])]
     epocmtracompprio = np.array([0.])

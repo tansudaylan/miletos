@@ -5007,8 +5007,7 @@ def srch_pbox(arry, \
               dicttlsqinpt=None, \
               
               # temp: move this out of srch_pbox
-              #typecalc='native', \
-              typecalc='TLS', \
+              typecalc='native', \
               
               # minimum period
               minmperi=None, \
@@ -9916,23 +9915,25 @@ def init( \
                 gdat.dictpboxinpt['figrsizeydobskin'] = gdat.figrsizeydobskin
                 gdat.dictpboxinpt['alphraww'] = gdat.alphraww
 
-                print('HACKING!')
-                print('HACKING!')
-                print('HACKING!')
-                print('HACKING!')
-                print('HACKING!')
-                print('HACKING!')
-                print('HACKING!')
-                print('HACKING!')
-                if gdat.boolsimurflx:
-                    dictpboxoutp = dict()
-                    for strg in ['peri', 'rsma', 'rrat', 'epocmtra', 'cosi']:
-                        dictpboxoutp[strg + 'comp'] = np.array([getattr(gdat.true, strg + 'com0')])
-                    dictpboxoutp['depttrancomp'] = 1e3 * dictpboxoutp['rratcomp']**2
-                    dictpboxoutp['duracomp'] = nicomedia.retr_duratrantotl(dictpboxoutp['pericomp'], dictpboxoutp['rsmacomp'], dictpboxoutp['cosicomp'])
-                    dictpboxoutp['sdeecomp'] = np.array([0.])
-                else:
-                    dictpboxoutp = srch_pbox(arry, **gdat.dictpboxinpt)
+                # to be deleted
+                #print('HACKING!')
+                #print('HACKING!')
+                #print('HACKING!')
+                #print('HACKING!')
+                #print('HACKING!')
+                #print('HACKING!')
+                #print('HACKING!')
+                #print('HACKING!')
+                #if gdat.boolsimurflx:
+                #    dictpboxoutp = dict()
+                #    for strg in ['peri', 'rsma', 'rrat', 'epocmtra', 'cosi']:
+                #        dictpboxoutp[strg + 'comp'] = np.array([getattr(gdat.true, strg + 'com0')])
+                #    dictpboxoutp['depttrancomp'] = 1e3 * dictpboxoutp['rratcomp']**2
+                #    dictpboxoutp['duracomp'] = nicomedia.retr_duratrantotl(dictpboxoutp['pericomp'], dictpboxoutp['rsmacomp'], dictpboxoutp['cosicomp'])
+                #    dictpboxoutp['sdeecomp'] = np.array([0.])
+                #else:
+                
+                dictpboxoutp = srch_pbox(arry, **gdat.dictpboxinpt)
                 
                 gdat.dictmileoutp['dictpboxoutp'] = dictpboxoutp
                 
@@ -10747,6 +10748,9 @@ def init( \
             print('gmod.typemodlblinener')
             print(gmod.typemodlblinener)
         
+        #  to be deleted
+        r = 0
+
         # iterate over different subsets of data
         for e in gdat.indxdataiter:
         
@@ -10775,12 +10779,6 @@ def init( \
             else:
                 listindxinstthis = gdat.listindxinst
             
-            if gdat.typeverb > 0:
-                print('')
-                print('')
-                print('gdat.indxdataiterthis')
-                print(gdat.indxdataiterthis)
-        
             if gdat.fitt.typemodl == 'supn':
                 
                 init_modl(gdat, 'fitt')
