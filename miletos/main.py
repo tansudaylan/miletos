@@ -9253,8 +9253,6 @@ def init( \
             cntr = 0
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    print('gdat.indxchun')
-                    print(gdat.indxchun)
                     for y in gdat.indxchun[b][p]:
                         timeoffs += np.sum(gdat.listarrytser['raww'][b][p][y][:, 0, 0])
                         cntr += gdat.listarrytser['raww'][b][p][y].shape[0]
