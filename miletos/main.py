@@ -3752,11 +3752,11 @@ def retr_namebdtrclip(e, r):
     return strgarrybdtrinpt, strgarryclipoutp, strgarrybdtroutp, strgarryclipinpt, strgarrybdtrblin
 
 
-def rebn_tser(arry, numbbins=None, delt=None, binsxdat=None):
+def rebn_tser(arry, numbbins=None, delt=None, blimxdat=None):
     
-    if not (numbbins is None and delt is None and binsxdat is not None or \
-            numbbins is not None and delt is None and binsxdat is None or \
-            numbbins is None and delt is not None and binsxdat is None):
+    if not (numbbins is None and delt is None and blimxdat is not None or \
+            numbbins is not None and delt is None and blimxdat is None or \
+            numbbins is None and delt is not None and blimxdat is None):
         raise Exception('')
     
     if arry.shape[0] == 0:
@@ -3775,10 +3775,10 @@ def rebn_tser(arry, numbbins=None, delt=None, binsxdat=None):
         xdat = arry[:, 0]
     
     if delt is not None:
-        binsxdat = np.arange(np.amin(xdat), np.amax(xdat) + delt, delt)
+        blimxdat = np.arange(np.amin(xdat), np.amax(xdat) + delt, delt)
     
-    if delt is not None or binsxdat is not None:
-        numbbins = binsxdat.size - 1
+    if delt is not None or blimxdat is not None:
+        numbbins = blimxdat.size - 1
 
     if arry.ndim == 3:
         shaparryrebn = (numbbins, numbener, 3)
@@ -3787,21 +3787,22 @@ def rebn_tser(arry, numbbins=None, delt=None, binsxdat=None):
     
     if numbbins is not None:
         arryrebn = np.full(shaparryrebn, fill_value=np.nan)
-        binsxdat = np.linspace(np.amin(xdat), np.amax(xdat), numbbins + 1)
+        blimxdat = np.linspace(np.amin(xdat), np.amax(xdat), numbbins + 1)
     
-    if delt is not None or binsxdat is not None:
-        numbbins = binsxdat.size - 1
+    if delt is not None or blimxdat is not None:
+        numbbins = blimxdat.size - 1
         arryrebn = np.full(shaparryrebn, fill_value=np.nan)
-
-    meanxdat = (binsxdat[:-1] + binsxdat[1:]) / 2.
+    
+    # bin centers
+    bctrxdat = (blimxdat[:-1] + blimxdat[1:]) / 2.
     if arry.ndim == 3:
-        arryrebn[:, 0, 0] = meanxdat
+        arryrebn[:, 0, 0] = bctrxdat
     else:
-        arryrebn[:, 0] = meanxdat
+        arryrebn[:, 0] = bctrxdat
 
     indxbins = np.arange(numbbins)
     for k in indxbins:
-        indxxdat = np.where((xdat < binsxdat[k+1]) & (xdat > binsxdat[k]))[0]
+        indxxdat = np.where((xdat < blimxdat[k+1]) & (xdat > blimxdat[k]))[0]
         if indxxdat.size > 0:
             #if arry.ndim == 3:
             arryrebn[k, ..., 1] = np.mean(arry[indxxdat, ..., 1], axis=0)
@@ -4822,7 +4823,7 @@ def exec_lspe(arrylcur, pathvisu=None, pathdata=None, strgextn='', factnyqt=None
     return dictlspeoutp
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def srch_pbox_work_loop(m, phas, phasdiff, dydchalf):
     
     phasoffs = phas - phasdiff[m]
@@ -4839,7 +4840,7 @@ def srch_pbox_work_loop(m, phas, phasdiff, dydchalf):
     return indxitra
 
 
-def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, i):
+def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, i, boolrebn):
     
     numbperi = len(listperi[i])
     numbdcyc = len(listdcyc[0])
@@ -4859,13 +4860,18 @@ def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotll
         
         peri = listperi[i][k]
         
-        for b in indxlevlrebn:
-            listphas[b] = (listarrytser[b][:, 0] % peri) / peri
-        
+        if boolrebn:
+            for b in indxlevlrebn:
+                listphas[b] = (listarrytser[b][:, 0] % peri) / peri
+        else:
+            listphas = (listarrytser[0][:, 0] % peri) / peri
+
         for l in range(len(listdcyc[k])):
             
-            b = np.digitize(listdcyc[k][l] * peri * 24., listduratrantotllevl) - 1
-            #b = 0
+            if boolrebn:
+                b = np.digitize(listdcyc[k][l] * peri * 24., listduratrantotllevl) - 1
+            else:
+                b = 0
             
             #print('listduratrantotllevl')
             #print(listduratrantotllevl)
@@ -5049,7 +5055,7 @@ def srch_pbox(arry, \
               pathdata=None, \
               
               # Boolean flag to rebin the time-series
-              boolrebn=True, \
+              boolchecrebn=True, \
 
               # plotting
               ## path where the output visuals will be written
@@ -5154,6 +5160,8 @@ def srch_pbox(arry, \
         
         minmtime = np.amin(arrysrch[:, 0])
         maxmtime = np.amax(arrysrch[:, 0])
+        
+        difftime = arrysrch[1:, 0] - arrysrch[:-1, 0]
         #arrysrch[:, 0] -= minmtime
 
         delttime = maxmtime - minmtime
@@ -5226,52 +5234,63 @@ def srch_pbox(arry, \
         print(listdcyc[0] * listperi[0] * 24)
 
         # cadence
-        cade = np.amin(arrysrch[1:, 0] - arrysrch[:-1, 0]) * 24. # [hr]
+        cade = np.amin(difftime) * 24. # [hr]
+        print('Cadence: %g [hours]' % cade)
         
+        meancade = np.mean(difftime) * 24. # [hr]
+        print('Average cadence: %g [hours]' % meancade)
+        
+        if cade < 0:
+            print('')
+            print('')
+            print('')
+            raise Exception('The time array is not sorted.')
+
         # minimum transit duration
         minmduratrantotl = listdcyc[-1][0] * listperi[-1] * 24
         
         # maximum transit duration
         maxmduratrantotl = listdcyc[0][-1] * listperi[0] * 24
         
-        if minmduratrantotl < factduracade * cade:
-            print('')
-            print('')
-            print('')
-            print('minmduratrantotl')
-            print(minmduratrantotl)
-            print('factduracade')
-            print(factduracade)
-            print('cade [hr]')
-            print(cade)
-            raise Exception('Either the minimum transit duration is too small or the cadence is too large.')
+        #if minmduratrantotl < factduracade * cade:
+        #    print('')
+        #    print('')
+        #    print('')
+        #    print('minmduratrantotl [hr]')
+        #    print(minmduratrantotl)
+        #    print('factduracade')
+        #    print(factduracade)
+        #    print('cade [hr]')
+        #    print(cade)
+        #    print('Warnin: either the minimum transit duration is too small or the cadence is too large.')
         
-        listarrysrch = []
+        listarrysrch = [arrysrch]
+        
+        # Boolean flag to rebin the time-series
+        boolrebn = boolchecrebn and meancade < 0.5 * minmduratrantotl
+        
         if boolrebn:
-            # number of rebinned data sets
             numblevlrebn = 10
             indxlevlrebn = np.arange(numblevlrebn)
-        
             # list of transit durations when rebinned data sets will be used
             listduratrantotllevl = np.linspace(minmduratrantotl, maxmduratrantotl, numblevlrebn)
-        
-            print('listduratrantotllevl')
-            print(listduratrantotllevl)
-        
+            
+            print('factduracade')
+            print(factduracade)
             for b in indxlevlrebn:
+                print('Transit duration for the level: %g [hour]' % listduratrantotllevl[b])
                 delt = listduratrantotllevl[b] / 24. / factduracade
-                print('delt')
-                print(delt)
                 arryrebn = rebn_tser(arrysrch, delt=delt)
+                print('Number of data points in rebinned to a delta time of %g [min]: %d' % (delt * 24. * 60., arryrebn.shape[0]))
                 indx = np.where(np.isfinite(arryrebn[:, 1]))[0]
-                print('Number of data points in binned data set for Delta time %g [min]: %d' % (delt * 24. * 60., arryrebn.shape[0]))
                 arryrebn = arryrebn[indx, :]
-                listarrysrch.append(arryrebn)
-                print('Number of data points in binned data set for Delta time %g [min]: %d' % (delt * 24. * 60., arryrebn.shape[0]))
+                print('Number of finite data points in rebinned to a delta time of %g [min]: %d' % (delt * 24. * 60., arryrebn.shape[0]))
                 print('')
+                listarrysrch.append(arryrebn)
         else:
             listduratrantotllevl = []
-            listarrysrch = [arrysrch]
+            #numblevlrebn = 1
+            indxlevlrebn = np.arange(1)
 
         listepoc = [[[] for l in range(numbdcyc)] for k in indxperi]
         numbtria = np.zeros(numbperi, dtype=int)
@@ -5378,15 +5397,15 @@ def srch_pbox(arry, \
                     for i in indxproc:
                         indx = np.where(indxprocperi == i)[0]
                         listperiproc[i] = listperi[indx]
-                    data = objtpool.map(partial(srch_pbox_work, listperiproc, listarrysrch, listdcyc, listepoc, listduratrantotllevl), indxproc)
+                    data = objtpool.map(partial(srch_pbox_work, listperiproc, listarrysrch, listdcyc, listepoc, listduratrantotllevl), indxproc, boolrebn)
                     listrflxitra = np.concatenate([data[k][0] for k in indxproc])
                     listdeptmaxm = np.concatenate([data[k][1] for k in indxproc])
                     listdcycmaxm = np.concatenate([data[k][2] for k in indxproc])
                     listepocmaxm = np.concatenate([data[k][3] for k in indxproc])
                 else:
-                    listrflxitra, listdcycmaxm, listepocmaxm = srch_pbox_work([listperi], listarrysrch, listdcyc, listepoc, listduratrantotllevl, 0)
+                    listrflxitra, listdcycmaxm, listepocmaxm = srch_pbox_work([listperi], listarrysrch, listdcyc, listepoc, listduratrantotllevl, 0, boolrebn)
                 
-                listdept = (np.median(listarrysrch[b][:, 1]) - listrflxitra) * 1e3 # [ppt])
+                listdept = (np.median(listarrysrch[0][:, 1]) - listrflxitra) * 1e3 # [ppt])
                 listsigr = listdept
                 if (~np.isfinite(listsigr)).any():
                     raise Exception('')
@@ -9203,6 +9222,8 @@ def init( \
                             elif gdat.liststrginst[b][p].startswith('LSST'):
                                 gdat.true.listtime[b][p][y] = (2460645. + np.random.rand(100)[:, None] * 365. * 0.7 + \
                                                                                         np.arange(10)[None, :] * 365.).flatten()
+                                
+                                gdat.true.listtime[b][p][y] = np.sort(gdat.true.listtime[b][p][y])
                             else:
                                 print('')
                                 print('')
@@ -9210,8 +9231,15 @@ def init( \
                                 print('gdat.liststrginst[b][p]')
                                 print(gdat.liststrginst[b][p])
                                 raise Exception('')
+                        
                         gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
-                    
+                        
+                        if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
+                            print('')
+                            print('')
+                            print('')
+                            raise Exception('The simulated time values are not sorted.'
+                            )
                     if gdat.booldiag:
                         for y in gdat.indxchun[b][p]:
                             if len(gdat.true.listtime[b][p][y]) == 0:

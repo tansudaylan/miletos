@@ -6,12 +6,16 @@ import numpy as np
 import wget
 import pandas as pd
 
+import matplotlib as mpl
+mpl.use('agg')
+import matplotlib.pyplot as plt
+
+import astropy
+
 import miletos
 import tdpy
 from tdpy.util import summgene
 import ephesos
-
-import astropy
 
 def cnfg_TOIs():
     
