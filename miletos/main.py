@@ -4843,7 +4843,6 @@ def srch_pbox_work_loop(m, phas, phasdiff, dydchalf):
 def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, i, boolrebn):
     
     numbperi = len(listperi[i])
-    numbdcyc = len(listdcyc[0])
     
     numblevlrebn = len(listduratrantotllevl)
     indxlevlrebn = np.arange(numblevlrebn)
@@ -5028,11 +5027,8 @@ def srch_pbox(arry, \
               # Boolean flag to search for positive boxes
               boolsrchposi=False, \
 
-              # number of duty cycle samples  
-              numbdcyc=3, \
-              
-              # spread in the logarithm of duty cycle
-              deltlogtdcyc=None, \
+              # differential logarithm of duty cycle
+              deltlogtdcyc=0.1, \
               
               # density of the star
               densstar=None, \
@@ -5157,7 +5153,8 @@ def srch_pbox(arry, \
         
         numbtime = arrysrch[:, 0].size
         print('Number of data points: %d...' % numbtime)
-        
+        minmdcyc = 2. / numbtime
+        print('Minimum duty cycle achievable with this number of data point: %g' % minmdcyc)
         minmtime = np.amin(arrysrch[:, 0])
         maxmtime = np.amax(arrysrch[:, 0])
         
@@ -5209,7 +5206,6 @@ def srch_pbox(arry, \
         print('maxmperi')
         print(maxmperi)
         
-        indxdcyc = np.arange(numbdcyc)
         listdcyc = [[] for k in indxperi]
         listperilogt = np.log10(listperi)
         
@@ -5220,18 +5216,34 @@ def srch_pbox(arry, \
         maxmdcyclogt = -2. / 3. * listperilogt - 1. + deltlogtdcyc
         if densstar is not None:
             maxmdcyclogt += -1. / 3. * np.log10(densstar)
-
-        minmdcyclogt = maxmdcyclogt - 2. * deltlogtdcyc
+        
+        print('maxmdcyclogt')
+        summgene(maxmdcyclogt)
+        listduratrantotl = []
         for k in indxperi:
-            listdcyc[k] = np.logspace(minmdcyclogt[k], maxmdcyclogt[k], numbdcyc)
+            minmdcyclogt = max(np.log10(minmdcyc), maxmdcyclogt[k] - 3. * deltlogtdcyc)
+            if maxmdcyclogt[k] >= minmdcyclogt:
+                listdcyc[k] = np.logspace(minmdcyclogt, maxmdcyclogt[k], 2 + int((maxmdcyclogt[k] - minmdcyclogt) / deltlogtdcyc))
+                listduratrantotl.append(listdcyc[k] * listperi[k])
+        listduratrantotl = np.concatenate(listduratrantotl)
+        
+        print('listduratrantotl')
+        print(listduratrantotl)
+
+        if booldiag:
+            if listduratrantotl.size == 0:
+                raise Exception('')
+
         print('Trial transit duty cycles at the smallest period')
         print(listdcyc[-1])
-        print('Trial transit durations at the smallest period [hr]')
-        print(listdcyc[-1] * listperi[-1] * 24)
+        if len(listdcyc[-1]) > 0:
+            print('Trial transit durations at the smallest period [hr]')
+            print(listdcyc[-1] * listperi[-1] * 24)
         print('Trial transit duty cycles at the largest period')
         print(listdcyc[0])
-        print('Trial transit durations at the largest period [hr]')
-        print(listdcyc[0] * listperi[0] * 24)
+        if len(listdcyc[0]) > 0:
+            print('Trial transit durations at the largest period [hr]')
+            print(listdcyc[0] * listperi[0] * 24)
 
         # cadence
         cade = np.amin(difftime) * 24. # [hr]
@@ -5245,12 +5257,14 @@ def srch_pbox(arry, \
             print('')
             print('')
             raise Exception('The time array is not sorted.')
-
-        # minimum transit duration
-        minmduratrantotl = listdcyc[-1][0] * listperi[-1] * 24
         
+        # minimum transit duration
+        #minmduratrantotl = listdcyc[-1][0] * listperi[-1] * 24
+        minmduratrantotl = np.amin(listduratrantotl)
+
         # maximum transit duration
-        maxmduratrantotl = listdcyc[0][-1] * listperi[0] * 24
+        #maxmduratrantotl = listdcyc[0][-1] * listperi[0] * 24
+        maxmduratrantotl = np.amax(listduratrantotl)
         
         #if minmduratrantotl < factduracade * cade:
         #    print('')
@@ -5292,13 +5306,14 @@ def srch_pbox(arry, \
             #numblevlrebn = 1
             indxlevlrebn = np.arange(1)
 
-        listepoc = [[[] for l in range(numbdcyc)] for k in indxperi]
+        listepoc = [[[] for l in range(len(listdcyc[k]))] for k in indxperi]
         numbtria = np.zeros(numbperi, dtype=int)
         for k in indxperi:
-            for l in indxdcyc:
-                diffepoc = max(cade / 24., factdeltepocdura * listperi[k] * listdcyc[k][l])
-                listepoc[k][l] = np.arange(minmtime, minmtime + listperi[k], diffepoc)
-                numbtria[k] += len(listepoc[k][l])
+            if len(listdcyc[k]) > 0:
+                for l in range(len(listdcyc[k])):
+                    diffepoc = max(cade / 24., factdeltepocdura * listperi[k] * listdcyc[k][l])
+                    listepoc[k][l] = np.arange(minmtime, minmtime + listperi[k], diffepoc)
+                    numbtria[k] += len(listepoc[k][l])
                 
         dflx = arrysrch[:, 1] - 1.
         stdvdflx = arrysrch[:, 2]
@@ -5486,6 +5501,16 @@ def srch_pbox(arry, \
                     cosicomp = [0]
                     rsmacomp = [nicomedia.retr_rsmacomp(dictpboxoutp['pericomp'][j], dictpboxoutp['duracomp'][j], cosicomp[0])]
                     rratcomp = [np.sqrt(dictpboxoutp['depttrancomp'][j] * 1e-3)]
+                    
+                    if booldiag:
+                        if not np.isfinite(rratcomp).all():
+                            print('')
+                            print('')
+                            print('')
+                            print('rratcomp')
+                            print(rratcomp)
+                            raise Exception('rratcomp is not finite.')
+
                     dictoutp = ephesos.eval_modl(timemodlplot, typesyst='psys', pericomp=pericomp, epocmtracomp=epocmtracomp, \
                                                                                                         rsmacomp=rsmacomp, cosicomp=cosicomp, rratcomp=rratcomp)
                     dictpboxinte['rflxtsermodl'] = dictoutp['rflx']
@@ -6844,15 +6869,30 @@ def plot_pcur(pathvisu, arrylcur=None, arrypcur=None, arrypcurbind=None, phascen
 
 def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5, booldiag=True):
     
+    if arry.ndim == 3:
+        time = arry[:, 0, 0]
+    elif arry.ndim == 2:
+        time = arry[:, 0]
+    else:
+        print('')
+        print('')
+        print('')
+        print('arry')
+        summgene(arry)
+        raise Exception('arry should be two or three dimensional.')
+
     arryfold = np.empty_like(arry)
     
-    xdat = (((arry[:, 0, 0] - epoc) % peri) / peri + phasshft) % 1. - phasshft
+    xdat = (((time - epoc) % peri) / peri + phasshft) % 1. - phasshft
     
     if boolxdattime:
         xdat *= peri
     
-    arryfold[:, 0, 0] = xdat
-    
+    if arry.ndim == 3:
+        arryfold[:, 0, 0] = xdat
+    else:
+        arryfold[:, 0] = xdat
+
     arryfold[:, ..., 1:3] = arry[:, ..., 1:3]
     
     if boolsort:
