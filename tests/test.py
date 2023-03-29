@@ -16,6 +16,8 @@ import miletos
 import tdpy
 from tdpy.util import summgene
 import ephesos
+import nicomedia
+
 
 def cnfg_TOIs():
     
@@ -215,7 +217,7 @@ def cnfg_TRAPPIST1():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
-    liststrgtypedata = [['simugene'], []]
+    liststrgtypedata = [['simutargpart'], []]
     liststrgtypedata = None
     
     #liststrgexpr = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
@@ -245,7 +247,7 @@ def cnfg_WASP18():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
-    liststrgtypedata = [['simugene'], []]
+    liststrgtypedata = [['simutargpart'], []]
     miletos.main.init( \
                    strgmast='WASP-18', \
                    #boolplotpopl=True, \
@@ -295,6 +297,53 @@ def cnfg_WASP43():
                   )
 
 
+def cnfg_flare_simulated():
+    
+    typepopl = 'targtess_prms_2min'
+    dicttic8 = nicomedia.retr_dictpopltic8(typepopl=typepopl)
+        
+    for a in range(2):
+        if a == 0:
+            lablcnfg = 'Simulated'
+            strgcnfg = 'simu'
+            liststrgtypedata = [['simutargpart'], []]
+            dicttrue = dict()
+            dicttrue['typemodl'] = 'flar'
+        else:
+            lablcnfg = ''
+            strgcnfg = 'real'
+        dictfitt = dict()
+        dictfitt['typemodl'] = 'flar'
+        
+        print('dicttic8.keys()')
+        print(dicttic8.keys())
+        numbtarg = dicttic8['tici'].size
+
+        indxtarg = np.arange(numbtarg)
+        for k in indxtarg:
+            
+            #lablltarg = 'TIC %d' % dicttic8['labl'][k]
+            miletos.main.init( \
+                          #labltarg=labltarg, \
+                          #rasctarg=rasctarg, \
+                          #decltarg=decltarg, \
+                          ticitarg=dicttic8['tici'][k], \
+                          
+                          lablcnfg=lablcnfg, \
+                          strgcnfg=strgcnfg, \
+
+                          dictfitt=dictfitt, \
+                          dicttrue=dicttrue, \
+                          booldiag=True, \
+                          
+                          liststrgtypedata=liststrgtypedata, \
+
+                          #refrlistlabltser=refrlistlabltser, \
+                          #refrarrytser=refrarrytser, \
+                          #dictlygoinpt=dictlygoinpt, \
+                         )
+
+
 def cnfg_ATEL15755():
     
     # https://www.astronomerstelegram.org/?read=15755
@@ -307,7 +356,7 @@ def cnfg_ATEL15755():
         if a == 0:
             lablcnfg = 'Simulated'
             strgcnfg = 'simu'
-            liststrgtypedata = [['simugene'], []]
+            liststrgtypedata = [['simutargpart'], []]
             dicttrue = dict()
             dicttrue['typemodl'] = 'flar'
         else:
@@ -688,7 +737,7 @@ def cnfg_TOI_lists(name):
         print(hosttoii)
 
 
-def cnfg_TTL5_simugene():
+def cnfg_TTL5():
     
     listlablinst = [['TESS', 'TTL5'], []]
 
@@ -933,8 +982,11 @@ def cnfg_WD1856():
 def cnfg_Faint():
 
     liststrgexpr = ['TESS']
-    #liststrgtypedata = [['simugenetdim'], []]
+    #liststrgtypedata = [['simutargsynt'], []]
     
+    # simulate two-dimensional images
+    boolsimutdim = True
+
     dicttrue = dict()
     dicttrue['typemodl'] = 'psys'
     
@@ -981,23 +1033,23 @@ def cnfg_SNeIa_Comp(strgruns):
     if strgruns == 'totl':
         liststrgruns = [ \
                         # fitting simulated data no bump using a model with quadratic SN but without a bump
-                        'simugenelcur_cons_quad_none_none_none', \
+                        'simutargsynt_cons_quad_none_none_none', \
                         # fitting simulated data with a bump using a model with quadratic SN but without a bump
-                        'simugenelcur_cons_quad_none_none_bump', \
+                        'simutargsynt_cons_quad_none_none_bump', \
                         # fitting simulated data with a bump using a model with quadratic SN and a bump
-                        'simugenelcur_cons_quad_bump_none_bump', \
+                        'simutargsynt_cons_quad_bump_none_bump', \
                         
                         # fitting simulated data with a bump *and red noise* using a model with a bump
-                        'simugenelcur_cons_quad_bump_gpro_bump', \
+                        'simutargsynt_cons_quad_bump_gpro_bump', \
                         # fitting simulated data with a bump *and red noise* using a model with a bump and GP baseline
-                        'simugenelcur_gpro_quad_bump_gpro_bump', \
+                        'simutargsynt_gpro_quad_bump_gpro_bump', \
 
                         # fitting real data using a model with a SN
-                        'real_cons_quad_none', \
+                        'obsd_cons_quad_none', \
                         # fitting real data using a model with a SN and bump
-                        'real_cons_quad_bump', \
+                        'obsd_cons_quad_bump', \
                         # fitting real data using a model with a SN, bump, and GP baseline
-                        'real_gpro_quad_bump', \
+                        'obsd_gpro_quad_bump', \
                        ]
     else:
         liststrgruns = [strgruns]
@@ -1011,10 +1063,10 @@ def cnfg_SNeIa_Comp(strgruns):
         
         dictlygoinpt['boolanim'] = strgruns == 'real_samp_cons_quad_none'
 
-        if strgtypedata == 'simugenelcur':
+        if strgtypedata == 'simutargsynt':
             dicttrue['typemodlbase'] = strgrunssplt[4]
             dicttrue['typemodlexcs'] = strgrunssplt[5]
-            liststrgtypedata = [['simugenelcur'], []]
+            liststrgtypedata = [['simutargsynt'], []]
             
             numbtarg = 1
             for k in range(numbtarg):
