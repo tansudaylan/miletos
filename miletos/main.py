@@ -269,14 +269,10 @@ def pars_para_mile(para, gdat, strgmodl):
     #        else:
     #            dictparainpt[strg] = para[gmod.dictindxpara[strg]]
     
-    print('gmod.listnameparafullfixd')
-    print(gmod.listnameparafullfixd)
     for name in gmod.listnameparafullfixd:
         #print('Found fixed value for parameter %s...' % name)
         dictparainpt[name] = getattr(gmod, name)
     
-    print('gmod.listnameparafullvari')
-    print(gmod.listnameparafullvari)
     for name in gmod.listnameparafullvari:
         
         dictparainpt[name] = para[gmod.dictindxpara[name]]
@@ -303,6 +299,8 @@ def pars_para_mile(para, gdat, strgmodl):
 
 def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     
+    print('retr_dictmodl_mile()')
+
     gmod = getattr(gdat, strgmodl)
     
     dictlistmodl = dict()
@@ -463,9 +461,11 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                         )
                 
                 dictlistmodl['tran'][0][p] = dictoutpmodl['rflx']
+                if dictlistmodl['tran'][0][p].ndim == 1:
+                    dictlistmodl['tran'][0][p] = dictlistmodl['tran'][0][p][:, None]
 
                 if gdat.booldiag:
-                    if np.amin(dictlistmodl['tran'][0][p]) < 0:
+                    if np.amin(dictlistmodl['tran'][0][p]) < 0 or dictlistmodl['tran'][0][p].ndim == 1:
                         print('')
                         print('')
                         print('')
@@ -548,10 +548,18 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             # total model
             if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
                 sgnl = dictlistmodl['tran'][0][p]
-            print('sgnl')
-            summgene(sgnl)
-            print('dictlistmodl[blin][0][p]')
-            summgene(dictlistmodl['blin'][0][p])
+            
+                if gdat.booldiag:
+                    if dictlistmodl['tran'][0][p].ndim != dictlistmodl['blin'][0][p].ndim:
+                        print('')
+                        print('')
+                        print('')
+                        print('sgnl')
+                        summgene(sgnl)
+                        print('dictlistmodl[blin][0][p]')
+                        summgene(dictlistmodl['blin'][0][p])
+                        raise Exception('dictlistmodl[tran][0][p].ndim != dictlistmodl[blin][0][p]')
+            
             dictlistmodl['totl'][0][p] = sgnl + dictlistmodl['blin'][0][p] - 1.
             
     if gdat.booldiag:
@@ -832,6 +840,10 @@ def retr_dictderi_mile(para, gdat):
                 
             strg = 'b%03dp%03d' % (b, p)
             
+            print('retr_dictderi_mile()')
+            print('strg')
+            print(strg)
+            
             if gdat.typellik == 'gpro':
                 
                 dictmodlgprofine = retr_rflxmodl_mile_gpro(gdat, gdat.thisstrgmodl, gdat.timethisfittfine[b][p], dictparainpt, rflxmodl=dictmodlfine['totl'])
@@ -865,6 +877,10 @@ def retr_dictderi_mile(para, gdat):
 
             dictvarbderi['stdvresi%s' % strg] = np.empty((gdat.numbrebn, gdat.numbener[p]))
             for k in gdat.indxrebn:
+                
+                print('k')
+                print(k)
+
                 delt = gdat.listdeltrebn[b][p][k]
                 arry = np.zeros((dictvarbderi['resi%s' % strg].shape[0], gdat.numbener, 3))
                 arry[:, 0, 0] = gdat.timethisfitt[b][p]
@@ -1092,20 +1108,9 @@ def plot_pser(gdat, strgmodl, strgarry, boolpost=False, \
                         if b == 1:
                             yerr = arrypcur[b][p][j][:, gdat.indxenerclip, 2]
                         
-                        # the factor to multiply the time axis
-                        if gdat.pericompprio[j] < 1. / 24.:
-                            facttime = 24. * 3600.
-                            lablunittime = 'seconds'
-                        elif gdat.pericompprio[j] < 1.:
-                            facttime = 24. * 60.
-                            lablunittime = 'minutes'
-                        elif gdat.pericompprio[j] < 400.:
-                            facttime = 24.
-                            lablunittime = 'hours'
-                        else: 
-                            facttime = 1.
-                            lablunittime = 'days'
-
+                        # the factor to multiply the time axis and its label
+                        facttime, lablunittime = retr_timeunitperi(gdat.pericompprio[j])
+                        
                         axis.errorbar(gdat.pericompprio[j] * arrypcur[b][p][j][:, gdat.indxenerclip, 0] * facttime, \
                                                              arrypcur[b][p][j][:, gdat.indxenerclip, 1], yerr=yerr, elinewidth=1, capsize=2, \
                                                             zorder=1, color='grey', alpha=gdat.alphraww, marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
@@ -1167,6 +1172,24 @@ def plot_pser(gdat, strgmodl, strgarry, boolpost=False, \
                     plt.savefig(path)
                     plt.close()
     
+
+def retr_timeunitperi(peri):
+    
+    if peri < 1. / 24.:
+        facttime = 24. * 3600.
+        lablunittime = 'seconds'
+    elif peri < 1.:
+        facttime = 24. * 60.
+        lablunittime = 'minutes'
+    elif peri < 400.:
+        facttime = 24.
+        lablunittime = 'hours'
+    else: 
+        facttime = 1.
+        lablunittime = 'days'
+
+    return facttime, lablunittime
+
 
 def retr_albg(amplplanrefl, radicomp, smax):
     '''
@@ -4186,7 +4209,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     
     pathplot = plot_tser(gdat.pathvisutarg, \
                                  timedata=time, \
-                                 lcurdata=tser, \
+                                 tserdata=tser, \
                                  timeoffs=gdat.timeoffs, \
                                  strgextn=strgextn, \
                                  strgtitl=strgtitl, \
@@ -4198,17 +4221,17 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     strgextn = 'resipmed%s%s' % (gdat.strgcnfg, gdat.liststrgdataiter[e])
     if gdat.typeinfe == 'samp':
         if gdat.fitt.typemodlenerfitt == 'full':
-            lcurdatatemp = np.median(gdat.dictsamp['resi%s' % strg][:, :, e], 0)
+            tserdatatemp = np.median(gdat.dictsamp['resi%s' % strg][:, :, e], 0)
         else:
-            lcurdatatemp = np.median(gmod.listdictsamp[e]['resi%s' % strg][:, :, 0], 0)
+            tserdatatemp = np.median(gmod.listdictsamp[e]['resi%s' % strg][:, :, 0], 0)
     else:
         if gdat.fitt.typemodlenerfitt == 'full':
-            lcurdatatemp = gdat.dictmlik['resi%s' % strg][:, e]
+            tserdatatemp = gdat.dictmlik['resi%s' % strg][:, e]
         else:
-            lcurdatatemp = gmod.listdictmlik[e]['resi%s' % strg][:, 0]
+            tserdatatemp = gmod.listdictmlik[e]['resi%s' % strg][:, 0]
     pathplot = plot_tser(gdat.pathvisutarg, \
                                  timedata=time, \
-                                 lcurdata=lcurdatatemp, \
+                                 tserdata=tserdatatemp, \
                                  timeoffs=gdat.timeoffs, \
                                  strgextn=strgextn, \
                                  strgtitl=strgtitl, \
@@ -4249,7 +4272,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
             dictmodl[namevarbsamp]['alph'] = 0.2
         pathplot = plot_tser(gdat.pathvisutarg, \
                                      timedata=gdat.timethisfitt[b][p], \
-                                     lcurdata=gdat.rflxthisfitt[b][p], \
+                                     tserdata=gdat.rflxthisfitt[b][p], \
                                      timeoffs=gdat.timeoffs, \
                                      strgextn=strgextn, \
                                      boolwritover=gdat.boolwritover, \
@@ -4303,7 +4326,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
         pathplot = plot_tser(gdat.pathvisutarg, \
                                      timedata=gdat.timethisfitt[b][p], \
                                      timeoffs=gdat.timeoffs, \
-                                     lcurdata=gdat.rflxthisfitt[b][p], \
+                                     tserdata=gdat.rflxthisfitt[b][p], \
                                      strgextn=strgextn, \
                                      boolwritover=gdat.boolwritover, \
                                      strgtitl=strgtitl, \
@@ -6687,16 +6710,16 @@ def plot_tser( \
               timedata=None, \
               
               # values of the time-series data
-              lcurdata=None, \
+              tserdata=None, \
               
               # time stamps of the binned time-series data
               timedatabind=None, \
               
               # values of the binned time-series data
-              lcurdatabind=None, \
+              tserdatabind=None, \
               
               # uncertainties of the binned time-series data
-              lcurdatastdvbind=None, \
+              tserdatastdvbind=None, \
               
               # Boolean flag to break the line of the model when separation is very large
               boolbrekmodl=True, \
@@ -6710,6 +6733,22 @@ def plot_tser( \
               # label for the vertical axis, including the unit
               lablyaxi=None, \
               
+              # phase folding
+              ## Boolean flag to indicate if the provided horizontal axis is phase, not time
+              boolphas=False, \
+              
+              ## Boolean flag to fold input time-series
+              boolfold=False, \
+
+              ## epoch for optional phase-folding
+              epoc=None, \
+              
+              ## period for optional phase-folding
+              peri=None, \
+              
+              # type of the horizontal axis (only taken into account if boolphas is True)
+              typephasunit='phas', \
+
               # size of the figure
               sizefigr=None, \
               
@@ -6721,6 +6760,9 @@ def plot_tser( \
               
               # time offset
               timeoffs=0., \
+              
+              # phase offset
+              phasoffs=0., \
               
               # limits for the horizontal axis in the form of a two-tuple
               limtxaxi=None, \
@@ -6750,6 +6792,17 @@ def plot_tser( \
         print('')
         raise Exception('strgextn should not be an empty string or None.')
     
+    if timeoffs != 0. and phasoffs != 0.:
+        raise Exception('')
+    
+    if boolfold and boolphas:
+        raise Exception('If input horizontal axis is phase (boolphas is True), then it cannot be phase-folded (boolfold must be False).')
+    
+    if boolphas or boolfold:
+        typexdat = 'phas'
+    else:
+        typexdat = 'time'
+
     if strgextn[0] == '_':
         strgextn = strgextn[1:]
 
@@ -6764,18 +6817,30 @@ def plot_tser( \
     
     boollegd = False
     
+    if boolfold:
+        arrypcur = fold_tser(arrylcur, epoc, peri)
+    
     if sizefigr is None:
         sizefigr = [8., 2.5]
 
     figr, axis = plt.subplots(figsize=sizefigr)
     
+    if typexdat == 'phas':
+        xdatoffs = phasoffs
+    else:
+        xdatoffs = timeoffs
+
+    # the factor to multiply the time axis and its label
+    if typexdat == 'phas' and typephasunit == 'time':
+        facttime, lablunittime = retr_timeunitperi(peri)
+    
     # raw data
     if timedata is not None:
-        axis.plot(timedata - timeoffs, lcurdata, color='gray', ls='', marker='o', ms=1, rasterized=True)
+        axis.plot(timedata - xdatoffs, tserdata, color='gray', ls='', marker='o', ms=1, rasterized=True)
     
     # binned data
     if timedatabind is not None:
-        axis.errorbar(timedatabind, lcurdatabind, yerr=lcurdatastdvbind, color='k', ls='', marker='o', ms=2)
+        axis.errorbar(timedatabind, tserdatabind, yerr=tserdatastdvbind, color='k', ls='', marker='o', ms=2)
     
     # model
     if dictmodl is not None:
@@ -6822,25 +6887,41 @@ def plot_tser( \
                     boollegd = True
                 else:
                     label = None
+    
+        
                 
                 print('xdat[n]')
                 summgene(xdat[n])
-                print('xdat[n] - timeoffs')
-                summgene(xdat[n] - timeoffs)
+                print('xdat[n] - xdatoffs')
+                summgene(xdat[n] - xdatoffs)
                 print('ydat[n]')
                 summgene(ydat[n])
                 print('')
                 print('')
                 print('')
-                axis.plot(xdat[n] - timeoffs, ydat[n], color=color, lw=1, label=label, ls=ls, alpha=alpha)
+                
+                xdattemp = xdat[n] - xdatoffs
+                
+                if typexdat == 'phas' and typephasunit == 'time':
+                    if numbchun != 1:
+                        raise Exception('')
+                    xdattemp *= peri * facttime
+                
+                axis.plot(xdattemp, ydat[n], color=color, lw=1, label=label, ls=ls, alpha=alpha)
             k += 1
     
     if lablxaxi is None:
-        if timeoffs == 0:
-            lablxaxi = 'Time [days]'
+        if typexdat == 'time':
+            if xdatoffs == 0:
+                lablxaxi = 'Time [days]'
+            else:
+                lablxaxi = 'Time [BJD-%d]' % xdatoffs
         else:
-            lablxaxi = 'Time [BJD-%d]' % timeoffs
-    
+            if typephasunit == 'time':
+                lablxaxi = 'Time [%s]' % lablunittime
+            else:
+                lablxaxi = 'Phase'
+            
     axis.set_xlabel(lablxaxi)
     
     if limtxaxi is not None:
@@ -6882,30 +6963,33 @@ def plot_tser( \
     return path
 
 
-def plot_pcur(pathvisu, arrylcur=None, arrypcur=None, arrypcurbind=None, phascent=0., boolhour=False, epoc=None, peri=None, strgextn='', \
+def plot_pser( \
+              pathvisu, \
+              arrypcur=None, \
+              arrypcurbind=None, \
+              arrylcur=None, \
+              phascent=0., \
               ## file type of the plot
               typefileplot='png', \
-                                                            boolbind=True, timespan=None, booltime=False, numbbins=100, limtxdat=None):
+              boolbind=True, \
+              booltime=False, \
+              numbbins=100, \
+              limtxdat=None, \
+             ):
     
-    if arrypcur is None:
-        arrypcur = fold_tser(arrylcur, epoc, peri)
     if arrypcurbind is None and boolbind:
         arrypcurbind = rebn_tser(arrypcur, numbbins)
     
-    if strgextn[0] == '_':
-        strgextn = strgextn[1:]
-
-    # phase on the horizontal axis
-    figr, axis = plt.subplots(1, 1, figsize=(8, 4))
-    
     # time on the horizontal axis
     if booltime:
-        lablxaxi = 'Time [hours]'
-        if boolhour:
-            fact = 24.
-        else:
-            fact = 1.
-        xdat = arrypcur[:, 0] * peri * fact
+        
+        # the factor to multiply the time axis and its label
+        facttime, lablunittime = retr_timeunitperi(peri)
+                        
+        xdat = arrypcur[:, 0] * peri * facttime
+        
+        lablxaxi = 'Time [%s]' % lablunittime
+        
         if boolbind:
             xdatbind = arrypcurbind[:, 0] * peri * fact
     else:
@@ -8972,7 +9056,7 @@ def init( \
             
             if gdat.rratcompprio is None:
                 gdat.rratcompprio = [[[] for j in range(gdat.numbcompprio)] for p in gdat.indxinst[0]]
-                for j in gdat.true.indxcomp:
+                for j in range(gdat.numbcompprio):
                     for p in gdat.indxinst[0]:
                         if gdat.typepriocomp == 'exar':
                             gdat.rratcompprio[p][j] = gdat.dictexartarg['rratcomp']
@@ -10175,8 +10259,8 @@ def init( \
             #indxtimemask = np.unique(indxtimemask)
             #indxtimegood = np.setdiff1d(np.arange(gdat.time.size), indxtimemask)
             #gdat.time = gdat.time[indxtimegood]
-            #gdat.lcurdata = gdat.lcurdata[indxtimegood]
-            #gdat.lcurdatastdv = gdat.lcurdatastdv[indxtimegood]
+            #gdat.tserdata = gdat.tserdata[indxtimegood]
+            #gdat.tserdatastdv = gdat.tserdatastdv[indxtimegood]
             #gdat.numbtime = gdat.time.size
 
     if gdat.booltserdata:
