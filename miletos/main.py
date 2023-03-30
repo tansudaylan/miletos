@@ -299,8 +299,6 @@ def pars_para_mile(para, gdat, strgmodl):
 
 def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     
-    print('retr_dictmodl_mile()')
-
     gmod = getattr(gdat, strgmodl)
     
     dictlistmodl = dict()
@@ -309,6 +307,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     
     if gmod.typemodl == 'flar':
         for p in gdat.indxinst[0]:
+            print('time')
+            print(time)
             rflxmodl = np.zeros((time[0][p].size, gdat.numbener[p], gmod.numbflar))
             for kk in range(gmod.numbflar):
                 strgflar = '%04d' % kk
@@ -882,7 +882,9 @@ def retr_dictderi_mile(para, gdat):
                 print(k)
 
                 delt = gdat.listdeltrebn[b][p][k]
-                arry = np.zeros((dictvarbderi['resi%s' % strg].shape[0], gdat.numbener, 3))
+                print('dictvarbderi[resi%s % strg]')
+                summgene(dictvarbderi['resi%s' % strg])
+                arry = np.zeros((dictvarbderi['resi%s' % strg].shape[0], gdat.numbener[p], 3))
                 arry[:, 0, 0] = gdat.timethisfitt[b][p]
                 for e in gdat.indxenermodl:
                     arry[:, e, 1] = dictvarbderi['resi%s' % strg][:, e]
@@ -6798,6 +6800,17 @@ def plot_tser( \
     if boolfold and boolphas:
         raise Exception('If input horizontal axis is phase (boolphas is True), then it cannot be phase-folded (boolfold must be False).')
     
+    if boolfold:
+        if epoc is None or peri is None:
+            print('')
+            print('')
+            print('')
+            print('epoc')
+            print(epoc)
+            print('peri')
+            print(peri)
+            raise Exception('boolfold is True but epoc is None or peri is None')
+
     if boolphas or boolfold:
         typexdat = 'phas'
     else:
@@ -6818,7 +6831,11 @@ def plot_tser( \
     boollegd = False
     
     if boolfold:
-        arrypcur = fold_tser(arrylcur, epoc, peri)
+        if timedata is not None:
+            arrylcurdata = np.empty((timedata.size, 3))
+            arrylcurdata[:, 0] = timedata
+            arrylcurdata[:, 1] = tserdata
+            arrypcurdata = fold_tser(arrylcurdata, epoc, peri)
     
     if sizefigr is None:
         sizefigr = [8., 2.5]
@@ -6838,9 +6855,25 @@ def plot_tser( \
     if timedata is not None:
         axis.plot(timedata - xdatoffs, tserdata, color='gray', ls='', marker='o', ms=1, rasterized=True)
     
+        if tserdata.ndim != 1:
+            print('')
+            print('')
+            print('')
+            print('tserdata')
+            summgene(tserdata)
+            raise Exception('tserdata.ndim != 1')
+    
     # binned data
     if timedatabind is not None:
         axis.errorbar(timedatabind, tserdatabind, yerr=tserdatastdvbind, color='k', ls='', marker='o', ms=2)
+    
+        if tserdatabind.ndim != 1:
+            print('')
+            print('')
+            print('')
+            print('tserdatabind')
+            summgene(tserdatabind)
+            raise Exception('tserdatabind.ndim != 1')
     
     # model
     if dictmodl is not None:
@@ -6861,7 +6894,15 @@ def plot_tser( \
                 alpha = dictmodl[attr]['alph']
             else:
                 alpha = None
-                
+            
+            if dictmodl[attr]['lcur'].ndim != 1:
+                print('')
+                print('')
+                print('')
+                print('dictmodl[attr][lcur]')
+                summgene(dictmodl[attr]['lcur'])
+                raise Exception('dictmodl[attr][lcur].ndim != 1')
+
             if boolbrekmodl:
                 diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
                 
@@ -6889,16 +6930,13 @@ def plot_tser( \
                     label = None
     
         
-                
-                print('xdat[n]')
-                summgene(xdat[n])
-                print('xdat[n] - xdatoffs')
-                summgene(xdat[n] - xdatoffs)
-                print('ydat[n]')
-                summgene(ydat[n])
-                print('')
-                print('')
-                print('')
+                if boolfold:
+                    arrylcurmodl = np.empty((xdat[n].size, 3))
+                    arrylcurmodl[:, 0] = xdat[n]
+                    arrylcurmodl[:, 1] = ydat[n]
+                    arrypcurmodl = fold_tser(arrylcurmodl, epoc, peri)
+                    xdat[n] = arrylcurmodl[:, 0]
+                    #ydat[n] = arrylcurmodl[:, 0]
                 
                 xdattemp = xdat[n] - xdatoffs
                 
@@ -6962,59 +7000,6 @@ def plot_tser( \
     
     return path
 
-
-def plot_pser( \
-              pathvisu, \
-              arrypcur=None, \
-              arrypcurbind=None, \
-              arrylcur=None, \
-              phascent=0., \
-              ## file type of the plot
-              typefileplot='png', \
-              boolbind=True, \
-              booltime=False, \
-              numbbins=100, \
-              limtxdat=None, \
-             ):
-    
-    if arrypcurbind is None and boolbind:
-        arrypcurbind = rebn_tser(arrypcur, numbbins)
-    
-    # time on the horizontal axis
-    if booltime:
-        
-        # the factor to multiply the time axis and its label
-        facttime, lablunittime = retr_timeunitperi(peri)
-                        
-        xdat = arrypcur[:, 0] * peri * facttime
-        
-        lablxaxi = 'Time [%s]' % lablunittime
-        
-        if boolbind:
-            xdatbind = arrypcurbind[:, 0] * peri * fact
-    else:
-        lablxaxi = 'Phase'
-        xdat = arrypcur[:, 0]
-        if boolbind:
-            xdatbind = arrypcurbind[:, 0]
-    axis.set_xlabel(lablxaxi)
-    
-    axis.plot(xdat, arrypcur[:, 1], color='gray', alpha=0.2, marker='o', ls='', ms=0.5, rasterized=True)
-    if boolbind:
-        axis.plot(xdatbind, arrypcurbind[:, 1], color='k', marker='o', ls='', ms=2)
-    
-    axis.set_ylabel('Relative Flux')
-    
-    # adjust the x-axis limits
-    if limtxdat is not None:
-        axis.set_xlim(limtxdat)
-    
-    plt.subplots_adjust(hspace=0., bottom=0.25, left=0.25)
-    path = pathvisu + 'pcur%s.%s' % (strgextn, typefileplot)
-    print('Writing to %s...' % path)
-    plt.savefig(path)
-    plt.close()
-            
 
 def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5, booldiag=True):
     
@@ -7328,9 +7313,10 @@ def init( \
          lablener=None, \
          
          # TPF light curve extraction pipeline (FFIs are always extracted by lygos)
-         ## 'lygos': lygos
-         ## 'SPOC': SPOC
-         typelcurtpxftess='SPOC', \
+         ## 'lygos': always lygos
+         ## 'SPOC': SPOC whenever available, otherwise lygos
+         ## 'SPOC_only': SPOC only
+         typelcurtpxftess='lygos', \
          
          ## type of SPOC light curve: 'PDC', 'SAP'
          typedataspoc='PDC', \
@@ -8665,24 +8651,21 @@ def init( \
                     boollygo = np.ones(numbtsec, dtype=bool)
                     booltpxflygo = not gdat.boolffimonly
                     gdat.listtseclygo = gdat.listtsec
-                if gdat.typelcurtpxftess == 'SPOC':
+                elif gdat.typelcurtpxftess == 'SPOC':
                     boollygo = ~booltpxf
                     booltpxflygo = False
                     gdat.listtseclygo = gdat.listtsec[boollygo]
+                elif gdat.typelcurtpxftess == 'SPOC_only':
+                    boollygo = np.zeros_like(booltpxf, dtype=bool)
+                else:
+                    raise Exception('')
+
                 gdat.listtseclygo = gdat.listtsec[boollygo]
                 
-                print('boollygo')
-                print(boollygo)
-                print('gdat.boolffimonly')
-                print(gdat.boolffimonly)
-                print('booltpxflygo')
-                print(booltpxflygo)
-
-                if typeverb > 0:
-                    print('booltpxflygo')
-                    print(booltpxflygo)
-                    print('gdat.listtseclygo')
-                    print(gdat.listtseclygo)
+                if gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC':
+                    if typeverb > 0:
+                        print('booltpxflygo')
+                        print(booltpxflygo)
             
             gdat.dictlygooutp = None
 
@@ -9424,12 +9407,15 @@ def init( \
                         
                         gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
                         
-                        if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
-                            print('')
-                            print('')
-                            print('')
-                            raise Exception('The simulated time values are not sorted.'
-                            )
+                    if gdat.liststrgtypedata[b][p] == 'simutargpart':
+                        gdat.true.listtime[b][p] = gdat.listarrytser['raww'][b][p][y][:, 0]
+                    
+                    if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
+                        print('')
+                        print('')
+                        print('')
+                        raise Exception('The simulated time values are not sorted.')
+
                     if gdat.booldiag:
                         for y in gdat.indxchun[b][p]:
                             if len(gdat.true.listtime[b][p][y]) == 0:
@@ -9439,7 +9425,7 @@ def init( \
                                 print('gdat.liststrgtypedata[b][p]')
                                 print(gdat.liststrgtypedata[b][p])
                                 raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
-
+            
             gdat.time = gdat.true.time
             gdat.timeconc = [[] for b in gdat.indxdatatser]
             gdat.minmtimeconc = np.empty(gdat.numbdatatser)
@@ -9462,9 +9448,10 @@ def init( \
                     
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    for y in gdat.indxchun[b][p]:
-                        gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
-                        gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
+                    if gdat.liststrgtypedata[b][p] == 'simutargsynt':
+                        for y in gdat.indxchun[b][p]:
+                            gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
+                            gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
             
         if gdat.timeoffs is None:
             timeoffs = 0.

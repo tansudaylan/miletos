@@ -328,7 +328,9 @@ def cnfg_flare_simulated():
                           #rasctarg=rasctarg, \
                           #decltarg=decltarg, \
                           ticitarg=dicttic8['tici'][k], \
-                          
+                           
+                          typelcurtpxftess='SPOC_only', \
+
                           lablcnfg=lablcnfg, \
                           strgcnfg=strgcnfg, \
 
