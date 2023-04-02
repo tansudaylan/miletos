@@ -560,6 +560,9 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         summgene(dictlistmodl['blin'][0][p])
                         raise Exception('dictlistmodl[tran][0][p].ndim != dictlistmodl[blin][0][p]')
             
+            if gmod.typemodl == 'flar':
+                sgnl = dictlistmodl['flar'][0][p]
+            
             dictlistmodl['totl'][0][p] = sgnl + dictlistmodl['blin'][0][p] - 1.
             
     if gdat.booldiag:
@@ -4103,17 +4106,18 @@ def proc_modl(gdat, strgmodl, strgextn, r):
             gmod.listdictmlik.append(gdat.dictmlik)
 
     if gdat.boolplottser:
-        if ee < 10:
         
-            #timedata = gdat.timethisfitt
-            #lcurdata = gdat.rflxthisfitt[:, e]
-                
-            for b in gdat.indxdatatser:
-                #plot_modl(gdat, strgmodl, b, None, None, e)
-                for p in gdat.indxinst[b]:
-                    #plot_modl(gdat, strgmodl, b, p, None, e)
-                    for y in gdat.indxchun[b][p]:
-                        plot_modl(gdat, strgmodl, b, p, y, e)
+        #timedata = gdat.timethisfitt
+        #lcurdata = gdat.rflxthisfitt[:, e]
+            
+        for b in gdat.indxdatatser:
+            #plot_modl(gdat, strgmodl, b, None, None, e)
+            for p in gdat.indxinst[b]:
+                for e in gdat.indxener[p]:
+                    if e < 5:
+                        #plot_modl(gdat, strgmodl, b, p, None, e)
+                        for y in gdat.indxchun[b][p]:
+                            plot_modl(gdat, strgmodl, b, p, y, e)
 
 
 def plot_modl(gdat, strgmodl, b, p, y, e):
@@ -4126,7 +4130,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     else:
         time = gdat.timethisfitt[b][p]
         timefine = gdat.timethisfittfine[b][p]
-        tser = gdat.rflxthisfitt[b][p]
+        tser = gdat.rflxthisfitt[b][p][:, e]
     
     strg = 'b%03dp%03d' % (b, p)
     
@@ -4146,6 +4150,24 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
                 lcurtemp = gdat.dictmlik[namecompmodlextn][:, e]
             else:
                 lcurtemp = gmod.listdictmlik[e][namecompmodlextn][:, 0]
+        
+        if gdat.booldiag:
+            if timefine.size != lcurtemp.size:
+                print('')
+                print('')
+                print('')
+                print('gdat.typeinfe')
+                print(gdat.typeinfe)
+                print('gdat.fitt.typemodlenerfitt')
+                print(gdat.fitt.typemodlenerfitt)
+                print('namecompmodlextn')
+                print(namecompmodlextn)
+                print('lcurtemp')
+                summgene(lcurtemp)
+                print('timefine')
+                summgene(timefine)
+                raise Exception('timefine.size != lcurtemp.size')
+
         if namecompmodl == 'totl':
             colr = 'b'
             labl = 'Total Model'
@@ -4176,27 +4198,6 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     else:
         strglablinst = ''
     
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('strglablinst')
-    print(strglablinst)
-    print('gdat.listlablinst[b][p]')
-    print(gdat.listlablinst[b][p])
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    raise Exception('')
-
     if gdat.lablcnfg != '':
         lablcnfgtemp = ', %s' % gdat.lablcnfg
     else:
@@ -4209,15 +4210,29 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     else:
         strgtitl = '%s%s%s, %g micron' % (gdat.labltarg, strglablinst, lablcnfgtemp, gdat.listener[p][e-1])
     
-    pathplot = plot_tser(gdat.pathvisutarg, \
-                                 timedata=time, \
-                                 tserdata=tser, \
-                                 timeoffs=gdat.timeoffs, \
-                                 strgextn=strgextn, \
-                                 strgtitl=strgtitl, \
-                                 boolwritover=gdat.boolwritover, \
-                                 boolbrekmodl=gdat.boolbrekmodl, \
-                                 dictmodl=dictmodl)
+    if gdat.booldiag:
+        if tser.ndim != 1:
+            print('')
+            print('')
+            print('')
+            print('p')
+            print(p)
+            print('tser')
+            summgene(tser)
+            raise Exception('tser.ndim != 1')
+    
+    pathplot = plot_tser( \
+                         gdat.pathvisutarg, \
+                         timedata=time, \
+                         tserdata=tser, \
+                         timeoffs=gdat.timeoffs, \
+                         strgextn=strgextn, \
+                         strgtitl=strgtitl, \
+                         boolwritover=gdat.boolwritover, \
+                         boolbrekmodl=gdat.boolbrekmodl, \
+                         dictmodl=dictmodl, \
+                         booldiag=gdat.booldiag, \
+                        )
     
     # plot the posterior median residual
     strgextn = 'resipmed%s%s' % (gdat.strgcnfg, gdat.liststrgdataiter[e])
@@ -4231,6 +4246,16 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
             tserdatatemp = gdat.dictmlik['resi%s' % strg][:, e]
         else:
             tserdatatemp = gmod.listdictmlik[e]['resi%s' % strg][:, 0]
+    
+    if gdat.booldiag:
+        if tserdatatemp.ndim != 1:
+            print('')
+            print('')
+            print('')
+            print('tserdatatemp')
+            summgene(tserdatatemp)
+            raise Exception('tserdatatemp.ndim != 1')
+    
     pathplot = plot_tser(gdat.pathvisutarg, \
                                  timedata=time, \
                                  tserdata=tserdatatemp, \
@@ -4456,8 +4481,8 @@ def setp_modlbase(gdat, strgmodl, r=None):
         print(gmod.typemodllmdkterm)
 
     gmod.listnamecompmodl = ['blin']
-    #if gmod.typemodl == 'flar':
-    #    gmod.listnamecompmodl += ['flar']
+    if gmod.typemodl == 'flar':
+        gmod.listnamecompmodl += ['flar']
     if gmod.typemodl == 'cosc' or gmod.typemodl == 'psys' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
         gmod.listnamecompmodl += ['tran']
 
@@ -4687,7 +4712,13 @@ def setp_modlbase(gdat, strgmodl, r=None):
             setp_para(gdat, strgmodl, 'peri', gdat.pericompprio[j] - 0.01 * gdat.pericompprio[j], \
                                                     gdat.pericompprio[j] + 0.01 * gdat.pericompprio[j], None, strgcomp=strgcomp)
             
-            setp_para(gdat, strgmodl, 'epocmtra', np.amin(gdat.timeconc[0]), np.amax(gdat.timeconc[0]), None, strgcomp=strgcomp)
+            minmepocmtra = np.amin(gdat.timeconc[0])
+            maxmepocmtra = np.amax(gdat.timeconc[0])
+            print('minmepocmtra')
+            print(minmepocmtra)
+            print('maxmepocmtra')
+            print(maxmepocmtra)
+            setp_para(gdat, strgmodl, 'epocmtra', minmepocmtra, maxmepocmtra, None, strgcomp=strgcomp)
             setp_para(gdat, strgmodl, 'cosi', 0., 0.08, None, strgcomp=strgcomp)
             
             minmpara = 0.11
@@ -6945,6 +6976,25 @@ def plot_tser( \
                         raise Exception('')
                     xdattemp *= peri * facttime
                 
+                if booldiag:
+                    if xdattemp.size != ydat[n].size:
+                        print('')
+                        print('')
+                        print('')
+                        print('xdattemp')
+                        summgene(xdattemp)
+                        print('ydat[n]')
+                        summgene(ydat[n])
+                        print('boolfold')
+                        print(boolfold)
+                        print('attr')
+                        print(attr)
+                        print('numbchun')
+                        print(numbchun)
+                        print('boolbrekmodl')
+                        print(boolbrekmodl)
+                        raise Exception('xdattemp.size != ydat[n].size')
+                
                 axis.plot(xdattemp, ydat[n], color=color, lw=1, label=label, ls=ls, alpha=alpha)
             k += 1
     
@@ -7323,8 +7373,9 @@ def init( \
                   
          # type of data for each data kind, instrument, and chunk
          ## 'simutargsynt': simulated data on a synthetic target
-         ## 'simutargpart': simulated data on a particular target with a particular observational baseline 
-         ## 'obsd': observed (particular) target
+         ## 'simutargpartsynt': simulated synthetic data on a particular target with a particular observational baseline 
+         ## 'simutargpartinje': simulated data obtained by injecting a synthetic signal on observed data on a particular target with a particular observational baseline 
+         ## 'obsd': observed data on a particular target
          liststrgtypedata=None, \
 
          ## list of labels indicating instruments
@@ -9383,7 +9434,7 @@ def init( \
             gdat.true.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    if gdat.liststrgtypedata[b][p] == 'simutargsynt':
+                    if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                         for y in gdat.indxchun[b][p]:
                             if gdat.liststrginst[b][p] == 'TESS':
                                 cade = 200. / 60. # [min]
@@ -9407,25 +9458,26 @@ def init( \
                         
                         gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
                         
-                    if gdat.liststrgtypedata[b][p] == 'simutargpart':
-                        gdat.true.listtime[b][p] = gdat.listarrytser['raww'][b][p][y][:, 0]
-                    
-                    if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
-                        print('')
-                        print('')
-                        print('')
-                        raise Exception('The simulated time values are not sorted.')
+                        if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
+                            print('')
+                            print('')
+                            print('')
+                            raise Exception('The simulated time values are not sorted.')
 
-                    if gdat.booldiag:
-                        for y in gdat.indxchun[b][p]:
-                            if len(gdat.true.listtime[b][p][y]) == 0:
-                                print('')
-                                print('')
-                                print('')
-                                print('gdat.liststrgtypedata[b][p]')
-                                print(gdat.liststrgtypedata[b][p])
-                                raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
+                        if gdat.booldiag:
+                            for y in gdat.indxchun[b][p]:
+                                if len(gdat.true.listtime[b][p][y]) == 0:
+                                    print('')
+                                    print('')
+                                    print('')
+                                    print('gdat.liststrgtypedata[b][p]')
+                                    print(gdat.liststrgtypedata[b][p])
+                                    raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
             
+                    # to be deleted
+                    #if gdat.liststrgtypedata[b][p] == 'simutargpart':
+                    #    gdat.true.listtime[b][p] = gdat.listarrytser['raww'][b][p][y][:, 0]
+                    
             gdat.time = gdat.true.time
             gdat.timeconc = [[] for b in gdat.indxdatatser]
             gdat.minmtimeconc = np.empty(gdat.numbdatatser)
@@ -9503,28 +9555,43 @@ def init( \
                 dictrflx = retr_rflxmodl_mile_gpro(gdat, 'true', gdat.true.time, dictparainpt)
                 gdat.true.dictrflxmodl['blin'] = dictrflx['blin']
 
-            # generate flux data
+            # generate data and its uncertainty
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for y in gdat.indxchun[b][p]:
                         
-                        # noise per cadence
-                        if gdat.liststrginst[b][p].startswith('LSST'):
-                            magt = getattr(gdat, '%smagsyst' % gdat.liststrginst[b][p][-1])
-                            nois = nicomedia.retr_noislsst(magt) # [ppt]
-                        elif gdat.liststrginst[b][p].startswith('TESS'):
-                            nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
-                        else:
-                            raise Exception('')
+                        if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
+                            gdat.listarrytser['raww'][b][p][y][:, :, 1] += gdat.true.dictmodl['totl'][0][p][y]
+                            gdat.true.listtime[b][p][y] = gdat.listarrytser['raww'][b][p][y][:, :, 0] 
                         
-                        gdat.listarrytser['raww'][b][p][y][:, :, 2] = 1e-3 * nois
-                        
-                        if gdat.numbener[p] == 1:
-                            gdat.listarrytser['raww'][b][p][y][:, 0, 1] = gdat.true.dictmodl['totl'][0][p][y]
-                        else:
-                            gdat.listarrytser['raww'][b][p][y][:, :, 1] = gdat.true.dictmodl['totl'][0][p][y]
+                        if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
+
+                            # noise per cadence
+                            if gdat.liststrginst[b][p].startswith('LSST'):
+                                magt = getattr(gdat, '%smagsyst' % gdat.liststrginst[b][p][-1])
+                                nois = nicomedia.retr_noislsst(magt) # [ppt]
+                            elif gdat.liststrginst[b][p].startswith('TESS'):
+                                if gdat.booldiag:
+                                    if gdat.tmagsyst is None:
+                                        print('')
+                                        print('')
+                                        print('')
+                                        print('gdat.tmagsyst')
+                                        print(gdat.tmagsyst)
+                                        raise Exception('When synthetic TESS data is being generated, tmagsyst should not be None.')
+                                nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
+                            else:
+                                raise Exception('')
                             
-                        gdat.listarrytser['raww'][b][p][y][:, :, 1] += \
+                            gdat.listarrytser['raww'][b][p][y][:, :, 2] = 1e-3 * nois
+                        
+                            if gdat.numbener[p] == 1:
+                                gdat.listarrytser['raww'][b][p][y][:, 0, 1] = gdat.true.dictmodl['totl'][0][p][y]
+                            else:
+                                gdat.listarrytser['raww'][b][p][y][:, :, 1] = gdat.true.dictmodl['totl'][0][p][y]
+                        
+                            # add noise to the synthetic data
+                            gdat.listarrytser['raww'][b][p][y][:, :, 1] += \
                                  np.random.randn(gdat.true.listtime[b][p][y].size * gdat.numbener[p]).reshape((gdat.true.listtime[b][p][y].size, gdat.numbener[p])) * \
                                                                                                                             gdat.listarrytser['raww'][b][p][y][:, :, 2]
         else:
@@ -10281,13 +10348,6 @@ def init( \
         # add pbox plots to the DV report
         if gdat.boolsrchpbox and gdat.boolplot:
             for p in gdat.indxinst[0]:
-                
-                print('HACKINGGGGGG')
-                print('HACKINGGGGGG')
-                print('HACKINGGGGGG')
-                print('HACKINGGGGGG')
-                continue
-
                 for g, name in enumerate(['sigr', 'resisigr', 'stdvresisigr', 'sdeecomp', 'pcur', 'rflx']):
                     for j in range(len(dictpboxoutp['epocmtracomp'])):
                         gdat.listdictdvrp[j+1].append({'path': dictpboxoutp['listpathplot%s' % name][j], 'limt':[0., 0.9 - g * 0.1, 0.5, 0.1]})

@@ -217,7 +217,7 @@ def cnfg_TRAPPIST1():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
-    liststrgtypedata = [['simutargpart'], []]
+    liststrgtypedata = [['simutargpartinje'], []]
     liststrgtypedata = None
     
     #liststrgexpr = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
@@ -247,7 +247,7 @@ def cnfg_WASP18():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psysttvr'
     
-    liststrgtypedata = [['simutargpart'], []]
+    liststrgtypedata = [['simutargpartinje'], []]
     miletos.main.init( \
                    strgmast='WASP-18', \
                    #boolplotpopl=True, \
@@ -277,7 +277,7 @@ def cnfg_WASP121():
 
 def cnfg_WASP43():
     
-    liststrgtypedata = [['simutargpart'], []]
+    liststrgtypedata = [['simutargpartinje'], []]
     
     dicttrue = dict()
     dicttrue['typemodl'] = 'psyspcur'
@@ -306,7 +306,7 @@ def cnfg_flare_simulated():
         if a == 0:
             lablcnfg = 'Simulated'
             strgcnfg = 'simu'
-            liststrgtypedata = [['simutargpart'], []]
+            liststrgtypedata = [['simutargpartsynt'], []]
             dicttrue = dict()
             dicttrue['typemodl'] = 'flar'
         else:
@@ -333,6 +333,8 @@ def cnfg_flare_simulated():
 
                           lablcnfg=lablcnfg, \
                           strgcnfg=strgcnfg, \
+                          
+                          tmagsyst=dicttic8['tmag'][k], \
 
                           dictfitt=dictfitt, \
                           dicttrue=dicttrue, \
@@ -358,7 +360,7 @@ def cnfg_ATEL15755():
         if a == 0:
             lablcnfg = 'Simulated'
             strgcnfg = 'simu'
-            liststrgtypedata = [['simutargpart'], []]
+            liststrgtypedata = [['simutargpartinje'], []]
             dicttrue = dict()
             dicttrue['typemodl'] = 'flar'
         else:
