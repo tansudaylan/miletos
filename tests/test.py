@@ -330,6 +330,8 @@ def cnfg_flare_simulated():
                           ticitarg=dicttic8['tici'][k], \
                            
                           typelcurtpxftess='SPOC_only', \
+                        
+                          strgclus='SimulatedFlares', \
 
                           lablcnfg=lablcnfg, \
                           strgcnfg=strgcnfg, \

@@ -339,8 +339,12 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 
                 if indxtime.size > 0:
                     rflxmodl[indxtime, 0, kk] = amplflar * np.exp(-(time[0][p][indxtime] - timeflar) / tsclflar)
-                
-            dictlistmodl['flar'][0][p] = np.sum(rflxmodl, -1)
+            
+            print('rflxmodl')
+            summgene(rflxmodl)
+            raise Exception('')
+
+            dictlistmodl['flar'][0][p] = 1. + np.sum(rflxmodl, -1)
             #dictlistmodl['sgnl'][0][p] = np.sum(rflxmodl, -1)
     
     timeredu = None
@@ -856,8 +860,18 @@ def retr_dictderi_mile(para, gdat):
                 
                 dictmodlfine['totl'] += dictrflx['totl'] - 1.
                 dictmodl['totl'] += dictrflxfine['totl'] - 1.
-    
+            
             for namecompmodl in gmod.listnamecompmodl:
+                
+                print('retr_dictderi_mile()')
+                print('namecompmodl')
+                print(namecompmodl)
+                print('dictmodlfine[namecompmodl][b][p]')
+                summgene(dictmodlfine[namecompmodl][b][p])
+                print('')
+                print('')
+                print('')
+                
                 dictvarbderi['modlfine%s%s' % (namecompmodl, strg)] = dictmodlfine[namecompmodl][b][p]
                 
                 if gdat.booldiag:
@@ -3596,6 +3610,8 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
                                   gdat.listarrytser['bdtrlowr'][b][p][y][:, 0, 1], \
                                   gdat.listarrytser['bdtruppr'][b][p][y][:, 0, 1], \
                                   color='c', alpha=0.2, rasterized=True)
+                print('gdat.thrsrflxflar[p][y]')
+                print(gdat.thrsrflxflar[p][y])
                 axis.axhline(gdat.thrsrflxflar[p][y], ls='--', alpha=0.5, color='r')
             
         axis.set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
@@ -4156,6 +4172,8 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
                 print('')
                 print('')
                 print('')
+                print('p')
+                print(p)
                 print('gdat.typeinfe')
                 print(gdat.typeinfe)
                 print('gdat.fitt.typemodlenerfitt')
@@ -7403,7 +7421,7 @@ def init( \
          ## list of types of analyses for time series data
          ### 'pdim': search for periodic dimmings
          ### 'pinc': search for periodic increases
-         ### 'lspe': search for sinusoid variability
+         ### 'lspe': search for sinusoidal variability
          ### 'mfil': matched filter
          listtypeanls=None, \
          
@@ -8143,7 +8161,7 @@ def init( \
         print(gdat.strgtarg)
     
     # check if the run has been completed before
-    path = gdat.pathdatatarg + 'dictmileoutp.pickle'
+    path = gdat.pathdatatarg + 'dict_miletos_output.pickle'
     if not gdat.boolwritover and os.path.exists(path):
         
         if gdat.typeverb > 0:
@@ -8763,7 +8781,7 @@ def init( \
                         print(gdat.listtsecspoc)
                         print('gdat.listarrylcurmast[p]')
                         print(gdat.listarrylcurmast[p])
-                        raise Exception('lenght of gdat.listarrylcurmast[p] and gdat.listtsecspoc should be the same.')
+                        raise Exception('length of gdat.listarrylcurmast[p] and gdat.listtsecspoc should be the same.')
 
                 for o, tseclygo in enumerate(gdat.listtsecspoc):
                     indx = np.where(gdat.dictlygooutp['listtsec'][0] == tseclygo)[0]
@@ -8972,11 +8990,14 @@ def init( \
     
         ## list of analysis types
         if gdat.listtypeanls is None:
-            gdat.listtypeanls = ['lspe']
-            if gdat.boolinfe and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur') and gdat.typepriocomp == 'pdim':
-                gdat.listtypeanls += ['pdim']
-            if gdat.boolinfe and gdat.fitt.typemodl == 'cosc':
-                gdat.listtypeanls += ['pinc']
+            gdat.listtypeanls = []
+            if gdat.boolinfe:
+                if (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur') and gdat.typepriocomp == 'pdim':
+                    gdat.listtypeanls += ['pdim']
+                if gdat.fitt.typemodl == 'cosc':
+                    gdat.listtypeanls += ['pinc']
+                if gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'spot':
+                    gdat.listtypeanls += ['lspe']
 
         if gdat.typeverb > 0:
             print('List of analysis types: %s' % gdat.listtypeanls)
@@ -9500,7 +9521,7 @@ def init( \
                     
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    if gdat.liststrgtypedata[b][p] == 'simutargsynt':
+                    if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                         for y in gdat.indxchun[b][p]:
                             gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
                             gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
@@ -9589,7 +9610,18 @@ def init( \
                                 gdat.listarrytser['raww'][b][p][y][:, 0, 1] = gdat.true.dictmodl['totl'][0][p][y]
                             else:
                                 gdat.listarrytser['raww'][b][p][y][:, :, 1] = gdat.true.dictmodl['totl'][0][p][y]
-                        
+                            
+                            if gdat.booldiag:
+                                if gdat.listarrytser['raww'][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size:
+                                    print('')
+                                    print('')
+                                    print('')
+                                    print('gdat.listarrytser[raww][b][p][y][:, :, 1]')
+                                    summgene(gdat.listarrytser['raww'][b][p][y][:, :, 1])
+                                    print('(gdat.true.listtime[b][p][y].size, gdat.numbener[p])')
+                                    print((gdat.true.listtime[b][p][y].size, gdat.numbener[p]))
+                                    raise Exception('gdat.listarrytser[raww][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size')
+                            
                             # add noise to the synthetic data
                             gdat.listarrytser['raww'][b][p][y][:, :, 1] += \
                                  np.random.randn(gdat.true.listtime[b][p][y].size * gdat.numbener[p]).reshape((gdat.true.listtime[b][p][y].size, gdat.numbener[p])) * \
@@ -10830,69 +10862,71 @@ def init( \
         #    gdat.arrytserdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrytser['bdtr'][b][p][y][:, 1])
         #gdat.arrytserdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrytser['bdtr'][b][p][y][:, 1])
         
-        ## phase-fold and save the baseline-detrended light curve
-        gdat.numbbinspcurtotl = 100
-        gdat.delttimebindzoom = gdat.duraprio / 24. / 50.
-        gdat.arrypcur = dict()
+        if gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'cosc':
+        ## number of bins in the phase curve
+            gdat.numbbinspcurtotl = 100
+        
+            gdat.delttimebindzoom = gdat.duraprio / 24. / 50.
+            gdat.arrypcur = dict()
 
-        gdat.arrypcur['quadbdtr'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['quadbdtrbindtotl'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['primbdtr'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['primbdtrbindtotl'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrypcur['primbdtrbindzoom'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.liststrgpcur = ['bdtr', 'resi', 'modl']
-        gdat.liststrgpcurcomp = ['modltotl', 'modlstel', 'modlplan', 'modlelli', 'modlpmod', 'modlnigh', 'modlbeam', 'bdtrplan']
-        gdat.binsphasprimtotl = np.linspace(-0.5, 0.5, gdat.numbbinspcurtotl + 1)
-        gdat.binsphasquadtotl = np.linspace(-0.25, 0.75, gdat.numbbinspcurtotl + 1)
-        gdat.numbbinspcurzoom = (gdat.pericompprio / gdat.delttimebindzoom).astype(int)
-        gdat.binsphasprimzoom = [[] for j in gdat.indxcompprio]
-        for j in gdat.indxcompprio:
-            if np.isfinite(gdat.duraprio[j]):
-                gdat.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gdat.numbbinspcurzoom[j] + 1)
+            gdat.arrypcur['quadbdtr'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrypcur['quadbdtrbindtotl'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrypcur['primbdtr'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrypcur['primbdtrbindtotl'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.arrypcur['primbdtrbindzoom'] = [[[[] for j in gdat.indxcompprio] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+            gdat.liststrgpcur = ['bdtr', 'resi', 'modl']
+            gdat.liststrgpcurcomp = ['modltotl', 'modlstel', 'modlplan', 'modlelli', 'modlpmod', 'modlnigh', 'modlbeam', 'bdtrplan']
+            gdat.binsphasprimtotl = np.linspace(-0.5, 0.5, gdat.numbbinspcurtotl + 1)
+            gdat.binsphasquadtotl = np.linspace(-0.25, 0.75, gdat.numbbinspcurtotl + 1)
+            gdat.numbbinspcurzoom = (gdat.pericompprio / gdat.delttimebindzoom).astype(int)
+            gdat.binsphasprimzoom = [[] for j in gdat.indxcompprio]
+            for j in gdat.indxcompprio:
+                if np.isfinite(gdat.duraprio[j]):
+                    gdat.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gdat.numbbinspcurzoom[j] + 1)
 
-        if gdat.typeverb > 0:
-            print('Phase folding and binning the light curve...')
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                for j in gdat.indxcompprio:
+            if gdat.typeverb > 0:
+                print('Phase folding and binning the light curve...')
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    for j in gdat.indxcompprio:
 
-                    gdat.arrypcur['primbdtr'][b][p][j] = fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :, :], \
-                                                                                                            gdat.epocmtracompprio[j], gdat.pericompprio[j])
+                        gdat.arrypcur['primbdtr'][b][p][j] = fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :, :], \
+                                                                                                                gdat.epocmtracompprio[j], gdat.pericompprio[j])
+                        
+                        if gdat.arrypcur['primbdtr'][b][p][j].ndim > 3:
+                            print('')
+                            print('')
+                            print('')
+                            print('gdat.arrytser[bdtr][b][p][gdat.listindxtimeclen[j][b][p], :, :]')
+                            summgene(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :, :])
+                            print('gdat.arrypcur[primbdtr][b][p][j]')
+                            summgene(gdat.arrypcur['primbdtr'][b][p][j])
+                            raise Exception('gdat.arrypcur[primbdtr][b][p][j].ndim > 3')
                     
-                    if gdat.arrypcur['primbdtr'][b][p][j].ndim > 3:
-                        print('')
-                        print('')
-                        print('')
-                        print('gdat.arrytser[bdtr][b][p][gdat.listindxtimeclen[j][b][p], :, :]')
-                        summgene(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :, :])
-                        print('gdat.arrypcur[primbdtr][b][p][j]')
-                        summgene(gdat.arrypcur['primbdtr'][b][p][j])
-                        raise Exception('gdat.arrypcur[primbdtr][b][p][j].ndim > 3')
-                
-                    gdat.arrypcur['primbdtrbindtotl'][b][p][j] = rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
-                                                                                                        blimxdat=gdat.binsphasprimtotl)
+                        gdat.arrypcur['primbdtrbindtotl'][b][p][j] = rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
+                                                                                                            blimxdat=gdat.binsphasprimtotl)
+                        
+                        if np.isfinite(gdat.duraprio[j]):
+                            gdat.arrypcur['primbdtrbindzoom'][b][p][j] = rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
+                                                                                                            blimxdat=gdat.binsphasprimzoom[j])
+                        
+                        gdat.arrypcur['quadbdtr'][b][p][j] = fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :, :], \
+                                                                                                gdat.epocmtracompprio[j], gdat.pericompprio[j], phasshft=0.25)
+                        
+                        gdat.arrypcur['quadbdtrbindtotl'][b][p][j] = rebn_tser(gdat.arrypcur['quadbdtr'][b][p][j], \
+                                                                                                            blimxdat=gdat.binsphasquadtotl)
+                        
+                        for e in gdat.indxener[p]:
+                            path = gdat.pathdatatarg + 'arrypcurprimbdtrbind_%s_%s_%s.csv' % (gdat.liststrgener[p][e], gdat.liststrgcomp[j], gdat.liststrginst[b][p])
+                            if not os.path.exists(path):
+                                temp = np.copy(gdat.arrypcur['primbdtrbindtotl'][b][p][j][:, e, :])
+                                temp[:, 0] *= gdat.pericompprio[j]
+                                if gdat.typeverb > 0:
+                                    print('Writing to %s...' % path)
+                                np.savetxt(path, temp, delimiter=',', header='phase,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
                     
-                    if np.isfinite(gdat.duraprio[j]):
-                        gdat.arrypcur['primbdtrbindzoom'][b][p][j] = rebn_tser(gdat.arrypcur['primbdtr'][b][p][j], \
-                                                                                                        blimxdat=gdat.binsphasprimzoom[j])
-                    
-                    gdat.arrypcur['quadbdtr'][b][p][j] = fold_tser(gdat.arrytser['bdtr'][b][p][gdat.listindxtimeclen[j][b][p], :, :], \
-                                                                                            gdat.epocmtracompprio[j], gdat.pericompprio[j], phasshft=0.25)
-                    
-                    gdat.arrypcur['quadbdtrbindtotl'][b][p][j] = rebn_tser(gdat.arrypcur['quadbdtr'][b][p][j], \
-                                                                                                        blimxdat=gdat.binsphasquadtotl)
-                    
-                    for e in gdat.indxener[p]:
-                        path = gdat.pathdatatarg + 'arrypcurprimbdtrbind_%s_%s_%s.csv' % (gdat.liststrgener[p][e], gdat.liststrgcomp[j], gdat.liststrginst[b][p])
-                        if not os.path.exists(path):
-                            temp = np.copy(gdat.arrypcur['primbdtrbindtotl'][b][p][j][:, e, :])
-                            temp[:, 0] *= gdat.pericompprio[j]
-                            if gdat.typeverb > 0:
-                                print('Writing to %s...' % path)
-                            np.savetxt(path, temp, delimiter=',', header='phase,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
-                
-        if gdat.boolplot:
-            plot_pser(gdat, strgmodl, 'primbdtr')
+            if gdat.boolplot:
+                plot_pser(gdat, strgmodl, 'primbdtr')
     
     gdat.numbsamp = 10
 
@@ -11287,7 +11321,7 @@ def init( \
             #    plt.close()
 
 
-    path = gdat.pathdatatarg + 'dictmileoutp.pickle'
+    path = gdat.pathdatatarg + 'dict_miletos_output.pickle'
     if gdat.typeverb > 0:
         print('Writing to %s...' % path)
     
@@ -11322,7 +11356,7 @@ def init( \
         gdat.dictmileoutp['listpathdvrp'] = listpathdvrp
 
     # write the output dictionary to target file
-    path = gdat.pathdatatarg + 'mileoutp.csv'
+    path = gdat.pathdatatarg + 'miletos_output.csv'
     objtfile = open(path, 'w')
     k = 0
     for name, valu in gdat.dictmileoutp.items():
@@ -11340,7 +11374,7 @@ def init( \
     
     # write the output dictionary to the cluster file
     if gdat.strgclus is not None:
-        path = gdat.pathdataclus + 'mileoutp.csv'
+        path = gdat.pathdataclus + 'miletos_cluster_output.csv'
         boolappe = True
         if os.path.exists(path):
             print('Reading from %s...' % path)
