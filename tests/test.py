@@ -306,7 +306,7 @@ def cnfg_flare_simulated():
         if a == 0:
             lablcnfg = 'Simulated'
             strgcnfg = 'simu'
-            liststrgtypedata = [['simutargpartsynt'], []]
+            liststrgtypedata = [['simutargpartinje'], []]
             dicttrue = dict()
             dicttrue['typemodl'] = 'flar'
         else:

@@ -301,6 +301,19 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     
     gmod = getattr(gdat, strgmodl)
     
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if time[b][p].ndim != 1:
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    print('time[b][p]')
+                    summgene(time[b][p])
+                    raise Exception('time[b][p].ndim != 1')
+
     dictlistmodl = dict()
     for name in gmod.listnamecompmodl:
         dictlistmodl[name] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -315,8 +328,14 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 timeflar = dictparainpt['timeflar%s' % strgflar]
                 amplflar = dictparainpt['amplflar%s' % strgflar]
                 tsclflar = dictparainpt['tsclflar%s' % strgflar]
-
-                indxtime = np.where((time[0][p] - timeflar < 10 * tsclflar / 24.) & (timeflar - time[0][p] > -3 * tsclflar / 24.))[0]
+                
+                timediff = time[0][p] - timeflar
+                print('np.where(timediff < 10 * tsclflar / 24.)[0]')
+                summgene(np.where(timediff < 10 * tsclflar / 24.)[0])
+                print('np.where(timediff > 0)[0]')
+                summgene(np.where(timediff > 0)[0])
+                #indxtime = np.where((timediff < 10 * tsclflar / 24.) & (timediff > -3 * tsclflar / 24.))[0]
+                indxtime = np.where((timediff < 10 * tsclflar / 24.) & (timediff > 0))[0]
                 
                 # to be deleted
                 #if indxtime.size == 0:
@@ -327,8 +346,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 #    print(timeflar)
                 #    print('amplflar')
                 #    print(amplflar)
-                #    print('tsclflar')
-                #    print(tsclflar)
                 #    print('indxtime')
                 #    summgene(indxtime)
                 #    print('rflxmodl')
@@ -337,12 +354,22 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 #    summgene(time[0][p])
                 #    raise Exception('')
                 
+                print('indxtime')
+                summgene(indxtime)
+                print('tsclflar')
+                print(tsclflar)
+                print('timeflar')
+                print(timeflar)
+                print('time[0][p]')
+                summgene(time[0][p])
+                print('time[0][p][indxtime]')
+                summgene(time[0][p][indxtime])
                 if indxtime.size > 0:
-                    rflxmodl[indxtime, 0, kk] = amplflar * np.exp(-(time[0][p][indxtime] - timeflar) / tsclflar)
+                    rflxmodl[indxtime, 0, kk] = amplflar * np.exp(-(time[0][p][indxtime] - timeflar) / (tsclflar / 24.))
             
-            print('rflxmodl')
-            summgene(rflxmodl)
-            raise Exception('')
+            #print('rflxmodl')
+            #summgene(rflxmodl)
+            #raise Exception('')
 
             dictlistmodl['flar'][0][p] = 1. + np.sum(rflxmodl, -1)
             #dictlistmodl['sgnl'][0][p] = np.sum(rflxmodl, -1)
@@ -3601,7 +3628,7 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
                 ydat = axis.get_ylim()[1]
                 for kk in range(len(gdat.listindxtimeflar[p][y])):
                     ms = 0.5 * gdat.listmdetflar[p][y][kk]
-                    axis.plot(arrytser[gdat.listindxtimeflar[p][y][kk], 0] - gdat.timeoffs, ydat, marker='v', color='b', ms=ms, rasterized=True)
+                    axis.plot(arrytser[gdat.listindxtimeflar[p][y][kk], 0, 0] - gdat.timeoffs, ydat, marker='v', color='b', ms=ms, rasterized=True)
                 axis.plot(gdat.listarrytser['bdtrmedi'][b][p][y][:, 0, 0] - gdat.timeoffs, \
                           gdat.listarrytser['bdtrmedi'][b][p][y][:, 0, 1], \
                           color='g', marker='.', ls='', ms=1, rasterized=True)
@@ -4018,6 +4045,7 @@ def proc_modl(gdat, strgmodl, strgextn, r):
     gdat.thisstrgmodl = 'fitt'
     # run the sampler
     if gdat.typeinfe == 'samp':
+        print('Will call tdpy.samp()...')
         gdat.dictsamp = tdpy.samp(gdat, \
                                   gdat.numbsampwalk, \
                                   retr_llik_mile, \
@@ -4033,7 +4061,58 @@ def proc_modl(gdat, strgmodl, strgextn, r):
         gdat.numbsamp = gdat.dictsamp['lpos'].size
         gdat.indxsamp = np.arange(gdat.numbsamp)
         gdat.numbsampplot = min(10, gdat.numbsamp)
-            
+        
+        if gdat.booldiag:
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    strg = 'b%03dp%03d' % (b, p)
+                    for e in gdat.indxener[p]:
+                    
+                        strgextn = 'pmed%s%s' % (gdat.strgcnfg, gdat.liststrgdataiter[e])
+                        for namecompmodl in gmod.listnamecompmodl:
+                            namecompmodlextn = 'modlfine%s%s' % (namecompmodl, strg)
+                            if gdat.typeinfe == 'samp':
+                                if gdat.fitt.typemodlenerfitt == 'full':
+                                    lcurtemp = np.median(gdat.dictsamp[namecompmodlextn][:, :, e], 0)
+                                else:
+                                    print('len(gmod.listdictsamp)')
+                                    print(len(gmod.listdictsamp))
+                                    print('e')
+                                    print(e)
+                                    lcurtemp = np.median(gmod.listdictsamp[e][namecompmodlextn][:, :, 0], 0)
+                                strgtitl = 'Posterior median model'
+                            else:
+                                if gdat.fitt.typemodlenerfitt == 'full':
+                                    lcurtemp = gdat.dictmlik[namecompmodlextn][:, e]
+                                else:
+                                    lcurtemp = gmod.listdictmlik[e][namecompmodlextn][:, 0]
+                            
+                        if p is None:
+                            time = gdat.timethisfittconc[b]
+                            timefine = gdat.timethisfittfineconc[b]
+                        else:
+                            time = gdat.timethisfitt[b][p]
+                            timefine = gdat.timethisfittfine[b][p]
+                            tser = gdat.rflxthisfitt[b][p][:, e]
+    
+                            if timefine.size != lcurtemp.size:
+                                print('')
+                                print('')
+                                print('')
+                                print('p')
+                                print(p)
+                                print('gdat.typeinfe')
+                                print(gdat.typeinfe)
+                                print('gdat.fitt.typemodlenerfitt')
+                                print(gdat.fitt.typemodlenerfitt)
+                                print('namecompmodlextn')
+                                print(namecompmodlextn)
+                                print('lcurtemp')
+                                summgene(lcurtemp)
+                                print('timefine')
+                                summgene(timefine)
+                                raise Exception('timefine.size != lcurtemp.size')
+
     if gdat.typeinfe == 'opti':
         
         bounds = [[] for kk in range(gmod.listminmpara.size)]
@@ -4189,15 +4268,15 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
         if namecompmodl == 'totl':
             colr = 'b'
             labl = 'Total Model'
-        elif namecompmodl == 'sgnl':
-            colr = 'g'
-            labl = 'Signal'
         elif namecompmodl == 'blin':
             colr = 'orange'
             labl = 'Baseline'
         elif namecompmodl == 'tran':
             colr = 'r'
             labl = 'Transit'
+        elif namecompmodl == 'flar':
+            colr = 'g'
+            labl = 'Flares'
         elif namecompmodl == 'supn':
             colr = 'm'
             labl = 'Supernova'
@@ -4317,7 +4396,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
             dictmodl[namevarbsamp]['alph'] = 0.2
         pathplot = plot_tser(gdat.pathvisutarg, \
                                      timedata=gdat.timethisfitt[b][p], \
-                                     tserdata=gdat.rflxthisfitt[b][p], \
+                                     tserdata=gdat.rflxthisfitt[b][p][:, e], \
                                      timeoffs=gdat.timeoffs, \
                                      strgextn=strgextn, \
                                      boolwritover=gdat.boolwritover, \
@@ -4338,17 +4417,20 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
                 colr = 'b'
                 labl = 'Total Model'
             elif namecompmodl == 'blin':
-                colr = 'g'
+                colr = 'orange'
                 labl = 'Baseline'
-            elif namecompmodl == 'supn':
+            elif namecompmodl == 'tran':
                 colr = 'r'
+                labl = 'Transit'
+            elif namecompmodl == 'flar':
+                colr = 'g'
+                labl = 'Flares'
+            elif namecompmodl == 'supn':
+                colr = 'm'
                 labl = 'Supernova'
             elif namecompmodl == 'excs':
-                colr = 'orange'
+                colr = 'olive'
                 labl = 'Excess'
-            elif namecompmodl == 'sgnl':
-                colr = 'b'
-                labl = 'Signal'
             else:
                 print('')
                 print('namecompmodl')
@@ -4371,7 +4453,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
         pathplot = plot_tser(gdat.pathvisutarg, \
                                      timedata=gdat.timethisfitt[b][p], \
                                      timeoffs=gdat.timeoffs, \
-                                     tserdata=gdat.rflxthisfitt[b][p], \
+                                     tserdata=gdat.rflxthisfitt[b][p][:, e], \
                                      strgextn=strgextn, \
                                      boolwritover=gdat.boolwritover, \
                                      strgtitl=strgtitl, \
@@ -4618,7 +4700,7 @@ def setp_modlbase(gdat, strgmodl, r=None):
         gmod.indxflar = np.arange(gmod.numbflar)
         for k in gmod.indxflar:
             setp_para(gdat, strgmodl, 'amplflar%04d' % k, 0., 0.15, ['$A_{%d}$' % k, ''])
-            setp_para(gdat, strgmodl, 'tsclflar%04d' % k, 0., 12., ['$t_{s,%d}$' % k, 'hour'])
+            setp_para(gdat, strgmodl, 'tsclflar%04d' % k, 0., 2., ['$t_{s,%d}$' % k, 'hour'])
             setp_para(gdat, strgmodl, 'timeflar%04d' % k, 0., 0.15, ['$t_{f,%d}$' % k, 'day'])
 
     if strgmodl == 'true':
@@ -5643,7 +5725,7 @@ def srch_pbox(arry, \
 
                     dictoutp = ephesos.eval_modl(timemodlplot, typesyst='psys', pericomp=pericomp, epocmtracomp=epocmtracomp, \
                                                                                                         rsmacomp=rsmacomp, cosicomp=cosicomp, rratcomp=rratcomp)
-                    dictpboxinte['rflxtsermodl'] = dictoutp['rflx']
+                    dictpboxinte['rflxtsermodl'] = dictoutp['rflx'][:, 0]
                     
                     arrymetamodl = np.zeros((numbtimeplot, 3))
                     arrymetamodl[:, 0] = timemodlplot
@@ -9450,7 +9532,6 @@ def init( \
         
         ## simulated data
         if gdat.boolsimurflx:
-
             gdat.true.listtime = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             gdat.true.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
             for b in gdat.indxdatatser:
@@ -9477,28 +9558,28 @@ def init( \
                                 print(gdat.liststrginst[b][p])
                                 raise Exception('')
                         
-                        gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
+                    if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
+                        for y in gdat.indxchun[b][p]:
+                            gdat.true.listtime[b][p][y] = gdat.listarrytser['raww'][b][p][y][:, 0, 0] 
                         
-                        if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
-                            print('')
-                            print('')
-                            print('')
-                            raise Exception('The simulated time values are not sorted.')
-
-                        if gdat.booldiag:
-                            for y in gdat.indxchun[b][p]:
-                                if len(gdat.true.listtime[b][p][y]) == 0:
-                                    print('')
-                                    print('')
-                                    print('')
-                                    print('gdat.liststrgtypedata[b][p]')
-                                    print(gdat.liststrgtypedata[b][p])
-                                    raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
-            
-                    # to be deleted
-                    #if gdat.liststrgtypedata[b][p] == 'simutargpart':
-                    #    gdat.true.listtime[b][p] = gdat.listarrytser['raww'][b][p][y][:, 0]
+                    gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
                     
+                    if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
+                        print('')
+                        print('')
+                        print('')
+                        raise Exception('The simulated time values are not sorted.')
+
+                    if gdat.booldiag:
+                        for y in gdat.indxchun[b][p]:
+                            if len(gdat.true.listtime[b][p][y]) == 0:
+                                print('')
+                                print('')
+                                print('')
+                                print('gdat.liststrgtypedata[b][p]')
+                                print(gdat.liststrgtypedata[b][p])
+                                raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
+            
             gdat.time = gdat.true.time
             gdat.timeconc = [[] for b in gdat.indxdatatser]
             gdat.minmtimeconc = np.empty(gdat.numbdatatser)
@@ -9510,15 +9591,6 @@ def init( \
                         gdat.minmtimeconc[b] = np.amin(gdat.timeconc[b])
                         gdat.maxmtimeconc[b] = np.amax(gdat.timeconc[b])
             
-            if gdat.true.typemodl == 'flar':
-                tdpy.setp_para_defa(gdat, 'true', 'numbflar', 1)
-                gdat.true.indxflar = np.arange(gdat.true.numbflar)
-                for k in gdat.true.indxflar:
-                    tdpy.setp_para_defa(gdat, 'true', 'amplflar%04d' % k, 0.1)
-                    timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.minmtimeconc[0]) 
-                    tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
-                    tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.)
-                    
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
@@ -9547,6 +9619,17 @@ def init( \
         
             init_modl(gdat, 'true')
 
+            if gdat.true.typemodl == 'flar':
+                tdpy.setp_para_defa(gdat, 'true', 'numbflar', 1)
+                gdat.true.indxflar = np.arange(gdat.true.numbflar)
+            
+            if gdat.true.typemodl == 'flar':
+                for k in gdat.true.indxflar:
+                    tdpy.setp_para_defa(gdat, 'true', 'amplflar%04d' % k, 0.1)
+                    timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.maxmtimeconc[0]) 
+                    tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
+                    tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.) # [1 hour]
+                    
             setp_modlbase(gdat, 'true')
             
             #gdat.true.typemodlenerfitt = 'full'
@@ -9583,7 +9666,6 @@ def init( \
                         
                         if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
                             gdat.listarrytser['raww'][b][p][y][:, :, 1] += gdat.true.dictmodl['totl'][0][p][y]
-                            gdat.true.listtime[b][p][y] = gdat.listarrytser['raww'][b][p][y][:, :, 0] 
                         
                         if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
 
