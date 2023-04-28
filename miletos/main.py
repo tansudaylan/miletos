@@ -3949,10 +3949,12 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
         gmod.listnameparafullfixd += [nameparabasefinl]
     
 
-def proc_modl(gdat, strgmodl, strgextn, r):
+def proc_modl(gdat, strgmodl, strgextn, h):
     
     gmod = getattr(gdat, strgmodl)
 
+    strgextn = 'pmed%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
+    
     # to be deleted
     #for name in gdat.fitt.listnameparafull:
     #    if hasattr(gdat.fitt, name):
@@ -4033,52 +4035,53 @@ def proc_modl(gdat, strgmodl, strgextn, r):
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     strg = 'b%03dp%03d' % (b, p)
-                    for h in gdat.indxfittiter:
                     
-                        strgextn = 'pmed%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[e])
-                        for namecompmodl in gmod.listnamecompmodl:
-                            namecompmodlextn = 'modlfine%s%s' % (namecompmodl, strg)
-                            if gdat.typeinfe == 'samp':
-                                if gdat.fitt.typemodlenerfitt == 'full':
-                                    lcurtemp = np.median(gdat.dictsamp[namecompmodlextn][:, :, h], 0)
-                                else:
-                                    print('len(gmod.listdictsamp)')
-                                    print(len(gmod.listdictsamp))
-                                    print('h')
-                                    print(h)
-                                    lcurtemp = np.median(gmod.listdictsamp[h][namecompmodlextn][:, :, 0], 0)
-                                strgtitl = 'Posterior median model'
+                    for namecompmodl in gmod.listnamecompmodl:
+                        namecompmodlextn = 'modlfine%s%s' % (namecompmodl, strg)
+                        if gdat.typeinfe == 'samp':
+                            if gdat.fitt.typemodlenerfitt == 'full':
+                                lcurtemp = np.median(gdat.dictsamp[namecompmodlextn][:, :, :], 0)
                             else:
-                                if gdat.fitt.typemodlenerfitt == 'full':
-                                    lcurtemp = gdat.dictmlik[namecompmodlextn][:, h]
-                                else:
-                                    lcurtemp = gmod.listdictmlik[h][namecompmodlextn][:, 0]
-                            
-                        if p is None:
-                            time = gdat.timethisfittconc[b]
-                            timefine = gdat.timethisfittfineconc[b]
+                                print('len(gmod.listdictsamp)')
+                                print(len(gmod.listdictsamp))
+                                print('h')
+                                print(h)
+                                lcurtemp = np.median(gdat.dictsamp[namecompmodlextn][:, :, 0], 0)
+                            strgtitl = 'Posterior median model'
                         else:
-                            time = gdat.timethisfitt[b][p]
-                            timefine = gdat.timethisfittfine[b][p]
-                            tser = gdat.rflxthisfitt[b][p][:, e]
+                            if gdat.fitt.typemodlenerfitt == 'full':
+                                lcurtemp = gdat.dictmlik[namecompmodlextn][:, h]
+                            else:
+                                lcurtemp = gmod.listdictmlik[h][namecompmodlextn][:, 0]
+                        
+                    if p is None:
+                        time = gdat.timethisfittconc[b]
+                        timefine = gdat.timethisfittfineconc[b]
+                    else:
+                        time = gdat.timethisfitt[b][p]
+                        timefine = gdat.timethisfittfine[b][p]
+                        if gdat.fitt.typemodlenerfitt == 'full':
+                            tser = gdat.rflxthisfitt[b][p][:, :]
+                        else:
+                            tser = gdat.rflxthisfitt[b][p][:, 0]
     
-                            if timefine.size != lcurtemp.size:
-                                print('')
-                                print('')
-                                print('')
-                                print('p')
-                                print(p)
-                                print('gdat.typeinfe')
-                                print(gdat.typeinfe)
-                                print('gdat.fitt.typemodlenerfitt')
-                                print(gdat.fitt.typemodlenerfitt)
-                                print('namecompmodlextn')
-                                print(namecompmodlextn)
-                                print('lcurtemp')
-                                summgene(lcurtemp)
-                                print('timefine')
-                                summgene(timefine)
-                                raise Exception('timefine.size != lcurtemp.size')
+                        if timefine.size != lcurtemp.size:
+                            print('')
+                            print('')
+                            print('')
+                            print('p')
+                            print(p)
+                            print('gdat.typeinfe')
+                            print(gdat.typeinfe)
+                            print('gdat.fitt.typemodlenerfitt')
+                            print(gdat.fitt.typemodlenerfitt)
+                            print('namecompmodlextn')
+                            print(namecompmodlextn)
+                            print('lcurtemp')
+                            summgene(lcurtemp)
+                            print('timefine')
+                            summgene(timefine)
+                            raise Exception('timefine.size != lcurtemp.size')
 
     if gdat.typeinfe == 'opti':
         
@@ -4161,11 +4164,10 @@ def proc_modl(gdat, strgmodl, strgextn, r):
         for name in dictderimlik:
             gdat.dictmlik[name] = dictderimlik[name]
                 
-    if gdat.fitt.typemodlenerfitt == 'iter':
-        if gdat.typeinfe == 'samp':
-            gmod.listdictsamp.append(gdat.dictsamp)
-        if gdat.typeinfe == 'opti':
-            gmod.listdictmlik.append(gdat.dictmlik)
+    if gdat.typeinfe == 'samp':
+        gmod.listdictsamp.append(gdat.dictsamp)
+    if gdat.typeinfe == 'opti':
+        gmod.listdictmlik.append(gdat.dictmlik)
 
     if gdat.boolplottser:
         
@@ -4197,7 +4199,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     strg = 'b%03dp%03d' % (b, p)
     
     # plot the data with the posterior median model
-    strgextn = 'pmed%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[e])
+    strgextn = 'pmed%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
     dictmodl = dict()
     for namecompmodl in gmod.listnamecompmodl:
         namecompmodlextn = 'modlfine%s%s' % (namecompmodl, strg)
@@ -4299,7 +4301,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
                         )
     
     # plot the posterior median residual
-    strgextn = 'resipmed%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[e])
+    strgextn = 'resipmed%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
     if gdat.typeinfe == 'samp':
         if gdat.fitt.typemodlenerfitt == 'full':
             tserdatatemp = np.median(gdat.dictsamp['resi%s' % strg][:, :, e], 0)
@@ -4335,7 +4337,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
     if gdat.typeinfe == 'samp':
         strgextn = 'psam%s' % gdat.strgcnfg
         if gdat.numbener[p] > 1:
-            strgextn += gdat.liststrgdatafittiter[e]
+            strgextn += gdat.liststrgdatafittiter[h]
         dictmodl = dict()
         for w in range(gdat.numbsampplot):
             namevarbsamp = 'psammodl%04d' % w
@@ -4374,7 +4376,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
         # plot the data with a number of model component samples
         strgextn = 'psamcomp%s' % gdat.strgcnfg
         if gdat.numbener[p] > 1:
-            strgextn += gdat.liststrgdatafittiter[e]
+            strgextn += gdat.liststrgdatafittiter[h]
         dictmodl = dict()
         for namecompmodl in gdat.fitt.listnamecompmodl:
             if namecompmodl == 'totl':
@@ -4428,7 +4430,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e):
                                      dictmodl=dictmodl)
 
     # plot the binned RMS
-    path = gdat.pathvisutarg + 'stdvrebn%s%s.%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[e], gdat.typefileplot)
+    path = gdat.pathvisutarg + 'stdvrebn%s%s.%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h], gdat.typefileplot)
     if not os.path.exists(path):
         if gdat.typeinfe == 'samp':
             if gdat.fitt.typemodlenerfitt == 'full':
@@ -4526,7 +4528,7 @@ def init_modl(gdat, strgmodl):
     gmod.cntr = 0
 
 
-def setp_modlbase(gdat, strgmodl, r=None):
+def setp_modlbase(gdat, strgmodl, h=None):
     
     print('')
     print('Setting up the model (%s) by running setp_modlbase()...' % strgmodl)
@@ -4745,7 +4747,7 @@ def setp_modlbase(gdat, strgmodl, r=None):
                     raise Exception('')
                 #or gmod.typemodllmdkener == 'ener':
                 #    
-                #    strgener = gdat.liststrgdatafittiter[e]
+                #    strgener = gdat.liststrgdatafittiter[h]
                 #    
                 #    if gmod.typemodllmdkterm != 'none':
                 #        # add linear coefficient
@@ -4826,7 +4828,16 @@ def setp_modlbase(gdat, strgmodl, r=None):
         tdpy.setp_para_defa(gdat, strgmodl, 'booltrancomp', booltrancomp)
 
 
-def exec_lspe(arrylcur, pathvisu=None, pathdata=None, strgextn='', factnyqt=None, \
+def exec_lspe( \
+              arrylcur, \
+              
+              pathvisu=None, \
+              
+              pathdata=None, \
+              
+              strgextn='', \
+              
+              factnyqt=None, \
               
               # minimum frequency (1/days)
               minmfreq=None, \
@@ -8816,23 +8827,25 @@ def init( \
                                                    )
                 
                 if gdat.booldiag:
-                    cntslcurlmasttess = 0
-                    for p in gdat.indxinst[0]:
-                        if gdat.liststrginst[0][p].startswith('TESS'):
-                            cntslcurlmasttess += 1
-                    if len(gdat.listtsecspoc) != cntslcurlmasttess:
-                        print('')
-                        print('')
-                        print('')
-                        print('cntslcurlmasttess')
-                        print(cntslcurlmasttess)
-                        print('gdat.listtsecspoc')
-                        print(gdat.listtsecspoc)
-                        print('gdat.liststrginst')
-                        print(gdat.liststrginst)
-                        print('gdat.listarrylcurmast[p]')
-                        print(gdat.listarrylcurmast[p])
-                        raise Exception('len(gdat.listtsecspoc) != cntslcurlmasttess')
+                    pass
+                    # to be deleted
+                    #cntslcurlmasttess = 0
+                    #for p in gdat.indxinst[0]:
+                    #    if gdat.liststrginst[0][p].startswith('TESS'):
+                    #        cntslcurlmasttess += 1
+                    #if len(gdat.listtsecspoc) != cntslcurlmasttess:
+                    #    print('')
+                    #    print('')
+                    #    print('')
+                    #    print('cntslcurlmasttess')
+                    #    print(cntslcurlmasttess)
+                    #    print('gdat.listtsecspoc')
+                    #    print(gdat.listtsecspoc)
+                    #    print('gdat.liststrginst')
+                    #    print(gdat.liststrginst)
+                    #    print('gdat.listarrylcurmast[p]')
+                    #    print(gdat.listarrylcurmast[p])
+                    #    raise Exception('len(gdat.listtsecspoc) != cntslcurlmasttess')
 
                 for o, tseclygo in enumerate(gdat.listtsecspoc):
                     indx = np.where(gdat.dictlygooutp['listtsec'][0] == tseclygo)[0]
@@ -9293,14 +9306,16 @@ def init( \
                         tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, getattr(gdat, namepara + 'compprio')[j])
                 
                 if gdat.true.boolmodlpsys:
+                    print('getattr(gdat, rratcompprio)')
+                    print(getattr(gdat, 'rratcompprio'))
                     for j in gdat.true.indxcomp:
                         if gdat.numbener[p] > 1:
                             tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
                             for e in range(gdat.numbener[p]):
                                 tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, e), getattr(gdat, 'rratcompprio')[j][p])
                         else:
-                            print('getattr(gdat, rratcompprio)[j]')
-                            print(getattr(gdat, 'rratcompprio')[j])
+                            print('getattr(gdat, rratcompprio)[p][j]')
+                            print(getattr(gdat, 'rratcompprio')[p][j])
                             tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[p][j])
                         
                 if gdat.true.typemodl == 'cosc':
@@ -10460,13 +10475,13 @@ def init( \
                 
                 for h in gdat.indxfittiter:
                     if gdat.numbinst[b] > 1:
-                        strgextn = '%s%s_%s' % (gdat.liststrgtser[b], gdat.liststrgdatafittiter[e], gdat.strgtarg)
+                        strgextn = '%s%s_%s' % (gdat.liststrgtser[b], gdat.liststrgdatafittiter[h], gdat.strgtarg)
                         gdat.dictlspeoutp = exec_lspe(gdat.arrytsertotl[b][:, e, :], pathvisu=pathvisulspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
                                                                                   typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
                     
                     for p in gdat.indxinst[b]:
                         for strg in liststrgarrylspe:
-                            strgextn = '%s_%s_%s%s_%s' % (strg, gdat.liststrgtser[b], gdat.liststrginst[b][p], gdat.liststrgdatafittiter[e], gdat.strgtarg) 
+                            strgextn = '%s_%s_%s%s_%s' % (strg, gdat.liststrgtser[b], gdat.liststrginst[b][p], gdat.liststrgdatafittiter[h], gdat.strgtarg) 
                             gdat.dictlspeoutp = exec_lspe(gdat.arrytser[strg][b][p][:, e, :], pathvisu=pathvisulspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
                                                                                   typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
         
@@ -11103,12 +11118,9 @@ def init( \
             print('gmod.typemodlblinener')
             print(gmod.typemodlblinener)
         
-        #  to be deleted
-        r = 0
-
         # iterate over different subsets of fits
         ## these can be over different subsets of data
-        for e in gdat.indxfittiter:
+        for h in gdat.indxfittiter:
         
             if gdat.typeinfe == 'opti':
                 path = gdat.pathdatatarg + 'paramlik.csv'
@@ -11142,30 +11154,30 @@ def init( \
                 gdat.minmtimethis = np.amin(gdat.timethis)
                 gdat.maxmtimethis = np.amax(gdat.timethis)
                 
-                setp_modlbase(gdat, 'fitt', r)
+                setp_modlbase(gdat, 'fitt', h)
         
                 # define arrays of parameter indices
                 #gmod.dictindxpara[namepara] = np.empty(2, dtype=int)
                 
                 strgextn = gdat.strgcnfg + gdat.fitt.typemodl
-                proc_modl(gdat, 'fitt', strgextn, r)
+                proc_modl(gdat, 'fitt', strgextn, h)
                     
             elif gdat.fitt.typemodl == 'flar':
 
                 init_modl(gdat, 'fitt')
 
-                setp_modlbase(gdat, 'fitt', r)
+                setp_modlbase(gdat, 'fitt', h)
         
-                proc_modl(gdat, 'fitt', strgextn, r)
+                proc_modl(gdat, 'fitt', strgextn, h)
 
 
             elif gdat.fitt.typemodl == 'agns':
 
                 init_modl(gdat, 'fitt')
 
-                setp_modlbase(gdat, 'fitt', r)
+                setp_modlbase(gdat, 'fitt', h)
         
-                proc_modl(gdat, 'fitt', strgextn, r)
+                proc_modl(gdat, 'fitt', strgextn, h)
 
 
             elif gdat.fitt.typemodl == 'spot':
@@ -11175,7 +11187,7 @@ def init( \
                     
                     init_modl(gdat, 'fitt')
 
-                    setp_modlbase(gdat, 'fitt', r)
+                    setp_modlbase(gdat, 'fitt', h)
         
                     if gdat.typeverb > 0:
                         print('gdat.numbspot')
@@ -11283,18 +11295,18 @@ def init( \
                     
                     init_modl(gdat, 'fitt')
 
-                    setp_modlbase(gdat, 'fitt', r)
+                    setp_modlbase(gdat, 'fitt', h)
                     
                     strgextn = gdat.strgcnfg + gdat.fitt.typemodl
                     if gdat.fitt.typemodlenerfitt == 'iter':
                         strgextn += gdat.liststrgdatafittiter[gdat.indxfittiterthis]
-                    proc_modl(gdat, 'fitt', strgextn, r)
+                    proc_modl(gdat, 'fitt', strgextn, h)
 
             elif gdat.fitt.typemodl == 'stargpro':
                 
                 init_modl(gdat, 'fitt')
 
-                setp_modlbase(gdat, 'fitt', r)
+                setp_modlbase(gdat, 'fitt', h)
         
                 pass
             else:
