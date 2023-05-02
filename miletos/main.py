@@ -9544,12 +9544,34 @@ def init( \
                                 print(gdat.liststrginst[b][p])
                                 raise Exception('')
                         
-                    if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
+                    elif gdat.liststrgtypedata[b][p] == 'simutargpartinje':
                         for y in gdat.indxchun[b][p]:
                             gdat.true.listtime[b][p][y] = gdat.listarrytser['raww'][b][p][y][:, 0, 0] 
-                        
+                    else:
+                        print('')
+                        print('')
+                        print('')
+                        print('gdat.liststrgtypedata[b][p]')
+                        print(gdat.liststrgtypedata[b][p])
+                        raise Exception('Unknown gdat.liststrgtypedata[b][p]')
+
                     gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
                     
+                    if gdat.booldiag:
+                        if len(gdat.true.time[b][p]) == 0:
+                            print('')
+                            print('')
+                            print('')
+                            print('b, p')
+                            print(b, p)
+                            print('gdat.liststrginst[b][p]')
+                            print(gdat.liststrginst[b][p])
+                            print('gdat.liststrgtypedata[b][p]')
+                            print(gdat.liststrgtypedata[b][p])
+                            print('gdat.true.time[b][p]')
+                            summgene(gdat.true.time[b][p])
+                            raise Exception('len(gdat.true.time[b][p]) == 0')
+
                     if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
                         print('')
                         print('')
