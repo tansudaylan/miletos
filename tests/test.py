@@ -25,6 +25,7 @@ def cnfg_TOIs():
         miletos.main.init( \
                    toiitarg=k, \
                    strgclus='TOIs', \
+                   boolforcoffl=True, \
                   )
 
 
@@ -265,13 +266,20 @@ def cnfg_WASP121():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psyspcur'
     
-    for strg in ['SPOC', 'lygos']:
+    # the following two are mutually exclusive
+    liststrgtypedata = [['simutargpartsynt'], []]
+    #typepriocomp = 'pdim'
+
+    listtypelcurtpxftess = ['lygos']
+    
+    for typelcurtpxftess in listtypelcurtpxftess:
         miletos.main.init( \
                        strgmast='WASP-121', \
+                       liststrgtypedata=liststrgtypedata, \
                        boolplotpopl=True, \
-                       typelcurtpxftess=strg, \
+                       typelcurtpxftess=typelcurtpxftess, \
                        dictfitt=dictfitt, \
-                       typepriocomp='pdim', \
+                       #typepriocomp=typepriocomp, \
                       )
 
 
