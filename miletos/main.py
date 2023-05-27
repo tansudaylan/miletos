@@ -334,6 +334,10 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     
     if gmod.typemodl == 'flar':
         for p in gdat.indxinst[0]:
+            
+            if strgmodl == 'true' and gdat.liststrgtypedata[b][p] == 'obsd':
+                continue
+
             rflxmodl = np.zeros((time[0][p].size, gdat.numbener[p], gmod.numbflar))
             for kk in range(gmod.numbflar):
                 strgflar = '%04d' % kk
@@ -398,6 +402,9 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
 
         for p in gdat.indxinst[0]:
             
+            if strgmodl == 'true' and gdat.liststrgtypedata[0][p] == 'obsd':
+                continue
+
             if gmod.boolmodlpsys:
                 rratcomp = np.empty((gmod.numbcomp, gdat.numbenerefes))
                 if gdat.numbener[p] > 1:
@@ -5026,7 +5033,7 @@ def srch_pbox_work_loop(m, phas, phasdiff, dydchalf):
     return indxitra
 
 
-def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, i, boolrebn):
+def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, i, boolrebn, pathvisu=None):
     
     numbperi = len(listperi[i])
     
@@ -5150,8 +5157,7 @@ def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotll
                 #print(s2nr)
                 #print('')
                 
-                #if True:
-                if False:
+                if pathvisu is not None:
                     figr, axis = plt.subplots(2, 1, figsize=(8, 8))
                     axis[0].plot(listarrytser[b][:, 0], listarrytser[b][:, 1], color='b', ls='', marker='o', rasterized=True, ms=0.3)
                     axis[0].plot(listarrytser[b][:, 0][indxitra], listarrytser[b][:, 1][indxitra], color='firebrick', ls='', marker='o', ms=2., rasterized=True)
@@ -5165,7 +5171,7 @@ def srch_pbox_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotll
                     axis[1].set_xlabel('Phase')
                     titl = '$P$=%.3f, $T_0$=%.3f, $q_{tr}$=%.3g, $f$=%.6g' % (peri, listepoc[k][l][m], listdcyc[k][l], rflxitra)
                     axis[0].set_title(titl, usetex=False)
-                    path = '/Users/tdaylan/Documents/work/data/troia/toyy_tessprms2min_TESS/mock0001/visuals/rflx_tria_diag_%04d%04d.pdf' % (l, m)
+                    path = pathvisu + 'rflx_pbox_%04d%04d.pdf' % (l, m)
                     print('Writing to %s...' % path)
                     plt.savefig(path, usetex=False)
                     plt.close()
@@ -7463,7 +7469,7 @@ def init( \
          ## 'lygos': always lygos
          ## 'SPOC': SPOC whenever available, otherwise lygos
          ## 'SPOC_only': SPOC only
-         typelcurtpxftess='lygos', \
+         typelcurtpxftess='SPOC', \
          
          ## type of SPOC light curve: 'PDC', 'SAP'
          typedataspoc='PDC', \
@@ -8435,6 +8441,8 @@ def init( \
         #    summgene(listtablobsv[name].value, boolshowuniq=True)
         #    print('')
 
+        gdat.listpathspocmast = []
+            
         print('listname')
         print(listname)
         for mm, strgexpr in enumerate(gdat.liststrginstfinl):
@@ -8548,8 +8556,6 @@ def init( \
             
             cntrtess = 0
 
-            gdat.listpathspocmast = []
-            
             if indx.size > 0:
                 print('Will get the list of products for each table...')
             
@@ -8642,8 +8648,7 @@ def init( \
                 
                 if manifest is not None:
                     for path in manifest['Local Path']:
-                        print('path')
-                        print(path)
+                        print('Reading from %s...' % path)
                         listhdun = astropy.io.fits.open(path)
                         listhdun.info()
                             
@@ -8651,6 +8656,7 @@ def init( \
                         #if path.endswith('allslits_x1d.fits') or path.endswith('s1600a1_x1d.fits') or 
                         
                         if 'tess' in path:
+                            print('Appending path to gdat.listpathspocmast...')
                             gdat.listpathspocmast.append(path)
                             arrylcur, tsec, tcam, tccd = \
                                 read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
@@ -8659,8 +8665,6 @@ def init( \
                             gdat.listtsecspoc.append(tsec)
                             gdat.listarrylcurmast[mm].append(arrylcur[:, None, :])
                             gdat.liststrginst[0].append('TESS_S%d' % tsec)
-                            print('cntrtess')
-                            print(cntrtess)
                         elif 'niriss' in path or path.endswith('nis_x1dints.fits'):
                             pass
                             #listtime = listhdun['EXTRACT1D'].data
@@ -8966,6 +8970,10 @@ def init( \
                 if not boollygo[o]:
                     
                     indx = np.where(gdat.listtsec[o] == gdat.listtsecspoc)[0][0]
+                    print('gdat.listpathspocmast')
+                    print(gdat.listpathspocmast)
+                    print('indx')
+                    print(indx)
                     path = gdat.listpathspocmast[indx]
                     if typeverb > 0:
                         print('Reading the SAP light curves...')
@@ -9266,6 +9274,7 @@ def init( \
 
             if gdat.rratcompprio is None:
                 #gdat.rratcompprio = [np.empty(gdat.numbcompprio) for p in gdat.indxinst[0]]
+                gdat.rratcompprio = [[] for p in gdat.indxinst[0]]
                 for p in gdat.indxinst[0]:
                     if gdat.typepriocomp == 'exar':
                         gdat.rratcompprio[p] = gdat.dictexartarg['rratcomp']
@@ -9597,7 +9606,13 @@ def init( \
                         gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p])
                         gdat.listtsec = np.delete(gdat.listtsec, y)
                     y += 1
-
+    
+    print('gdat.listarrytser')
+    print(gdat.listarrytser)
+    print('len(gdat.listarrytser[raww][0][0])')
+    print(len(gdat.listarrytser['raww'][0][0]))
+    print('len(gdat.listarrytser[raww][0][1])')
+    print(len(gdat.listarrytser['raww'][0][1]))
     ## user-input data
     if gdat.listpathdatainpt is not None:
         for b in gdat.indxdatatser:
@@ -9626,17 +9641,22 @@ def init( \
                             delttime = cade / 60. / 24. # [day]
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
+                        elif gdat.liststrginst[b][p] == 'TESS-GEO':
+                            cade = 10. / 60. # [min]
+                            delttime = cade / 60. / 24. # [day]
+                            #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
+                            gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
                         elif gdat.liststrginst[b][p] == 'JWST':
                             gdat.true.listtime[b][p][y] = 2459000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
                         elif gdat.liststrginst[b][p].startswith('LSST'):
-                            gdat.true.listtime[b][p][y] = (2460645. + np.random.rand(100)[:, None] * 365. * 0.7 + \
-                                                                                    np.arange(10)[None, :] * 365.).flatten()
-                            
+                            gdat.true.listtime[b][p][y] = (2460645. + np.random.rand(100)[:, None] * 365. * 0.7 + np.arange(10)[None, :] * 365.).flatten()
                             gdat.true.listtime[b][p][y] = np.sort(gdat.true.listtime[b][p][y])
                         else:
                             print('')
                             print('')
                             print('')
+                            print('b, p')
+                            print(b, p)
                             print('gdat.liststrginst[b][p]')
                             print(gdat.liststrginst[b][p])
                             raise Exception('')
@@ -9644,7 +9664,7 @@ def init( \
                 elif gdat.liststrgtypedata[b][p] == 'simutargpartinje':
                     for y in gdat.indxchun[b][p]:
                         gdat.true.listtime[b][p][y] = gdat.listarrytser['raww'][b][p][y][:, 0, 0] 
-                else:
+                elif gdat.liststrgtypedata[b][p] != 'obsd':
                     print('')
                     print('')
                     print('')
@@ -9655,35 +9675,35 @@ def init( \
                 gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
                 
                 if gdat.booldiag:
-                    if len(gdat.true.time[b][p]) == 0:
-                        print('')
-                        print('')
-                        print('')
-                        print('b, p')
-                        print(b, p)
-                        print('gdat.liststrginst[b][p]')
-                        print(gdat.liststrginst[b][p])
-                        print('gdat.liststrgtypedata[b][p]')
-                        print(gdat.liststrgtypedata[b][p])
-                        print('gdat.true.time[b][p]')
-                        summgene(gdat.true.time[b][p])
-                        raise Exception('len(gdat.true.time[b][p]) == 0')
-
-                if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
-                    print('')
-                    print('')
-                    print('')
-                    raise Exception('The simulated time values are not sorted.')
-
-                if gdat.booldiag:
-                    for y in gdat.indxchun[b][p]:
-                        if len(gdat.true.listtime[b][p][y]) == 0:
+                    if gdat.liststrgtypedata[b][p] != 'obsd':
+                        if len(gdat.true.time[b][p]) == 0:
                             print('')
                             print('')
                             print('')
+                            print('b, p')
+                            print(b, p)
+                            print('gdat.liststrginst[b][p]')
+                            print(gdat.liststrginst[b][p])
                             print('gdat.liststrgtypedata[b][p]')
                             print(gdat.liststrgtypedata[b][p])
-                            raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
+                            print('gdat.true.time[b][p]')
+                            summgene(gdat.true.time[b][p])
+                            raise Exception('len(gdat.true.time[b][p]) == 0')
+
+                        if np.amin(gdat.true.time[b][p][1:] - gdat.true.time[b][p][:-1]) < 0:
+                            print('')
+                            print('')
+                            print('')
+                            raise Exception('The simulated time values are not sorted.')
+
+                        for y in gdat.indxchun[b][p]:
+                            if len(gdat.true.listtime[b][p][y]) == 0:
+                                print('')
+                                print('')
+                                print('')
+                                print('gdat.liststrgtypedata[b][p]')
+                                print(gdat.liststrgtypedata[b][p])
+                                raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
         
         gdat.time = gdat.true.time
         gdat.timeconc = [[] for b in gdat.indxdatatser]
@@ -9703,6 +9723,13 @@ def init( \
                         gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
                         gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
         
+    print('gdat.listarrytser')
+    print(gdat.listarrytser)
+    print('len(gdat.listarrytser[raww][0][0])')
+    print(len(gdat.listarrytser['raww'][0][0]))
+    print('len(gdat.listarrytser[raww][0][1])')
+    print(len(gdat.listarrytser['raww'][0][1]))
+
     if gdat.timeoffs is None:
         timeoffs = 0.
         cntr = 0
@@ -9759,25 +9786,20 @@ def init( \
         for name in gdat.true.listnameparafull:
             dictparainpt[name] = getattr(gdat.true, name)
         
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('dictparainpt')
-        print(dictparainpt)
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-    
-
         if gdat.booldiag:
             if len(dictparainpt) == 0:
                 raise Exception('')
+        
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    if gdat.true.time[b][p].size == 0 and gdat.liststrgtypedata[b][p] != 'obsd':
+                        print('')
+                        print('')
+                        print('')
+                        print('b, p')
+                        print(b, p)
+                        raise Exception('gdat.true.time[b][p].size == 0')
+        
         gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
         
         if gdat.true.typemodlblinshap == 'gpro':
@@ -9844,6 +9866,13 @@ def init( \
                     gdat.liststrgener[p].append('')
                 else:
                     gdat.liststrgener[p].append('ener%04d' % e)
+
+    print('gdat.listarrytser')
+    print(gdat.listarrytser)
+    print('len(gdat.listarrytser[raww][0][0])')
+    print(len(gdat.listarrytser['raww'][0][0]))
+    print('len(gdat.listarrytser[raww][0][1])')
+    print(len(gdat.listarrytser['raww'][0][1]))
 
     # make white light curve
     if gdat.numbener[p] > 1:
@@ -9918,6 +9947,8 @@ def init( \
                     print('')
                     print('')
                     print('')
+                    print('b, p')
+                    print(b, p)
                     print('gdat.listtsec')
                     print(gdat.listtsec)
                     print('len(gdat.listarrytser[raww][b][p])')
