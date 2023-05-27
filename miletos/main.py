@@ -9231,7 +9231,7 @@ def init( \
                 if gdat.typeverb > 0:
                     print('Duration from the Exoplanet Archive Composite PS table is infite for companions. Assuming a duty cycle of %.3g.' % dcyc)
                 gdat.duraprio[indx] = gdat.pericompprio[indx] * dcyc
-            gdat.tmagsyst = gdat.dictexartarg['tmagsyst']
+            gdat.tmagsyst = gdat.dictexartarg['tmagsyst'][0]
         
         if gdat.typepriocomp == 'exof':
             if gdat.typeverb > 0:
@@ -9265,13 +9265,12 @@ def init( \
                     raise Exception('gdat.numbcompprio is None.')
 
             if gdat.rratcompprio is None:
-                gdat.rratcompprio = [[[] for j in range(gdat.numbcompprio)] for p in gdat.indxinst[0]]
-                for j in range(gdat.numbcompprio):
-                    for p in gdat.indxinst[0]:
-                        if gdat.typepriocomp == 'exar':
-                            gdat.rratcompprio[p][j] = gdat.dictexartarg['rratcomp'][j]
-                        if gdat.typepriocomp == 'exof':
-                            gdat.rratcompprio[p][j] = np.sqrt(gdat.deptprio[j])
+                #gdat.rratcompprio = [np.empty(gdat.numbcompprio) for p in gdat.indxinst[0]]
+                for p in gdat.indxinst[0]:
+                    if gdat.typepriocomp == 'exar':
+                        gdat.rratcompprio[p] = gdat.dictexartarg['rratcomp']
+                    if gdat.typepriocomp == 'exof':
+                        gdat.rratcompprio[p] = np.sqrt(gdat.deptprio)
 
         # check MAST
         if gdat.strgmast is None:
@@ -9442,21 +9441,26 @@ def init( \
                             
     # determine number of chunks
     gdat.numbchun = [np.zeros(gdat.numbinst[b], dtype=int) - 1 for b in gdat.indxdatatser]
+    gdat.numbdatagood = 0
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.boolsimurflx:
                 gdat.numbchun[b][p] = 1
+                gdat.numbdatagood += 1
             elif gdat.liststrgtypedata[b][p] == 'inpt':
                 gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
+                gdat.numbdatagood += 1
             elif b == 0:
                 if gdat.boolretrlcurmast[b][p]:
                     gdat.numbchun[b][p] = len(gdat.listarrylcurmast[p])
-                    #gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[p]
+                    gdat.numbdatagood += 1
                 else:
-                    print('gdat.dictlygooutp[arryrflx]')
-                    print(gdat.dictlygooutp['arryrflx'])
-                    gdat.numbchun[b][p] = len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0])
-
+                    if gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
+                        gdat.numbchun[b][p] = len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0])
+                        gdat.numbdatagood += 1
+                    else:
+                        print('Warning: lygos data were not incorporated into miletos!')
+            
             if gdat.booldiag:
                 if gdat.boolretrlcurmast[b][p]:
                     for y in range(len(gdat.listarrylcurmast[p])):
@@ -9468,44 +9472,10 @@ def init( \
                             summgene(gdat.listarrylcurmast[p][y])
                             raise Exception('gdat.listarrylcurmast[p][y].ndim != 3')
                 
-                if gdat.numbchun[b][p] <= 0:
-                    print('')
-                    print('')
-                    print('')
-                    print('bp')
-                    print(b, p)
-                    print('len(gdat.listarrylcurmast[p])')
-                    print(len(gdat.listarrylcurmast[p]))
-                    print('gdat.listarrylcurmast[p]')
-                    print(gdat.listarrylcurmast[p])
-                    for y in range(len(gdat.listarrylcurmast[p])):
-                        print('gdat.listarrylcurmast[p][y]')
-                        print(gdat.listarrylcurmast[p][y])
-                    raise Exception('gdat.numbchun[b][p] <= 0')
-
-                if gdat.numbchun[b][p] <= 0:
-                    print('')
-                    print('')
-                    print('')
-                    print('gdat.numbchun was not properly defined.')
-                    print('gdat.numbchun')
-                    print(gdat.numbchun)
-                    print('gdat.numbchun[b][p]')
-                    print(gdat.numbchun[b][p])
-                    print('bp')
-                    print(b, p)
-                    print('(gdat.liststrginst[b][p] == TESS or gdat.liststrginst[b][p].startswith(JWST))')
-                    print((gdat.liststrginst[b][p] == 'TESS' or gdat.liststrginst[b][p].startswith('JWST')))
-                    print('gdat.boolsimurflx')
-                    print(gdat.boolsimurflx)
-                    print('gdat.typetarg')
-                    print(gdat.typetarg)
-                    print('gdat.liststrgtypedata')
-                    print(gdat.liststrgtypedata)
-                    print('gdat.liststrginst[b][p]')
-                    print(gdat.liststrginst[b][p])
-                    raise Exception('')
-    
+    if gdat.numbdatagood == 0:
+        print('No good data has been found. Will quit.')
+        return gdat.dictmileoutp
+        
     gdat.indxchun = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -9779,16 +9749,6 @@ def init( \
         if gdat.true.boolmodlcomp:
             for j in range(gdat.epocmtracompprio.size):
                 for name in gdat.true.listnameparacomp[j]:
-                    print('')
-                    print('name')
-                    print(name)
-                    print('getattr(gdat, %scompprio % name)')
-                    print(getattr(gdat, '%scompprio' % name))
-                    print('gdat.epocmtracompprio')
-                    print(gdat.epocmtracompprio)
-                    print('j')
-                    print(j)
-
                     if name == 'rrat':
                         compprio = getattr(gdat, '%scompprio' % name)[p][j]
                     else:
@@ -10515,7 +10475,7 @@ def init( \
             gdat.deptprio = 1. - 1e-3 * dictpboxoutp['depttrancomp']
             gdat.duraprio = dictpboxoutp['duracomp']
             gdat.cosicompprio = np.zeros_like(dictpboxoutp['epocmtracomp']) 
-            gdat.rratcompprio[p][j] = np.sqrt(1e-3 * gdat.deptprio)
+            gdat.rratcompprio[p] = np.sqrt(1e-3 * gdat.deptprio)
             gdat.rsmacompprio = np.sin(np.pi * gdat.duraprio / gdat.pericompprio / 24.)
             
             gdat.perimask = gdat.pericompprio
@@ -10711,7 +10671,7 @@ def init( \
             gdat.duraprio = nicomedia.retr_duratrantotl(gdat.pericompprio, gdat.rsmacompprio, gdat.cosicompprio)
         
         if gdat.rratcompprio is None:
-            gdat.rratcompprio = np.sqrt(1e-3 * gdat.deptprio)
+            gdat.rratcompprio[p] = np.sqrt(1e-3 * gdat.deptprio)
         if gdat.rsmacompprio is None:
             gdat.rsmacompprio = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.pericompprio / 24.)**2 + gdat.cosicompprio**2)
         if gdat.ecoscompprio is None:
@@ -10761,7 +10721,20 @@ def init( \
             indxcompsort = np.argsort(gdat.pericompprio)
             
             #gdat.booltrancomp = gdat.booltrancomp[indxcompsort]
-            gdat.rratcompprio = gdat.rratcompprio[indxcompsort]
+            print('gdat.pericompprio')
+            print(gdat.pericompprio)
+            print('indxcompsort')
+            print(indxcompsort)
+            print('gdat.rratcompprio')
+            summgene(gdat.rratcompprio)
+            print(gdat.rratcompprio)
+            for p in gdat.indxinst[0]:
+                print('gdat.rratcompprio[p]')
+                print(gdat.rratcompprio[p])
+                summgene(gdat.rratcompprio[p])
+                print('indxcompsort')
+                summgene(indxcompsort)
+                gdat.rratcompprio[p] = gdat.rratcompprio[p][indxcompsort]
             gdat.rsmacompprio = gdat.rsmacompprio[indxcompsort]
             gdat.epocmtracompprio = gdat.epocmtracompprio[indxcompsort]
             gdat.pericompprio = gdat.pericompprio[indxcompsort]

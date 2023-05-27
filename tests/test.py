@@ -122,8 +122,13 @@ def cnfg_FermiLAT_AGN():
         liststrgmast.append(line[1:18])
         k += 1
 
-    print('liststrgmast')
-    print(liststrgmast)
+    numbtarg = len(liststrgmast)
+    print('Extracting the TESS light curves of Fermi-LAT AGNs...')
+    print('Number of targets: %d' % numbtarg)
+    
+    for strgmast in liststrgmast:
+        print(strgmast)
+    
     dictlygoinpt = dict()
     dictlygoinpt['boolutiltpxf'] = False
 
@@ -131,6 +136,9 @@ def cnfg_FermiLAT_AGN():
     
     for strgmast in liststrgmast:
         
+        if strgmast == '4FGL J1806.8+6949':
+            continue
+
         miletos.main.init( \
                           strgmast=strgmast, \
                           strgclus=strgclus, \
