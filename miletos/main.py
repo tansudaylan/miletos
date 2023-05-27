@@ -2839,7 +2839,7 @@ def plot_popl(gdat, strgpdfn):
         if strgpopl == 'exar':
             dictpopl = gdat.dictexar
         else:
-            dictpopl = gdat.dictexof
+            dictpopl = gdat.dicttoii
         
         numbcomppopl = dictpopl['radicomp'].size
         indxtargpopl = np.arange(numbcomppopl)
@@ -3903,6 +3903,12 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
 
     if hasattr(gmod, nameparabasefinl):
         if gdat.typeverb > 0:
+            print('nameparabasefinl')
+            print(nameparabasefinl)
+            print('strgmodl')
+            print(strgmodl)
+            print('getattr(gmod, nameparabasefinl)')
+            print(getattr(gmod, nameparabasefinl))
             print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
     gmod.listlablpara.append(lablpara)
@@ -4808,6 +4814,10 @@ def setp_modlbase(gdat, strgmodl, h=None):
             
             minmpara = 0.11
             maxmpara = 0.19
+            print('gdat.numbener')
+            print(gdat.numbener)
+            print('gdat.indxener[p]')
+            print(gdat.indxener[p])
             if gdat.numbener[p] > 1 and (strgmodl == 'true' or gdat.fitt.typemodlenerfitt == 'full'):
                 for e in gdat.indxener[p]:
                     setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgener=gdat.liststrgener[p][e], strgcomp=strgcomp)
@@ -7421,9 +7431,6 @@ def init( \
          ### Boolean flag to only utilize SPOC light curves on a local disk
          boolutiltesslocl=False, \
 
-         ### Boolean flag to only consider FFI data
-         boolffimonly=False, \
-
          ### Boolean flag to only consider TPF data (2-min or 20-sec)
          #### deprecated? to be deleted?
          booltpxfonly=False, \
@@ -7452,7 +7459,7 @@ def init( \
          ## label for the energy axis
          lablener=None, \
          
-         # TPF light curve extraction pipeline (FFIs are always extracted by lygos)
+         # Source of TESS TPF light curves (FFIs are always extracted by lygos)
          ## 'lygos': always lygos
          ## 'SPOC': SPOC whenever available, otherwise lygos
          ## 'SPOC_only': SPOC only
@@ -8033,7 +8040,7 @@ def init( \
     
     if gdat.toiitarg is not None or gdat.ticitarg is not None \
                                                                and (gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys):
-        gdat.dictexof = nicomedia.retr_dicttoii()
+        gdat.dicttoii = nicomedia.retr_dicttoii()
 
     if gdat.boolinfe:
         # model
@@ -8053,12 +8060,8 @@ def init( \
         
         # check if this TIC is a TOI
         if gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
-            indx = np.where(gdat.dictexof['tici'] == gdat.ticitarg)[0]
-            if indx.size > 0:
-                gdat.toiitarg = int(str(gdat.dictexof['toii'][indx[0]]).split('.')[0])
-                if gdat.typeverb > 0:
-                    print('Matched the input TIC ID with TOI-%d.' % gdat.toiitarg)
-        
+            gdat.toiitarg = nicomedia.retr_toiitici(gdat.ticitarg, typeverb=gdat.typeverb)
+
         gdat.strgmast = 'TIC %d' % gdat.ticitarg
 
     elif gdat.toiitarg is not None:
@@ -8068,16 +8071,19 @@ def init( \
         # determine TIC ID
         gdat.strgtoiibase = str(gdat.toiitarg)
         indx = []
-        for k, strg in enumerate(gdat.dictexof['toii']):
+        for k, strg in enumerate(gdat.dicttoii['toii']):
             if str(strg).split('.')[0] == gdat.strgtoiibase:
                 indx.append(k)
         indx = np.array(indx)
         if indx.size == 0:
-            print('Did not find the TOI in the ExoFOP-TESS TOI list.')
-            print('gdat.dictexof[TOI]')
-            summgene(gdat.dictexof['toii'])
-            raise Exception('')
-        gdat.ticitarg = gdat.dictexof['tici'][indx[0]]
+            print('')
+            print('')
+            print('')
+            print('gdat.dicttoii[TOI]')
+            summgene(gdat.dicttoii['toii'])
+            raise Exception('Did not find the TOI in the ExoFOP-TESS TOI list.')
+
+        gdat.ticitarg = gdat.dicttoii['tici'][indx[0]]
 
         if gdat.strgexar is None:
             gdat.strgexar = 'TOI-%d' % gdat.toiitarg
@@ -8107,6 +8113,13 @@ def init( \
     # Boolean flag indicating whether MAST has been searched already
     gdat.boolsrchmastdone = False
     
+    print('gdat.typetarg')
+    print(gdat.typetarg)
+    print('gdat.boolsrchmastdone')
+    print(gdat.boolsrchmastdone)
+    print('gdat.boolexecoffl')
+    print(gdat.boolexecoffl)
+    
     if (gdat.typetarg == 'tici' or gdat.typetarg == 'toii' or gdat.typetarg == 'mast') and not gdat.boolsrchmastdone and not gdat.boolexecoffl:
         # temp -- check that the closest TIC to a given TIC is itself
         if gdat.typeverb > 0:
@@ -8115,27 +8128,19 @@ def init( \
         gdat.boolsrchmastdone = True
         if gdat.typeverb > 0:
             print('Found %d TIC sources.' % len(listdictticinear))
-        maxmanglmtch = 0.2 # [arcsecond]
-        if listdictticinear[0]['dstArcSec'] < maxmanglmtch:
-            print('The closest match via the MAST query was within %.g arcseconds. Will associate the TIC ID of the closest match to the target.' % maxmanglmtch)
-            gdat.ticitarg = int(listdictticinear[0]['ID'])
-            gdat.rasctarg = listdictticinear[0]['ra']
-            gdat.decltarg = listdictticinear[0]['dec']
-            gdat.tmagtarg = listdictticinear[0]['Tmag']
+        if len(listdictticinear) > 0:
+            maxmanglmtch = 0.2 # [arcsecond]
+            if listdictticinear[0]['dstArcSec'] < maxmanglmtch:
+                print('The closest match via the MAST query was within %.g arcseconds. Will associate the TIC ID of the closest match to the target.' % maxmanglmtch)
+                gdat.ticitarg = int(listdictticinear[0]['ID'])
+                gdat.rasctarg = listdictticinear[0]['ra']
+                gdat.decltarg = listdictticinear[0]['dec']
+                gdat.tmagtarg = listdictticinear[0]['Tmag']
+            else:
+                print('The closest match via the MAST query was not within %.g arcseconds. Will not associate the TIC ID of the closest match to the target.' % maxmanglmtch)
         else:
-            print('The closest match via the MAST query was not within %.g arcseconds. Will not associate the TIC ID of the closest match to the target.' % maxmanglmtch)
+            print('There was not match via the MAST query. Will not associate the TIC ID of the closest match to the target.')
 
-    print('gdat.typetarg')
-    print(gdat.typetarg)
-    print('gdat.typetarg')
-    print(gdat.typetarg)
-    print('gdat.typetarg')
-    print(gdat.typetarg)
-    print('gdat.boolsrchmastdone')
-    print(gdat.boolsrchmastdone)
-    print('gdat.boolexecoffl')
-    print(gdat.boolexecoffl)
-    
     if gdat.typeverb > 0:
         print('gdat.typetarg')
         print(gdat.typetarg)
@@ -8369,7 +8374,7 @@ def init( \
             print('')
             print('')
             print('')
-            raise Exception('gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None AND boolexecoffl is True.')
+            raise Exception('(gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) AND boolexecoffl is True.')
 
         strgtcut = strgmasttemp
         # get the list of sectors for which TESS FFI data are available via TESSCut
@@ -8453,7 +8458,7 @@ def init( \
 
             if strgexprtemp == 'TESS':
                 
-                if gdat.typelcurtpxftess == 'lygos' or gdat.boolffimonly:
+                if gdat.typelcurtpxftess == 'lygos':
                     continue
 
                 gdat.listtsecspoc = []
@@ -8757,11 +8762,13 @@ def init( \
     booltess = 'TESS' in gdat.liststrginst[0]
     booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
     if booltesskepl:
-        if gdat.typelcurtpxftess == 'lygos' or gdat.boolffimonly:
+        if gdat.typelcurtpxftess == 'lygos':
             gdat.listtseclygo = gdat.listtsectcut
             gdat.listtsecspoc = np.array([], dtype=int)
-        else:
+        elif gdat.typelcurtpxftess == 'SPOC':
             gdat.listtseclygo = np.setdiff1d(gdat.listtsectcut, gdat.listtsecspoc)
+        elif gdat.typelcurtpxftess == 'SPOC_only':
+            gdat.listtseclygo = []
 
         print('List of chunks to be reduced via lygos')
         print(gdat.listtseclygo)
@@ -8833,11 +8840,9 @@ def init( \
         
         if gdat.typelcurtpxftess == 'lygos':
             boollygo = np.ones(numbtsec, dtype=bool)
-            booltpxflygo = not gdat.boolffimonly
             gdat.listtseclygo = gdat.listtsec
         elif gdat.typelcurtpxftess == 'SPOC':
             boollygo = ~booltpxf
-            booltpxflygo = False
             gdat.listtseclygo = gdat.listtsec[boollygo]
         elif gdat.typelcurtpxftess == 'SPOC_only':
             boollygo = np.zeros_like(booltpxf, dtype=bool)
@@ -8846,11 +8851,6 @@ def init( \
 
         gdat.listtseclygo = gdat.listtsec[boollygo]
         
-        if gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC':
-            if typeverb > 0:
-                print('booltpxflygo')
-                print(booltpxflygo)
-    
     gdat.dictlygooutp = None
     
     print('booltess')
@@ -8871,7 +8871,8 @@ def init( \
             raise Exception('')
         gdat.dictlygoinpt['labltarg'] = labltarg
         gdat.dictlygoinpt['listipntsele'] = gdat.listtseclygo
-        gdat.dictlygoinpt['booltpxflygo'] = booltpxflygo
+        if not 'boolutiltpxf' in gdat.dictlygoinpt:
+            gdat.dictlygoinpt['boolutiltpxf'] = True
         gdat.dictlygoinpt['listnameanls'] = 'psfn'
         if not 'boolmaskqual' in gdat.dictlygoinpt:
             gdat.dictlygoinpt['boolmaskqual'] = gdat.boolmaskqual
@@ -9121,10 +9122,10 @@ def init( \
         
         # grab object features from ExoFOP
         if gdat.toiitarg is not None:
-            gdat.dictexoftarg = nicomedia.retr_dicttoii(toiitarg=gdat.toiitarg)
+            gdat.dicttoiitarg = nicomedia.retr_dicttoii(toiitarg=gdat.toiitarg)
         else:
-            gdat.dictexoftarg = None
-        gdat.boolexof = gdat.toiitarg is not None and gdat.dictexoftarg is not None
+            gdat.dicttoiitarg = None
+        gdat.boolexof = gdat.toiitarg is not None and gdat.dicttoiitarg is not None
         gdat.boolexar = gdat.strgexar is not None and gdat.dictexartarg is not None or gdat.typepriocomp == 'exar'
         
         if gdat.typesimucomp is None:
@@ -9273,11 +9274,11 @@ def init( \
                 print('Retreiving the companion priors from ExoFOP-TESS...')
             
             if gdat.epocmtracompprio is None:
-                gdat.epocmtracompprio = gdat.dictexoftarg['epocmtracomp']
+                gdat.epocmtracompprio = gdat.dicttoiitarg['epocmtracomp']
             if gdat.pericompprio is None:
-                gdat.pericompprio = gdat.dictexoftarg['pericomp']
-            gdat.deptprio = gdat.dictexoftarg['depttrancomp']
-            gdat.duraprio = gdat.dictexoftarg['duratrantotl']
+                gdat.pericompprio = gdat.dicttoiitarg['pericomp']
+            gdat.deptprio = gdat.dicttoiitarg['depttrancomp']
+            gdat.duraprio = gdat.dicttoiitarg['duratrantotl']
             if gdat.cosicompprio is None:
                 gdat.cosicompprio = np.zeros_like(gdat.epocmtracompprio)
         
@@ -9304,10 +9305,10 @@ def init( \
                 for j in range(gdat.numbcompprio):
                     for p in gdat.indxinst[0]:
                         if gdat.typepriocomp == 'exar':
-                            gdat.rratcompprio[p][j] = gdat.dictexartarg['rratcomp']
+                            gdat.rratcompprio[p][j] = gdat.dictexartarg['rratcomp'][j]
                         if gdat.typepriocomp == 'exof':
-                            gdat.rratcompprio[p][j] = np.sqrt(gdat.deptprio)
-            
+                            gdat.rratcompprio[p][j] = np.sqrt(gdat.deptprio[j])
+
         # check MAST
         if gdat.strgmast is None:
             if gdat.typetarg != 'inpt' and not gdat.booltargsynt:
@@ -9425,12 +9426,8 @@ def init( \
 
             gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
             
-            print('gdat.true.indxcomp')
-            print(gdat.true.indxcomp)
             for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
                 for j in gdat.true.indxcomp:
-                    print('namepara')
-                    print(namepara)
                     tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, getattr(gdat, namepara + 'compprio')[j])
             
             if gdat.true.boolmodlpsys:
@@ -9440,6 +9437,17 @@ def init( \
                         for e in range(gdat.numbener[p]):
                             tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, e), getattr(gdat, 'rratcompprio')[j][p])
                     else:
+                        if gdat.booldiag:
+                            if not np.isscalar(getattr(gdat, 'rratcompprio')[p][j]):
+                                print('')
+                                print('')
+                                print('')
+                                print('gdat.numbener[p]')
+                                print(gdat.numbener[p])
+                                print('getattr(gdat, rratcompprio)[p][j]')
+                                print(getattr(gdat, 'rratcompprio')[p][j])
+                                raise Exception('gdat.numbener[p] == 1, but len(getattr(gdat, rratcompprio)[p][j]) > 1')
+                        
                         tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[p][j])
                     
             if gdat.true.typemodl == 'cosc':
@@ -9628,8 +9636,32 @@ def init( \
                 gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[p]
             ## from lygos
             if gdat.typelcurtpxftess == 'lygos':
-                gdat.listarrytser['raww'][b][p] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][:, None, :]
-    
+                gdat.listarrytser['raww'][b][p] = []
+                y = 0
+                for arry in gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]:
+                    if len(arry) > 0:
+                        gdat.listarrytser['raww'][b][p].append(arry[:, None, :])
+                
+                        if gdat.booldiag:
+                            if not np.isfinite(arry[:, None, :]).all():
+                                print('')
+                                print('')
+                                print('')
+                                print('b, p')
+                                print(b, p)
+                                print('arry[:, None, :]')
+                                summgene(arry[:, None, :])
+                                indxbadd = np.where(~np.isfinite(arry[:, None, :]))[0]
+                                print('indxbadd')
+                                summgene(indxbadd)
+                                raise Exception('not np.isfinite(arry[:, None, :]).all()')
+                    else:
+                        print('lygos light curve for this sector is empty. Removing sector %d...' % gdat.listtsec[y])
+                        gdat.numbchun[b][p] -= 1
+                        gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p])
+                        gdat.listtsec = np.delete(gdat.listtsec, y)
+                    y += 1
+
     ## user-input data
     if gdat.listpathdatainpt is not None:
         for b in gdat.indxdatatser:
@@ -9732,16 +9764,8 @@ def init( \
             for p in gdat.indxinst[b]:
                 if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                     for y in gdat.indxchun[b][p]:
-                        print('gdat.numbener[p]')
-                        print(gdat.numbener[p])
-                        print('gdat.true.listtime[b][p][y]')
-                        print(gdat.true.listtime[b][p][y])
-                        print('bpy')
-                        print(b, p, y)
                         gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
                         gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
-                        print('gdat.listarrytser[raww][b][p][y]')
-                        print(gdat.listarrytser['raww'][b][p][y])
         
     if gdat.timeoffs is None:
         timeoffs = 0.
@@ -9789,6 +9813,16 @@ def init( \
         if gdat.true.boolmodlcomp:
             for j in range(gdat.epocmtracompprio.size):
                 for name in gdat.true.listnameparacomp[j]:
+                    print('')
+                    print('name')
+                    print(name)
+                    print('getattr(gdat, %scompprio % name)')
+                    print(getattr(gdat, '%scompprio' % name))
+                    print('gdat.epocmtracompprio')
+                    print(gdat.epocmtracompprio)
+                    print('j')
+                    print(j)
+
                     setattr(gdat.true, '%scom%d' % (name, j), getattr(gdat, '%scompprio' % name)[j])
         
         dictparainpt = dict()
@@ -9948,6 +9982,16 @@ def init( \
                     print(gdat.liststrginst)
                     raise Exception('Instrument is TESS, but list of sectors is None.')
                     
+                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                    print('')
+                    print('')
+                    print('')
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    print('len(gdat.listarrytser[raww][b][p])')
+                    print(len(gdat.listarrytser['raww'][b][p]))
+                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+
     if gdat.liststrgchun is None:
         gdat.listlablchun = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.liststrgchun = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -10035,8 +10079,12 @@ def init( \
                     summgene(gdat.arrytser['raww'][b][p])
                     print('indxbadd')
                     summgene(indxbadd)
-                    raise Exception('')
+                    raise Exception('not np.isfinite(gdat.arrytser[raww][b][p]).all()')
     
+    
+
+
+
     # check availability of data 
     booldataaval = False
     for b in gdat.indxdatatser:
@@ -11100,7 +11148,7 @@ def init( \
     #    gdat.arrytserdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrytser['bdtr'][b][p][y][:, 1])
     #gdat.arrytserdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrytser['bdtr'][b][p][y][:, 1])
     
-    if gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'cosc':
+    if gdat.boolinfe and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'cosc'):
     ## number of bins in the phase curve
         gdat.numbbinspcurtotl = 100
     
@@ -11620,6 +11668,11 @@ def init( \
             objtfile = open(path, 'w')
             boolmakehead = True
         
+        if boolmakehead:
+            print('Will construct a header...')
+        else:
+            print('Will not construct a header...')
+        
         if boolappe:
             
             print('gdat.dictmileoutp')
@@ -11667,6 +11720,8 @@ def init( \
                 if 'path' in name:
                     print(name)
             
+            print('gdat.dictmileoutp.keys()')
+            print(sorted(list(gdat.dictmileoutp.keys())))
             for name in listnamecols:
                 valu = gdat.dictmileoutp[name]
                 if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):

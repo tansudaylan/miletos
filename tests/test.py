@@ -124,6 +124,8 @@ def cnfg_FermiLAT_AGN():
 
     print('liststrgmast')
     print(liststrgmast)
+    dictlygoinpt = dict()
+    dictlygoinpt['boolutiltpxf'] = False
 
     strgclus = 'FermiLAT_AGN'
     
@@ -132,6 +134,7 @@ def cnfg_FermiLAT_AGN():
         miletos.main.init( \
                           strgmast=strgmast, \
                           strgclus=strgclus, \
+                          dictlygoinpt=dictlygoinpt, \
                          )
 
 
