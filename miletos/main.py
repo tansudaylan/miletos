@@ -964,9 +964,9 @@ def retr_llik_albbepsi(para, gdat):
     return llik
 
 
-def retr_modl_spec(gdat, tmpt, booltess=False, strgtype='intg'):
+def retr_modl_spec(gdat, tmpt, boolthpt=False, strgtype='intg'):
     
-    if booltess:
+    if boolthpt:
         thpt = scipy.interpolate.interp1d(gdat.meanwlenband, gdat.thptband)(wlen)
     else:
         thpt = 1.
@@ -986,7 +986,7 @@ def retr_llik_spec(para, gdat):
     
     tmpt = para[0]
     
-    specboloplan = retr_modl_spec(gdat, tmpt, booltess=False, strgtype='intg')
+    specboloplan = retr_modl_spec(gdat, tmpt, boolthpt=False, strgtype='intg')
     deptplan = 1e3 * gdat.rratmedi[0]**2 * specboloplan / gdat.specstarintg # [ppt]
     
     llik = -0.5 * np.sum((deptplan - gdat.deptobsd)**2 / gdat.varideptobsd)
@@ -8410,7 +8410,6 @@ def init( \
             print(listtsec2min)
         
         # get observation tables
-        listpathdownspoc = []
         if typeverb > 0:
             print('Querying the MAST for observation tables with MAST keyword %s within %g arcseconds...' % (strgmasttemp, maxmradisrchmast))
         listtablobsv = astroquery.mast.Observations.query_object(strgmasttemp, radius=strgradi)
@@ -8754,54 +8753,15 @@ def init( \
         print('gdat.boolutiltesslocl')
         print(gdat.boolutiltesslocl)
 
-    
     booltess = 'TESS' in gdat.liststrginst[0]
-    booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
-    if booltesskepl:
-        if gdat.typelcurtpxftess == 'lygos':
-            gdat.listtseclygo = gdat.listtsectcut
-            gdat.listtsecspoc = np.array([], dtype=int)
-        elif gdat.typelcurtpxftess == 'SPOC':
-            gdat.listtseclygo = np.setdiff1d(gdat.listtsectcut, gdat.listtsecspoc)
-        elif gdat.typelcurtpxftess == 'SPOC_only':
-            gdat.listtseclygo = []
-
-        print('List of chunks to be reduced via lygos')
-        print(gdat.listtseclygo)
-        print('List of chunks to be taken from SPOC')
-        print(gdat.listtsecspoc)
-        
-        numbtsecspoc = gdat.listtsecspoc.size
-        indxtsecspoc = np.arange(numbtsecspoc)
-
-    if booltess:
-        print('gdat.typelcurtpxftess')
-        print(gdat.typelcurtpxftess)
-    
-        gdat.listtsecpdcc = np.empty_like(gdat.listtsecspoc)
-        gdat.listtsecsapp = np.empty_like(gdat.listtsecspoc)
-
-        # merge list of sectors whose light curves will come from SPOC and lygos, respectively
-        gdat.listtsec = np.unique(np.concatenate((gdat.listtseclygo, gdat.listtsecspoc), dtype=int))
-
-        print('List of TESS sectors')
-        print(gdat.listtsec)
-    
-    # filter the list of sectors using the desired list of sectors, if any
-    if listtsecsele is not None:
-        print('Filtering the list of sectors based on the user selection (listtsecsele)...')
-        listtsecsave = np.copy(gdat.listtsec)
-        gdat.listtsec = []
-        for tsec in listtsecsele:
-            if tsec in listtsecsave:
-                gdat.listtsec.append(tsec)
-        
-        gdat.listtsec = np.array(gdat.listtsec, dtype=int)
-    
-        print('Filtered list of TESS sectors')
-        print(gdat.listtsec)
+    gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
     
     if gdat.booldiag:
+        if np.unique(gdat.listtsecspoc).size != gdat.listtsecspoc.size:
+            print('gdat.listtsecspoc')
+            print(gdat.listtsecspoc)
+            raise Exception('gdat.listtsecspoc has repeating sectors.')
+
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 if b == 0 and gdat.liststrginst[b][p] == 'TESS' and gdat.boolretrlcurmastanyy and len(gdat.listtsecspoc) != len(gdat.listarrylcurmast[p]):
@@ -8820,15 +8780,20 @@ def init( \
                     summgene(gdat.listtsecspoc)
                     raise Exception('len(gdat.listarrylcurmast[p]) should match the length of gdat.listtsec.')
 
-    if booltess:
-        numbtsec = len(gdat.listtsec)
-        indxtsec = np.arange(numbtsec)
+    ## type of inference over energy axis to perform inference using
+    ### 'full': fit all energy bins simultaneously
+    ### 'iter': iterate over energy bins
+    tdpy.setp_para_defa(gdat, 'fitt', 'typemodlenerfitt', 'iter')
+                
+    if gdat.typeverb > 1:
+        print('gdat.fitt.typemodlenerfitt')
+        print(gdat.fitt.typemodlenerfitt)
+                    
+    if gdat.booltesskepl:
+        numbtsec = len(gdat.listtsectcut)
 
-        gdat.listtcam = np.empty(numbtsec, dtype=int)
-        gdat.listtccd = np.empty(numbtsec, dtype=int)
-    
         # determine for each sector whether a TFP is available
-        booltpxf = retr_booltpxf(gdat.listtsec, gdat.listtsecspoc)
+        booltpxf = retr_booltpxf(gdat.listtsectcut, gdat.listtsecspoc)
     
         if typeverb > 0:
             print('booltpxf')
@@ -8836,23 +8801,28 @@ def init( \
         
         if gdat.typelcurtpxftess == 'lygos':
             boollygo = np.ones(numbtsec, dtype=bool)
-            gdat.listtseclygo = gdat.listtsec
+            gdat.listtsecspoc = np.array([], dtype=int)
+            gdat.listtseclygo = gdat.listtsectcut
         elif gdat.typelcurtpxftess == 'SPOC':
             boollygo = ~booltpxf
-            gdat.listtseclygo = gdat.listtsec[boollygo]
+            gdat.listtseclygo = gdat.listtsectcut[boollygo]
         elif gdat.typelcurtpxftess == 'SPOC_only':
             boollygo = np.zeros_like(booltpxf, dtype=bool)
+            gdat.listtseclygo = []
         else:
             raise Exception('')
 
-        gdat.listtseclygo = gdat.listtsec[boollygo]
+        gdat.listtseclygo = gdat.listtsectcut[boollygo]
         
+        print('gdat.listtseclygo')
+        print(gdat.listtseclygo)
+        print('gdat.listtsecspoc')
+        print(gdat.listtsecspoc)
+    
     gdat.dictlygooutp = None
     
-    print('booltess')
-    print(booltess)
-    print('gdat.listtseclygo')
-    print(gdat.listtseclygo)
+    print('gdat.booltesskepl')
+    print(gdat.booltesskepl)
 
     if gdat.booldiag:
         # check if gdat.liststrginst has any 'TESS_S*'
@@ -8869,7 +8839,7 @@ def init( \
             print(gdat.liststrginst)
             raise Exception('gdat.liststrginst has both TESS and TESS_S*')
 
-    if booltess and len(gdat.listtseclygo) > 0:
+    if gdat.booltesskepl and len(gdat.listtseclygo) > 0:
         
         # configure lygos
         print('Configuring lygos...')
@@ -8909,7 +8879,7 @@ def init( \
             gdat.dictlygoinpt['boolutiltpxf'] = True
         
         # name of the lygos analysis from which the light curve will be derived
-        gdat.dictlygoinpt['listnameanls'] = 'psfn'
+        gdat.dictlygoinpt['listnameanls'] = ['psfn']
         
         # Boolean flag to use quality mask
         if not 'boolmaskqual' in gdat.dictlygoinpt:
@@ -8927,23 +8897,75 @@ def init( \
                                             **gdat.dictlygoinpt, \
                                            )
         
+        if gdat.booldiag:
+            if not (gdat.dictlygooutp['listtsec'][0] - gdat.listtseclygo == 0).all():
+                print('')
+                print('')
+                print('')
+                print('gdat.listtseclygo')
+                print(gdat.listtseclygo)
+                print('gdat.dictlygooutp[listtsec]')
+                print(gdat.dictlygooutp['listtsec'])
+                raise Exception('gdat.dictlygooutp[listtsec] and gdat.listtseclygo are different!')
+
+        # check if lygos has a missing sector
+        listindxtseclygodele = []
+        for y, arry in enumerate(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]):
+            if len(arry) == 0:
+                print('lygos light curve for this sector is empty. Removing sector %d...' % gdat.listtseclygo[y])
+                listindxtseclygodele.append(y)
+        if len(listindxtseclygodele) > 0:
+            for indxtseclygodele in listindxtseclygodele:
+                gdat.listtseclygo = np.delete(gdat.listtseclygo, indxtseclygodele)
+                del gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxtseclygodele]
+                del gdat.dictlygooutp['listtcam'][indxtseclygodele]
+                del gdat.dictlygooutp['listtccd'][indxtseclygodele]
+        
+        # remove bad times
         for o, tseclygo in enumerate(gdat.listtseclygo):
-            indx = np.where(gdat.dictlygooutp['listtsec'][0] == tseclygo)[0]
-            if indx.size > 0:
-                indxtsecthis = indx[0]
-                if len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxtsecthis]) > 0:
-                    
-                    # choose the current sector
-                    arry = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxtsecthis]
-                    
-                    # find good times
-                    indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
-                    
-                    # filter for good times
-                    gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxtsecthis] = arry[indxtimegood, :]
-                    
-                    gdat.listtcam[o] = gdat.dictlygooutp['listtcam'][indxtsecthis]
-                    gdat.listtccd[o] = gdat.dictlygooutp['listtccd'][indxtsecthis]
+            # choose the current sector
+            arry = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]
+            
+            # find good times
+            indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
+            
+            # filter for good times
+            gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o] = arry[indxtimegood, :]
+            
+    if gdat.booltesskepl:
+        print('List of chunks to be reduced via lygos')
+        print(gdat.listtseclygo)
+        print('List of chunks to be taken from SPOC')
+        print(gdat.listtsecspoc)
+        
+        numbtsecspoc = gdat.listtsecspoc.size
+        indxtsecspoc = np.arange(numbtsecspoc)
+
+        print('gdat.typelcurtpxftess')
+        print(gdat.typelcurtpxftess)
+    
+        gdat.listtsecpdcc = np.empty_like(gdat.listtsecspoc)
+        gdat.listtsecsapp = np.empty_like(gdat.listtsecspoc)
+
+        # merge list of sectors whose light curves will come from SPOC and lygos, respectively
+        gdat.listtsec = np.unique(np.concatenate((gdat.listtseclygo, gdat.listtsecspoc), dtype=int))
+
+        print('List of TESS sectors')
+        print(gdat.listtsec)
+    
+    # filter the list of sectors using the desired list of sectors, if any
+    if listtsecsele is not None:
+        print('Filtering the list of sectors based on the user selection (listtsecsele)...')
+        listtsecsave = np.copy(gdat.listtsec)
+        gdat.listtsec = []
+        for tsec in listtsecsele:
+            if tsec in listtsecsave:
+                gdat.listtsec.append(tsec)
+        
+        gdat.listtsec = np.array(gdat.listtsec, dtype=int)
+    
+        print('Filtered list of TESS sectors')
+        print(gdat.listtsec)
     
     if gdat.booldiag:
         for p in gdat.indxinst[0]:
@@ -8979,90 +9001,74 @@ def init( \
                         summgene(gdat.listarrylcurmast[p][y])
                         raise Exception('gdat.listarrylcurmast[p][y].ndim != 3')
     
-    if booltesskepl:
-        # make sure the list of paths to sector files are time-sorted
-        #listpathdown.sort()
+    if gdat.booltesskepl:
         
         if len(gdat.listtsecspoc) > 0 and gdat.typelcurtpxftess == 'SPOC':
             
             ## read SPOC light curves
-            gdat.listarrylcurmastsapp = [[] for o in indxtsec] 
-            gdat.listarrylcurmastpdcc = [[] for o in indxtsec] 
-            for o in indxtsec:
-                if not boollygo[o]:
-                    
-                    indx = np.where(gdat.listtsec[o] == gdat.listtsecspoc)[0][0]
-                    print('gdat.listpathspocmast')
-                    print(gdat.listpathspocmast)
-                    print('indx')
-                    print(indx)
-                    path = gdat.listpathspocmast[indx]
-                    if typeverb > 0:
-                        print('Reading the SAP light curves...')
-                    gdat.listarrylcurmastsapp[o], gdat.listtsecsapp[o], gdat.listtcam[o], gdat.listtccd[o] = \
-                                           read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', \
-                                                                        booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
-                    if typeverb > 0:
-                        print('Reading the PDC light curves...')
-                    gdat.listarrylcurmastpdcc[o], gdat.listtsecpdcc[o], gdat.listtcam[o], gdat.listtccd[o] = \
-                                           read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
-                                                                        booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
+            gdat.listarrylcurmastsapp = [[] for o in indxtsecspoc]
+            gdat.listarrylcurmastpdcc = [[] for o in indxtsecspoc]
+            
+            gdat.listtcamspoc = [[] for o in indxtsecspoc]
+            gdat.listtccdspoc = [[] for o in indxtsecspoc]
+            
+            for indx, tsecspoc in enumerate(gdat.listtsecspoc):
+                path = gdat.listpathspocmast[indx]
+                if typeverb > 0:
+                    print('Reading the SAP light curves...')
+                
+                gdat.listarrylcurmastsapp[indx], gdat.listtsecsapp[indx], gdat.listtcamspoc[indx], gdat.listtccdspoc[indx] = \
+                                       read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', \
+                                                                    booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
+                if typeverb > 0:
+                    print('Reading the PDC light curves...')
+                gdat.listarrylcurmastpdcc[indx], gdat.listtsecpdcc[indx], gdat.listtcamspoc[indx], gdat.listtccdspoc[indx] = \
+                                       read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
+                                                                    booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
                     
             # merge light curves from different sectors
             arrylcursapp = np.concatenate([arry for arry in gdat.listarrylcurmastsapp if len(arry) > 0], 0)
             arrylcurpdcc = np.concatenate([arry for arry in gdat.listarrylcurmastpdcc if len(arry) > 0], 0)
     
-    if gdat.booldiag:
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
-                    print('')
-                    print('')
-                    print('')
-                    print('b, p')
-                    print(b, p)
-                    print('gdat.listtsec')
-                    print(gdat.listtsec)
-                    print('len(gdat.listarrytser[raww][b][p])')
-                    print(len(gdat.listarrytser['raww'][b][p]))
-                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
-
     # check if gdat.listarrylcurmast contains any empty sectors and remove from gdat.listarrylcurmast, listtcam, listtccd, and gdat.listtsec
-    for p in gdat.indxinst[b]:
-        boolbadd = False
-        for arrylcur in gdat.listarrylcurmast[p]:
-            if len(arrylcur) == 0:
-                boolbadd = True
-        if boolbadd:
-            if typeverb > 0:
-                print('gdat.listarrylcurmast contains at least one empty element (i.e., sector with no data). Will remove all such elements.')
-            listarrylcurmasttemp = []
-            listindxtsecgood = []
-            for o in indxtsec:
-                if len(gdat.listarrylcurmast[p][o]) > 0:
-                    listindxtsecgood.append(o)
-            listindxtsecgood = np.array(listindxtsecgood, dtype=int)
-            gdat.listtsec = gdat.listtsec[listindxtsecgood]
-            gdat.listtcam = gdat.listtcam[listindxtsecgood]
-            gdat.listtccd = gdat.listtccd[listindxtsecgood]
-            for indxtsecgood in listindxtsecgood:
-                listarrylcurmasttemp.append(gdat.listarrylcurmast[p][indxtsecgood, :, :])
-            gdat.listarrylcurmast[p] = listarrylcurmasttemp
+    # probably to be deleted (why would SPOC sector be empty?)
+    #for p in gdat.indxinst[b]:
+    #    boolbadd = False
+    #    for arrylcur in gdat.listarrylcurmast[p]:
+    #        if len(arrylcur) == 0:
+    #            boolbadd = True
+    #    if boolbadd:
+    #        if typeverb > 0:
+    #            print('gdat.listarrylcurmast contains at least one empty element (i.e., sector with no data). Will remove all such elements.')
+    #        listarrylcurmasttemp = []
+    #        listindxtsecgood = []
+    #        for o in indxtsec:
+    #            if len(gdat.listarrylcurmast[p][o]) > 0:
+    #                listindxtsecgood.append(o)
+    #        listindxtsecgood = np.array(listindxtsecgood, dtype=int)
+    #        gdat.listtsec = gdat.listtsec[listindxtsecgood]
+    #        gdat.listtcam = gdat.listtcam[listindxtsecgood]
+    #        gdat.listtccd = gdat.listtccd[listindxtsecgood]
+    #        for indxtsecgood in listindxtsecgood:
+    #            listarrylcurmasttemp.append(gdat.listarrylcurmast[p][indxtsecgood, :, :])
+    #        gdat.listarrylcurmast[p] = listarrylcurmasttemp
         
-    if gdat.booldiag:
+    if gdat.typeverb > 1:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
-                    print('')
-                    print('')
-                    print('')
-                    print('b, p')
-                    print(b, p)
-                    print('gdat.listtsec')
-                    print(gdat.listtsec)
-                    print('len(gdat.listarrytser[raww][b][p])')
-                    print(len(gdat.listarrytser['raww'][b][p]))
-                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+                if gdat.boolretrlcurmast[b][p]:
+                    for y in gdat.indxchun[b][p]:
+                        print('bpy')
+                        print(b, p, y)
+                        print('gdat.listarrylcurmast[p][y]')
+                        summgene(gdat.listarrylcurmast[p][y])
+                        print('gdat.listarrylcurmast[p][y][:, :, 0]')
+                        summgene(gdat.listarrylcurmast[p][y][:, :, 0])
+                        print('gdat.listarrylcurmast[p][y][:, :, 1]')
+                        summgene(gdat.listarrylcurmast[p][y][:, :, 1])
+                        print('gdat.listarrylcurmast[p][y][:, :, 2]')
+                        summgene(gdat.listarrylcurmast[p][y][:, :, 2])
+                        print('')
 
     if gdat.booldiag:
         for b in gdat.indxdatatser:
@@ -9496,7 +9502,8 @@ def init( \
             tdpy.setp_para_defa(gdat, 'true', 'coefquadsupn', 0.5) # [ppt]
                             
     # determine number of chunks
-    gdat.numbchun = [np.zeros(gdat.numbinst[b], dtype=int) - 1 for b in gdat.indxdatatser]
+    print('Determining the number of chunks...')
+    gdat.numbchun = [np.zeros(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
     gdat.numbdatagood = 0
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -9508,11 +9515,17 @@ def init( \
                 gdat.numbdatagood += 1
             elif b == 0:
                 if gdat.boolretrlcurmast[b][p]:
-                    gdat.numbchun[b][p] = len(gdat.listarrylcurmast[p])
+                    print('gdat.numbchun[b][p]')
+                    print(gdat.numbchun[b][p])
+                    gdat.numbchun[b][p] += len(gdat.listarrylcurmast[p])
+                    print('gdat.numbchun[b][p]')
+                    print(gdat.numbchun[b][p])
                     gdat.numbdatagood += 1
-                else:
+                if len(gdat.listtseclygo) > 0:
                     if gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
-                        gdat.numbchun[b][p] = len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0])
+                        gdat.numbchun[b][p] += len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0])
+                        print('gdat.numbchun[b][p]')
+                        print(gdat.numbchun[b][p])
                         gdat.numbdatagood += 1
                     else:
                         print('Warning: lygos data were not incorporated into miletos!')
@@ -9542,31 +9555,6 @@ def init( \
                     raise Exception('')
             gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p], dtype=int)
     
-    ## type of inference over energy axis to perform inference using
-    ### 'full': fit all energy bins simultaneously
-    ### 'iter': iterate over energy bins
-    tdpy.setp_para_defa(gdat, 'fitt', 'typemodlenerfitt', 'iter')
-                
-    if gdat.typeverb > 1:
-        print('gdat.fitt.typemodlenerfitt')
-        print(gdat.fitt.typemodlenerfitt)
-                    
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if gdat.boolretrlcurmast[b][p]:
-                    for y in gdat.indxchun[b][p]:
-                        print('bpy')
-                        print(b, p, y)
-                        print('gdat.listarrylcurmast[p][y]')
-                        summgene(gdat.listarrylcurmast[p][y])
-                        print('gdat.listarrylcurmast[p][y][:, :, 0]')
-                        summgene(gdat.listarrylcurmast[p][y][:, :, 0])
-                        print('gdat.listarrylcurmast[p][y][:, :, 1]')
-                        summgene(gdat.listarrylcurmast[p][y][:, :, 1])
-                        print('gdat.listarrylcurmast[p][y][:, :, 2]')
-                        summgene(gdat.listarrylcurmast[p][y][:, :, 2])
-                        print('')
-
     if gdat.numbener[p] == 1:
         gdat.numbenermodl = 1
         gdat.numbeneriter = 1
@@ -9582,8 +9570,8 @@ def init( \
     gdat.indxfittiter = np.arange(gdat.numbeneriter)
     gdat.indxenermodl = np.arange(gdat.numbenermodl)
 
-    #if gdat.listarrytser is None:
-    gdat.listarrytser['raww'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    if not 'raww' in gdat.listarrytser:
+        gdat.listarrytser['raww'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     gdat.arrytser['bdtrlowr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listarrytser['bdtrlowr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -9603,62 +9591,6 @@ def init( \
     gdat.listarrytser['bdtr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
-    # list of strings to be attached to file names for type of run over energy bins
-    gdat.liststrgdatafittiter = [[] for r in gdat.indxfittiter]
-    for h in gdat.indxfittiter:
-        if h == 0:
-            if gdat.numbener[p] > 1:
-                gdat.liststrgdatafittiter[0] = 'whit'
-            else:
-                gdat.liststrgdatafittiter[0] = ''
-        else:
-            e = h - 1
-            
-            gdat.liststrgdatafittiter[h] = 'ener%04d' % e
-    
-    if gdat.typeverb > 0:
-        print('gdat.liststrgdatafittiter')
-        print(gdat.liststrgdatafittiter)
-
-    # load data
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            ## from MAST
-            if gdat.boolretrlcurmast[b][p]:
-                gdat.listarrytser['raww'][b][p] = gdat.listarrylcurmast[p]
-            ## from lygos
-            if gdat.typelcurtpxftess == 'lygos':
-                gdat.listarrytser['raww'][b][p] = []
-                y = 0
-                for arry in gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]:
-                    if len(arry) > 0:
-                        gdat.listarrytser['raww'][b][p].append(arry[:, None, :])
-                
-                        if gdat.booldiag:
-                            if not np.isfinite(arry[:, None, :]).all():
-                                print('')
-                                print('')
-                                print('')
-                                print('b, p')
-                                print(b, p)
-                                print('arry[:, None, :]')
-                                summgene(arry[:, None, :])
-                                indxbadd = np.where(~np.isfinite(arry[:, None, :]))[0]
-                                print('indxbadd')
-                                summgene(indxbadd)
-                                raise Exception('not np.isfinite(arry[:, None, :]).all()')
-                    else:
-                        print('lygos light curve for this sector is empty. Removing sector %d...' % gdat.listtsec[y])
-                        gdat.numbchun[b][p] -= 1
-                        gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p])
-                        gdat.listtsec = np.delete(gdat.listtsec, y)
-                    y += 1
-    
-    if booltess:
-        gdat.dictmileoutp['listtsec'] = gdat.listtsec
-        print('List of TESS sectors:')
-        print(gdat.listtsec)
-    
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -9670,10 +9602,54 @@ def init( \
                     print(b, p)
                     print('gdat.listtsec')
                     print(gdat.listtsec)
+                    summgene(gdat.listtsec)
+                    print('gdat.listtseclygo')
+                    print(gdat.listtseclygo)
+                    print('gdat.listtsecspoc')
+                    print(gdat.listtsecspoc)
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    print('len(gdat.listarrylcurmast[p])')
+                    print(len(gdat.listarrylcurmast[p]))
+                    if len(gdat.listtseclygo) > 0:
+                        print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0])')
+                        print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
+                    print('gdat.boolretrlcurmast')
+                    print(gdat.boolretrlcurmast)
+                    print('gdat.typelcurtpxftess')
+                    print(gdat.typelcurtpxftess)
                     print('len(gdat.listarrytser[raww][b][p])')
                     print(len(gdat.listarrytser['raww'][b][p]))
                     raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
 
+    if gdat.booltesskepl:
+        gdat.dictmileoutp['listtsec'] = gdat.listtsec
+        print('List of TESS sectors:')
+        print(gdat.listtsec)
+    
+    # load data
+    print('Loading data into gdat.listarrytser[raww]...')
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            
+            print('len(gdat.listarrytser[raww][b][p])')
+            print(len(gdat.listarrytser['raww'][b][p]))
+            
+            ## from MAST
+            if gdat.boolretrlcurmast[b][p]:
+                for o, tsecspoc in enumerate(gdat.listtsecspoc):
+                    indx = np.where(gdat.listtsec == tsecspoc)[0][0]
+                    gdat.listarrytser['raww'][b][p][indx] = gdat.listarrylcurmast[p][o]
+            
+            print('len(gdat.listarrytser[raww][b][p])')
+            print(len(gdat.listarrytser['raww'][b][p]))
+            
+            ## TESS and Kepler data via lygos
+            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
+                for o, tseclygo in enumerate(gdat.listtseclygo):
+                    indx = np.where(gdat.listtsec == tseclygo)[0][0]
+                    gdat.listarrytser['raww'][b][p][indx] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o][:, None, :]
+                
     ## user-input data
     if gdat.listpathdatainpt is not None:
         for b in gdat.indxdatatser:
@@ -9784,12 +9760,22 @@ def init( \
                         gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
                         gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
         
-    print('gdat.listarrytser')
-    print(gdat.listarrytser)
-    print('len(gdat.listarrytser[raww][0][0])')
-    print(len(gdat.listarrytser['raww'][0][0]))
-    print('len(gdat.listarrytser[raww][0][1])')
-    print(len(gdat.listarrytser['raww'][0][1]))
+    # list of strings to be attached to file names for type of run over energy bins
+    gdat.liststrgdatafittiter = [[] for r in gdat.indxfittiter]
+    for h in gdat.indxfittiter:
+        if h == 0:
+            if gdat.numbener[p] > 1:
+                gdat.liststrgdatafittiter[0] = 'whit'
+            else:
+                gdat.liststrgdatafittiter[0] = ''
+        else:
+            e = h - 1
+            
+            gdat.liststrgdatafittiter[h] = 'ener%04d' % e
+    
+    if gdat.typeverb > 0:
+        print('gdat.liststrgdatafittiter')
+        print(gdat.liststrgdatafittiter)
 
     if gdat.timeoffs is None:
         timeoffs = 0.
@@ -9927,13 +9913,6 @@ def init( \
                     gdat.liststrgener[p].append('')
                 else:
                     gdat.liststrgener[p].append('ener%04d' % e)
-
-    print('gdat.listarrytser')
-    print(gdat.listarrytser)
-    print('len(gdat.listarrytser[raww][0][0])')
-    print(len(gdat.listarrytser['raww'][0][0]))
-    print('len(gdat.listarrytser[raww][0][1])')
-    print(len(gdat.listarrytser['raww'][0][1]))
 
     # make white light curve
     if gdat.numbener[p] > 1:
