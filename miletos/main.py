@@ -7364,7 +7364,10 @@ def init( \
          
          ## local time offset for the visibility calculation
          offstimeobvt=0., \
-            
+         
+         # Boolean flag to separate TESS sectors into separate instruments TESS_S*
+         boolbrektess=False, \
+
          # dictionary for parameters of the true generative model
          dicttrue=None, \
 
@@ -8004,9 +8007,6 @@ def init( \
     if gdat.boolplotdvrp is None:
         gdat.boolplotdvrp = gdat.boolplot
     
-    if gdat.dictlygoinpt is None:
-        gdat.dictlygoinpt = dict()
-    
     # data validation (DV) report
     ## list of dictionaries holding the paths and DV report positions of plots
     if gdat.boolplot:
@@ -8356,15 +8356,6 @@ def init( \
         print('magt')
         summgene(magt)
     
-    gdat.dictlygoinpt['pathtarg'] = gdat.pathtargcnfg + 'lygos/'
-        
-    if not 'liststrginst' in gdat.dictlygoinpt:
-        gdat.dictlygoinpt['liststrginst'] = gdat.liststrginst[0]
-    
-    if not 'typepsfninfe' in gdat.dictlygoinpt:
-        gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
-        #gdat.dictlygoinpt['maxmradisrchmast'] = maxmradisrchmast
-        
     # determine the MAST keyword to be used for the target
     if gdat.strgmast is not None:
         strgmasttemp = gdat.strgmast
@@ -8393,8 +8384,6 @@ def init( \
         
         #if gdat.liststrginst is None:
         #    gdat.liststrginst = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
-        print('liststrginst')
-        print(liststrginst)
         
         maxmradisrchmast = 10. # arcsec
         strgradi = '%gs' % maxmradisrchmast
@@ -8664,7 +8653,10 @@ def init( \
                             
                             gdat.listtsecspoc.append(tsec)
                             gdat.listarrylcurmast[mm].append(arrylcur[:, None, :])
-                            gdat.liststrginst[0].append('TESS_S%d' % tsec)
+                            
+                            if gdat.boolbrektess:
+                                gdat.liststrginst[0].append('TESS_S%d' % tsec)
+                        
                         elif 'niriss' in path or path.endswith('nis_x1dints.fits'):
                             pass
                             #listtime = listhdun['EXTRACT1D'].data
@@ -8862,9 +8854,39 @@ def init( \
     print('gdat.listtseclygo')
     print(gdat.listtseclygo)
 
+    if gdat.booldiag:
+        # check if gdat.liststrginst has any 'TESS_S*'
+        booltemp = False
+        for strginst in gdat.liststrginst[0]:
+            if strginst.startswith('TESS_S'):
+                booltemp = True
+    
+        if 'TESS' in gdat.liststrginst[0] and booltemp:
+            print('')
+            print('')
+            print('')
+            print('gdat.liststrginst')
+            print(gdat.liststrginst)
+            raise Exception('gdat.liststrginst has both TESS and TESS_S*')
+
     if booltess and len(gdat.listtseclygo) > 0:
         
         # configure lygos
+        print('Configuring lygos...')
+        if gdat.dictlygoinpt is None:
+            gdat.dictlygoinpt = dict()
+        
+        gdat.dictlygoinpt['pathtarg'] = gdat.pathtargcnfg + 'lygos/'
+            
+        if not 'liststrginst' in gdat.dictlygoinpt:
+            gdat.dictlygoinpt['liststrginst'] = gdat.liststrginst[0]
+            
+            print('gdat.dictlygoinpt[liststrginst]')
+            print(gdat.dictlygoinpt['liststrginst'])
+        
+        if not 'typepsfninfe' in gdat.dictlygoinpt:
+            gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
+        
         ## target identifier
         if gdat.typetarg == 'mast':
             gdat.dictlygoinpt['strgmast'] = gdat.strgmast
@@ -8990,6 +9012,21 @@ def init( \
             arrylcursapp = np.concatenate([arry for arry in gdat.listarrylcurmastsapp if len(arry) > 0], 0)
             arrylcurpdcc = np.concatenate([arry for arry in gdat.listarrylcurmastpdcc if len(arry) > 0], 0)
     
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    print('len(gdat.listarrytser[raww][b][p])')
+                    print(len(gdat.listarrytser['raww'][b][p]))
+                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+
     # check if gdat.listarrylcurmast contains any empty sectors and remove from gdat.listarrylcurmast, listtcam, listtccd, and gdat.listtsec
     for p in gdat.indxinst[b]:
         boolbadd = False
@@ -9015,6 +9052,21 @@ def init( \
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
+                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    print('len(gdat.listarrytser[raww][b][p])')
+                    print(len(gdat.listarrytser['raww'][b][p]))
+                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
                 if b == 0 and gdat.liststrginst[b][p] == 'TESS' and gdat.boolretrlcurmastanyy and len(gdat.listtsecspoc) != len(gdat.listarrylcurmast[p]):
                     print('')
                     print('')
@@ -9026,11 +9078,6 @@ def init( \
                     print(gdat.listtsec)
                     raise Exception('')
 
-    if booltess:
-        gdat.dictmileoutp['listtsec'] = gdat.listtsec
-        print('List of TESS sectors:')
-        print(gdat.listtsec)
-    
     if gdat.dictlygooutp is not None:
         for name in gdat.dictlygooutp:
             gdat.dictmileoutp['lygo_' + name] = gdat.dictlygooutp[name]
@@ -9607,12 +9654,26 @@ def init( \
                         gdat.listtsec = np.delete(gdat.listtsec, y)
                     y += 1
     
-    print('gdat.listarrytser')
-    print(gdat.listarrytser)
-    print('len(gdat.listarrytser[raww][0][0])')
-    print(len(gdat.listarrytser['raww'][0][0]))
-    print('len(gdat.listarrytser[raww][0][1])')
-    print(len(gdat.listarrytser['raww'][0][1]))
+    if booltess:
+        gdat.dictmileoutp['listtsec'] = gdat.listtsec
+        print('List of TESS sectors:')
+        print(gdat.listtsec)
+    
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    print('len(gdat.listarrytser[raww][b][p])')
+                    print(len(gdat.listarrytser['raww'][b][p]))
+                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+
     ## user-input data
     if gdat.listpathdatainpt is not None:
         for b in gdat.indxdatatser:
@@ -9954,7 +10015,7 @@ def init( \
                     print('len(gdat.listarrytser[raww][b][p])')
                     print(len(gdat.listarrytser['raww'][b][p]))
                     raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
-
+    
     if gdat.liststrgchun is None:
         gdat.listlablchun = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.liststrgchun = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
