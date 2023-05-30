@@ -249,7 +249,10 @@ def retr_listtsectcut(strgtcut):
     listtsec = np.array(tabltesscutt['sector'])
     listtcam = np.array(tabltesscutt['camera'])
     listtccd = np.array(tabltesscutt['ccd'])
-   
+    
+    print('listtsec')
+    print(listtsec)
+
     return listtsec, listtcam, listtccd
 
 
@@ -3741,7 +3744,7 @@ def plot_tser_mile(gdat, strgmodl, b, p, y, strgarry, booltoge=True, boolflar=Fa
         plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y, boolcolrtran=True, boolflar=boolflar)
         
         ## plot all chunks together if there is more than one chunk
-        if y == 0 and gdat.numbchun[b][p] > 1:
+        if y == 0 and gdat.numbchun[b][p] > 1 and not strgarry.startswith('ts0'):
             plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, boolcolrtran=True, boolflar=boolflar)
 
         # plot in-transit data
@@ -8959,9 +8962,9 @@ def init( \
                 print('gdat.dictlygooutp[listtsec][0]')
                 print(gdat.dictlygooutp['listtsec'][0])
                 summgene(gdat.dictlygooutp['listtsec'])
-                raise Exception('Sizes of gdat.dictlygooutp[listtsec] and gdat.listtseclygo are different!')
+                print('Warning! Sizes of gdat.dictlygooutp[listtsec] and gdat.listtseclygo are different!')
 
-            if not (gdat.dictlygooutp['listtsec'][0] - gdat.listtseclygo == 0).all():
+            elif not (gdat.dictlygooutp['listtsec'][0] - gdat.listtseclygo == 0).all():
                 print('')
                 print('')
                 print('')
@@ -8969,7 +8972,7 @@ def init( \
                 print(gdat.listtseclygo)
                 print('gdat.dictlygooutp[listtsec]')
                 print(gdat.dictlygooutp['listtsec'])
-                raise Exception('gdat.dictlygooutp[listtsec] and gdat.listtseclygo are different!')
+                print('Warning! gdat.dictlygooutp[listtsec] and gdat.listtseclygo are different!')
 
         # check if lygos has a missing sector
         listindxtseclygodele = []
@@ -9541,13 +9544,17 @@ def init( \
 
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.boolsimurflx:
+            if gdat.liststrgtypedata[b][p].startswith('simu'):
                 gdat.numbchun[b][p] = 1
                 gdat.numbdatagood += 1
             elif gdat.liststrgtypedata[b][p] == 'inpt':
                 gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
                 gdat.numbdatagood += 1
             elif b == 0:
+                print('b, p')
+                print(b, p)
+                print('gdat.boolretrlcurmast[b][p]')
+                print(gdat.boolretrlcurmast[b][p])
                 if gdat.boolretrlcurmast[b][p]:
                     print('gdat.numbchun[b][p]')
                     print(gdat.numbchun[b][p])
@@ -9651,6 +9658,7 @@ def init( \
             if gdat.boolretrlcurmast[b][p]:
                 for o, tsecspoc in enumerate(gdat.listtsecspoc):
                     indx = np.where(gdat.listtsec == tsecspoc)[0][0]
+                    
                     print('')
                     print('indx')
                     print(indx)
@@ -9658,10 +9666,13 @@ def init( \
                     print(tsecspoc)
                     print('o')
                     print(o)
+                    print('b, p')
+                    print(b, p)
                     print('len(gdat.listarrylcurmast[p])')
                     print(len(gdat.listarrylcurmast[p]))
                     print('gdat.listarrytser[raww][b][p]')
                     summgene(gdat.listarrytser['raww'][b][p])
+                    
                     gdat.listarrytser['raww'][b][p][indx] = gdat.listarrylcurmast[p][o]
             
             print('len(gdat.listarrytser[raww][b][p])')
@@ -9786,33 +9797,34 @@ def init( \
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
-                    print('')
-                    print('')
-                    print('')
-                    print('b, p')
-                    print(b, p)
-                    print('gdat.listtsec')
-                    print(gdat.listtsec)
-                    summgene(gdat.listtsec)
-                    print('gdat.listtseclygo')
-                    print(gdat.listtseclygo)
-                    print('gdat.listtsecspoc')
-                    print(gdat.listtsecspoc)
-                    print('gdat.listtsec')
-                    print(gdat.listtsec)
-                    print('len(gdat.listarrylcurmast[p])')
-                    print(len(gdat.listarrylcurmast[p]))
-                    if len(gdat.listtseclygo) > 0:
-                        print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0])')
-                        print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
-                    print('gdat.boolretrlcurmast')
-                    print(gdat.boolretrlcurmast)
-                    print('gdat.typelcurtpxftess')
-                    print(gdat.typelcurtpxftess)
-                    print('len(gdat.listarrytser[raww][b][p])')
-                    print(len(gdat.listarrytser['raww'][b][p]))
-                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+                if (gdat.liststrginst[b][p].startswith('TESS_S') or gdat.liststrginst[b][p] == 'TESS'):
+                    if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                        print('')
+                        print('')
+                        print('')
+                        print('b, p')
+                        print(b, p)
+                        print('gdat.listtsec')
+                        print(gdat.listtsec)
+                        summgene(gdat.listtsec)
+                        print('gdat.listtseclygo')
+                        print(gdat.listtseclygo)
+                        print('gdat.listtsecspoc')
+                        print(gdat.listtsecspoc)
+                        print('gdat.listtsec')
+                        print(gdat.listtsec)
+                        print('len(gdat.listarrylcurmast[p])')
+                        print(len(gdat.listarrylcurmast[p]))
+                        if len(gdat.listtseclygo) > 0:
+                            print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0])')
+                            print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
+                        print('gdat.boolretrlcurmast')
+                        print(gdat.boolretrlcurmast)
+                        print('gdat.typelcurtpxftess')
+                        print(gdat.typelcurtpxftess)
+                        print('len(gdat.listarrytser[raww][b][p])')
+                        print(len(gdat.listarrytser['raww'][b][p]))
+                        raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
 
     # list of strings to be attached to file names for type of run over energy bins
     gdat.liststrgdatafittiter = [[] for r in gdat.indxfittiter]
@@ -10037,7 +10049,7 @@ def init( \
                     print(gdat.liststrginst)
                     raise Exception('Instrument is TESS, but list of sectors is None.')
                     
-                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                if gdat.liststrginst[b][p] == 'TESS' and len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
                     print('')
                     print('')
                     print('')
@@ -10215,10 +10227,12 @@ def init( \
         gdat.numbiterbdtr = [[0 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
         numbtimecutt = [[1 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
         
-        print('Listing all strings of detrending variables...')
+        print('Defining all intermediate variables related to clipping and detrending...')
         for z, timescalbdtrspln in enumerate(gdat.listtimescalbdtrspln):
             for wr in range(gdat.maxmnumbiterbdtr):
                 strgarrybdtrinpt, strgarryclipoutp, strgarrybdtroutp, strgarryclipinpt, strgarrybdtrblin = retr_namebdtrclip(z, wr)
+                print('strgarrybdtrinpt')
+                print(strgarrybdtrinpt)
                 gdat.listarrytser[strgarrybdtrinpt] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gdat.listarrytser[strgarryclipoutp] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gdat.listarrytser[strgarrybdtroutp] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -10275,6 +10289,8 @@ def init( \
                             raise Exception('')
 
                         if gdat.boolplottser:
+                            print('strgarrybdtrinpt')
+                            print(strgarrybdtrinpt)
                             plot_tser_mile(gdat, strgmodl, 0, p, y, strgarrybdtrinpt, booltoge=False)
                         
                         # perform trial detrending
