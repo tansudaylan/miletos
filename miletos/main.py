@@ -8380,6 +8380,9 @@ def init( \
         print('List of TESS sectors for which FFI data are available via TESSCut:')
         print(gdat.listtsectcut)
         
+    booltess = 'TESS' in gdat.liststrginst[0]
+    gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
+    
     if gdat.boolretrlcurmastanyy:
         
         #if gdat.liststrginst is None:
@@ -8471,15 +8474,10 @@ def init( \
                 #summgene(listtablobsv['target_name'].value)
                 #print('')
                 
-                if gdat.booldiag:
-                    if gdat.ticitarg is None:
-                        print('')
-                        print('')
-                        print('')
-                        print('gdat.ticitarg is None')
-                        raise Exception('')
+                if gdat.ticitarg is not None:
+                    print('Filtering the observation tables based on whether the TIC ID matches the target...')
                 
-                boolgood = boolgood & (listtablobsv['target_name'].value == '%s' % gdat.ticitarg)
+                    boolgood = boolgood & (listtablobsv['target_name'].value == '%s' % gdat.ticitarg)
                 
             if strgexprtemp == 'K2':
                 boolgood = boolgood & (listtablobsv['dataproduct_type'] == 'timeseries') & (listtablobsv['target_name'] == gdat.strgmast)
@@ -8644,8 +8642,26 @@ def init( \
                         #if path.endswith('allslits_x1d.fits') or path.endswith('s1600a1_x1d.fits') or 
                         
                         if 'tess' in path:
+                            
+                            if 'a_fast' in path:
+                                print('temp: removing all fast (20 sec) cadence data...')
+                                continue
+                            
                             print('Appending path to gdat.listpathspocmast...')
                             gdat.listpathspocmast.append(path)
+
+                            #'aylan/mast/mastDownload/TESS/tess2021091135823-s0037-0000000260647166-0208-s/tess2021091135823-s0037-0000000260647166-0208-s_lc.fits...'
+                            #'aylan/mast/mastDownload/TESS/tess2021091135823-s0037-0000000260647166-0208-a_fast/tess2021091135823-s0037-0000000260647166-0208-a_fast-lc.fits...'
+                            #pathsplt = path.split('/')
+                            #pathtemp = '/'.join((pathsplt[:-2])) + pathsplt[-2][:-1] + 'a_fast/' + pathsplt[-1][:-9] + 'a_fast-lc.fits'
+                            #print('pathtemp')
+                            #print(pathtemp)
+                            #print('manifest[Local Path]')
+                            #print(manifest['Local Path'])
+                            #if pathtemp in manifest['Local Path']:
+                            #    print('This sector is available at higher cadence. Skipping this file...')
+                            #    continue
+
                             arrylcur, tsec, tcam, tccd = \
                                 read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
                                                                          booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
@@ -8753,10 +8769,44 @@ def init( \
         print('gdat.boolutiltesslocl')
         print(gdat.boolutiltesslocl)
 
-    booltess = 'TESS' in gdat.liststrginst[0]
-    gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
-    
     if gdat.booldiag:
+        for p in gdat.indxinst[0]:
+            if gdat.boolretrlcurmast[0][p]:
+                if len(gdat.listarrylcurmast[p]) != gdat.listtsecspoc.size:
+                    print('')
+                    print('')
+                    print('')
+                    print('p')
+                    print(p)
+                    print('gdat.listarrylcurmast')
+                    print(gdat.listarrylcurmast)
+                    print('gdat.listtsecspoc')
+                    print(gdat.listtsecspoc)
+                    print('gdat.boolretrlcurmast')
+                    print(gdat.boolretrlcurmast)
+                    print('gdat.boolretrlcurmastanyy')
+                    print(gdat.boolretrlcurmastanyy)
+                    print('gdat.listarrylcurmast[p]')
+                    summgene(gdat.listarrylcurmast[p])
+                    raise Exception('len(gdat.listarrylcurmast[p]) == 0')
+    
+                for y in range(len(gdat.listarrylcurmast[p])):
+                    if gdat.listarrylcurmast[p][y].ndim != 3:
+                        print('')
+                        print('')
+                        print('')
+                        print('p')
+                        print(p)
+                        print('y')
+                        print(y)
+                        print('gdat.listarrylcurmast')
+                        print(gdat.listarrylcurmast)
+                        print('gdat.boolretrlcurmast')
+                        print(gdat.boolretrlcurmast)
+                        print('gdat.listarrylcurmast[p][y]')
+                        summgene(gdat.listarrylcurmast[p][y])
+                        raise Exception('gdat.listarrylcurmast[p][y].ndim != 3')
+    
         if np.unique(gdat.listtsecspoc).size != gdat.listtsecspoc.size:
             print('gdat.listtsecspoc')
             print(gdat.listtsecspoc)
@@ -8898,6 +8948,19 @@ def init( \
                                            )
         
         if gdat.booldiag:
+            
+            if gdat.dictlygooutp['listtsec'][0].size != gdat.listtseclygo.size:
+                print('')
+                print('')
+                print('')
+                print('gdat.listtseclygo')
+                print(gdat.listtseclygo)
+                summgene(gdat.listtseclygo)
+                print('gdat.dictlygooutp[listtsec][0]')
+                print(gdat.dictlygooutp['listtsec'][0])
+                summgene(gdat.dictlygooutp['listtsec'])
+                raise Exception('Sizes of gdat.dictlygooutp[listtsec] and gdat.listtseclygo are different!')
+
             if not (gdat.dictlygooutp['listtsec'][0] - gdat.listtseclygo == 0).all():
                 print('')
                 print('')
@@ -8966,40 +9029,6 @@ def init( \
     
         print('Filtered list of TESS sectors')
         print(gdat.listtsec)
-    
-    if gdat.booldiag:
-        for p in gdat.indxinst[0]:
-            if gdat.boolretrlcurmast[0][p]:
-                if len(gdat.listarrylcurmast[p]) == 0:
-                    print('')
-                    print('')
-                    print('')
-                    print('p')
-                    print(p)
-                    print('gdat.listarrylcurmast')
-                    print(gdat.listarrylcurmast)
-                    print('gdat.boolretrlcurmast')
-                    print(gdat.boolretrlcurmast)
-                    print('gdat.listarrylcurmast[p]')
-                    summgene(gdat.listarrylcurmast[p])
-                    raise Exception('len(gdat.listarrylcurmast[p]) == 0')
-    
-                for y in range(len(gdat.listarrylcurmast[p])):
-                    if gdat.listarrylcurmast[p][y].ndim != 3:
-                        print('')
-                        print('')
-                        print('')
-                        print('p')
-                        print(p)
-                        print('y')
-                        print(y)
-                        print('gdat.listarrylcurmast')
-                        print(gdat.listarrylcurmast)
-                        print('gdat.boolretrlcurmast')
-                        print(gdat.boolretrlcurmast)
-                        print('gdat.listarrylcurmast[p][y]')
-                        summgene(gdat.listarrylcurmast[p][y])
-                        raise Exception('gdat.listarrylcurmast[p][y].ndim != 3')
     
     if gdat.booltesskepl:
         
@@ -9505,6 +9534,11 @@ def init( \
     print('Determining the number of chunks...')
     gdat.numbchun = [np.zeros(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
     gdat.numbdatagood = 0
+    print('gdat.boolretrlcurmast')
+    print(gdat.boolretrlcurmast)
+    print('gdat.listarrylcurmast')
+    print(gdat.listarrylcurmast)
+
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.boolsimurflx:
@@ -9517,6 +9551,8 @@ def init( \
                 if gdat.boolretrlcurmast[b][p]:
                     print('gdat.numbchun[b][p]')
                     print(gdat.numbchun[b][p])
+                    print('gdat.listarrylcurmast[p]')
+                    print(gdat.listarrylcurmast[p])
                     gdat.numbchun[b][p] += len(gdat.listarrylcurmast[p])
                     print('gdat.numbchun[b][p]')
                     print(gdat.numbchun[b][p])
@@ -9591,37 +9627,6 @@ def init( \
     gdat.listarrytser['bdtr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
-    if gdat.booldiag:
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
-                    print('')
-                    print('')
-                    print('')
-                    print('b, p')
-                    print(b, p)
-                    print('gdat.listtsec')
-                    print(gdat.listtsec)
-                    summgene(gdat.listtsec)
-                    print('gdat.listtseclygo')
-                    print(gdat.listtseclygo)
-                    print('gdat.listtsecspoc')
-                    print(gdat.listtsecspoc)
-                    print('gdat.listtsec')
-                    print(gdat.listtsec)
-                    print('len(gdat.listarrylcurmast[p])')
-                    print(len(gdat.listarrylcurmast[p]))
-                    if len(gdat.listtseclygo) > 0:
-                        print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0])')
-                        print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
-                    print('gdat.boolretrlcurmast')
-                    print(gdat.boolretrlcurmast)
-                    print('gdat.typelcurtpxftess')
-                    print(gdat.typelcurtpxftess)
-                    print('len(gdat.listarrytser[raww][b][p])')
-                    print(len(gdat.listarrytser['raww'][b][p]))
-                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
-
     if gdat.booltesskepl:
         gdat.dictmileoutp['listtsec'] = gdat.listtsec
         print('List of TESS sectors:')
@@ -9632,13 +9637,31 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             
+            # to be deleted
+            #if gdat.booldiag:
+            #    if len(gdat.listarrytser['raww'][b][p]) != gdat.listtsec.size:
+            #        raise Exception('len(gdat.listarrytser[raww][b][p]) != gdat.listtsec.size')
+
             print('len(gdat.listarrytser[raww][b][p])')
             print(len(gdat.listarrytser['raww'][b][p]))
-            
+            print('gdat.indxchun')
+            print(gdat.indxchun)
+
             ## from MAST
             if gdat.boolretrlcurmast[b][p]:
                 for o, tsecspoc in enumerate(gdat.listtsecspoc):
                     indx = np.where(gdat.listtsec == tsecspoc)[0][0]
+                    print('')
+                    print('indx')
+                    print(indx)
+                    print('tsecspoc')
+                    print(tsecspoc)
+                    print('o')
+                    print(o)
+                    print('len(gdat.listarrylcurmast[p])')
+                    print(len(gdat.listarrylcurmast[p]))
+                    print('gdat.listarrytser[raww][b][p]')
+                    summgene(gdat.listarrytser['raww'][b][p])
                     gdat.listarrytser['raww'][b][p][indx] = gdat.listarrylcurmast[p][o]
             
             print('len(gdat.listarrytser[raww][b][p])')
@@ -9760,6 +9783,37 @@ def init( \
                         gdat.listarrytser['raww'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
                         gdat.listarrytser['raww'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
         
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if len(gdat.listtsec) != len(gdat.listarrytser['raww'][b][p]):
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    summgene(gdat.listtsec)
+                    print('gdat.listtseclygo')
+                    print(gdat.listtseclygo)
+                    print('gdat.listtsecspoc')
+                    print(gdat.listtsecspoc)
+                    print('gdat.listtsec')
+                    print(gdat.listtsec)
+                    print('len(gdat.listarrylcurmast[p])')
+                    print(len(gdat.listarrylcurmast[p]))
+                    if len(gdat.listtseclygo) > 0:
+                        print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0])')
+                        print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
+                    print('gdat.boolretrlcurmast')
+                    print(gdat.boolretrlcurmast)
+                    print('gdat.typelcurtpxftess')
+                    print(gdat.typelcurtpxftess)
+                    print('len(gdat.listarrytser[raww][b][p])')
+                    print(len(gdat.listarrytser['raww'][b][p]))
+                    raise Exception('len(gdat.listtsec) != len(gdat.listarrytser[raww][b][p])')
+
     # list of strings to be attached to file names for type of run over energy bins
     gdat.liststrgdatafittiter = [[] for r in gdat.indxfittiter]
     for h in gdat.indxfittiter:
