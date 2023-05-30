@@ -296,21 +296,6 @@ def pars_para_mile(para, gdat, strgmodl):
         for name in ['sigmgprobase', 'rhoogprobase']:
             dictparainpt[name] = para[gmod.dictindxpara[name]]
     
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('dictparainpt')
-    print(dictparainpt)
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    
     return dictparainpt
 
 
@@ -440,8 +425,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         for j in gmod.indxcomp:
                             rratcomp[j, e] = np.array([dictparainpt['rratcom%d%s' % (j, gdat.liststrgener[p][e])]])
                 else:
-                    print('dictparainpt[rratcom%d % j]')
-                    print(dictparainpt['rratcom%d' % j])
                     rratcomp[j] = dictparainpt['rratcom%d' % j]
                 
                 if strgmodl == 'true':
@@ -476,7 +459,9 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                          
                                                          rratcomp=rratcomp, \
                                                          typesyst=gmod.typemodl, \
-                                                         typeverb=0, \
+                                                         
+                                                         typeverb=2, \
+                                                        
                                                         )
                 
                 dictlistmodl['tran'][0][p] = dictoutpmodl['rflx']
@@ -3792,7 +3777,7 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
         for i in gdat.indxsplnregi[b][p][y]:
             ## non-baseline-detrended light curve
             axis[0].plot(gdat.listarrytser[strgarryinpt][b][p][y][:, gdat.indxenerclip, 0] - gdat.timeoffs, \
-                         gdat.listarrytser[strgarryinpt][b][p][y][:, gdat.indxenerclip, 1], rasterized=True, alpha=gdat.alphraww, \
+                         gdat.listarrytser[strgarryinpt][b][p][y][:, gdat.indxenerclip, 1], rasterized=True, \
                                                                                             marker='o', ls='', ms=1, color='grey')
             ## spline
             if gdat.listobjtspln[b][p][y] is not None and gdat.listobjtspln[b][p][y][i] is not None:
@@ -3807,7 +3792,7 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
                 axis[0].plot(timesplnregifine - gdat.timeoffs, lcurtren, 'b-', lw=3, rasterized=True)
             ## baseline-detrended light curve
             axis[1].plot(gdat.listarrytser[strgarryoutp][b][p][y][:, gdat.indxenerclip, 0] - gdat.timeoffs, \
-                         gdat.listarrytser[strgarryoutp][b][p][y][:, gdat.indxenerclip, 1], rasterized=True, alpha=gdat.alphraww, \
+                         gdat.listarrytser[strgarryoutp][b][p][y][:, gdat.indxenerclip, 1], rasterized=True, \
                                                                                               marker='o', ms=1, ls='', color='grey')
         for a in range(2):
             axis[a].set_ylabel(gdat.labltserphot)
@@ -3913,12 +3898,6 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
 
     if hasattr(gmod, nameparabasefinl):
         if gdat.typeverb > 0:
-            print('nameparabasefinl')
-            print(nameparabasefinl)
-            print('strgmodl')
-            print(strgmodl)
-            print('getattr(gmod, nameparabasefinl)')
-            print(getattr(gmod, nameparabasefinl))
             print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
     gmod.listlablpara.append(lablpara)
@@ -4815,19 +4794,11 @@ def setp_modlbase(gdat, strgmodl, h=None):
             
             minmepocmtra = np.amin(gdat.timeconc[0])
             maxmepocmtra = np.amax(gdat.timeconc[0])
-            print('minmepocmtra')
-            print(minmepocmtra)
-            print('maxmepocmtra')
-            print(maxmepocmtra)
             setp_para(gdat, strgmodl, 'epocmtra', minmepocmtra, maxmepocmtra, None, strgcomp=strgcomp)
             setp_para(gdat, strgmodl, 'cosi', 0., 0.08, None, strgcomp=strgcomp)
             
             minmpara = 0.11
             maxmpara = 0.19
-            print('gdat.numbener')
-            print(gdat.numbener)
-            print('gdat.indxener[p]')
-            print(gdat.indxener[p])
             if gdat.numbener[p] > 1 and (strgmodl == 'true' or gdat.fitt.typemodlenerfitt == 'full'):
                 for e in gdat.indxener[p]:
                     setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgener=gdat.liststrgener[p][e], strgcomp=strgcomp)
@@ -8449,11 +8420,6 @@ def init( \
             else:
                 strgexprtemp = strgexpr
             
-            print('strgexpr')
-            print(strgexpr)
-            print('strgexprtemp')
-            print(strgexprtemp)
-
             #indx = np.where((listtablobsv['obs_collection'] == strgexprtemp) & (listtablobsv['dataproduct_type'] == 'timeseries'))
             boolgood = (listtablobsv['obs_collection'] == strgexprtemp)
             # & (listtablobsv['dataproduct_type'] == 'timeseries'))
@@ -8609,9 +8575,6 @@ def init( \
                         print('indxprodgood')
                         print(indxprodgood)
                         raise Exception('')
-                #print('indxprodgood')
-                #summgene(indxprodgood)
-
             
                 #print('listprod')
                 #for name in listname:
@@ -8632,8 +8595,6 @@ def init( \
                 print('Downloading products for table number %d...' % k)
                 # download data from MAST
                 manifest = astroquery.mast.Observations.download_products(listprod[indxprodgood], download_dir=gdat.pathdatamast)
-                print('indxprodgood')
-                summgene(indxprodgood)
                 
                 if manifest is not None:
                     for path in manifest['Local Path']:
@@ -8926,7 +8887,9 @@ def init( \
         
         ## list of TESS sectors
         gdat.dictlygoinpt['listipntsele'] = gdat.listtseclygo
-        
+        print('Will ask lygos to consider the following TESS sectors:')
+        print(gdat.listtseclygo)
+
         # Boolean flag to use the TPFs
         if not 'boolutiltpxf' in gdat.dictlygoinpt:
             gdat.dictlygoinpt['boolutiltpxf'] = True
@@ -9537,10 +9500,6 @@ def init( \
     print('Determining the number of chunks...')
     gdat.numbchun = [np.zeros(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
     gdat.numbdatagood = 0
-    print('gdat.boolretrlcurmast')
-    print(gdat.boolretrlcurmast)
-    print('gdat.listarrylcurmast')
-    print(gdat.listarrylcurmast)
 
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -9551,24 +9510,12 @@ def init( \
                 gdat.numbchun[b][p] = len(gdat.listarrytser['raww'][b][p])
                 gdat.numbdatagood += 1
             elif b == 0:
-                print('b, p')
-                print(b, p)
-                print('gdat.boolretrlcurmast[b][p]')
-                print(gdat.boolretrlcurmast[b][p])
                 if gdat.boolretrlcurmast[b][p]:
-                    print('gdat.numbchun[b][p]')
-                    print(gdat.numbchun[b][p])
-                    print('gdat.listarrylcurmast[p]')
-                    print(gdat.listarrylcurmast[p])
                     gdat.numbchun[b][p] += len(gdat.listarrylcurmast[p])
-                    print('gdat.numbchun[b][p]')
-                    print(gdat.numbchun[b][p])
                     gdat.numbdatagood += 1
                 if len(gdat.listtseclygo) > 0:
                     if gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
                         gdat.numbchun[b][p] += len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0])
-                        print('gdat.numbchun[b][p]')
-                        print(gdat.numbchun[b][p])
                         gdat.numbdatagood += 1
                     else:
                         print('Warning: lygos data were not incorporated into miletos!')
@@ -9644,39 +9591,11 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             
-            # to be deleted
-            #if gdat.booldiag:
-            #    if len(gdat.listarrytser['raww'][b][p]) != gdat.listtsec.size:
-            #        raise Exception('len(gdat.listarrytser[raww][b][p]) != gdat.listtsec.size')
-
-            print('len(gdat.listarrytser[raww][b][p])')
-            print(len(gdat.listarrytser['raww'][b][p]))
-            print('gdat.indxchun')
-            print(gdat.indxchun)
-
             ## from MAST
             if gdat.boolretrlcurmast[b][p]:
                 for o, tsecspoc in enumerate(gdat.listtsecspoc):
                     indx = np.where(gdat.listtsec == tsecspoc)[0][0]
-                    
-                    print('')
-                    print('indx')
-                    print(indx)
-                    print('tsecspoc')
-                    print(tsecspoc)
-                    print('o')
-                    print(o)
-                    print('b, p')
-                    print(b, p)
-                    print('len(gdat.listarrylcurmast[p])')
-                    print(len(gdat.listarrylcurmast[p]))
-                    print('gdat.listarrytser[raww][b][p]')
-                    summgene(gdat.listarrytser['raww'][b][p])
-                    
                     gdat.listarrytser['raww'][b][p][indx] = gdat.listarrylcurmast[p][o]
-            
-            print('len(gdat.listarrytser[raww][b][p])')
-            print(len(gdat.listarrytser['raww'][b][p]))
             
             ## TESS and Kepler data via lygos
             if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
@@ -9713,10 +9632,11 @@ def init( \
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
                         elif gdat.liststrginst[b][p] == 'TESS-GEO':
-                            cade = 10. / 60. # [min]
+                            cade = 4. / 60. # [min]
                             delttime = cade / 60. / 24. # [day]
+                            lengobsv = 5.
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
-                            gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
+                            gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'JWST':
                             gdat.true.listtime[b][p][y] = 2459000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
                         elif gdat.liststrginst[b][p].startswith('LSST'):
