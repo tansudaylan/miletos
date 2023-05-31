@@ -8951,7 +8951,7 @@ def init( \
                 del gdat.dictlygooutp['listtccd'][indxtseclygodele]
         
         # remove bad times
-        for o, tseclygo in enumerate(gdat.listtseclygo):
+        for o, tseclygo in enumerate(gdat.dictlygooutp['listtsec'][0]):
             # choose the current sector
             arry = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]
             
@@ -9599,7 +9599,7 @@ def init( \
             
             ## TESS and Kepler data via lygos
             if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
-                for o, tseclygo in enumerate(gdat.listtseclygo):
+                for o, tseclygo in enumerate(gdat.dictlygooutp['listtsec'][0]):
                     indx = np.where(gdat.listtsec == tseclygo)[0][0]
                     gdat.listarrytser['raww'][b][p][indx] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o][:, None, :]
                 
