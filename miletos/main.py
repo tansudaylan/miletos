@@ -8920,6 +8920,9 @@ def init( \
         # name of the lygos analysis from which the light curve will be derived
         gdat.dictlygoinpt['listnameanls'] = ['psfn']
         
+        # type of data
+        gdat.dictlygoinpt['liststrgtypedata'] = gdat.liststrgtypedata[0]
+
         # Boolean flag to use quality mask
         if not 'boolmaskqual' in gdat.dictlygoinpt:
             gdat.dictlygoinpt['boolmaskqual'] = gdat.boolmaskqual
@@ -8965,7 +8968,7 @@ def init( \
             listindxtseclygodele = []
             for y, arry in enumerate(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p]):
                 if len(arry) == 0:
-                    print('lygos light curve for instrument %d and sector %d, is empty. Removing the sector...' % (p, gdat.dictlygooutp['listipnt'][p][y])
+                    print('lygos light curve for instrument %d and sector %d, is empty. Removing the sector...' % (p, gdat.dictlygooutp['listipnt'][p][y]))
                     listindxtseclygodele.append(y)
             if len(listindxtseclygodele) > 0:
                 for indxtseclygodele in listindxtseclygodele:
