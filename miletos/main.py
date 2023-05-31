@@ -423,8 +423,10 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 if gdat.numbener[p] > 1:
                     for e in gdat.indxener[p]:
                         for j in gmod.indxcomp:
+                            print('mey')
                             rratcomp[j, e] = np.array([dictparainpt['rratcom%d%s' % (j, gdat.liststrgener[p][e])]])
                 else:
+                    print('key')
                     rratcomp[j] = dictparainpt['rratcom%d' % j]
                 
                 if strgmodl == 'true':
@@ -436,6 +438,9 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 else:
                     boolmakeanim = False
                     pathvisu = None
+                
+                print('rratcomp')
+                print(rratcomp)
                 dictoutpmodl = ephesos.eval_modl(time[0][p], \
                                                          pericomp=pericomp, \
                                                          epocmtracomp=epocmtracomp, \
@@ -7854,6 +7859,20 @@ def init( \
             for p in gdat.indxinst[b]:
                 gdat.liststrginst[b][p] = ''.join(gdat.listlablinst[b][p].split(' '))
     
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            if len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b]):
+                print('')
+                print('')
+                print('')
+                print('b')
+                print(b)
+                print('gdat.liststrgtypedata')
+                print(gdat.liststrgtypedata)
+                print('gdat.liststrginst')
+                print(gdat.liststrginst)
+                raise Exception('len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b])')
+
     gdat.listindxinst = [[] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         gdat.listindxinst[b] = np.arange(len(gdat.liststrginst[b]))
@@ -8947,11 +8966,21 @@ def init( \
             for indxtseclygodele in listindxtseclygodele:
                 gdat.listtseclygo = np.delete(gdat.listtseclygo, indxtseclygodele)
                 del gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxtseclygodele]
-                del gdat.dictlygooutp['listtcam'][indxtseclygodele]
-                del gdat.dictlygooutp['listtccd'][indxtseclygodele]
+                gdat.dictlygooutp['listtcam'] = np.delete(gdat.dictlygooutp['listtcam'], indxtseclygodele)
+                gdat.dictlygooutp['listtccd'] = np.delete(gdat.dictlygooutp['listtccd'], indxtseclygodele)
         
         # remove bad times
         for o, tseclygo in enumerate(gdat.dictlygooutp['listtsec'][0]):
+            
+            print('o')
+            print(o)
+            print('tseclygo')
+            print(tseclygo)
+            print('gdat.dictlygooutp[listtsec]')
+            summgene(gdat.dictlygooutp['listtsec'][0])
+            print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo])')
+            print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
+
             # choose the current sector
             arry = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]
             
@@ -8977,7 +9006,10 @@ def init( \
         gdat.listtsecsapp = np.empty_like(gdat.listtsecspoc)
 
         # merge list of sectors whose light curves will come from SPOC and lygos, respectively
-        gdat.listtsec = np.unique(np.concatenate((gdat.listtseclygo, gdat.listtsecspoc), dtype=int))
+        if not gdat.dictlygooutp is None:
+            gdat.listtsec = np.unique(np.concatenate((gdat.dictlygooutp['listtsec'][0], gdat.listtsecspoc), dtype=int))
+        else:
+            gdat.listtsec = gdat.listtsecspoc
 
         print('List of TESS sectors')
         print(gdat.listtsec)
@@ -9631,7 +9663,7 @@ def init( \
                             delttime = cade / 60. / 24. # [day]
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
-                        elif gdat.liststrginst[b][p] == 'TESS-GEO':
+                        elif gdat.liststrginst[b][p].startswith('TGEO'):
                             cade = 4. / 60. # [min]
                             delttime = cade / 60. / 24. # [day]
                             lengobsv = 5.
@@ -9833,6 +9865,8 @@ def init( \
                         print(b, p)
                         raise Exception('gdat.true.time[b][p].size == 0')
         
+        print('dictparainpt')
+        print(dictparainpt)
         gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
         
         if gdat.true.typemodlblinshap == 'gpro':
