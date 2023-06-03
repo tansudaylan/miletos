@@ -3519,8 +3519,6 @@ def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, s
 
 def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=True, boolflar=False):
     
-    gmod = getattr(gdat, strgmodl)
-    
     boolchun = y is not None
     
     if not boolchun and gdat.numbchun[b][p] == 1:
@@ -3576,6 +3574,9 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
             axis.plot(arrytser[:, 0, 0] - gdat.timeoffs, arrytser[:, 0, 1], color='grey', marker='.', ls='', ms=1, rasterized=True)
         
         if boolcolrtran and hasattr(gdat, 'listindxtimetran'):
+            
+            gmod = getattr(gdat, strgmodl)
+    
             # color and name transits
             ylim = axis.get_ylim()
             listtimetext = []
@@ -3722,8 +3723,6 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
 
 def plot_tser_mile(gdat, strgmodl, b, p, y, strgarry, booltoge=True, boolflar=False):
     
-    gmod = getattr(gdat, strgmodl)
-    
     # plot each chunk
     plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y, boolcolrtran=False, boolflar=boolflar)
     
@@ -3746,6 +3745,9 @@ def plot_tser_mile(gdat, strgmodl, b, p, y, strgarry, booltoge=True, boolflar=Fa
             path = gdat.pathvisutarg + 'rflx%s_intr%s_%s_%s_%s.%s' % \
                                             (strgarry, gdat.strgcnfg, gdat.liststrginst[b][p], gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
             if not os.path.exists(path):
+            
+                gmod = getattr(gdat, strgmodl)
+    
                 # plot only the in-transit data
                 figr, axis = plt.subplots(gmod.numbcomp, 1, figsize=gdat.figrsizeydobskin, sharex=True)
                 if gmod.numbcomp == 1:
@@ -7136,7 +7138,7 @@ def plot_tser( \
     if boollegd:
         axis.legend()
 
-    plt.subplots_adjust(bottom=0.2)
+    plt.subplots_adjust(bottom=0.2, top=0.8)
     print('Writing to %s...' % path)
     plt.savefig(path, dpi=300)
     plt.close()
@@ -7341,6 +7343,9 @@ def init( \
          
          ## string of time for the beginning of the year
          strgtimeobvtyear=None, \
+         
+         # Boolean flag to use Target Pixel Files (TPFs) at the highest cadence whenever possible
+         boolutiltpxf=True, \
          
          ## list of time difference samples for the year
          listdelttimeobvtyear=None, \
@@ -7846,6 +7851,16 @@ def init( \
         for b in gdat.indxdatatser:
             gdat.liststrgtypedata[b] = ['obsd' for p in gdat.indxinst[b]]
     
+    if gdat.booldiag:
+        if 'simutargsynt' in gdat.liststrgtypedata[0] or 'simutargsynt' in gdat.liststrgtypedata[1]:
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst:
+                    if gdat.liststrgtypedata[b][p] != 'simutargsynt':
+                        print('')
+                        print('')
+                        print('')
+                        raise Exception('IF gdat.liststrgtypedata contains simutargsynt then all instruments should be simutargsynt.')
+
     # Boolean flag indicating if the simulated target is a synthetic one
     gdat.booltargsynt = False
     for b in gdat.indxdatatser:
@@ -7915,11 +7930,12 @@ def init( \
     ## Boolean flag to query MAST
     gdat.boolretrlcurmast = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.boolretrlcurmastanyy = False
-
+    
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
-                if gdat.liststrginst[b][p] in ['K2', 'Kepler', 'HST'] or gdat.liststrginst[b][p].startswith('JWST') or gdat.liststrginst[b][p] == 'TESS' and gdat.typelcurtpxftess != 'lygos':
+                if gdat.liststrginst[b][p] in ['K2', 'Kepler', 'HST'] or gdat.liststrginst[b][p].startswith('JWST') or gdat.liststrginst[b][p] == 'TESS' \
+                                                                                                        and gdat.boolutiltpxf and gdat.typelcurtpxftess != 'lygos':
                     gdat.boolretrlcurmast[b][p] = True
                     gdat.boolretrlcurmastanyy = True
                 if gdat.liststrginst[b][p] == 'ZTF':
@@ -8794,10 +8810,14 @@ def init( \
                         summgene(gdat.listarrylcurmast[p][y])
                         raise Exception('gdat.listarrylcurmast[p][y].ndim != 3')
     
-        if np.unique(gdat.listipntspoc).size != gdat.listipntspoc.size:
-            print('gdat.listipntspoc')
-            print(gdat.listipntspoc)
-            raise Exception('gdat.listipntspoc has repeating sectors.')
+        if gdat.boolretrlcurmastanyy:
+            if np.unique(gdat.listipntspoc).size != gdat.listipntspoc.size:
+                print('')
+                print('')
+                print('')
+                print('gdat.listipntspoc')
+                print(gdat.listipntspoc)
+                raise Exception('gdat.listipntspoc has repeating sectors.')
 
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -8829,21 +8849,22 @@ def init( \
     if gdat.booltesskepl:
         numbtsec = len(gdat.listipnttcut)
 
-        # determine for each sector whether a TFP is available
-        booltpxf = retr_booltpxf(gdat.listipnttcut, gdat.listipntspoc)
+        if gdat.boolutiltpxf:
+            # determine for each sector whether a TFP is available
+            booltpxf = retr_booltpxf(gdat.listipnttcut, gdat.listipntspoc)
     
-        if typeverb > 0:
-            print('booltpxf')
-            print(booltpxf)
+            if typeverb > 0:
+                print('booltpxf')
+                print(booltpxf)
         
-        if gdat.typelcurtpxftess == 'lygos':
+        if gdat.typelcurtpxftess == 'lygos' or not gdat.boolutiltpxf:
             boollygo = np.ones(numbtsec, dtype=bool)
             gdat.listipntspoc = np.array([], dtype=int)
             gdat.listipntlygo = gdat.listipnttcut
-        elif gdat.typelcurtpxftess == 'SPOC':
+        elif gdat.boolutiltpxf and gdat.typelcurtpxftess == 'SPOC':
             boollygo = ~booltpxf
             gdat.listipntlygo = gdat.listipnttcut[boollygo]
-        elif gdat.typelcurtpxftess == 'SPOC_only':
+        elif gdat.boolutiltpxf and gdat.typelcurtpxftess == 'SPOC_only':
             boollygo = np.zeros_like(booltpxf, dtype=bool)
             gdat.listipntlygo = []
         else:
@@ -8853,8 +8874,9 @@ def init( \
         
         print('gdat.listipntlygo')
         print(gdat.listipntlygo)
-        print('gdat.listipntspoc')
-        print(gdat.listipntspoc)
+        if gdat.boolutiltpxf:
+            print('gdat.listipntspoc')
+            print(gdat.listipntspoc)
     
     gdat.dictlygooutp = None
     
@@ -8915,7 +8937,7 @@ def init( \
 
         # Boolean flag to use the TPFs
         if not 'boolutiltpxf' in gdat.dictlygoinpt:
-            gdat.dictlygoinpt['boolutiltpxf'] = True
+            gdat.dictlygoinpt['boolutiltpxf'] = gdat.boolutiltpxf
         
         # name of the lygos analysis from which the light curve will be derived
         gdat.dictlygoinpt['listnameanls'] = ['psfn']
@@ -8964,40 +8986,89 @@ def init( \
                 print('Warning! gdat.dictlygooutp[listipnt] and gdat.listipntlygo are different!')
 
         # check if lygos has a missing sector
-        for p in gdat.indxinst[b]:
+        print('b')
+        print(b)
+        print('gdat.indxinst[b]')
+        print(gdat.indxinst[b])
+        for p in gdat.indxinst[0]:
             listindxtseclygodele = []
-            for y, arry in enumerate(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p]):
+            print('meyyy')
+            print('gdat.dictlygooutp[arryrflx][gdat.nameanlslygo]')
+            print(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo])
+            for y, arry in enumerate(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]):
+                print('arry')
+                summgene(arry)
                 if len(arry) == 0:
-                    print('lygos light curve for instrument %d and sector %d, is empty. Removing the sector...' % (p, gdat.dictlygooutp['listipnt'][p][y]))
+                    print('lygos light curve for instrument %d and sector %d, is empty. Removing the sector...' % (0, gdat.dictlygooutp['listipnt'][0][y]))
                     listindxtseclygodele.append(y)
             if len(listindxtseclygodele) > 0:
                 for indxtseclygodele in listindxtseclygodele:
-                    del gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p][indxtseclygodele]
+                    del gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxtseclygodele]
                     gdat.dictlygooutp['listipnt'][p] = np.delete(gdat.dictlygooutp['listipnt'][p], indxtseclygodele)
-                    gdat.dictlygooutp['listtcam'][p] = np.delete(gdat.dictlygooutp['listtcam'][p], indxtseclygodele)
-                    gdat.dictlygooutp['listtccd'][p] = np.delete(gdat.dictlygooutp['listtccd'][o], indxtseclygodele)
+                    gdat.dictlygooutp['listtcam'] = np.delete(gdat.dictlygooutp['listtcam'], indxtseclygodele)
+                    gdat.dictlygooutp['listtccd'] = np.delete(gdat.dictlygooutp['listtccd'], indxtseclygodele)
         
+        if gdat.booldiag:
+            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listipntlygo) > 0):
+                for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
+                    if len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]) == 0:
+                        print('')
+                        print('')
+                        print('')
+                        print('o')
+                        print(o)
+                        print('gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0][o]')
+                        print(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o])
+                        raise Exception('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0][o]) == 0')
+                
         # remove bad times
-        for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
-            
-            print('o')
-            print(o)
-            print('tseclygo')
-            print(tseclygo)
-            print('gdat.dictlygooutp[listipnt]')
-            summgene(gdat.dictlygooutp['listipnt'][0])
-            print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo])')
-            print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0]))
+        for p in gdat.indxinst[b]:
+            for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][p]):
+                
+                print('o')
+                print(o)
+                print('tseclygo')
+                print(tseclygo)
+                print('gdat.dictlygooutp[listipnt]')
+                summgene(gdat.dictlygooutp['listipnt'][p])
+                print('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][p])')
+                print(len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p]))
 
-            # choose the current sector
-            arry = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]
+                # choose the current sector
+                arry = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p][o]
+                
+                print('arry')
+                print(arry)
+                
+                if gdat.booldiag:
+                    if len(arry) == 0:
+                        print('')
+                        print('')
+                        print('')
+                        print('gdat.dictlygooutp[arryrflx]')
+                        print(gdat.dictlygooutp['arryrflx'])
+                        raise Exception('')
+
+                # find good times
+                indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
+                
+                # filter for good times
+                gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p][o] = arry[indxtimegood, :]
             
-            # find good times
-            indxtimegood = np.where(np.isfinite(arry[:, 1]) & np.isfinite(arry[:, 2]))[0]
-            
-            # filter for good times
-            gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o] = arry[indxtimegood, :]
-            
+        if gdat.booldiag:
+            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listipntlygo) > 0):
+                for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
+                    if len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]) == 0:
+                        print('')
+                        print('')
+                        print('')
+                        print('o')
+                        print(o)
+                        print('gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0][o]')
+                        print(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o])
+                        print('')
+                        raise Exception('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0][o]) == 0')
+                
     if gdat.booltesskepl:
         print('List of chunks to be reduced via lygos')
         print(gdat.listipntlygo)
@@ -9618,6 +9689,12 @@ def init( \
             if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listipntlygo) > 0):
                 for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
                     indx = np.where(gdat.listipnt == tseclygo)[0][0]
+                    
+                    print('o')
+                    print(o)
+                    print('gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0][o]')
+                    print(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o])
+                    print('')
                     gdat.listarrytser['raww'][b][p][indx] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o][:, None, :]
                 
     ## user-input data
@@ -9649,7 +9726,8 @@ def init( \
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
                         elif gdat.liststrginst[b][p].startswith('TGEO'):
-                            cade = 4. / 60. # [min]
+                            print('temp')
+                            cade = 40. / 60. # [min]
                             delttime = cade / 60. / 24. # [day]
                             lengobsv = 5.
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
@@ -10109,14 +10187,21 @@ def init( \
         return gdat.dictmileoutp
     
     # plot raw data
-    for strgmodl in gdat.liststrgmodl:
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                for y in gdat.indxchun[b][p]:
-                    if gdat.boolplottser:
-                        plot_tser_mile(gdat, strgmodl, b, p, y, 'raww')
+    print('gdat.indxinst')
+    print(gdat.indxinst)
+    print('gdat.indxchun')
+    print(gdat.indxchun)
+    print('gdat.indxdatatser')
+    print(gdat.indxdatatser)
+    print('gdat.liststrgmodl')
+    print(gdat.liststrgmodl)
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            for y in gdat.indxchun[b][p]:
                 if gdat.boolplottser:
-                    gdat.arrytser['raww'][b][p] = np.concatenate(gdat.listarrytser['raww'][b][p], axis=0)
+                    plot_tser_mile(gdat, None, b, p, y, 'raww')
+            if gdat.boolplottser:
+                gdat.arrytser['raww'][b][p] = np.concatenate(gdat.listarrytser['raww'][b][p], axis=0)
     
     # obtain 'maskcust' (obtained after custom mask, if any) time-series bundle after applying user-defined custom mask, if any
     if gdat.listlimttimemask is not None:
@@ -10157,7 +10242,7 @@ def init( \
         gdat.epocmask = None
         gdat.perimask = None
         gdat.duramask = None
-                        
+    
     # obtain bdtrnotr time-series bundle, the baseline-detrended light curve with no masking due to identified transiting object
     if gdat.numbinst[0] > 0 and gdat.boolbdtranyy:
         gdat.listobjtspln = [[[[] for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]] for b in gdat.indxdatatser]
@@ -10232,7 +10317,7 @@ def init( \
                         if gdat.boolplottser:
                             print('strgarrybdtrinpt')
                             print(strgarrybdtrinpt)
-                            plot_tser_mile(gdat, strgmodl, 0, p, y, strgarrybdtrinpt, booltoge=False)
+                            plot_tser_mile(gdat, None, 0, p, y, strgarrybdtrinpt, booltoge=False)
                         
                         # perform trial detrending
                         if gdat.typeverb > 0:
@@ -10266,7 +10351,7 @@ def init( \
                         if gdat.boolplottser:
                             plot_tser_bdtr(gdat, b, p, y, z, r, strgarrybdtrinpt, strgarryclipinpt)
         
-                            plot_tser_mile(gdat, strgmodl, 0, p, y, strgarryclipinpt, booltoge=False)
+                            plot_tser_mile(gdat, None, 0, p, y, strgarryclipinpt, booltoge=False)
                 
                         if gdat.typeverb > 0:
                             print('Determining outlier limits...')
@@ -10414,8 +10499,8 @@ def init( \
             for p in gdat.indxinst[0]:
                 if gdat.boolbdtr[0][p]:
                     for y in gdat.indxchun[0][p]:
-                        plot_tser_mile(gdat, strgmodl, 0, p, y, 'bdtr')
-                    plot_tser_mile(gdat, strgmodl, 0, p, None, 'bdtr')
+                        plot_tser_mile(gdat, None, 0, p, y, 'bdtr')
+                    plot_tser_mile(gdat, None, 0, p, None, 'bdtr')
     
     else:
         gdat.arrytser['bdtr'] = gdat.arrytser['maskcust']
