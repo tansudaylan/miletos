@@ -1662,7 +1662,7 @@ def proc_alle(gdat, typemodl):
                     
                 if gdat.typeverb > 0:
                     print('Writing to %s...' % path)
-                np.savetxt(path, listarrytserbdtrtemp, delimiter=',', header='time,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
+                np.savetxt(path, listarrytserbdtrtemp, delimiter=',', header=gdat.strgheadtser)
     
     ## params_star
     pathparastar = gdat.pathalle[typemodl] + 'params_star.csv'
@@ -1928,12 +1928,11 @@ def proc_alle(gdat, typemodl):
     # write the model to file
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            path = gdat.pathdatatarg + 'arry%smodl_%s.csv' % (gdat.liststrgdatatser[b], gdat.liststrginst[b][p])
+            path = gdat.pathdatatarg + 'arry%s_modl_%s.csv' % (gdat.liststrgdatatser[b], gdat.liststrginst[b][p])
             if not os.path.exists(path):
                 if gdat.typeverb > 0:
                     print('Writing to %s...' % path)
-                np.savetxt(path, gdat.arrytser['modl'+typemodl][b][p], delimiter=',', \
-                                                        header='time,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
+                np.savetxt(path, gdat.arrytser['modl'+typemodl][b][p], delimiter=',', header=gdat.strgheadtser)
 
     # number of samples to plot
     gdat.arrypcur['primbdtr'+typemodl] = [[[[] for j in gmod.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -2118,12 +2117,11 @@ def proc_alle(gdat, typemodl):
                                                                                                                 blimxdat=gdat.binsphasquadtotl)
                     
                     # write
-                    path = gdat.pathdatatarg + 'arrypcurquad%sbindtotl_%s_%s.csv' % (strgpcurcomp, gdat.liststrgcomp[j], gdat.liststrginst[b][p])
+                    path = gdat.pathdatatarg + 'arrypcur_quad_%sbindtotl_%s_%s.csv' % (strgpcurcomp, gdat.liststrgcomp[j], gdat.liststrginst[b][p])
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, typemodl)][b][p][j], delimiter=',', \
-                                                        header='phase,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
+                        np.savetxt(path, gdat.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, typemodl)][b][p][j], delimiter=',', header=gdat.strgheadpser)
                     
                     if gdat.boolplot:
                         plot_pser(gdat, strgmodl, 'quad'+strgpcurcomp+typemodl, boolpost=boolpost)
@@ -10119,13 +10117,7 @@ def init( \
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 for y in gdat.indxchun[b][p]:
-                    
-                    print('gdat.listipnt')
-                    print(gdat.listipnt)
-                    print('gdat.liststrgtypedata[b][p]')
-                    print(gdat.liststrgtypedata[b][p])
                     if gdat.liststrginst[b][p] == 'TESS' and (gdat.liststrgtypedata[b][p] != 'simutargsynt'):
-                        
                         if gdat.booldiag:
                             if gdat.numbchun[b][p] != len(gdat.listipnt):
                                 print('')
@@ -10133,7 +10125,6 @@ def init( \
                                 print('')
                                 print('')
                                 print('bpy')
-                                print('gdat.numbchun[b][p] != len(gdat.listipnt)')
                                 print(b, p, y)
                                 print('gdat.listipnt')
                                 print(gdat.listipnt)
@@ -10141,12 +10132,11 @@ def init( \
                                 print(gdat.indxchun)
                                 print('gdat.numbchun')
                                 print(gdat.numbchun)
-                                raise Exception('')
+                                raise Exception('gdat.numbchun[b][p] != len(gdat.listipnt)')
 
                         gdat.listlablchun[b][p][y] = 'Sector %d' % gdat.listipnt[y]
-                        gdat.liststrgchun[b][p][y] = 'sc%02d' % gdat.listipnt[y]
+                        gdat.liststrgchun[b][p][y] = 'Sector%02d' % gdat.listipnt[y]
                     else:
-                        raise Exception('')
                         gdat.liststrgchun[b][p][y] = 'ch%02d' % y
 
     # check the user-defined gdat.listpathdatainpt
@@ -10164,6 +10154,9 @@ def init( \
     gdat.liststrgtser = ['rflx', 'rvel']
     gdat.liststrgtsercsvv = ['flux', 'rv']
     
+    gdat.strgheadtser = 'time,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b])
+    gdat.strgheadpser = 'phase,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b])
+
     if gdat.offstextatmoraditmpt is None:
         gdat.offstextatmoraditmpt = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
     if gdat.offstextatmoradimetr is None:
@@ -10470,9 +10463,9 @@ def init( \
                                     
                                 if gdat.typebdtr == 'spln':
                                     rflxtren.append(gdat.listobjtspln[b][p][y][kk](gdat.listarrytser['maskcust'][b][p][y][:, gdat.indxenerclip, 0]))
-                            gdat.listarrytser['bdtr'][0][p][y] = np.copy(gdat.listarrytser['maskcust'][0][p][y])
+                            gdat.listarrytser[strgarrybdtr][0][p][y] = np.copy(gdat.listarrytser['maskcust'][0][p][y])
                             
-                            gdat.listarrytser['bdtr'][0][p][y][:, gdat.indxenerclip, 1] = \
+                            gdat.listarrytser[strgarrybdtr][0][p][y][:, gdat.indxenerclip, 1] = \
                                             1. + gdat.listarrytser['maskcust'][0][p][y][:, gdat.indxenerclip, 1] - np.concatenate(rflxtren)
                         
                             if r == gdat.maxmnumbiterbdtr - 1:
@@ -10486,12 +10479,6 @@ def init( \
                             break
                             
                         else:
-                            # plot the trial detrended and sigma-clipped time-series data
-                            #print('strgarrybdtroutp')
-                            #print(strgarrybdtroutp)
-                            #if gdat.boolplottser:
-                            #    plot_tser_mile(gdat, strgmodl, 0, p, y, strgarryclipoutp, booltoge=False)
-                            
                             print('Have not achieved the desired stability in iteration %d. Will reiterate...' % r)
                             print('indxtimeclipkeep')
                             summgene(indxtimeclipkeep)
@@ -10505,13 +10492,18 @@ def init( \
                                 print('')
                                 print('')
 
-                    #gdat.numbiterbdtr[p][y] = r
-                    #bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarryclipoutp, strgarrybdtroutp, strgarrybdtrblin, timescalbdtrspln=timescalbdtrspln)
-                    
-                    #gdat.listarrytser[strgarrybdtr][0][p][y] = gdat.listarrytser[strgarrybdtroutp][0][p][y]
+                    # write the baseline-detrended light curve for this time scale
+                    path = gdat.pathdatatarg + 'arrytser_bdtr_%s_%s%s_ts%02d.csv' % (gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], gdat.liststrgener[p][e], z)
+                    if not os.path.exists(path):
+                        if gdat.typeverb > 0:
+                            print('Writing to %s...' % path)
+                        np.savetxt(path, gdat.listarrytser[strgarrybdtr][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
         
+        # place the output of detrending into the baseline-detrended 'bdtr' light curve
         if gdat.listtimescalbdtrspln[0] == 0.:
             gdat.listarrytser['bdtr'] = gdat.listarrytser['maskcust']
+        else:
+            gdat.listarrytser['bdtr'] = gdat.listarrytser['bdtrts00']
 
         # merge chunks
         for p in gdat.indxinst[0]:
@@ -10526,20 +10518,18 @@ def init( \
             for e in gdat.indxener[p]:
 
                 if gdat.numbchun[0][p] > 1:
-                    path = gdat.pathdatatarg + 'arrytserbdtr%s%s.csv' % (gdat.liststrginst[0][p], gdat.liststrgener[p][e])
+                    path = gdat.pathdatatarg + 'arrytser_bdtr_%s%s.csv' % (gdat.liststrginst[0][p], gdat.liststrgener[p][e])
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrytser['bdtr'][0][p][:, e, :], delimiter=',', \
-                                                        header='time,%s,%s_err' % (gdat.liststrgtsercsvv[0], gdat.liststrgtsercsvv[0]))
+                        np.savetxt(path, gdat.arrytser['bdtr'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser)
                 
                 for y in gdat.indxchun[0][p]:
-                    path = gdat.pathdatatarg + 'arrytserbdtr%s%s%s.csv' % (gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], gdat.liststrgener[p][e])
+                    path = gdat.pathdatatarg + 'arrytser_bdtr_%s_%s%s.csv' % (gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], gdat.liststrgener[p][e])
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.listarrytser['bdtr'][0][p][y][:, e, :], delimiter=',', \
-                                                       header='time,%s,%s_err' % (gdat.liststrgtsercsvv[0], gdat.liststrgtsercsvv[0]))
+                        np.savetxt(path, gdat.listarrytser['bdtr'][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
     
         if gdat.boolplottser:
             for p in gdat.indxinst[0]:
@@ -11102,24 +11092,6 @@ def init( \
         if gdat.listindxchuninst is None:
             gdat.listindxchuninst = [gdat.indxchun]
     
-        # plot raw data
-        #if gdat.typetarg != 'inpt' and 'TESS' in gdat.liststrginst[0] and gdat.listarrytsersapp is not None:
-        #    for b in gdat.indxdatatser:
-        #        for p in gdat.indxinst[b]:
-        #            if gdat.liststrginst[b][p] != 'TESS':
-        #                continue
-        #            for y in gdat.indxchun[b][p]:
-        #                path = gdat.pathdatatarg + gdat.liststrgchun[b][p][y] + '_SAP.csv'
-        #                if not os.path.exists(path):
-        #                    if gdat.typeverb > 0:
-        #                        print('Writing to %s...' % path)
-        #                    np.savetxt(path, gdat.listarrytsersapp[y], delimiter=',', header='time,flux,flux_err')
-        #                path = gdat.pathdatatarg + gdat.liststrgchun[b][p][y] + '_PDCSAP.csv'
-        #                if not os.path.exists(path):
-        #                    if gdat.typeverb > 0:
-        #                        print('Writing to %s...' % path)
-        #                    np.savetxt(path, gdat.listarrytserpdcc[y], delimiter=',', header='time,flux,flux_err')
-        #    
         #    # plot PDCSAP and SAP light curves
         #    figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
         #    axis[0].plot(gdat.arrytsersapp[:, 0] - gdat.timeoffs, gdat.arrytsersapp[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
@@ -11129,7 +11101,6 @@ def init( \
         #    axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
         #    for a in range(2):
         #        axis[a].set_ylabel(gdat.labltserphot)
-        #    
         #    plt.subplots_adjust(hspace=0.)
         #    path = gdat.pathvisutarg + 'lcurspoc_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
         #    gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.8, 0.8]})
@@ -11239,8 +11210,7 @@ def init( \
     #            if not os.path.exists(path):
     #                if gdat.typeverb > 0:
     #                    print('Writing to %s' % path)
-    #                np.savetxt(path, gdat.listarrytser['bdtrbind'][b][p][y], delimiter=',', \
-    #                                                header='time,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
+    #                np.savetxt(path, gdat.listarrytser['bdtrbind'][b][p][y], delimiter=',', header=gdat.strgheadtser)
     #        
     #            if gdat.boolplottser:
     #                plot_tser_mile(gdat, strgmodl, b, p, y, 'bdtrbind')
@@ -11361,13 +11331,13 @@ def init( \
                                                                                                         blimxdat=gdat.binsphasquadtotl)
                     
                     for e in gdat.indxener[p]:
-                        path = gdat.pathdatatarg + 'arrypcurprimbdtrbind_%s_%s_%s.csv' % (gdat.liststrgener[p][e], gdat.liststrgcomp[j], gdat.liststrginst[b][p])
+                        path = gdat.pathdatatarg + 'arrypcur_prim_bdtr_bind_%s%s_%s.csv' % (gdat.liststrginst[b][p], gdat.liststrgener[p][e], gdat.liststrgcomp[j])
                         if not os.path.exists(path):
                             temp = np.copy(gdat.arrypcur['primbdtrbindtotl'][b][p][j][:, e, :])
                             temp[:, 0] *= gdat.pericompprio[j]
                             if gdat.typeverb > 0:
                                 print('Writing to %s...' % path)
-                            np.savetxt(path, temp, delimiter=',', header='phase,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b]))
+                            np.savetxt(path, temp, delimiter=',', header=gdat.strgheadpser)
                 
         if gdat.boolplot:
             plot_pser(gdat, strgmodl, 'primbdtr')
