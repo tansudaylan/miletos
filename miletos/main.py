@@ -1137,7 +1137,7 @@ def plot_pser(gdat, strgmodl, strgarry, boolpost=False, \
                             yerr = arrypcur[b][p][j][:, gdat.indxenerclip, 2]
                         
                         # the factor to multiply the time axis and its label
-                        facttime, lablunittime = retr_timeunitperi(gdat.pericompprio[j])
+                        facttime, lablunittime = retr_timeunitdays(gdat.pericompprio[j])
                         
                         axis.errorbar(gdat.pericompprio[j] * arrypcur[b][p][j][:, gdat.indxenerclip, 0] * facttime, \
                                                              arrypcur[b][p][j][:, gdat.indxenerclip, 1], yerr=yerr, elinewidth=1, capsize=2, \
@@ -1201,20 +1201,35 @@ def plot_pser(gdat, strgmodl, strgarry, boolpost=False, \
                     plt.close()
     
 
-def retr_timeunitperi(peri):
+def retr_timeunitdays(time):
     
-    if peri < 1. / 24.:
-        facttime = 24. * 3600.
-        lablunittime = 'seconds'
-    elif peri < 1.:
-        facttime = 24. * 60.
-        lablunittime = 'minutes'
-    elif peri < 400.:
-        facttime = 24.
-        lablunittime = 'hours'
-    else: 
+    if time > 1.:
         facttime = 1.
         lablunittime = 'days'
+    elif time == 1.:
+        facttime = 1.
+        lablunittime = 'day'
+    elif time > 1. / 24.:
+        facttime = 24.
+        lablunittime = 'hours'
+    elif time == 1. / 24.:
+        facttime = 24.
+        lablunittime = 'hour'
+    elif time > 1. / (24. * 60.):
+        facttime = 24. * 60.
+        lablunittime = 'minutes'
+    elif time == 1. / (24. * 60.):
+        facttime = 24. * 60.
+        lablunittime = 'minute'
+    elif time > 1. / (24. * 3600.):
+        facttime = 24. * 3600.
+        lablunittime = 'seconds'
+    elif time == 1. / (24. * 3600.):
+        facttime = 24. * 3600.
+        lablunittime = 'second'
+    elif time < 1. / (24. * 3600.):
+        facttime = 24. * 3600.
+        lablunittime = 'seconds'
 
     return facttime, lablunittime
 
@@ -3631,11 +3646,8 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
             cbar = plt.colorbar(imag)
         else:
             axis.set_ylabel(gdat.listlabltser[b])
-        titl = '%s, %s' % (gdat.labltarg, gdat.listlablinst[b][p])
-        if gdat.lablcnfg is not None and gdat.lablcnfg != '':
-           titl += ', %s' % gdat.lablcnfg 
-        if y is not None and len(gdat.listlablchun[b][p][y]) > 0 and gdat.listlablchun[b][p][y] != '':
-           titl += ', %s' % gdat.listlablchun[b][p][y]
+        titl = retr_tsertitl(gdat, b, p, y=y)
+    
         axis.set_title(titl)
         plt.subplots_adjust(bottom=0.2)
         
@@ -3721,6 +3733,19 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
             plt.close()
 
 
+def retr_tsertitl(gdat, b, p, y=None):
+    
+    titl = '%s, %s' % (gdat.labltarg, gdat.listlablinst[b][p])
+        
+    if y is not None and len(gdat.listlablchun[b][p][y]) > 0 and gdat.listlablchun[b][p][y] != '':
+       titl += ', %s' % gdat.listlablchun[b][p][y]
+    
+    if gdat.lablcnfg is not None and gdat.lablcnfg != '':
+       titl += ', %s' % gdat.lablcnfg 
+    
+    return titl
+
+
 def plot_tser_mile(gdat, strgmodl, b, p, y, strgarry, booltoge=True, boolflar=False):
     
     # plot each chunk
@@ -3779,9 +3804,10 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
     #if strgarry != 'raww' and gdat.typepriocomp is not None:
     #    strgprioplan = '_%s' % gdat.typepriocomp
     
-    path = gdat.pathvisutarg + 'rflx_ts%02dit%02dsumm%s_%s_%s_%s%s%s.%s' % (z, r, gdat.strgcnfg, gdat.liststrginst[b][p], \
-                                        gdat.liststrgchun[b][p][y], gdat.strgtarg, strgprioplan, gdat.liststrgener[p][gdat.indxenerclip], gdat.typefileplot)
+    path = gdat.pathvisutarg + 'rflx_DetrendProcess%s_%s_%s_%s%s%s_ts%02dit%02d.%s' % (gdat.strgcnfg, gdat.liststrginst[b][p], \
+                                        gdat.liststrgchun[b][p][y], gdat.strgtarg, strgprioplan, gdat.liststrgener[p][gdat.indxenerclip], z, r, gdat.typefileplot)
     gdat.listdictdvrp[0].append({'path': path, 'limt':[0., 0.05, 1.0, 0.2]})
+    
     if not os.path.exists(path):
             
         figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
@@ -3809,6 +3835,13 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
             axis[a].set_ylabel(gdat.labltserphot)
         axis[0].set_xticklabels([])
         axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
+        
+        titl = retr_tsertitl(gdat, b, p, y=y)
+        facttime, lablunittime = retr_timeunitdays(gdat.listtimescalbdtrspln[z])
+        titl += ', DTS = %.3g %s' % (facttime * gdat.listtimescalbdtrspln[z], lablunittime)
+        titl += ', Iteration %d' % r
+        axis[0].set_title(titl)
+        
         plt.subplots_adjust(hspace=0.)
         print('Writing to %s...' % path)
         plt.savefig(path, dpi=200)
@@ -6975,7 +7008,7 @@ def plot_tser( \
 
     # the factor to multiply the time axis and its label
     if typexdat == 'phas' and typephasunit == 'time':
-        facttime, lablunittime = retr_timeunitperi(peri)
+        facttime, lablunittime = retr_timeunitdays(peri)
     
     # raw data
     if timedata is not None:
@@ -7576,9 +7609,9 @@ def init( \
          typebdtr='gpro', \
          #### order of the spline
          ordrspln=3, \
-         #### time scale for median-filtering detrending
+         #### time scale for median-filtering detrending [days]
          timescalbdtrmedi=2., \
-         #### time scale for spline baseline detrending
+         #### time scale for spline baseline detrending [days]
          listtimescalbdtrspln=[2.], \
 
          ### maximum frequency (per day) for LS periodogram
@@ -10087,7 +10120,11 @@ def init( \
             for p in gdat.indxinst[b]:
                 for y in gdat.indxchun[b][p]:
                     
-                    if gdat.liststrginst[b][p] == 'TESS' and hasattr(gdat, 'listipnt') and (gdat.liststrgtypedata[b][p] != 'simutargsynt') and gdat.listipnt is None:
+                    print('gdat.listipnt')
+                    print(gdat.listipnt)
+                    print('gdat.liststrgtypedata[b][p]')
+                    print(gdat.liststrgtypedata[b][p])
+                    if gdat.liststrginst[b][p] == 'TESS' and (gdat.liststrgtypedata[b][p] != 'simutargsynt'):
                         
                         if gdat.booldiag:
                             if gdat.numbchun[b][p] != len(gdat.listipnt):
@@ -10106,9 +10143,10 @@ def init( \
                                 print(gdat.numbchun)
                                 raise Exception('')
 
-                        gdat.listlablchun[b][p][y] = 'Sectors %d' % gdat.listipnt[y]
+                        gdat.listlablchun[b][p][y] = 'Sector %d' % gdat.listipnt[y]
                         gdat.liststrgchun[b][p][y] = 'sc%02d' % gdat.listipnt[y]
                     else:
+                        raise Exception('')
                         gdat.liststrgchun[b][p][y] = 'ch%02d' % y
 
     # check the user-defined gdat.listpathdatainpt
@@ -10453,6 +10491,14 @@ def init( \
                             #print(strgarrybdtroutp)
                             #if gdat.boolplottser:
                             #    plot_tser_mile(gdat, strgmodl, 0, p, y, strgarryclipoutp, booltoge=False)
+                            
+                            print('Have not achieved the desired stability in iteration %d. Will reiterate...' % r)
+                            print('indxtimeclipkeep')
+                            summgene(indxtimeclipkeep)
+                            print('gdat.listarrytser[strgarryclipinpt][0][p][y][:, gdat.indxenerclip, 1]')
+                            summgene(gdat.listarrytser[strgarryclipinpt][0][p][y][:, gdat.indxenerclip, 1])
+                            print('')
+                            
                             r += 1
                         
                             if gdat.typeverb > 0:
