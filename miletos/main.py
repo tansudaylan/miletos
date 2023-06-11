@@ -1138,7 +1138,7 @@ def plot_pser(gdat, strgmodl, strgarry, boolpost=False, \
                         
                         # the factor to multiply the time axis and its label
                         facttime, lablunittime = retr_timeunitdays(gdat.pericompprio[j])
-                        
+                         
                         axis.errorbar(gdat.pericompprio[j] * arrypcur[b][p][j][:, gdat.indxenerclip, 0] * facttime, \
                                                              arrypcur[b][p][j][:, gdat.indxenerclip, 1], yerr=yerr, elinewidth=1, capsize=2, \
                                                             zorder=1, color='grey', alpha=gdat.alphraww, marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
@@ -7923,6 +7923,11 @@ def init( \
                 print(gdat.liststrginst)
                 raise Exception('len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b])')
 
+    gdat.liststrgtimescalbdtrspln = []
+    for timescalbdtrspln in gdat.listtimescalbdtrspln:
+        facttime, lablunittime = retr_timeunitdays(timescalbdtrspln)
+        gdat.liststrgtimescalbdtrspln.append('%.3g%s' % (facttime * timescalbdtrspln, lablunittime))
+                        
     gdat.listindxinst = [[] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         gdat.listindxinst[b] = np.arange(len(gdat.liststrginst[b]))
@@ -9413,10 +9418,12 @@ def init( \
                 print('Retreiving the companion priors from ExoFOP-TESS...')
             
             if gdat.epocmtracompprio is None:
-                gdat.epocmtracompprio = gdat.dicttoiitarg['epocmtracomp']
+                print('gdat.dicttoiitarg')
+                print(gdat.dicttoiitarg)
+                gdat.epocmtracompprio = gdat.dicttoiitarg['epocmtraplan']
             if gdat.pericompprio is None:
-                gdat.pericompprio = gdat.dicttoiitarg['pericomp']
-            gdat.deptprio = gdat.dicttoiitarg['depttrancomp']
+                gdat.pericompprio = gdat.dicttoiitarg['periplan']
+            gdat.deptprio = gdat.dicttoiitarg['depttranplan']
             gdat.duraprio = gdat.dicttoiitarg['duratrantotl']
             if gdat.cosicompprio is None:
                 gdat.cosicompprio = np.zeros_like(gdat.epocmtracompprio)
