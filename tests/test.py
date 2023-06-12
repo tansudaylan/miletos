@@ -244,6 +244,8 @@ def cnfg_TOI1797():
     miletos.init( \
          toiitarg=1797, \
          dictfitt=dictfitt, \
+         boolsimutargpartsynt=True, \
+         booldiag=False, \
          #listlablinst=[['TESS'], []], \
          #dictlygoinpt=dictlygoinpt, \
         )
