@@ -137,9 +137,10 @@ def cnfg_FermiLAT_AGN():
     strgclus = 'FermiLAT_AGN'
     
     boolutiltpxf = False
-    liststrgmast = ['4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371']
-    #liststrgmast = ['4FGL J1748.6+7005']
-    
+    #liststrgmast = ['4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371']
+    liststrgmast = ['4FGL J1748.6+7005']
+    listtsecsele = [26]
+
     listtimescalbdtrspln = [1. / 24, 1., 5.]
     for strgmast in liststrgmast:
         
@@ -147,6 +148,7 @@ def cnfg_FermiLAT_AGN():
                           strgmast=strgmast, \
                           strgclus=strgclus, \
                           boolbdtr=boolbdtr, \
+                          listtsecsele=listtsecsele, \
                           listtimescalbdtrspln=listtimescalbdtrspln, \
                           boolutiltpxf=boolutiltpxf, \
                           dictlygoinpt=dictlygoinpt, \

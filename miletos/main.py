@@ -204,11 +204,11 @@ def retr_tsecpathlocl( \
     pathbase = os.environ['TESS_DATA_PATH'] + '/data/lcur/'
     path = pathbase + 'tsec/tsec_spoc_%016d.csv' % tici
     if not os.path.exists(path):
-        listipntsele = np.arange(1, 60)
+        listtsecsele = np.arange(1, 60)
         listpath = []
         listipnt = []
         strgtagg = '*-%016d-*.fits' % tici
-        for tsec in listipntsele:
+        for tsec in listtsecsele:
             pathtemp = pathbase + 'sector-%02d/' % tsec
             listpathtemp = fnmatch.filter(os.listdir(pathtemp), strgtagg)
             
@@ -7451,7 +7451,7 @@ def init( \
         
          ## data retrieval
          ### subset of TESS sectors to retrieve
-         listipntsele=None, \
+         listtsecsele=None, \
          
          ### Boolean flag to apply quality mask
          boolmaskqual=True, \
@@ -8967,7 +8967,7 @@ def init( \
         gdat.dictlygoinpt['labltarg'] = labltarg
         
         ## list of TESS sectors
-        gdat.dictlygoinpt['listipntsele'] = gdat.listipntlygo
+        gdat.dictlygoinpt['listtsecsele'] = gdat.listipntlygo
         print('Will ask lygos to consider the following TESS sectors:')
         print(gdat.listipntlygo)
 
@@ -9130,11 +9130,11 @@ def init( \
         print(gdat.listipnt)
     
     # filter the list of sectors using the desired list of sectors, if any
-    if listipntsele is not None:
-        print('Filtering the list of sectors based on the user selection (listipntsele)...')
+    if listtsecsele is not None:
+        print('Filtering the list of sectors based on the user selection (listtsecsele)...')
         listipntsave = np.copy(gdat.listipnt)
         gdat.listipnt = []
-        for tsec in listipntsele:
+        for tsec in listtsecsele:
             if tsec in listipntsave:
                 gdat.listipnt.append(tsec)
         
@@ -9420,10 +9420,10 @@ def init( \
             if gdat.epocmtracompprio is None:
                 print('gdat.dicttoiitarg')
                 print(gdat.dicttoiitarg)
-                gdat.epocmtracompprio = gdat.dicttoiitarg['epocmtraplan']
+                gdat.epocmtracompprio = gdat.dicttoiitarg['epocmtracomp']
             if gdat.pericompprio is None:
-                gdat.pericompprio = gdat.dicttoiitarg['periplan']
-            gdat.deptprio = gdat.dicttoiitarg['depttranplan']
+                gdat.pericompprio = gdat.dicttoiitarg['pericomp']
+            gdat.deptprio = gdat.dicttoiitarg['depttrancomp']
             gdat.duraprio = gdat.dicttoiitarg['duratrantotl']
             if gdat.cosicompprio is None:
                 gdat.cosicompprio = np.zeros_like(gdat.epocmtracompprio)
