@@ -469,7 +469,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                          rratcomp=rratcomp, \
                                                          typesyst=gmod.typemodl, \
                                                          
-                                                         typeverb=2, \
+                                                         #typeverb=2, \
                                                         
                                                         )
                 
@@ -4234,10 +4234,10 @@ def proc_modl(gdat, strgmodl, strgextn, h):
                     if e < 5:
                         #plot_modl(gdat, strgmodl, b, p, None, e)
                         for y in gdat.indxchun[b][p]:
-                            plot_modl(gdat, strgmodl, b, p, y, e)
+                            plot_modl(gdat, strgmodl, b, p, y, e, h)
 
 
-def plot_modl(gdat, strgmodl, b, p, y, e):
+def plot_modl(gdat, strgmodl, b, p, y, e, h):
     
     gmod = getattr(gdat, strgmodl)
             
@@ -10788,13 +10788,6 @@ def init( \
     print('gdat.numbcompprio')
     print(gdat.numbcompprio)
 
-    if gdat.labltarg == 'WASP-43' and gdat.numbcompprio is None:
-        print('gdat.boolinfe')
-        print(gdat.boolinfe)
-        print('gdat.fitt.typemodl')
-        print(gdat.fitt.typemodl)
-        raise Exception('')
-        
     # data validation (DV) report
     ## number of pages in the DV report
     if gdat.boolplot:
@@ -11253,6 +11246,7 @@ def init( \
     if gdat.numbcompprio is not None:
         for j in gdat.indxcompprio:
             gdat.liststrgcompfull[j] = gdat.labltarg + ' ' + gdat.liststrgcomp[j]
+        gdat.fitt.numbcomp = gdat.numbcompprio
 
     ## augment object dictinary
     gdat.dictfeatobjt = dict()
@@ -11380,7 +11374,7 @@ def init( \
     # do not continue if there is no trigger
     # Boolean flag to continue modeling the data based on the feature extraction
     gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur') and \
-                                                                           gdat.boolsrchpbox and not gdat.dictmileoutp['boolposianls'].any()
+                                                                           not (gdat.boolsrchpbox and not gdat.dictmileoutp['boolposianls'].any())
     
     if gdat.boolmodl:
         gdat.liststrgpdfn += ['post']
@@ -11390,6 +11384,8 @@ def init( \
         print(gdat.liststrgpdfn)
     
     if not gdat.boolmodl:
+        print('gdat.boolinfe')
+        print(gdat.boolinfe)
         print('Skipping the forward modeling of this prior transiting object...')
 
     if gdat.boolmodl:
