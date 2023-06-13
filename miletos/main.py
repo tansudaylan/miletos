@@ -9558,6 +9558,9 @@ def init( \
         
         if gdat.true.boolmodlpsys or gdat.true.typemodl == 'cosc':
             if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
+                
+                numbcomp = gdat.numbcompprio
+                
                 if gdat.booldiag:
                     if gdat.numbcompprio is None:
                         print('')
@@ -9570,16 +9573,23 @@ def init( \
                         print('gdat.true.typemodl')
                         print(gdat.true.typemodl)
                         raise Exception('gdat.numbcompprio is None while generating true data.')
-                    numbcomp = gdat.numbcompprio
             else:
                 numbcomp = 1
+            
             tdpy.setp_para_defa(gdat, 'true', 'numbcomp', numbcomp)
 
             gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
             
             for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
                 for j in gdat.true.indxcomp:
-                    tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, getattr(gdat, namepara + 'compprio')[j])
+                    paracompprio = getattr(gdat, namepara + 'compprio')
+                    
+                    print('namepara')
+                    print(namepara)
+                    print('paracompprio')
+                    print(paracompprio)
+
+                    tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracompprio[j])
             
             if gdat.true.boolmodlpsys:
                 for j in gdat.true.indxcomp:

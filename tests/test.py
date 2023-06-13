@@ -245,7 +245,7 @@ def cnfg_TOI1797():
          toiitarg=1797, \
          dictfitt=dictfitt, \
          boolsimutargpartsynt=True, \
-         booldiag=False, \
+         #booldiag=False, \
          #listlablinst=[['TESS'], []], \
          #dictlygoinpt=dictlygoinpt, \
         )
