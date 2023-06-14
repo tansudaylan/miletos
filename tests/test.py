@@ -238,17 +238,28 @@ def cnfg_TOI1797():
     dictfitt = dict()
     dictfitt['typemodl'] = 'psys'
     
-    #dictlygoinpt = dict()
-    #dictlygoinpt['numbside'] = 51
-    #dictlygoinpt['maxmtmagcatl'] = 9.
-    miletos.init( \
-         toiitarg=1797, \
-         dictfitt=dictfitt, \
-         boolsimutargpartsynt=True, \
-         #booldiag=False, \
-         #listlablinst=[['TESS'], []], \
-         #dictlygoinpt=dictlygoinpt, \
-        )
+    for a in range(2):
+        
+        if a == 0:
+            boolsimutargpartsynt = True
+            strgcnfg = 'Simulated'
+        if a == 1:
+            boolsimutargpartsynt = False
+            strgcnfg = 'Observed'
+
+        #dictlygoinpt = dict()
+        #dictlygoinpt['numbside'] = 51
+        #dictlygoinpt['maxmtmagcatl'] = 9.
+        miletos.init( \
+             toiitarg=1797, \
+             dictfitt=dictfitt, \
+             strgclus='TOI1979', \
+             strgcnfg=strgcnfg, \
+             boolsimutargpartsynt=boolsimutargpartsynt, \
+             #booldiag=False, \
+             #listlablinst=[['TESS'], []], \
+             #dictlygoinpt=dictlygoinpt, \
+            )
         
 
 def cnfg_TRAPPIST1():

@@ -7615,7 +7615,7 @@ def init( \
          ## 'gaus': Gaussian
          typemodllens='phdy', \
 
-         ### type of priors for stars: 'tici', 'exar', 'inpt'
+         ### type of priors for stars: 'TICID', 'exar', 'inpt'
          typepriostar=None, \
 
          # type of prior model parameters for companions
@@ -8105,7 +8105,7 @@ def init( \
 
     # determine target identifiers
     if gdat.ticitarg is not None:
-        gdat.typetarg = 'tici'
+        gdat.typetarg = 'TICID'
         if gdat.typeverb > 0:
             print('A TIC ID was provided as target identifier.')
         
@@ -8116,13 +8116,13 @@ def init( \
         gdat.strgmast = 'TIC %d' % gdat.ticitarg
 
     elif gdat.toiitarg is not None:
-        gdat.typetarg = 'toii'
+        gdat.typetarg = 'TOIID'
         if gdat.typeverb > 0:
             print('A TOI ID (%d) was provided as target identifier.' % gdat.toiitarg)
         # determine TIC ID
         gdat.strgtoiibase = str(gdat.toiitarg)
         indx = []
-        for k, strg in enumerate(gdat.dicttoii['toii']):
+        for k, strg in enumerate(gdat.dicttoii['TOIID']):
             if str(strg).split('.')[0] == gdat.strgtoiibase:
                 indx.append(k)
         indx = np.array(indx)
@@ -8131,22 +8131,22 @@ def init( \
             print('')
             print('')
             print('gdat.dicttoii[TOI]')
-            summgene(gdat.dicttoii['toii'])
+            summgene(gdat.dicttoii['TOIID'])
             raise Exception('Did not find the TOI in the ExoFOP-TESS TOI list.')
 
-        gdat.ticitarg = gdat.dicttoii['tici'][indx[0]]
+        gdat.ticitarg = gdat.dicttoii['TICID'][indx[0]]
 
         if gdat.strgexar is None:
             gdat.strgexar = 'TOI-%d' % gdat.toiitarg
         gdat.strgmast = 'TIC %d' % gdat.ticitarg
 
     elif gdat.strgmast is not None:
-        gdat.typetarg = 'mast'
+        gdat.typetarg = 'MASTKey'
         if gdat.typeverb > 0:
             print('A MAST key (%s) was provided as target identifier.' % gdat.strgmast)
 
     elif gdat.rasctarg is not None and gdat.decltarg is not None:
-        gdat.typetarg = 'posi'
+        gdat.typetarg = 'Position'
         if gdat.typeverb > 0:
             print('RA and DEC (%g %g) are provided as target identifier.' % (gdat.rasctarg, gdat.decltarg))
         gdat.strgmast = '%g %g' % (gdat.rasctarg, gdat.decltarg)
@@ -8171,7 +8171,7 @@ def init( \
     print('gdat.boolexecoffl')
     print(gdat.boolexecoffl)
     
-    if (gdat.typetarg == 'tici' or gdat.typetarg == 'toii' or gdat.typetarg == 'mast') and not gdat.boolsrchmastdone and not gdat.boolexecoffl:
+    if (gdat.typetarg == 'TICID' or gdat.typetarg == 'TOIID' or gdat.typetarg == 'MASTKey') and not gdat.boolsrchmastdone and not gdat.boolexecoffl:
         # temp -- check that the closest TIC to a given TIC is itself
         if gdat.typeverb > 0:
             print('Querying the TIC within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source to the MAST keyword %s...' % (gdat.strgradi, gdat.strgmast))
@@ -8224,7 +8224,7 @@ def init( \
         if gdat.radistar is not None:
             gdat.typepriostar = 'inpt'
         else:
-            gdat.typepriostar = 'tici'
+            gdat.typepriostar = 'TICID'
     
     if gdat.boolinfe:
         if gdat.typeverb > 0:
@@ -8263,13 +8263,13 @@ def init( \
             print(gdat.pathclus)
 
     if gdat.labltarg is None:
-        if gdat.typetarg == 'mast':
+        if gdat.typetarg == 'MASTKey':
             gdat.labltarg = gdat.strgmast
-        if gdat.typetarg == 'toii':
+        if gdat.typetarg == 'TOIID':
             gdat.labltarg = 'TOI-%d' % gdat.toiitarg
-        if gdat.typetarg == 'tici':
+        if gdat.typetarg == 'TICID':
             gdat.labltarg = 'TIC %d' % gdat.ticitarg
-        if gdat.typetarg == 'posi':
+        if gdat.typetarg == 'Position':
             gdat.labltarg = 'RA=%.4g, DEC=%.4g' % (gdat.rasctarg, gdat.decltarg)
         if gdat.typetarg == 'synt':
             gdat.labltarg = 'Sim Target'
@@ -8949,11 +8949,11 @@ def init( \
             gdat.dictlygoinpt['typepsfninfe'] = 'fixd'
         
         ## target identifier
-        if gdat.typetarg == 'mast':
+        if gdat.typetarg == 'MASTKey':
             gdat.dictlygoinpt['strgmast'] = gdat.strgmast
-        elif gdat.typetarg == 'tici' or gdat.typetarg == 'toii':
+        elif gdat.typetarg == 'TICID' or gdat.typetarg == 'TOIID':
             gdat.dictlygoinpt['ticitarg'] = gdat.ticitarg
-        elif gdat.typetarg == 'posi':
+        elif gdat.typetarg == 'Position':
             gdat.dictlygoinpt['rasctarg'] = rasctarg
             gdat.dictlygoinpt['decltarg'] = decltarg
         else:
