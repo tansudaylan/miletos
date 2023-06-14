@@ -6827,19 +6827,6 @@ def retr_stdvwind(ydat, sizewind, boolcuttpeak=True):
     return stdv
 
 
-def retr_booltpxf(listipnt, listtsecspoc):
-
-    ## number of sectors for which TESS data are available
-    numbtsec = len(listipnt)
-    ## Boolean flags to indicate that TPFs exist at 2-min
-    booltpxf = np.zeros(numbtsec, dtype=bool)
-    for k, tsec in enumerate(listipnt):
-        if tsec in listtsecspoc:
-            booltpxf[k] = True
-    
-    return booltpxf
-
-
 def plot_tser( \
               
               # path in which the plot will be placed
@@ -7361,8 +7348,8 @@ def init( \
          ## string of time for the beginning of the year
          strgtimeobvtyear=None, \
          
-         # Boolean flag to use Target Pixel Files (TPFs) at the highest cadence whenever possible
-         boolutiltpxf=True, \
+         # Boolean flag to use the highest cadence whenever possible
+         boolutilcadehigh=True, \
          
          ## list of time difference samples for the year
          listdelttimeobvtyear=None, \
@@ -7444,10 +7431,6 @@ def init( \
          
          ### Boolean flag to only utilize SPOC light curves on a local disk
          boolutiltesslocl=False, \
-
-         ### Boolean flag to only consider TPF data (2-min or 20-sec)
-         #### deprecated? to be deleted?
-         booltpxfonly=False, \
 
          ### name of the data product of lygos indicating which analysis has been used for photometry
          nameanlslygo='psfn', \
@@ -7956,23 +7939,25 @@ def init( \
     gdat.boolretrlcurzwtf = False
     
     ## Boolean flag to query MAST
-    gdat.boolretrlcurmast = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.boolretrlcurmast = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.boolretrlcurmastanyy = False
     
-    gdat.boolinjeobsvanyy = False
+    gdat.booltargpartanyy = False
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
-                gdat.boolinjeobsvanyy = True
+            if gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
+                gdat.booltargpartanyy = True
 
-            if gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
                 if gdat.liststrginst[b][p] in ['K2', 'Kepler', 'HST'] or gdat.liststrginst[b][p].startswith('JWST') or gdat.liststrginst[b][p] == 'TESS' \
-                                                                                                        and gdat.boolutiltpxf and gdat.typelcurtpxftess != 'lygos':
+                                                                                                        and gdat.boolutilcadehigh and gdat.typelcurtpxftess != 'lygos':
                     gdat.boolretrlcurmast[b][p] = True
                     gdat.boolretrlcurmastanyy = True
                 if gdat.liststrginst[b][p] == 'ZTF':
                     gdat.boolretrlcurzwtf = True
     
+    print('gdat.boolretrlcurmastanyy')
+    print(gdat.boolretrlcurmastanyy)
+
     # decide whether to run in offline mode
     if gdat.boolforcoffl:
         gdat.boolexecoffl = True
@@ -8428,6 +8413,9 @@ def init( \
     booltess = 'TESS' in gdat.liststrginst[0]
     gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
     
+    print('gdat.booltesskepl')
+    print(gdat.booltesskepl)
+
     if gdat.boolretrlcurmastanyy:
         
         #if gdat.liststrginst is None:
@@ -8873,32 +8861,33 @@ def init( \
     ### 'full': fit all energy bins simultaneously
     ### 'iter': iterate over energy bins
     tdpy.setp_para_defa(gdat, 'fitt', 'typemodlenerfitt', 'iter')
-                
+    
+    print('gdat.typelcurtpxftess')
+    print(gdat.typelcurtpxftess)
+    
+    print('gdat.boolutilcadehigh')
+    print(gdat.boolutilcadehigh)
+
     if gdat.typeverb > 1:
         print('gdat.fitt.typemodlenerfitt')
         print(gdat.fitt.typemodlenerfitt)
                     
-    if gdat.booltesskepl and gdat.boolinjeobsvanyy:
+    if gdat.booltesskepl and gdat.booltargpartanyy:
         numbtsec = len(gdat.listipnttcut)
 
-        if gdat.boolutiltpxf:
-            # determine for each sector whether a TFP is available
-            booltpxf = retr_booltpxf(gdat.listipnttcut, gdat.listtsecspoc)
-    
-            if typeverb > 0:
-                print('booltpxf')
-                print(booltpxf)
-        
-        if gdat.typelcurtpxftess == 'lygos' or not gdat.boolutiltpxf:
+        if gdat.typelcurtpxftess == 'lygos' or not gdat.boolutilcadehigh:
             boollygo = np.ones(numbtsec, dtype=bool)
             gdat.listtsecspoc = np.array([], dtype=int)
             gdat.listipntlygo = gdat.listipnttcut
-        elif gdat.boolutiltpxf and gdat.typelcurtpxftess == 'SPOC':
-            boollygo = ~booltpxf
-            gdat.listipntlygo = gdat.listipnttcut[boollygo]
-        elif gdat.boolutiltpxf and gdat.typelcurtpxftess == 'SPOC_only':
-            boollygo = np.zeros_like(booltpxf, dtype=bool)
-            gdat.listipntlygo = []
+        elif gdat.boolutilcadehigh:
+            if gdat.typelcurtpxftess == 'SPOC':
+                # determine for each sector whether a TFP is available
+                boollygo = ~tdpy.retr_boolsubb(gdat.listipnttcut, gdat.listtsecspoc)
+                gdat.listipntlygo = gdat.listipnttcut[boollygo]
+            
+            if gdat.typelcurtpxftess == 'SPOC_only':
+                boollygo = np.zeros_like(gdat.listipnttcut, dtype=bool)
+                gdat.listipntlygo = []
         else:
             raise Exception('')
 
@@ -8906,9 +8895,6 @@ def init( \
         
         print('gdat.listipntlygo')
         print(gdat.listipntlygo)
-        if gdat.boolutiltpxf:
-            print('gdat.listtsecspoc')
-            print(gdat.listtsecspoc)
     
     gdat.dictlygooutp = None
     
@@ -8930,7 +8916,7 @@ def init( \
             print(gdat.liststrginst)
             raise Exception('gdat.liststrginst has both TESS and TESS_S*')
 
-    if gdat.booltesskepl and gdat.boolinjeobsvanyy and len(gdat.listipntlygo) > 0:
+    if gdat.booltesskepl and gdat.booltargpartanyy and len(gdat.listipntlygo) > 0:
         
         # configure lygos
         print('Configuring lygos...')
@@ -8969,7 +8955,7 @@ def init( \
 
         # Boolean flag to use the TPFs
         if not 'boolutiltpxf' in gdat.dictlygoinpt:
-            gdat.dictlygoinpt['boolutiltpxf'] = gdat.boolutiltpxf
+            gdat.dictlygoinpt['boolutiltpxf'] = gdat.boolutilcadehigh
         
         # name of the lygos analysis from which the light curve will be derived
         gdat.dictlygoinpt['listnameanls'] = ['psfn']
@@ -9101,7 +9087,7 @@ def init( \
                         print('')
                         raise Exception('len(gdat.dictlygooutp[arryrflx][gdat.nameanlslygo][0][o]) == 0')
                 
-    if gdat.booltesskepl and gdat.boolinjeobsvanyy:
+    if gdat.booltesskepl and gdat.booltargpartanyy:
         print('List of chunks to be reduced via lygos')
         print(gdat.listipntlygo)
         print('List of chunks to be taken from SPOC')
@@ -9143,7 +9129,7 @@ def init( \
     
     if gdat.booltesskepl:
         
-        if gdat.boolinjeobsvanyy and len(gdat.listtsecspoc) > 0 and gdat.typelcurtpxftess == 'SPOC':
+        if gdat.booltargpartanyy and len(gdat.listtsecspoc) > 0 and gdat.typelcurtpxftess == 'SPOC':
             
             ## read SPOC light curves
             gdat.listarrylcurmastsapp = [[] for o in indxtsecspoc]
@@ -9713,7 +9699,7 @@ def init( \
     gdat.listarrytser['Detrended'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
-    if gdat.booltesskepl and gdat.boolinjeobsvanyy:
+    if gdat.booltesskepl and gdat.booltargpartanyy:
         gdat.dictmileoutp['listipnt'] = gdat.listipnt
         print('List of TESS sectors:')
         print(gdat.listipnt)
@@ -9726,11 +9712,27 @@ def init( \
             ## from MAST
             if gdat.boolretrlcurmast[b][p]:
                 for o, tsecspoc in enumerate(gdat.listtsecspoc):
+                    print('gdat.listtsecspoc')
+                    print(gdat.listtsecspoc)
+                    print('tsecspoc')
+                    print(tsecspoc)
+                    print('gdat.listipnt')
+                    print(gdat.listipnt)
+                    print('gdat.indxchun')
+                    print(gdat.indxchun)
+                    #print('gdat.listarrylcurmast[p][o]')
+                    #print(gdat.listarrylcurmast[p][o])
+                    print('gdat.listarrytser[Raw][b][p]')
+                    print(gdat.listarrytser['Raw'][b][p])
+                    
                     indx = np.where(gdat.listipnt == tsecspoc)[0][0]
+                    print('indx')
+                    print(indx)
+                    
                     gdat.listarrytser['Raw'][b][p][indx] = gdat.listarrylcurmast[p][o]
             
             ## TESS and Kepler data via lygos
-            if gdat.booltesskepl and gdat.boolinjeobsvanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listipntlygo) > 0):
+            if gdat.booltesskepl and gdat.booltargpartanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listipntlygo) > 0):
                 for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
                     indx = np.where(gdat.listipnt == tseclygo)[0][0]
                     gdat.listarrytser['Raw'][b][p][indx] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o][:, None, :]
@@ -9850,7 +9852,7 @@ def init( \
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if (gdat.liststrginst[b][p].startswith('TESS_S') or gdat.liststrginst[b][p] == 'TESS') and gdat.boolinjeobsvanyy:
+                if (gdat.liststrginst[b][p].startswith('TESS_S') or gdat.liststrginst[b][p] == 'TESS') and gdat.booltargpartanyy:
                     if len(gdat.listtsec) != len(gdat.listarrytser['Raw'][b][p]):
                         print('')
                         print('')
@@ -10084,7 +10086,7 @@ def init( \
                         summgene(gdat.listarrytser['Raw'][b][p][y])
                         raise Exception('len(gdat.listarrytser[raww][b][p][y]) == 0')
 
-                if gdat.liststrginst[b][p] == 'TESS' and gdat.boolinjeobsvanyy:
+                if gdat.liststrginst[b][p] == 'TESS' and gdat.booltargpartanyy:
                     if not hasattr(gdat, 'listtsecspoc'):
                         print('')
                         print('')
@@ -10127,7 +10129,7 @@ def init( \
                 for y in gdat.indxchun[b][p]:
                     if gdat.liststrginst[b][p] == 'TESS' and (gdat.liststrgtypedata[b][p] != 'simutargsynt'):
                         if gdat.booldiag:
-                            if gdat.boolinjeobsvanyy and gdat.numbchun[b][p] != len(gdat.listipnt):
+                            if gdat.booltargpartanyy and gdat.numbchun[b][p] != len(gdat.listipnt):
                                 print('')
                                 print('')
                                 print('')

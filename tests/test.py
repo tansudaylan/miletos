@@ -253,7 +253,6 @@ def cnfg_TOI1797():
         miletos.init( \
              toiitarg=1797, \
              dictfitt=dictfitt, \
-             strgclus='TOI1979', \
              strgcnfg=strgcnfg, \
              boolsimutargpartsynt=boolsimutargpartsynt, \
              #booldiag=False, \
