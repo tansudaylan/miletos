@@ -356,7 +356,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 numbener = gdat.numbener[p]
             else:
                 numbener = 1
-            dictlistmodl['tran'][0][p] = np.empty((time[0][p].size, numbener))
+            dictlistmodl['Transit'][0][p] = np.empty((time[0][p].size, numbener))
             #dictlistmodl['sgnl'][0][p] = np.empty((time[0][p].size, numbener))
         
         # temp
@@ -470,17 +470,17 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                         
                                                         )
                 
-                dictlistmodl['tran'][0][p] = dictoutpmodl['rflx']
-                if dictlistmodl['tran'][0][p].ndim == 1:
-                    dictlistmodl['tran'][0][p] = dictlistmodl['tran'][0][p][:, None]
+                dictlistmodl['Transit'][0][p] = dictoutpmodl['rflx']
+                if dictlistmodl['Transit'][0][p].ndim == 1:
+                    dictlistmodl['Transit'][0][p] = dictlistmodl['Transit'][0][p][:, None]
 
                 if gdat.booldiag:
-                    if np.amin(dictlistmodl['tran'][0][p]) < 0 or dictlistmodl['tran'][0][p].ndim == 1:
+                    if np.amin(dictlistmodl['Transit'][0][p]) < 0 or dictlistmodl['Transit'][0][p].ndim == 1:
                         print('')
                         print('')
                         print('')
                         print('dictlistmodl[tran][0][p]')
-                        summgene(dictlistmodl['tran'][0][p])
+                        summgene(dictlistmodl['Transit'][0][p])
                         print('rratcomp')
                         summgene(rratcomp)
                         raise Exception('dictlistmodl[tran][0][p] has gone negative.')
@@ -557,10 +557,10 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
         for p in gdat.indxinst[0]:
             # total model
             if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
-                sgnl = dictlistmodl['tran'][0][p]
+                sgnl = dictlistmodl['Transit'][0][p]
             
                 if gdat.booldiag:
-                    if dictlistmodl['tran'][0][p].ndim != dictlistmodl['Baseline'][0][p].ndim:
+                    if dictlistmodl['Transit'][0][p].ndim != dictlistmodl['Baseline'][0][p].ndim:
                         print('')
                         print('')
                         print('')
@@ -865,7 +865,7 @@ def retr_dictderi_mile(para, gdat):
             
             for namecompmodl in gmod.listnamecompmodl:
                 
-                dictvarbderi['Model_Fine_%s%s' % (namecompmodl, strg)] = dictmodlfine[namecompmodl][b][p]
+                dictvarbderi['Model_Fine_%s_%s' % (namecompmodl, strg)] = dictmodlfine[namecompmodl][b][p]
                 
                 if gdat.booldiag:
                     if gdat.timethisfittfine[b][p].size != dictmodlfine[namecompmodl][b][p].size:
@@ -905,6 +905,8 @@ def retr_dictderi_mile(para, gdat):
                             raise Exception('')
     
             if gdat.booldiag:
+                print('dictvarbderi.keys()')
+                print(dictvarbderi.keys())
                 if dictvarbderi['Model_Fine_Total_%s' % strg].size != gdat.timethisfittfine[b][p].size:
                     raise Exception('')
     
@@ -3193,7 +3195,7 @@ def plot_popl(gdat, strgpdfn):
         indxcompfilt = dict()
         indxcompfilt['Total'] = indxtargpopl
         
-        #indxcompfilt['tran'] = np.where(dictpopl['booltran'])[0]
+        #indxcompfilt['Transit'] = np.where(dictpopl['booltran'])[0]
         strgcuttmain = 'Total'
         
         #indxcompfilt['box1'] = np.where((dictpopl['radicomp'] < 3.5) & (dictpopl['radicomp'] > 3.) & (dictpopl['tmptplan'] > 300) & \
@@ -3212,7 +3214,7 @@ def plot_popl(gdat, strgpdfn):
         #indxcompfilt['r204'] = np.where((dictpopl['radicomp'] > 2) & (dictpopl['radicomp'] < 4))[0]
         #indxcompfilt['rb24'] = np.where((dictpopl['radicomp'] < 4) & (dictpopl['radicomp'] > 2.))[0]
         #indxcompfilt['gmtr'] = np.where(np.isfinite(stnomass) & (stnomass > 5) & (dictpopl['booltran']))[0]
-        #indxcompfilt['tran'] = np.where(dictpopl['booltran'])[0]
+        #indxcompfilt['Transit'] = np.where(dictpopl['booltran'])[0]
         #indxcompfilt['mult'] = np.where(dictpopl['numbplantranstar'] > 3)[0]
         #indxcompfilt['live'] = np.where(dictpopl['boollive'])[0]
         #indxcompfilt['terr'] = np.where(dictpopl['boolterr'] & dictpopl['boollive'])[0]
@@ -4267,7 +4269,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e, h):
         elif namecompmodl == 'Baseline':
             colr = 'orange'
             labl = 'Baseline'
-        elif namecompmodl == 'tran':
+        elif namecompmodl == 'Transit':
             colr = 'r'
             labl = 'Transit'
         elif namecompmodl == 'flar':
@@ -4415,7 +4417,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e, h):
             elif namecompmodl == 'Baseline':
                 colr = 'orange'
                 labl = 'Baseline'
-            elif namecompmodl == 'tran':
+            elif namecompmodl == 'Transit':
                 colr = 'r'
                 labl = 'Transit'
             elif namecompmodl == 'flar':
@@ -4436,10 +4438,10 @@ def plot_modl(gdat, strgmodl, b, p, y, e, h):
             for w in range(gdat.numbsampplot):
                 namevarbsamp = 'PosteriorSamples%s%04d' % (namecompmodl, w)
                 if gdat.fitt.typemodlenerfitt == 'full':
-                    dictmodl[namevarbsamp] = {'tser': gdat.dictsamp['Model_Fine_%s%s' % (namecompmodl, strg)][w, :, e], 'time': gdat.timethisfittfine[b][p]}
+                    dictmodl[namevarbsamp] = {'tser': gdat.dictsamp['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, e], 'time': gdat.timethisfittfine[b][p]}
                 else:
                     dictmodl[namevarbsamp] = \
-                                {'tser': gmod.listdictsamp[e]['Model_Fine_%s%s' % (namecompmodl, strg)][w, :, 0], 'time': gdat.timethisfittfine[b][p]}
+                                {'tser': gmod.listdictsamp[e]['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, 0], 'time': gdat.timethisfittfine[b][p]}
                 if w == 0:
                     dictmodl[namevarbsamp]['labl'] = labl
                 else:
@@ -4580,7 +4582,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
     if gmod.typemodl == 'flar':
         gmod.listnamecompmodl += ['flar']
     if gmod.typemodl == 'cosc' or gmod.typemodl == 'psys' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
-        gmod.listnamecompmodl += ['tran']
+        gmod.listnamecompmodl += ['Transit']
 
         if gmod.boolmodltran:
             gmod.numbcomp = gdat.epocmtracompprio.size
