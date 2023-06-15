@@ -127,7 +127,6 @@ def cnfg_FermiLAT_AGN():
     print('Number of targets: %d' % numbtarg)
     
     listtimescalbdtrspln = [[6.]]
-    boolbdtr = [[True], []]
     for strgmast in liststrgmast:
         print(strgmast)
     
@@ -141,13 +140,13 @@ def cnfg_FermiLAT_AGN():
     liststrgmast = ['Mkn 421', 'Mkn 501', 'CGCG 050-083', '1RXS J234354.4+054713', '3C 371']
     #listtsecsele = [26]
 
-    listtimescalbdtrspln = [1. / 24, 1., 5.]
+    #listtimescalbdtrspln = [1. / 24, 1., 5.]
+    listtimescalbdtrspln = []
+    
     for strgmast in liststrgmast:
-        
         miletos.main.init( \
                           strgmast=strgmast, \
                           strgclus=strgclus, \
-                          boolbdtr=boolbdtr, \
                           typelcurtpxftess=typelcurtpxftess, \
                           #listtsecsele=listtsecsele, \
                           listtimescalbdtrspln=listtimescalbdtrspln, \
@@ -499,7 +498,6 @@ def cnfg_PhotCalibPPAStars():
                        boolnorm=boolnormphot, \
                        strgclus='PhotCalibPPAStars', \
                        dictfitt=dictfitt, \
-                       #boolbdtr=False, \
                        #boolplotpopl=True, \
                       )
 

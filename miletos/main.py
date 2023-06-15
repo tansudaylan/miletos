@@ -7469,13 +7469,14 @@ def init( \
                   
          # type of data for each data kind, instrument, and chunk
          ## 'simutargsynt': simulated data on a synthetic target
-         ## 'simutargpartsynt': simulated synthetic data on a particular target with a particular observational baseline 
+         ## 'simutargpartsynt': simulated data on a particular target over a synthetic temporal baseline
+         ## 'simutargpartfprt': simulated data on a particular target with a particular temporal footprint 
          ## 'simutargpartinje': simulated data obtained by injecting a synthetic signal on observed data on a particular target with a particular observational baseline 
          ## 'obsd': observed data on a particular target
          liststrgtypedata=None, \
             
-         # Boolean flag to default into boolsimutargpartsynt for all data types and instruments
-         boolsimutargpartsynt=False, \
+         # Boolean flag to default into boolsimutargpartfprt for all data types and instruments
+         boolsimutargpartfprt=False, \
 
          ## list of labels indicating instruments
          listlablinst=None, \
@@ -7569,8 +7570,6 @@ def init( \
          dilu=None, \
          
          ## priors
-         ### Boolean flag to detrend the photometric time-series before estimating the priors
-         boolbdtr=None, \
          ### baseline detrending
          #### minimum time interval for breaking the time-series into regions, which will be detrended separately
          timebrekregi=0.1, \
@@ -7860,8 +7859,8 @@ def init( \
     if gdat.liststrgtypedata is None:
         gdat.liststrgtypedata = [[] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
-            if gdat.boolsimutargpartsynt:
-                gdat.liststrgtypedata[b] = ['simutargpartsynt' for p in gdat.indxinst[b]]
+            if gdat.boolsimutargpartfprt:
+                gdat.liststrgtypedata[b] = ['simutargpartfprt' for p in gdat.indxinst[b]]
             else:
                 gdat.liststrgtypedata[b] = ['obsd' for p in gdat.indxinst[b]]
     
@@ -7873,7 +7872,7 @@ def init( \
                         print('')
                         print('')
                         print('')
-                        raise Exception('IF gdat.liststrgtypedata contains simutargsynt then all instruments should be simutargsynt.')
+                        raise Exception('If gdat.liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
 
     # Boolean flag indicating if the simulated target is a synthetic one
     gdat.booltargsynt = False
@@ -7905,11 +7904,12 @@ def init( \
                 print('gdat.liststrginst')
                 print(gdat.liststrginst)
                 raise Exception('len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b])')
-
-    gdat.liststrgtimescalbdtrspln = []
-    for timescalbdtrspln in gdat.listtimescalbdtrspln:
-        facttime, lablunittime = retr_timeunitdays(timescalbdtrspln)
-        gdat.liststrgtimescalbdtrspln.append('%.3g%s' % (facttime * timescalbdtrspln, lablunittime))
+    
+    if gdat.listtimescalbdtrspln is not None:
+        gdat.liststrgtimescalbdtrspln = []
+        for timescalbdtrspln in gdat.listtimescalbdtrspln:
+            facttime, lablunittime = retr_timeunitdays(timescalbdtrspln)
+            gdat.liststrgtimescalbdtrspln.append('%.3g%s' % (facttime * timescalbdtrspln, lablunittime))
                         
     gdat.listindxinst = [[] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
@@ -7953,7 +7953,8 @@ def init( \
     gdat.booltargpartanyy = False
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
+            if gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt' or \
+                                                                    gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
                 gdat.booltargpartanyy = True
 
                 if gdat.liststrginst[b][p] in ['K2', 'Kepler', 'HST'] or gdat.liststrginst[b][p].startswith('JWST') or gdat.liststrginst[b][p] == 'TESS' \
@@ -9144,11 +9145,11 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.listlablinst[b][p] == 'TESS' and \
-                        (gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd'):
+                        (gdat.liststrgtypedata[b][p] == 'simutargpartfprt' or gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd'):
                 gdat.listipnt[b][p] = gdat.listtsec
                 if gdat.listtsec.size > 0:
                     gdat.numbdatagood += 1
-            elif gdat.liststrgtypedata[b][p] == 'simutargsynt':
+            elif gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                 gdat.listipnt[b][p] = np.array([0])
                 gdat.numbdatagood += 1
             elif gdat.liststrgtypedata[b][p] == 'inpt':
@@ -9351,15 +9352,13 @@ def init( \
     if gdat.typeverb > 0:
         print('List of analysis types: %s' % gdat.listtypeanls)
     
-    if gdat.boolbdtr is None:
-        
-        gdat.boolbdtr = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if gdat.boolinfe and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur') and not gdat.liststrginst[b][p].startswith('LSST'):
-                    gdat.boolbdtr[b][p] = True
-                else:
-                    gdat.boolbdtr[b][p] = False
+    # Boolean flag to detrend the photometric time-series before estimating the priors
+    gdat.boolbdtr = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.boolinfe and len(gdat.listtimescalbdtrspln) > 0 and \
+                                (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur') and not gdat.liststrginst[b][p].startswith('LSST'):
+                gdat.boolbdtr[b][p] = True
     
     gdat.boolbdtranyy = False
     for b in gdat.indxdatatser:
@@ -9807,7 +9806,7 @@ def init( \
                             print(gdat.liststrginst[b][p])
                             raise Exception('')
                     
-                elif gdat.liststrgtypedata[b][p] == 'simutargpartinje':
+                elif gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt':
                     for y in gdat.indxchun[b][p]:
                         gdat.true.listtime[b][p][y] = gdat.listarrytser['Raw'][b][p][y][:, 0, 0] 
                 elif gdat.liststrgtypedata[b][p] != 'obsd':
@@ -9996,7 +9995,7 @@ def init( \
                     if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] += gdat.true.dictmodl['Total'][0][p][y]
                     
-                    if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
+                    if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt':
 
                         # noise per cadence
                         if gdat.liststrginst[b][p].startswith('LSST'):
@@ -10129,7 +10128,8 @@ def init( \
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 for y in gdat.indxchun[b][p]:
-                    if gdat.liststrginst[b][p] == 'TESS' and (gdat.liststrgtypedata[b][p] != 'simutargsynt'):
+                    if gdat.liststrginst[b][p] == 'TESS' and (gdat.liststrgtypedata[b][p] == 'simutargpartfprt' or gdat.liststrgtypedata[b][p] == 'simutargpartinje' or \
+                                                                                                                                            gdat.liststrgtypedata[b][p] == 'obsd'):
                         if gdat.booldiag:
                             if gdat.booltargpartanyy and gdat.numbchun[b][p] != len(gdat.listipnt[b][p]):
                                 print('')
@@ -10291,20 +10291,26 @@ def init( \
     gdat.cadetime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            timeconctemp = np.concatenate(gdat.arrytser['maskcust'][0][p][:, 0])
+            timeconctemp = gdat.arrytser['maskcust'][0][p][:, 0, 0]
+            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1])
             
             if gdat.booldiag:
-                if not (np.sort(timeconctemp) - timeconctemp == 0).all():
+                if not (np.sort(timeconctemp) - timeconctemp == 0).all() or gdat.cadetime[b][p] <= 0:
                     print('')
                     print('')
                     print('')
+                    print('gdat.listarrytser[maskcust][0][p]')
+                    print(gdat.listarrytser['maskcust'][0][p])
+                    print('gdat.arrytser[maskcust][0][p][:, 0]')
+                    print(gdat.arrytser['maskcust'][0][p][:, 0])
                     print('timeconctemp')
                     summgene(timeconctemp)
                     print('gdat.liststrgtypedata[b][p]')
                     print(gdat.liststrgtypedata[b][p])
-                    raise Exception('timeconctemp is not sorted!')
-
-            gdat.cadetime[b][p] = np.amin(gdat.arrytser['maskcust'][0][p][1:, 0] - gdat.arrytser['maskcust'][0][p][:-1, 0])
+                    print('gdat.cadetime[b][p]')
+                    print(gdat.cadetime[b][p])
+                    raise Exception('timeconctemp is not sorted or gdat.cadetime[b][p] <= 0!')
+            
     if gdat.numbener[p] > 1:
         gdat.ratesampener = np.amin(gdat.listener[p][1:] - gdat.listener[p][:-1])
     
