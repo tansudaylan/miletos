@@ -851,7 +851,7 @@ def retr_dictderi_mile(para, gdat):
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
                 
-            strg = '%s_%s' % (gdat.listlabldatatser[b], gdat.listlablinst[b][p])
+            strg = '%s_%s' % (gdat.liststrgdatatser[b], gdat.listlablinst[b][p])
             
             if gdat.typellik == 'GaussianProcess':
                 
@@ -1888,7 +1888,7 @@ def proc_alle(gdat, typemodl):
             gdat.arrytser['modl'+typemodl][b][p] = np.empty((gdat.time[b][p].size, 3))
             gdat.arrytser['modl'+typemodl][b][p][:, 0] = gdat.time[b][p]
             gdat.arrytser['modl'+typemodl][b][p][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
-                                                                                                             gdat.liststrgtsercsvv[b], xx=gdat.time[b][p])
+                                                                                                             gdat.liststrgdatatsercsvv[b], xx=gdat.time[b][p])
             gdat.arrytser['modl'+typemodl][b][p][:, 2] = 0.
 
             gdat.arrytser['resi'+typemodl][b][p] = np.copy(gdat.arrytser['Detrended'][b][p])
@@ -1896,7 +1896,7 @@ def proc_alle(gdat, typemodl):
             for y in gdat.indxchun[b][p]:
                 gdat.listarrytser['modl'+typemodl][b][p][y] = np.copy(gdat.listarrytser['Detrended'][b][p][y])
                 gdat.listarrytser['modl'+typemodl][b][p][y][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
-                                                                                                       gdat.liststrgtsercsvv[b], xx=gdat.listtime[b][p][y])
+                                                                                                       gdat.liststrgdatatsercsvv[b], xx=gdat.listtime[b][p][y])
                 
                 gdat.listarrytser['resi'+typemodl][b][p][y] = np.copy(gdat.listarrytser['Detrended'][b][p][y])
                 gdat.listarrytser['resi'+typemodl][b][p][y][:, 1] -= gdat.listarrytser['modl'+typemodl][b][p][y][:, 1]
@@ -1908,7 +1908,7 @@ def proc_alle(gdat, typemodl):
     # write the model to file
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            path = gdat.pathdatatarg + 'arry%s_modl_%s.csv' % (gdat.listlabldatatser[b], gdat.liststrginst[b][p])
+            path = gdat.pathdatatarg + 'arry%s_modl_%s.csv' % (gdat.liststrgdatatser[b], gdat.liststrginst[b][p])
             if not os.path.exists(path):
                 if gdat.typeverb > 0:
                     print('Writing to %s...' % path)
@@ -1962,7 +1962,7 @@ def proc_alle(gdat, typemodl):
                 
                 # this is only the physical model and excludes the baseline, which is available separately via get_one_posterior_baseline()
                 gdat.listarrytsermodl[b][p][ii, :, 1] = gdat.objtalle[typemodl].get_one_posterior_model(gdat.liststrginst[b][p], \
-                                                                        gdat.liststrgtsercsvv[b], xx=gdat.time[b][p], sample_id=i)
+                                                                        gdat.liststrgdatatsercsvv[b], xx=gdat.time[b][p], sample_id=i)
                 
                 for j in gmod.indxcomp:
                     gdat.listarrypcur['quadmodl'+typemodl][b][p][j][ii, :, :] = \
@@ -3529,8 +3529,6 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
             print('')
             print('strgarry')
             print(strgarry)
-            print('arrytser')
-            print(arrytser)
             raise Exception('len(arrytser) == 0')
     
     # determine name of the file
@@ -3545,7 +3543,7 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
     if boolchun and gdat.numbchun[b][p] > 1:
         strgchun = '_' + gdat.liststrgchun[b][p][y]
     path = gdat.pathvisutarg + '%s%s_%s%s_%s%s_%s%s.%s' % \
-                    (gdat.liststrgtser[b], gdat.strgcnfg, strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, strgprioplan, gdat.typefileplot)
+                    (gdat.liststrgdatatser[b], gdat.strgcnfg, strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, strgprioplan, gdat.typefileplot)
     
     if not strgarry.startswith('bdtroutpit') and not strgarry.startswith('clipoutpit'):
         if strgarry == 'Raw':
@@ -3639,7 +3637,7 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
         # plot each energy
         
         path = gdat.pathvisutarg + '%s%s_%s%s_%s%s_%s%s_ener.%s' % \
-                    (gdat.liststrgtser[b], gdat.strgcnfg, strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, strgprioplan, gdat.typefileplot)
+                    (gdat.liststrgdatatser[b], gdat.strgcnfg, strgarry, strgcolr, gdat.liststrginst[b][p], strgchun, gdat.strgtarg, strgprioplan, gdat.typefileplot)
     
         if not os.path.exists(path):
                 
@@ -4069,7 +4067,7 @@ def proc_modl(gdat, strgmodl, strgextn, h):
         if gdat.booldiag:
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    strg = '%s_%s' % (gdat.listlabldatatser[b], gdat.listlablinst[b][p])
+                    strg = '%s_%s' % (gdat.liststrgdatatser[b], gdat.listlablinst[b][p])
                     
                     for namecompmodl in gmod.listnamecompmodl:
                         namecompmodlextn = 'Model_Fine_%s_%s' % (namecompmodl, strg)
@@ -4227,7 +4225,7 @@ def plot_modl(gdat, strgmodl, b, p, y, e, h):
         timefine = gdat.timethisfittfine[b][p]
         tser = gdat.rflxthisfitt[b][p][:, e]
     
-    strg = '%s_%s' % (gdat.listlabldatatser[b], gdat.listlablinst[b][p])
+    strg = '%s_%s' % (gdat.liststrgdatatser[b], gdat.listlablinst[b][p])
     
     # plot the data with the posterior median model
     strgextn = 'PosteriorMedian%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
@@ -7812,7 +7810,8 @@ def init( \
     gdat.boolusedrflx = True
 
     # types of data
-    gdat.listlabldatatser = ['LightCurve', 'RelativeVelocity']
+    gdat.listlabldatatser = ['Relative Flux', 'Relative Velocity']
+    gdat.liststrgdatatser = ['RelativeFlux', 'RelativeVelocity']
     gdat.numbdatatser = len(gdat.listlabldatatser)
     gdat.indxdatatser = np.arange(gdat.numbdatatser)
     
@@ -9134,7 +9133,7 @@ def init( \
         print('List of TESS sectors')
         print(gdat.listtsec)
 
-        print('Warning! No suitabe TESS data found on the target!')
+        print('Warning! No suitable TESS data found on the target!')
                 
     else:
         if listtsecsele is not None:
@@ -10163,11 +10162,10 @@ def init( \
     else:
         gdat.labltserphot = 'ADC Counts [e$^-$/s]'
     gdat.listlabltser = [gdat.labltserphot, 'Radial Velocity [km/s]']
-    gdat.liststrgtser = ['RelativeFlux', 'RelativeVelocity']
-    gdat.liststrgtsercsvv = ['flux', 'rv']
+    gdat.liststrgdatatsercsvv = ['flux', 'rv']
     
-    gdat.strgheadtser = 'time,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b])
-    gdat.strgheadpser = 'phase,%s,%s_err' % (gdat.liststrgtsercsvv[b], gdat.liststrgtsercsvv[b])
+    gdat.strgheadtser = 'time,%s,%s_err' % (gdat.liststrgdatatsercsvv[b], gdat.liststrgdatatsercsvv[b])
+    gdat.strgheadpser = 'phase,%s,%s_err' % (gdat.liststrgdatatsercsvv[b], gdat.liststrgdatatsercsvv[b])
 
     if gdat.offstextatmoraditmpt is None:
         gdat.offstextatmoraditmpt = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
@@ -10229,15 +10227,47 @@ def init( \
             print('No data found. Returning...')
         return gdat.dictmileoutp
     
+    # sampling rate (cadence)
+    ## temporal
+    gdat.cadetime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            timeconctemp = gdat.arrytser['Raw'][0][p][:, 0, 0]
+            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1])
+            
+            if gdat.booldiag:
+                if not (np.sort(timeconctemp) - timeconctemp == 0).all() or gdat.cadetime[b][p] <= 0:
+                    print('')
+                    print('')
+                    print('')
+                    print('gdat.listarrytser[Raw][0][p]')
+                    print(gdat.listarrytser['Raw'][0][p])
+                    print('gdat.arrytser[Raw][0][p][:, 0]')
+                    print(gdat.arrytser['Raw'][0][p][:, 0])
+                    print('timeconctemp')
+                    summgene(timeconctemp)
+                    print('gdat.liststrgtypedata[b][p]')
+                    print(gdat.liststrgtypedata[b][p])
+                    print('gdat.cadetime[b][p]')
+                    print(gdat.cadetime[b][p])
+                    raise Exception('timeconctemp is not sorted or gdat.cadetime[b][p] <= 0!')
+            
+    if gdat.numbener[p] > 1:
+        gdat.ratesampener = np.amin(gdat.listener[p][1:] - gdat.listener[p][:-1])
+    
+    # string to indicate cadence in the file names
+    gdat.strgextncade = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrginst[b][p] == 'TESS':
+                if gdat.cadetime[b][p] == 200. / 3600 / 24 or gdat.cadetime[b][p] == 20. / 3600 / 24:
+                    gdat.strgextncade[b][p] = '_%dsec' % round(gdat.cadetime[b][p] * 3600 * 24)
+                else:
+                    gdat.strgextncade[b][p] = '_%dmin' % round(gdat.cadetime[b][p] * 60 * 24)
+            else:
+                gdat.strgextncade[b][p] = ''
+    
     # plot raw data
-    print('gdat.indxinst')
-    print(gdat.indxinst)
-    print('gdat.indxchun')
-    print(gdat.indxchun)
-    print('gdat.indxdatatser')
-    print(gdat.indxdatatser)
-    print('gdat.liststrgmodl')
-    print(gdat.liststrgmodl)
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             for y in gdat.indxchun[b][p]:
@@ -10245,6 +10275,23 @@ def init( \
                     plot_tser_mile(gdat, None, b, p, y, 'Raw')
             if gdat.boolplottser:
                 gdat.arrytser['Raw'][b][p] = np.concatenate(gdat.listarrytser['Raw'][b][p], axis=0)
+    
+            for e in gdat.indxener[p]:
+
+                if gdat.numbchun[0][p] > 1:
+                    path = gdat.pathdatatarg + '%s_DataCube_%s%s%s.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], gdat.strgextncade[b][p], gdat.liststrgener[p][e])
+                    if not os.path.exists(path):
+                        if gdat.typeverb > 0:
+                            print('Writing to %s...' % path)
+                        np.savetxt(path, gdat.arrytser['Raw'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser)
+                
+                for y in gdat.indxchun[0][p]:
+                    path = gdat.pathdatatarg + '%s_DataCube_%s_%s%s%s.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], \
+                                                                                                                        gdat.strgextncade[b][p], gdat.liststrgener[p][e])
+                    if not os.path.exists(path):
+                        if gdat.typeverb > 0:
+                            print('Writing to %s...' % path)
+                        np.savetxt(path, gdat.listarrytser['Raw'][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
     
     # obtain 'maskcust' (obtained after custom mask, if any) time-series bundle after applying user-defined custom mask, if any
     if gdat.listlimttimemask is not None:
@@ -10285,48 +10332,6 @@ def init( \
         gdat.epocmask = None
         gdat.perimask = None
         gdat.duramask = None
-    
-    # sampling rate (cadence)
-    ## temporal
-    gdat.cadetime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            timeconctemp = gdat.arrytser['maskcust'][0][p][:, 0, 0]
-            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1])
-            
-            if gdat.booldiag:
-                if not (np.sort(timeconctemp) - timeconctemp == 0).all() or gdat.cadetime[b][p] <= 0:
-                    print('')
-                    print('')
-                    print('')
-                    print('gdat.listarrytser[maskcust][0][p]')
-                    print(gdat.listarrytser['maskcust'][0][p])
-                    print('gdat.arrytser[maskcust][0][p][:, 0]')
-                    print(gdat.arrytser['maskcust'][0][p][:, 0])
-                    print('timeconctemp')
-                    summgene(timeconctemp)
-                    print('gdat.liststrgtypedata[b][p]')
-                    print(gdat.liststrgtypedata[b][p])
-                    print('gdat.cadetime[b][p]')
-                    print(gdat.cadetime[b][p])
-                    raise Exception('timeconctemp is not sorted or gdat.cadetime[b][p] <= 0!')
-            
-    if gdat.numbener[p] > 1:
-        gdat.ratesampener = np.amin(gdat.listener[p][1:] - gdat.listener[p][:-1])
-    
-    # string to indicate cadence in the file names
-    gdat.strgextncade = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            if gdat.liststrginst[b][p] == 'TESS':
-                if gdat.cadetime[b][p] == 200. / 3600 / 24 or gdat.cadetime[b][p] == 20. / 3600 / 24:
-                    gdat.strgextncade[b][p] = '_%dsec' % (gdat.cadetime[b][p] * 3600 * 24)
-                else:
-                    gdat.strgextncade[b][p] = '_%dmin' % (gdat.cadetime[b][p] * 60 * 24)
-                print('gdat.cadetime[b][p] * 3600 * 24')
-                print(gdat.cadetime[b][p] * 3600 * 24)
-            else:
-                gdat.strgextncade[b][p] = ''
     
     # obtain bdtrnotr time-series bundle, the baseline-detrended light curve with no masking due to identified transiting object
     if gdat.numbinst[0] > 0 and gdat.boolbdtranyy:
@@ -10545,7 +10550,7 @@ def init( \
                                 print('')
 
                     # write the baseline-detrended light curve for this time scale
-                    path = gdat.pathdatatarg + 'arrytser_Detrended_%s_%s%s%s_ts%02d.csv' % (gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], \
+                    path = gdat.pathdatatarg + '%s_DataCube_Detrended_%s_%s%s%s_ts%02d.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], \
                                                                                                             gdat.strgextncade[b][p], gdat.liststrgener[p][e], z)
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
@@ -10571,14 +10576,15 @@ def init( \
             for e in gdat.indxener[p]:
 
                 if gdat.numbchun[0][p] > 1:
-                    path = gdat.pathdatatarg + 'arrytser_Detrended_%s%s%s.csv' % (gdat.liststrginst[0][p], gdat.strgextncade[b][p], gdat.liststrgener[p][e])
+                    path = gdat.pathdatatarg + '%s_DataCube_Detrended_%s%s%s.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], gdat.strgextncade[b][p], gdat.liststrgener[p][e])
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
                         np.savetxt(path, gdat.arrytser['Detrended'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser)
                 
                 for y in gdat.indxchun[0][p]:
-                    path = gdat.pathdatatarg + 'arrytser_Detrended_%s_%s%s%s.csv' % (gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], gdat.strgextncade[b][p], gdat.liststrgener[p][e])
+                    path = gdat.pathdatatarg + '%s_DataCube_Detrended_%s_%s%s%s.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], \
+                                                                                        gdat.liststrgchun[0][p][y], gdat.strgextncade[b][p], gdat.liststrgener[p][e])
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
@@ -10867,13 +10873,13 @@ def init( \
                 
                 for h in gdat.indxfittiter:
                     if gdat.numbinst[b] > 1:
-                        strgextn = '%s%s_%s' % (gdat.liststrgtser[b], gdat.liststrgdatafittiter[h], gdat.strgtarg)
+                        strgextn = '%s%s_%s' % (gdat.liststrgdatatser[b], gdat.liststrgdatafittiter[h], gdat.strgtarg)
                         gdat.dictlspeoutp = exec_lspe(gdat.arrytsertotl[b][:, e, :], pathvisu=pathvisulspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
                                                                                   typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
                     
                     for p in gdat.indxinst[b]:
                         for strg in liststrgarrylspe:
-                            strgextn = '%s_%s_%s%s_%s' % (strg, gdat.liststrgtser[b], gdat.liststrginst[b][p], gdat.liststrgdatafittiter[h], gdat.strgtarg) 
+                            strgextn = '%s_%s_%s%s_%s' % (strg, gdat.liststrgdatatser[b], gdat.liststrginst[b][p], gdat.liststrgdatafittiter[h], gdat.strgtarg) 
                             gdat.dictlspeoutp = exec_lspe(gdat.arrytser[strg][b][p][:, e, :], pathvisu=pathvisulspe, strgextn=strgextn, maxmfreq=maxmfreqlspe, \
                                                                                   typeverb=gdat.typeverb, typefileplot=gdat.typefileplot, pathdata=gdat.pathdatatarg)
         
@@ -11243,7 +11249,7 @@ def init( \
     #        for y in gdat.indxchun[b][p]:
     #            gdat.listarrytser['bdtrbind'][b][p][y] = rebn_tser(gdat.listarrytser['Detrended'][b][p][y], delt=gdat.delttimebind)
     #            
-    #            path = gdat.pathdatatarg + 'arrytserbdtrbind%s%s.csv' % (gdat.liststrginst[b][p], gdat.liststrgchun[b][p][y])
+    #            path = gdat.pathdatatarg + '%s_DataCube_Detrended_Binned_%s%s.csv' % (gdat.liststrgdatatser[b][p], gdat.liststrginst[b][p], gdat.liststrgchun[b][p][y])
     #            if not os.path.exists(path):
     #                if gdat.typeverb > 0:
     #                    print('Writing to %s' % path)
@@ -11775,7 +11781,7 @@ def init( \
         # make data-validation report
         for w in gdat.indxpage:
             # path of DV report
-            pathplot = gdat.pathvisutarg + '%s_dvrp_pag%d.png' % (gdat.strgtarg, w + 1)
+            pathplot = gdat.pathvisutarg + '%s_Summary_Page%d.png' % (gdat.strgtarg, w + 1)
             listpathdvrp.append(pathplot)
             
             if not os.path.exists(pathplot):
