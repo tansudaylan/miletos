@@ -240,10 +240,10 @@ def cnfg_TOI1797():
     for a in range(2):
         
         if a == 0:
-            boolsimutargpartsynt = True
+            boolsimutargpartfprt = True
             strgcnfg = 'Simulated'
         if a == 1:
-            boolsimutargpartsynt = False
+            boolsimutargpartfprt = False
             strgcnfg = 'Observed'
 
         #dictlygoinpt = dict()
@@ -253,7 +253,7 @@ def cnfg_TOI1797():
              toiitarg=1797, \
              dictfitt=dictfitt, \
              strgcnfg=strgcnfg, \
-             boolsimutargpartsynt=boolsimutargpartsynt, \
+             boolsimutargpartfprt=boolsimutargpartfprt, \
              #booldiag=False, \
              #listlablinst=[['TESS'], []], \
              #dictlygoinpt=dictlygoinpt, \
