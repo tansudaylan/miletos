@@ -323,7 +323,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     print('dictparainpt')
     print(dictparainpt)
 
-    if gmod.typemodl == 'flar':
+    if gmod.typemodl == 'FlaringStar':
         for p in gdat.indxinst[0]:
             
             if strgmodl == 'true' and gdat.liststrgtypedata[b][p] == 'obsd':
@@ -343,11 +343,11 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 if indxtime.size > 0:
                     rflxmodl[indxtime, 0, kk] = amplflar * np.exp(-(time[0][p][indxtime] - timeflar) / (tsclflar / 24.))
             
-            dictlistmodl['flar'][0][p] = 1. + np.sum(rflxmodl, -1)
+            dictlistmodl['FlaringStar'][0][p] = 1. + np.sum(rflxmodl, -1)
     
     timeredu = None
                             
-    if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+    if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
         
         timeredu = np.empty(gdat.numbenermodl)
         
@@ -364,7 +364,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
         rsmacomp = np.empty(gmod.numbcomp)
         epocmtracomp = np.empty(gmod.numbcomp)
         cosicomp = np.empty(gmod.numbcomp)
-        if gmod.typemodl == 'cosc':
+        if gmod.typemodl == 'CompactObjectStellarCompanion':
             masscomp = np.empty(gmod.numbcomp)
         
         for j in gmod.indxcomp:
@@ -372,7 +372,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             rsmacomp[j] = dictparainpt['rsmacom%d' % j]
             epocmtracomp[j] = dictparainpt['epocmtracom%d' % j]
             cosicomp[j] = dictparainpt['cosicom%d' % j]
-        if gmod.typemodl == 'cosc':
+        if gmod.typemodl == 'CompactObjectStellarCompanion':
             for j in gmod.indxcomp:
                 masscomp[j] = dictparainpt['masscom%d' % j]
             massstar = dictparainpt['massstar']
@@ -489,7 +489,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             
             timeredu = dictoutpmodl['timeredu']
 
-    elif gmod.typemodl == 'supn':
+    elif gmod.typemodl == 'Supernova':
         
         
         if gmod.typemodlsupn == 'linr':
@@ -503,8 +503,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             timeoffs = time[0][p] - dictparainpt['timesupn'] - gdat.timeoffs
             indxpost = np.where(timeoffs > 0)[0]
             dflxsupn = np.zeros_like(time[0][p])
-            dictlistmodl['supn'][0][p] = 1. + dflxsupn[:, None]
-            dictlistmodl['sgnl'][0][p] = np.copy(dictlistmodl['supn'][0][p])
+            dictlistmodl['Supernova'][0][p] = 1. + dflxsupn[:, None]
+            dictlistmodl['sgnl'][0][p] = np.copy(dictlistmodl['Supernova'][0][p])
 
             if gmod.typemodlexcs == 'bump':
                 dictlistmodl['excs'][0][p] = np.ones((time[0][p].size, gdat.numbener[p]))
@@ -556,7 +556,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     if gmod.typemodlblinshap != 'GaussianProcess':
         for p in gdat.indxinst[0]:
             # total model
-            if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+            if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
                 sgnl = dictlistmodl['Transit'][0][p]
             
                 if gdat.booldiag:
@@ -570,9 +570,11 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         summgene(dictlistmodl['Baseline'][0][p])
                         raise Exception('dictlistmodl[tran][0][p].ndim != dictlistmodl[blin][0][p]')
             
-            if gmod.typemodl == 'flar':
-                sgnl = dictlistmodl['flar'][0][p]
-            
+            elif gmod.typemodl == 'FlaringStar':
+                sgnl = dictlistmodl['FlaringStar'][0][p]
+            else:
+                raise Exception('')
+
             dictlistmodl['Total'][0][p] = sgnl + dictlistmodl['Baseline'][0][p] - 1.
             
     if gdat.booldiag:
@@ -605,7 +607,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         summgene(dictlistmodl[name][0][p])
                         raise Exception('dictlistmodl[name][0][p].shape[0] != time[0][p].size')
         
-    if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+    if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
         for p in gdat.indxinst[1]:
             dictlistmodl[1][p] = retr_rvel(time[1][p], dictparainpt['epocmtracomp'], dictparainpt['pericomp'], dictparainpt['masscomp'], \
                                                 dictparainpt['massstar'], dictparainpt['inclcomp'], dictparainpt['eccecomp'], dictparainpt['argupericomp'])
@@ -637,10 +639,10 @@ def retr_rflxmodl_mile_gpro(gdat, strgmodl, timemodl, dictparainpt, timemodleval
     dictobjtkern, dictobjtgpro = setp_gpro(gdat, dictparainpt, strgmodl)
     dictmodl = dict()
     for name in gdat.listnamecompgpro:
-        if name == 'supn' or name == 'excs':
+        if name == 'Supernova' or name == 'excs':
             timeoffsdata = gdat.timethisfittconc - dictparainpt['timesupn'] - gdat.timeoffs
             timeoffsmodl = timemodl - dictparainpt['timesupn'] - gdat.timeoffs
-        if name == 'supn':
+        if name == 'Supernova':
             indxtimedata = np.where(timeoffsdata > 0)[0]
             indxtimemodl = np.where(timeoffsmodl > 0)[0]
         if name == 'excs':
@@ -721,7 +723,7 @@ def retr_llik_mile(para, gdat):
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             
-            if gdat.fitt.typemodl == 'supn' and (dictmodl['supn'][b][p] < 1).any():
+            if gdat.fitt.typemodl == 'Supernova' and (dictmodl['Supernova'][b][p] < 1).any():
                 return -np.inf
     
             if gdat.fitt.typemodlenerfitt == 'full':
@@ -4272,10 +4274,10 @@ def plot_modl(gdat, strgmodl, b, p, y, e, h):
         elif namecompmodl == 'Transit':
             colr = 'r'
             labl = 'Transit'
-        elif namecompmodl == 'flar':
+        elif namecompmodl == 'FlaringStar':
             colr = 'g'
             labl = 'Flares'
-        elif namecompmodl == 'supn':
+        elif namecompmodl == 'Supernova':
             colr = 'm'
             labl = 'Supernova'
         elif namecompmodl == 'excs':
@@ -4420,10 +4422,10 @@ def plot_modl(gdat, strgmodl, b, p, y, e, h):
             elif namecompmodl == 'Transit':
                 colr = 'r'
                 labl = 'Transit'
-            elif namecompmodl == 'flar':
+            elif namecompmodl == 'FlaringStar':
                 colr = 'g'
                 labl = 'Flares'
-            elif namecompmodl == 'supn':
+            elif namecompmodl == 'Supernova':
                 colr = 'm'
                 labl = 'Supernova'
             elif namecompmodl == 'excs':
@@ -4492,12 +4494,12 @@ def setp_modlinit(gdat, strgmodl):
     gmod = getattr(gdat, strgmodl)
     
     print('Performing initial setup for model %s...' % strgmodl)
-    gmod.boolmodlcosc = gmod.typemodl == 'cosc'
+    gmod.boolmodlcosc = gmod.typemodl == 'CompactObjectStellarCompanion'
     
     print('gmod.boolmodlcosc')
     print(gmod.boolmodlcosc)
     
-    gmod.boolmodlpsys = gmod.typemodl == 'psys' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr'
+    gmod.boolmodlpsys = gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr'
     
     if gdat.typeverb > 0:
         print('gmod.boolmodlpsys')
@@ -4513,7 +4515,7 @@ def setp_modlinit(gdat, strgmodl):
     print('gmod.boolmodlpcur')
     print(gmod.boolmodlpcur)
     
-    if gmod.typemodl == 'supn':
+    if gmod.typemodl == 'Supernova':
         # 'linr': quadratic
         # 'quad': quadratic
         # 'cubc': cubic
@@ -4567,7 +4569,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
     print('gmod.typemodl')
     print(gmod.typemodl)
 
-    gmod.boolmodlcomp = 'psys' in gmod.typemodl
+    gmod.boolmodlcomp = 'PlanetarySystem' in gmod.typemodl
             
     tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkener', 'cons')
     tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkterm', 'quad')
@@ -4579,9 +4581,9 @@ def setp_modlbase(gdat, strgmodl, h=None):
         print(gmod.typemodllmdkterm)
 
     gmod.listnamecompmodl = ['Baseline']
-    if gmod.typemodl == 'flar':
-        gmod.listnamecompmodl += ['flar']
-    if gmod.typemodl == 'cosc' or gmod.typemodl == 'psys' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
+    if gmod.typemodl == 'FlaringStar':
+        gmod.listnamecompmodl += ['FlaringStar']
+    if gmod.typemodl == 'CompactObjectStellarCompanion' or gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
         gmod.listnamecompmodl += ['Transit']
 
         if gmod.boolmodltran:
@@ -4595,7 +4597,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
         
         gmod.indxcomp = np.arange(gmod.numbcomp)
      
-    if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+    if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
         # number of terms in the LD law
         if gmod.typemodllmdkterm == 'line':
             gmod.numbcoeflmdkterm = 1
@@ -4612,8 +4614,8 @@ def setp_modlbase(gdat, strgmodl, h=None):
     if gmod.typemodlblinshap == 'GaussianProcess':
         gdat.listnamecompgpro.append('Baseline')
     
-    if gmod.typemodl == 'supn':
-        gmod.listnamecompmodl += ['supn']
+    if gmod.typemodl == 'Supernova':
+        gmod.listnamecompmodl += ['Supernova']
         if gmod.typemodlexcs != 'none':
             gmod.listnamecompmodl += ['excs']
     
@@ -4688,7 +4690,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
     tdpy.setp_para_defa(gdat, strgmodl, 'timestep', 791.12)
     tdpy.setp_para_defa(gdat, strgmodl, 'scalstep', 0.00125147)
                         
-    if gmod.typemodl == 'flar':
+    if gmod.typemodl == 'FlaringStar':
         setp_para(gdat, strgmodl, 'numbflar', 0, 10, ['$N_f$', ''], boolvari=False)
         
         # fixed parameters of the fitting model
@@ -4702,7 +4704,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
             setp_para(gdat, strgmodl, 'timeflar%04d' % k, 0., 0.15, ['$t_{f,%d}$' % k, 'day'])
 
     if strgmodl == 'true':
-        if gmod.typemodl.startswith('psys') or gmod.typemodl == 'cosc':
+        if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
             print('gdat.true.typemodllmdkener')
             print(gdat.true.typemodllmdkener)
             if gdat.true.typemodllmdkener == 'linr':
@@ -4717,7 +4719,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
                     tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinr' % strginst, 0.4)
                     tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquad' % strginst, 0.25)
             
-    if gmod.typemodl == 'psys' or gmod.typemodl == 'cosc' or gmod.typemodl == 'psysttvr' or gmod.typemodl == 'psyspcur':
+    if gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'CompactObjectStellarCompanion' or gmod.typemodl == 'psysttvr' or gmod.typemodl == 'psyspcur':
         
         #gmod.listnameparasyst = []
 
@@ -4730,7 +4732,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 if gmod.typemodlttvr == 'globlineuser' or gmod.typemodlttvr == 'globlineflot':
                     for lll in range(gdat.numbtran[j]):
                         gmod.listnameparacomp[j] += ['ttvr%04d' % lll]
-            if gmod.typemodl == 'cosc':
+            if gmod.typemodl == 'CompactObjectStellarCompanion':
                 gmod.listnameparacomp[j] += ['mass']
             if not (gmod.typemodl == 'psysttvr' and gmod.typemodlttvr == 'indilineuser'):
                 gmod.listnameparacomp[j] += ['rrat']
@@ -4800,7 +4802,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
         for j in gmod.indxcomp:
             
             # define parameter limits
-            if gmod.typemodl == 'cosc':
+            if gmod.typemodl == 'CompactObjectStellarCompanion':
                 setp_para(gdat, strgmodl, 'radistar', 0.1, 100., ['$R_*$', ''])
                 setp_para(gdat, strgmodl, 'massstar', 0.1, 100., ['$M_*$', ''])
             
@@ -4833,10 +4835,10 @@ def setp_modlbase(gdat, strgmodl, h=None):
             else:
                 setp_para(gdat, strgmodl, 'rrat', minmpara, maxmpara, None, strgcomp=strgcomp)
             
-            if gmod.typemodl == 'cosc':
+            if gmod.typemodl == 'CompactObjectStellarCompanion':
                 setp_para(gdat, strgmodl, 'mass', 0.1, 100., ['$M_c$', ''], strgcomp=strgcomp)
 
-    if gmod.typemodl == 'supn':
+    if gmod.typemodl == 'Supernova':
         # temp
         if gdat.liststrgtypedata[0][0].startswith('simu'):
             minmtimesupn = gdat.minmtimethis + 0.15 * (gdat.maxmtimethis - gdat.minmtimethis) - gdat.timeoffs
@@ -5545,7 +5547,7 @@ def srch_pbox(arry, \
                     
                 for b in indxlevlrebn:
                     ## evaluate model at all resolutions
-                    dictoutp = eval_modl(listarrysrch[b][:, 0], 'psys', pericomp=pericomp, epocmtracomp=epocmtracomp, \
+                    dictoutp = eval_modl(listarrysrch[b][:, 0], 'PlanetarySystem', pericomp=pericomp, epocmtracomp=epocmtracomp, \
                                                                                         rsmacomp=rsmacomp, cosicomp=cosicomp, rratcomp=rratcomp)
                     ## subtract it from data
                     listarrysrch[b][:, 1] -= (dictoutp['rflx'][b] - 1.)
@@ -5735,7 +5737,7 @@ def srch_pbox(arry, \
                             print(indxperimpow)
                             raise Exception('rratcomp is not finite.')
 
-                    dictoutp = ephesos.eval_modl(timemodlplot, typesyst='psys', pericomp=pericomp, epocmtracomp=epocmtracomp, \
+                    dictoutp = ephesos.eval_modl(timemodlplot, typesyst='PlanetarySystem', pericomp=pericomp, epocmtracomp=epocmtracomp, \
                                                                                                         rsmacomp=rsmacomp, cosicomp=cosicomp, rratcomp=rratcomp)
                     dictpboxinte['rflxtsermodl'] = dictoutp['rflx'][:, 0]
                     
@@ -7534,14 +7536,14 @@ def init( \
 
          # list of types of models for time series data
          ## typemodl
-         ### 'psys': gravitationally bound system of a star and potentially transiting planets
+         ### 'PlanetarySystem': gravitationally bound system of a star and potentially transiting planets
          ### 'psysphas': gravitationally bound system of a star and potentially transiting planets with phase modulations
          ### 'ssys': gravitationally bound system of potentially transiting two stars
-         ### 'cosc': gravitationally bound system of a star and potentially transiting compact companion
-         ### 'flar': stellar flare
-         ### 'agns': AGN
-         ### 'spot': stellar spot
-         ### 'supn': supernova
+         ### 'CompactObjectStellarCompanion': gravitationally bound system of a star and potentially transiting compact companion
+         ### 'FlaringStar': stellar flare
+         ### 'AGN': AGN
+         ### 'SpottedStar': stellar spot
+         ### 'Supernova': supernova
          ### 'stargpro': star with variability described by a Gaussian Process
 
          # stellar limb darkening
@@ -8221,7 +8223,7 @@ def init( \
     
     if gdat.boolinfe:
         if gdat.typeverb > 0:
-            if gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur':
                 print('Stellar parameter prior type: %s' % gdat.typepriostar)
     
     # number of Boolean signal outputs
@@ -8367,7 +8369,7 @@ def init( \
 
     # Boolean flag to execute a search for flares
     if gdat.boolsrchflar is None:
-        if gdat.boolinfe and gdat.fitt.typemodl == 'flar':
+        if gdat.boolinfe and gdat.fitt.typemodl == 'FlaringStar':
             gdat.boolsrchflar = True
         else:
             gdat.boolsrchflar = False
@@ -9242,7 +9244,7 @@ def init( \
                 gdat.numbener[p] = 1
             gdat.indxener[p] = np.arange(gdat.numbener[p])
         
-        tdpy.setp_para_defa(gdat, 'true', 'typemodl', 'psys')
+        tdpy.setp_para_defa(gdat, 'true', 'typemodl', 'PlanetarySystem')
 
         tdpy.setp_para_defa(gdat, 'true', 'typemodlsupn', 'quad')
         tdpy.setp_para_defa(gdat, 'true', 'typemodlexcs', 'bump')
@@ -9341,11 +9343,11 @@ def init( \
     if gdat.listtypeanls is None:
         gdat.listtypeanls = []
         if gdat.boolinfe:
-            if (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur') and gdat.typepriocomp == 'pdim':
+            if (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur') and gdat.typepriocomp == 'pdim':
                 gdat.listtypeanls += ['pdim']
-            if gdat.fitt.typemodl == 'cosc':
+            if gdat.fitt.typemodl == 'CompactObjectStellarCompanion':
                 gdat.listtypeanls += ['pinc']
-            if gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'spot':
+            if gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'SpottedStar':
                 gdat.listtypeanls += ['lspe']
 
     if gdat.typeverb > 0:
@@ -9356,7 +9358,7 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.boolinfe and len(gdat.listtimescalbdtrspln) > 0 and \
-                                (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur') and not gdat.liststrginst[b][p].startswith('LSST'):
+                                (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur') and not gdat.liststrginst[b][p].startswith('LSST'):
                 gdat.boolbdtr[b][p] = True
     
     gdat.boolbdtranyy = False
@@ -9574,7 +9576,7 @@ def init( \
             tdpy.setp_para_defa(gdat, 'true', 'timestep', np.array([0.]))
             tdpy.setp_para_defa(gdat, 'true', 'scalstep', np.array([1.]))
         
-        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'cosc':
+        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
             if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
                 
                 numbcomp = gdat.numbcompprio
@@ -9627,12 +9629,12 @@ def init( \
                         
                         tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[p][j])
                     
-            if gdat.true.typemodl == 'cosc':
+            if gdat.true.typemodl == 'CompactObjectStellarCompanion':
                 tdpy.setp_para_defa(gdat, 'true', 'radistar', 1.)
                 tdpy.setp_para_defa(gdat, 'true', 'massstar', 1.)
                 tdpy.setp_para_defa(gdat, 'true', 'masscom0', 1.)
         
-        if gdat.true.typemodl == 'supn':
+        if gdat.true.typemodl == 'Supernova':
             # temp
             minmtimesupn = np.amin(gdat.true.listtime[0][0][0]) + 0. * (np.amax(gdat.true.listtime[0][0][0]) - np.amin(gdat.true.listtime[0][0][0]))
             maxmtimesupn = np.amin(gdat.true.listtime[0][0][0]) + 1. * (np.amax(gdat.true.listtime[0][0][0]) - np.amin(gdat.true.listtime[0][0][0]))
@@ -9929,11 +9931,11 @@ def init( \
     
         init_modl(gdat, 'true')
 
-        if gdat.true.typemodl == 'flar':
+        if gdat.true.typemodl == 'FlaringStar':
             tdpy.setp_para_defa(gdat, 'true', 'numbflar', 1)
             gdat.true.indxflar = np.arange(gdat.true.numbflar)
         
-        if gdat.true.typemodl == 'flar':
+        if gdat.true.typemodl == 'FlaringStar':
             for k in gdat.true.indxflar:
                 tdpy.setp_para_defa(gdat, 'true', 'amplflar%04d' % k, 0.1)
                 timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.maxmtimeconc[0]) 
@@ -10685,7 +10687,7 @@ def init( \
                     gdat.dictpboxinpt['pathvisu'] = gdat.pathvisutarg
             
             if not 'boolsrchposi' in gdat.dictpboxinpt:
-                if 'cosc' in gdat.listtypeanls:
+                if 'CompactObjectStellarCompanion' in gdat.listtypeanls:
                     gdat.dictpboxinpt['boolsrchposi'] = True
                 else:
                     gdat.dictpboxinpt['boolsrchposi'] = False
@@ -10824,7 +10826,7 @@ def init( \
         #gdat.tserdatastdv = gdat.tserdatastdv[indxtimegood]
         #gdat.numbtime = gdat.time.size
 
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr'):
+    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr'):
         gdat.numbcompprio = gdat.epocmtracompprio.size
         gdat.indxcompprio = np.arange(gdat.numbcompprio)
 
@@ -11021,7 +11023,7 @@ def init( \
         
         if gdat.typeverb > 0:
             
-            if gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'psyspcur':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur':
                 print('Stellar priors:')
                 print('gdat.rascstar')
                 print(gdat.rascstar)
@@ -11320,7 +11322,7 @@ def init( \
     #    gdat.arrytserdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrytser['Detrended'][b][p][y][:, 1])
     #gdat.arrytserdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrytser['Detrended'][b][p][y][:, 1])
     
-    if gdat.boolinfe and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'cosc'):
+    if gdat.boolinfe and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
     ## number of bins in the phase curve
         gdat.numbbinspcurtotl = 100
     
@@ -11417,7 +11419,7 @@ def init( \
 
     # do not continue if there is no trigger
     # Boolean flag to continue modeling the data based on the feature extraction
-    gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur') and \
+    gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur') and \
                                                                            not (gdat.boolsrchpbox and not gdat.dictmileoutp['boolposianls'].any())
     
     if gdat.boolmodl:
@@ -11456,7 +11458,7 @@ def init( \
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 if gdat.limttimefitt is None:
-                    #if gdat.fitt.typemodl == 'supn':
+                    #if gdat.fitt.typemodl == 'Supernova':
                     #    indxtimetemp = np.argmin(abs(gdat.rflxthis[:, 0] - np.percentile(gdat.rflxthis, 1.) + \
                     #                                                            0.5 * (np.percentile(gdat.rflxthis, 99.) - np.percentile(gdat.rflxthis, 1.))))
                     #    indxtimefitt = np.where(gdat.timethis < gdat.timethis[indxtimetemp])[0]
@@ -11498,7 +11500,7 @@ def init( \
         #    for p in gdat.indxinst[b]:
                 
         if gdat.typeverb > 0:
-            if gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur':
                 print('gdat.dictmileoutp[boolposianls]')
                 print(gdat.dictmileoutp['boolposianls'])
             
@@ -11537,7 +11539,7 @@ def init( \
             else:
                 listindxinstthis = gdat.listindxinst
             
-            if gdat.fitt.typemodl == 'supn':
+            if gdat.fitt.typemodl == 'Supernova':
                 
                 init_modl(gdat, 'fitt')
 
@@ -11552,7 +11554,7 @@ def init( \
                 strgextn = gdat.strgcnfg + gdat.fitt.typemodl
                 proc_modl(gdat, 'fitt', strgextn, h)
                     
-            elif gdat.fitt.typemodl == 'flar':
+            elif gdat.fitt.typemodl == 'FlaringStar':
 
                 init_modl(gdat, 'fitt')
 
@@ -11561,7 +11563,7 @@ def init( \
                 proc_modl(gdat, 'fitt', strgextn, h)
 
 
-            elif gdat.fitt.typemodl == 'agns':
+            elif gdat.fitt.typemodl == 'AGN':
 
                 init_modl(gdat, 'fitt')
 
@@ -11570,7 +11572,7 @@ def init( \
                 proc_modl(gdat, 'fitt', strgextn, h)
 
 
-            elif gdat.fitt.typemodl == 'spot':
+            elif gdat.fitt.typemodl == 'SpottedStar':
 
                 # for each spot multiplicity, fit the spot model
                 for gdat.numbspot in listindxnumbspot:
@@ -11658,7 +11660,7 @@ def init( \
                     plt.close()
 
 
-            elif gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr':
+            elif gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr':
                 
                 if gdat.fitt.typemodl == 'psysttvr':
                     if gdat.fitt.typemodlttvr == 'indilineuser':
@@ -11717,7 +11719,7 @@ def init( \
                 print('gdat.numbsampplot')
                 print(gdat.numbsampplot)
         
-        if gdat.numbener[p] > 1 and (gdat.fitt.typemodl == 'psys' or gdat.fitt.typemodl == 'cosc' or gdat.fitt.typemodl == 'psyspcur'):
+        if gdat.numbener[p] > 1 and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur'):
             # plot the radius ratio spectrum
             path = gdat.pathvisutarg + 'spec%s.%s' % (gdat.strgcnfg, gdat.typefileplot)
             figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
