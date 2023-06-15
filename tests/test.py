@@ -32,7 +32,7 @@ def cnfg_TOIs():
 def cnfg_TOI_multis():
 
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
         
@@ -43,7 +43,7 @@ def cnfg_TOI_multis():
                       )
 
 
-def cnfg_Interesting_TICs_psys():
+def cnfg_Interesting_TICs_PlanetarySystem():
     
     listtici = [ \
                 
@@ -62,7 +62,7 @@ def cnfg_Interesting_TICs_psys():
                ]
 
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     for tici in listtici:
         miletos.main.init( \
@@ -136,10 +136,10 @@ def cnfg_FermiLAT_AGN():
 
     strgclus = 'FermiLAT_AGN'
     
-    typelcurtpxftess = 'SPOC'
+    typelcurtpxftess = 'SPOC_only'
     #liststrgmast = ['4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371']
-    liststrgmast = ['3C 371']
-    listtsecsele = [26]
+    liststrgmast = ['Mkn 421', 'Mkn 501', 'CGCG 050-083', '1RXS J234354.4+054713', '3C 371']
+    #listtsecsele = [26]
 
     listtimescalbdtrspln = [1. / 24, 1., 5.]
     for strgmast in liststrgmast:
@@ -149,7 +149,7 @@ def cnfg_FermiLAT_AGN():
                           strgclus=strgclus, \
                           boolbdtr=boolbdtr, \
                           typelcurtpxftess=typelcurtpxftess, \
-                          listtsecsele=listtsecsele, \
+                          #listtsecsele=listtsecsele, \
                           listtimescalbdtrspln=listtimescalbdtrspln, \
                           dictlygoinpt=dictlygoinpt, \
                          )
@@ -236,7 +236,7 @@ def cnfg_Sirius():
 def cnfg_TOI1797():
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     for a in range(2):
         
@@ -264,7 +264,7 @@ def cnfg_TOI1797():
 def cnfg_TRAPPIST1():
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    dictfitt['typemodl'] = 'PlanetarySystemWithTTVs'
     
     liststrgtypedata = [['simutargpartinje'], []]
     liststrgtypedata = None
@@ -294,7 +294,7 @@ def cnfg_TRAPPIST1():
 def cnfg_WASP18():
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    dictfitt['typemodl'] = 'PlanetarySystemWithTTVs'
     
     liststrgtypedata = [['simutargpartinje'], []]
     miletos.main.init( \
@@ -312,7 +312,7 @@ def cnfg_WASP18():
 def cnfg_WASP121():
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psyspcur'
+    dictfitt['typemodl'] = 'PlanetarySystemWithPhaseCurve'
     
     # the following two are mutually exclusive
     liststrgtypedata = [['simutargpartsynt'], []]
@@ -336,7 +336,7 @@ def cnfg_WASP43():
     liststrgtypedata = [['simutargpartinje'], []]
     
     dicttrue = dict()
-    dicttrue['typemodl'] = 'psyspcur'
+    dicttrue['typemodl'] = 'PlanetarySystemWithPhaseCurve'
     listlablinst = [['JWST'], []]
 
     listener = [np.linspace(0.5, 5., 10)]
@@ -449,7 +449,7 @@ def cnfg_ATEL15755():
 def cnfg_WASP12():
 
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    dictfitt['typemodl'] = 'PlanetarySystemWithTTVs'
     
     miletos.main.init( \
                    strgmast='WASP-12', \
@@ -463,7 +463,7 @@ def cnfg_PhotCalibPPAStars():
     listtici = [381979590, 264221449, 233160374, 289572157, 165553746]
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    dictfitt['typemodl'] = 'PlanetarySystemWithTTVs'
     
     for tici in listtici:
         dictlygoinpt = dict()
@@ -556,7 +556,7 @@ def cnfg_WhiteDwarfs_Candidates_TESS_GI():
     listisec = np.arange(27, 28)
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     for isec in listisec:
         path = 'https://heasarc.gsfc.nasa.gov/docs/tess/data/target_lists/sector%03d_targets_lists/GI_20s_S%03d.csv' % (isec, isec)
@@ -586,7 +586,7 @@ def cnfg_WhiteDwarf_Candidates_TOI_Process():
                    ]
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     for ticitarg in listticitarg:
         miletos.main.init( \
@@ -720,7 +720,7 @@ def cnfg_WASP(strgiwas):
     strgmast = 'WASP-%d' % iwas
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psysttvr'
+    dictfitt['typemodl'] = 'PlanetarySystemWithTTVs'
     
     miletos.main.init( \
                   strgmast=strgmast, \
@@ -799,31 +799,6 @@ def cnfg_TOI_lists(name):
         print(hosttoii)
 
 
-def cnfg_TTL5():
-    
-    listlablinst = [['TESS', 'TTL5'], []]
-
-    liststrgtypedata = [['SimGenTPF', 'SimGenTPF'], []]
-    
-    dicttrue = dict()
-    dicttrue['epocmtracomp'] = np.array([2459000.])
-    dicttrue['pericomp'] = np.array([1.])
-    dicttrue['rratcomp'] = np.array([0.1])
-    dicttrue['cosicomp'] = np.array([0.03])
-    dicttrue['rsmacomp'] = np.array([0.1])
-    
-    miletos.main.init( \
-         #toiitarg=1233, \
-         
-         listlablinst=listlablinst, \
-         
-         dicttrue=dicttrue, \
-         liststrgtypedata=liststrgtypedata, \
-
-         strgclus='TTL5_psys', \
-        )
-
-
 def cnfg_Rafael():
     
     miletos.main.init( \
@@ -892,13 +867,13 @@ def cnfg_transit_asymmetry():
                          )
 
 
-def cnfg_LSST_psys():
+def cnfg_LSST_PlanetarySystem():
     
     dicttrue = dict()
-    dicttrue['typemodl'] = 'psys'
+    dicttrue['typemodl'] = 'PlanetarySystem'
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     liststrgtypedata = [[], []]
     listlablinst = [[], []]
@@ -979,7 +954,7 @@ def cnfg_TOI1233():
     listarrytser['raww'][1][0][0][:, 0, 1] = np.array(listrvel)
     listarrytser['raww'][1][0][0][:, 0, 2] = np.array(liststdvrvel)
 
-    listtypemodl = ['psys', 'psysttvr']
+    listtypemodl = ['PlanetarySystem', 'PlanetarySystemWithTTVs']
     
     for typemodl in listtypemodl:
         dictfitt = dict()
@@ -1050,7 +1025,7 @@ def cnfg_Faint():
     boolsimutdim = True
 
     dicttrue = dict()
-    dicttrue['typemodl'] = 'psys'
+    dicttrue['typemodl'] = 'PlanetarySystem'
     
     miletos.main.init( \
                       dicttrue=dicttrue, \
@@ -1389,7 +1364,7 @@ def cnfg_TESS_EB_Catalog():
     listtici = [91961, 101462, 120016, 627436, 737546]
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'psys'
+    dictfitt['typemodl'] = 'PlanetarySystem'
     
     for tici in listtici:
         miletos.main.init( \
