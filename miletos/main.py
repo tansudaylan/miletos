@@ -26,21 +26,16 @@ from astropy.coordinates import SkyCoord
 import pickle
     
 import celerite
-#from celerite import terms
 
 from functools import partial
 
 import matplotlib
 import matplotlib.pyplot as plt
 
-#import seaborn as sns
-
 import tdpy
 from tdpy.util import summgene
 import nicomedia
-import chalcedon
 import lygos
-
 import ephesos
 
 """
