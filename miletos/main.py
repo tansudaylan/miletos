@@ -6589,7 +6589,7 @@ def bdtr_tser( \
               ordrspln=None, \
               
               # time scale of the spline detrending
-              timescalbdtrspln=None, \
+              timescalbdtr=None, \
               
               # time scale of the median detrending
               timescalbdtrmedi=None, \
@@ -6607,19 +6607,19 @@ def bdtr_tser( \
     '''
     
     if typebdtr is None:
-        typebdtr = 'GaussianProcess'
+        typebdtr = 'Spline'
     
     if boolbrekregi and timebrekregi is None:
         timebrekregi = 0.1 # [day]
     if ordrspln is None:
         ordrspln = 3
-    if timescalbdtrspln is None:
-        timescalbdtrspln = 0.5 # [days]
+    if timescalbdtr is None:
+        timescalbdtr = 0.5 # [days]
     if timescalbdtrmedi is None:
         timescalbdtrmedi = 0.5 # [days]
     
     if typebdtr == 'Spline' or typebdtr == 'GaussianProcess':
-        timescal = timescalbdtrspln
+        timescal = timescalbdtr
     else:
         timescal = timescalbdtrmedi
     if typeverb > 0:
@@ -6694,11 +6694,11 @@ def bdtr_tser( \
         if typebdtr == 'GaussianProcess':
             # fit a Gaussian Process (GP) model to the data as baseline
             ## construct the kernel object
-            objtkern = celerite.terms.Matern32Term(log_sigma=np.log(np.std(4. * lcurregi[indxtimeregioutt[i]])), log_rho=np.log(timescalbdtrspln))
+            objtkern = celerite.terms.Matern32Term(log_sigma=np.log(np.std(4. * lcurregi[indxtimeregioutt[i]])), log_rho=np.log(timescalbdtr))
             print('sigma for GP')
             print(np.std(lcurregi[indxtimeregioutt[i]]))
             print('rho for GP [days]')
-            print(timescalbdtrspln)
+            print(timescalbdtr)
 
             ## construct the GP model object
             objtgpro = celerite.GP(objtkern, mean=np.mean(lcurregi[indxtimeregioutt[i]]))
@@ -6750,10 +6750,10 @@ def bdtr_tser( \
                     
                     minmtime = np.amin(timeregi[indxtimeregioutt[i]])
                     maxmtime = np.amax(timeregi[indxtimeregioutt[i]])
-                    numbknot = int((maxmtime - minmtime) / timescalbdtrspln) + 1
+                    numbknot = int((maxmtime - minmtime) / timescalbdtr) + 1
                     
                     timeknot = np.linspace(minmtime, maxmtime, numbknot)
-                    #timeknot = timeknot[1:-1]
+                    timeknot = timeknot[1:-1]
                     numbknot = timeknot.size
 
                     indxknotregi = np.digitize(timeregi[indxtimeregioutt[i]], timeknot) - 1
@@ -6763,14 +6763,24 @@ def bdtr_tser( \
                         print(minmtime)
                         print('maxmtime')
                         print(maxmtime)
-                        print('timescalbdtrspln')
-                        print(timescalbdtrspln)
+                        print('timescalbdtr')
+                        print(timescalbdtr)
                         print('%d knots used (exclduing the end points).' % (numbknot))
                         if numbknot > 1:
                             print('Knot separation: %.3g hours' % (24 * (timeknot[1] - timeknot[0])))
                     
                     if numbknot > 0:
-                        objtspln = scipy.interpolate.LSQUnivariateSpline(timeregi[indxtimeregioutt[i]], lcurregi[indxtimeregioutt[i]], timeknot, k=ordrspln)
+                        try:
+                            objtspln = scipy.interpolate.LSQUnivariateSpline(timeregi[indxtimeregioutt[i]], lcurregi[indxtimeregioutt[i]], timeknot, k=ordrspln)
+                        except:
+                            print('')
+                            print('')
+                            print('')
+                            print('timeknot')
+                            print(timeknot)
+                            print('ordrspln')
+                            print(ordrspln)
+                            raise Exception('scipy.interpolate.LSQUnivariateSpline() failed.')
                         lcurbdtrregi[i] = lcurregi - objtspln(timeregi) + 1.
                         listobjtspln[i] = objtspln
                     else:
@@ -6785,8 +6795,10 @@ def bdtr_tser( \
                 print('lcurbdtrregi[i]')
                 summgene(lcurbdtrregi[i])
                 print('')
+    
+    lcurbdtr = np.concatenate(lcurbdtrregi)
 
-    return lcurbdtrregi, indxtimeregi, indxtimeregioutt, listobjtspln, timeedge
+    return lcurbdtr, lcurbdtrregi, indxtimeregi, indxtimeregioutt, listobjtspln, timeedge
 
 
 def retr_stdvwind(ydat, sizewind, boolcuttpeak=True):
@@ -6924,7 +6936,7 @@ def plot_tser( \
         print('')
         print('')
         print('')
-        raise Exception('strgextn should not be an empty string or None.')
+        raise Exception('If pathvisu is not None, strgextn should not be an empty string or None.')
     
     if timeoffs != 0. and phasoffs != 0.:
         raise Exception('')
@@ -6948,17 +6960,18 @@ def plot_tser( \
     else:
         typexdat = 'time'
 
-    if strgextn[0] == '_':
-        strgextn = strgextn[1:]
+    if pathvisu is not None:
+        dicttdpy = tdpy.retr_dictstrg()
 
-    dicttdpy = tdpy.retr_dictstrg()
+        if strgextn[0] == '_':
+            strgextn = strgextn[1:]
 
-    path = pathvisu + '%s_%s.%s' % (dicttdpy['tser'], strgextn, typefileplot)
+        path = pathvisu + '%s_%s.%s' % (dicttdpy['tser'], strgextn, typefileplot)
     
-    # skip plotting
-    if not boolwritover and os.path.exists(path):
-        print('Plot already exists at %s. Skipping...' % path)
-        return path
+        # skip plotting
+        if not boolwritover and os.path.exists(path):
+            print('Plot already exists at %s. Skipping...' % path)
+            return path
     
     boollegd = False
     
@@ -7145,11 +7158,16 @@ def plot_tser( \
         axis.legend()
 
     plt.subplots_adjust(bottom=0.2, top=0.8)
-    print('Writing to %s...' % path)
-    plt.savefig(path, dpi=300)
-    plt.close()
     
-    return path
+    if pathvisu is not None:
+        print('Writing to %s...' % path)
+        plt.savefig(path, dpi=300)
+        plt.close()
+        return path
+    else:
+        plt.show()
+        return None
+
 
 
 def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5, booldiag=True):
@@ -7583,7 +7601,7 @@ def init( \
          #### time scale for median-filtering detrending [days]
          timescalbdtrmedi=2., \
          #### time scale for spline baseline detrending [days]
-         listtimescalbdtrspln=[2.], \
+         listtimescalbdtr=[2.], \
 
          ### maximum frequency (per day) for LS periodogram
          maxmfreqlspe=None, \
@@ -7906,11 +7924,11 @@ def init( \
                 print(gdat.liststrginst)
                 raise Exception('len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b])')
     
-    if gdat.listtimescalbdtrspln is not None:
-        gdat.liststrgtimescalbdtrspln = []
-        for timescalbdtrspln in gdat.listtimescalbdtrspln:
-            facttime, lablunittime = retr_timeunitdays(timescalbdtrspln)
-            gdat.liststrgtimescalbdtrspln.append('%.3g%s' % (facttime * timescalbdtrspln, lablunittime))
+    if gdat.listtimescalbdtr is not None:
+        gdat.liststrgtimescalbdtr = []
+        for timescalbdtr in gdat.listtimescalbdtr:
+            facttime, lablunittime = retr_timeunitdays(timescalbdtr)
+            gdat.liststrgtimescalbdtr.append('%.3g%s' % (facttime * timescalbdtr, lablunittime))
                         
     gdat.listindxinst = [[] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
@@ -9357,7 +9375,7 @@ def init( \
     gdat.boolbdtr = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.boolinfe and len(gdat.listtimescalbdtrspln) > 0 and \
+            if gdat.boolinfe and len(gdat.listtimescalbdtr) > 0 and \
                                 (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur') and not gdat.liststrginst[b][p].startswith('LSST'):
                 gdat.boolbdtr[b][p] = True
     
@@ -10346,7 +10364,7 @@ def init( \
         numbtimecutt = [[1 for y in gdat.indxchun[0][p]] for p in gdat.indxinst[0]]
         
         print('Defining all intermediate variables related to clipping and detrending...')
-        for z, timescalbdtrspln in enumerate(gdat.listtimescalbdtrspln):
+        for z, timescalbdtr in enumerate(gdat.listtimescalbdtr):
             for wr in range(gdat.maxmnumbiterbdtr):
                 strgarrybdtrinpt, strgarryclipoutp, strgarrybdtroutp, strgarryclipinpt, strgarrybdtrblin = retr_namebdtrclip(z, wr)
                 gdat.listarrytser[strgarrybdtrinpt] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -10357,9 +10375,9 @@ def init( \
         
         # iterate over all detrending time scales (including, but not limited to the (first) time scale used for later analysis and model)
         gdat.indxenerclip = 0
-        for z, timescalbdtrspln in enumerate(gdat.listtimescalbdtrspln):
+        for z, timescalbdtr in enumerate(gdat.listtimescalbdtr):
             
-            if timescalbdtrspln == 0:
+            if timescalbdtr == 0:
                 continue
             
             strgarrybdtr = 'bdtrts%02d' % z
@@ -10413,7 +10431,7 @@ def init( \
                         if gdat.typeverb > 0:
                             print('Trial detrending into %s...' % strgarryclipinpt)
                         bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarryclipinpt, 'temp', \
-                                                                                                            timescalbdtrspln=timescalbdtrspln)
+                                                                                                            timescalbdtr=timescalbdtr)
                         
                         if r == 0:
                             gdat.listtimebrekfrst = np.copy(gdat.listtimebrek)
@@ -10497,7 +10515,7 @@ def init( \
                         #    # decrease mask
 
                         #    # trial detrending
-                        #    bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarryclipinpt, 'temp', timescalbdtrspln=timescalbdtrspln)
+                        #    bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarryclipinpt, 'temp', timescalbdtr=timescalbdtr)
                         #    
                         #    chi2 = np.sum((gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1] - gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1])**2 / 
                         #                                                   gdat.listarrytser[strgarryclipinpt][0][p][y][:, 2]**2) / gdat.listarrytser[strgarryclipinpt][0][p][y][:, 1].size
@@ -10560,7 +10578,7 @@ def init( \
                         np.savetxt(path, gdat.listarrytser[strgarrybdtr][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
         
         # place the output of detrending into the baseline-detrended 'Detrended' light curve
-        if gdat.listtimescalbdtrspln[0] == 0.:
+        if gdat.listtimescalbdtr[0] == 0.:
             gdat.listarrytser['Detrended'] = gdat.listarrytser['maskcust']
         else:
             gdat.listarrytser['Detrended'] = gdat.listarrytser['bdtrts00']
