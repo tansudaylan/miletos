@@ -3475,7 +3475,7 @@ def plot_popl(gdat, strgpdfn):
                                 plt.close()
 
    
-def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, strgtren, timescalbdtrspln):
+def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, strgtren, timescalbdtr):
     '''
     Wrap baseline-detrending function
     '''
@@ -3487,11 +3487,11 @@ def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, s
     gdat.listarrytser[strgtren][b][p][y] = np.copy(gdat.listarrytser[strgintp][b][p][y])
     
     for e in gdat.indxener[p]:
-        gdat.rflxbdtrregi, gdat.listindxtimeregi[b][p][y], gdat.indxtimeregioutt[b][p][y], gdat.listobjtspln[b][p][y], gdat.listtimebrek = \
+        gdat.rflxbdtr, gdat.rflxbdtrregi, gdat.listindxtimeregi[b][p][y], gdat.indxtimeregioutt[b][p][y], gdat.listobjtspln[b][p][y], gdat.listtimebrek = \
                      bdtr_tser(gdat.listarrytser[strgintp][b][p][y][:, e, 0], gdat.listarrytser[strgintp][b][p][y][:, e, 1], \
                                        stdvlcur=gdat.listarrytser[strgintp][b][p][y][:, e, 2], \
                                        epocmask=epocmask, perimask=perimask, duramask=duramask, \
-                                       timescalbdtrspln=timescalbdtrspln, \
+                                       timescalbdtr=timescalbdtr, \
                                        typeverb=gdat.typeverb, \
                                        timeedge=gdat.listtimebrek, \
                                        timebrekregi=gdat.timebrekregi, \
@@ -3812,8 +3812,8 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
         axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
         
         titl = retr_tsertitl(gdat, b, p, y=y)
-        facttime, lablunittime = retr_timeunitdays(gdat.listtimescalbdtrspln[z])
-        titl += ', DTS = %.3g %s' % (facttime * gdat.listtimescalbdtrspln[z], lablunittime)
+        facttime, lablunittime = retr_timeunitdays(gdat.listtimescalbdtr[z])
+        titl += ', DTS = %.3g %s' % (facttime * gdat.listtimescalbdtr[z], lablunittime)
         titl += ', Iteration %d' % r
         axis[0].set_title(titl)
         
@@ -7452,7 +7452,10 @@ def init( \
 
          ### Boolean flag to use 20-sec TPF when available
          boolfasttpxf=True, \
-             
+         
+         # Boolean flag to indicate a prior belief that the target is a planetary system
+         ## This turns on relevant prior plotting without triggering an attempt to model it
+         boolpriotargpsys=False, \
 
          # input data
          ## path of the CSV file containing the input data
@@ -8091,7 +8094,7 @@ def init( \
         
     if gdat.boolplotpopl:
         gdat.liststrgpopl = []
-        if gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
+        if gdat.boolpriotargpsys or gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
             gdat.liststrgpopl += ['exar']
             if gdat.toiitarg is not None:
                 gdat.liststrgpopl += ['exof']
@@ -10426,7 +10429,7 @@ def init( \
                         if gdat.typeverb > 0:
                             print('Trial detrending into %s...' % strgarryclipinpt)
                         bdtr_wrap(gdat, 0, p, y, gdat.epocmask, gdat.perimask, gdat.duramask, strgarrybdtrinpt, strgarryclipinpt, 'temp', \
-                                                                                                            timescalbdtr=timescalbdtr)
+                                                                                                                    timescalbdtr=timescalbdtr)
                         
                         if r == 0:
                             gdat.listtimebrekfrst = np.copy(gdat.listtimebrek)
