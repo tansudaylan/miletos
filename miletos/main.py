@@ -7806,7 +7806,7 @@ def init( \
     if gdat.listarrytser is None:
         gdat.listarrytser = dict()
         if gdat.ticitarg is None and gdat.strgmast is None and gdat.toiitarg is None and (gdat.rasctarg is None or gdat.decltarg is None):
-            print('Warning: No TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) wad provided.')
+            print('Warning: No TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) was provided.')
         
         if gdat.ticitarg is not None and (gdat.strgmast is not None or gdat.toiitarg is not None or gdat.rasctarg is not None or gdat.decltarg is not None):
             raise Exception('Either a TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) should be provided.')
@@ -7885,6 +7885,10 @@ def init( \
         if 'simutargsynt' in gdat.liststrgtypedata[0] or 'simutargsynt' in gdat.liststrgtypedata[1]:
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst:
+                    print('b, p')
+                    print(b, p)
+                    print('gdat.liststrgtypedata')
+                    print(gdat.liststrgtypedata)
                     if gdat.liststrgtypedata[b][p] != 'simutargsynt':
                         print('')
                         print('')
