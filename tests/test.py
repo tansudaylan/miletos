@@ -45,6 +45,10 @@ def cnfg_TOI_multis():
 
 def cnfg_Interesting_TICs_PlanetarySystem():
     
+    # include
+    # random transitter
+    strgmast = 'HD 139139'
+
     listtici = [ \
                 
                 # the random transiter (HD 139139; Rappaport+2019)
@@ -1010,7 +1014,7 @@ def cnfg_WD1856():
     ticitarg = 267574918
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'supn'
+    dictfitt['typemodl'] = 'psys'
     
     miletos.main.init( \
          strgmast=strgmast, \

@@ -9943,11 +9943,11 @@ def init( \
         # generate data and its uncertainty
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if gdat.numbchun[b][p] > 1:
-                    raise Exception('')
                 for y in gdat.indxchun[b][p]:
                     
                     if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
+                        if gdat.numbchun[b][p] > 1:
+                            raise Exception('')
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] += gdat.true.dictmodl['Total'][0][p]
                     
                     if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt':
@@ -11360,6 +11360,9 @@ def init( \
         gdat.data = np.loadtxt(gdat.pathdatatarg + 'band.csv', delimiter=',', skiprows=9)
         gdat.meanwlenband = gdat.data[:, 0] * 1e-3
         gdat.thptband = gdat.data[:, 1]
+    
+    if gdat.boolsrchpbox and not gdat.dictmileoutp['boolposianls'].any():
+        print('BLS was performed, but no super-threshold BLS signal was found.')
 
     # do not continue if there is no trigger
     # Boolean flag to continue modeling the data based on the feature extraction
@@ -11373,9 +11376,9 @@ def init( \
         print('gdat.liststrgpdfn')
         print(gdat.liststrgpdfn)
     
+    print('gdat.boolinfe')
+    print(gdat.boolinfe)
     if not gdat.boolmodl:
-        print('gdat.boolinfe')
-        print(gdat.boolinfe)
         print('Skipping the forward modeling of this prior transiting object...')
 
     if gdat.boolmodl:
