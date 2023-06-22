@@ -1009,8 +1009,12 @@ def cnfg_WD1856():
     strgmast = 'WD1856+534'
     ticitarg = 267574918
     
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'supn'
+    
     miletos.main.init( \
          strgmast=strgmast, \
+         dictfitt=dictfitt, \
          #boolmakeanim=True, \
          #dilucorr=0.01, \
         )
