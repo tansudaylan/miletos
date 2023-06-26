@@ -7328,9 +7328,6 @@ def init( \
          ## Boolean flag to plot the time-series
          boolplottser=None, \
          
-         ## Boolean flag to animate the orbit
-         boolanimorbt=False, \
-         
          ## time offset to subtract from the time axes, which is otherwise automatically estimated
          timeoffs=None, \
          
@@ -7452,6 +7449,7 @@ def init( \
          # analyses
          ## list of types of analyses for time series data
          ### 'pdim': search for periodic dimmings
+         ### 'outlperi': search for periodic outliers
          ### 'pinc': search for periodic increases
          ### 'lspe': search for sinusoidal variability
          ### 'mfil': matched filter

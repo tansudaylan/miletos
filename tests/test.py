@@ -890,32 +890,36 @@ def cnfg_LSST_PlanetarySystem():
     rsmacompprio = np.array([0.1])
     cosicompprio = np.array([0.])
     
-    listtypeanls = ['outlperi']
-    listtypeanls = ['pdim']
+    for typeanls in ['outlperi', 'pdim']:
 
-    for numbyearlsst in [1., 5., 10.]:
-        
-        dicttrue['numbyearlsst'] = numbyearlsst
+        for numbyearlsst in [1., 5., 10.]:
+            
+            dicttrue['numbyearlsst'] = numbyearlsst
 
-        miletos.main.init( \
-                          labltarg='Simulated Jupiter, %d year' % numbyearlsst, \
-                          dicttrue=dicttrue, \
-                          dictfitt=dictfitt, \
-                          listtypeanls=listtypeanls, \
-                          rratcompprio=rratcompprio, \
-                          epocmtracompprio=epocmtracompprio, \
-                          pericompprio=pericompprio, \
-                          cosicompprio=cosicompprio, \
-                          rsmacompprio=rsmacompprio, \
-                          umagsyst=20., \
-                          gmagsyst=20., \
-                          rmagsyst=20., \
-                          imagsyst=20., \
-                          zmagsyst=20., \
-                          ymagsyst=20., \
-                          listlablinst=listlablinst, \
-                          liststrgtypedata=liststrgtypedata, \
-                         )
+            miletos.main.init( \
+                              labltarg='Simulated Jupiter, %d year' % numbyearlsst, \
+                              
+                              dicttrue=dicttrue, \
+                              dictfitt=dictfitt, \
+                              
+                              listtypeanls=[typeanls], \
+                              
+                              rratcompprio=rratcompprio, \
+                              epocmtracompprio=epocmtracompprio, \
+                              pericompprio=pericompprio, \
+                              cosicompprio=cosicompprio, \
+                              rsmacompprio=rsmacompprio, \
+                              
+                              umagsyst=20., \
+                              gmagsyst=20., \
+                              rmagsyst=20., \
+                              imagsyst=20., \
+                              zmagsyst=20., \
+                              ymagsyst=20., \
+                              
+                              listlablinst=listlablinst, \
+                              liststrgtypedata=liststrgtypedata, \
+                             )
 
 
 def cnfg_Cygnus1():
