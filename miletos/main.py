@@ -7416,8 +7416,8 @@ def init( \
                   
          # type of data for each data kind, instrument, and chunk
          ## 'simutargsynt': simulated data on a synthetic target
-         ## 'simutargpartsynt': simulated data on a particular target over a synthetic temporal baseline
-         ## 'simutargpartfprt': simulated data on a particular target with a particular temporal footprint 
+         ## 'simutargpartsynt': simulated data on a particular target over a synthetic temporal footprint
+         ## 'simutargpartfprt': simulated data on a particular target over the observed temporal footprint 
          ## 'simutargpartinje': simulated data obtained by injecting a synthetic signal on observed data on a particular target with a particular observational baseline 
          ## 'obsd': observed data on a particular target
          liststrgtypedata=None, \
