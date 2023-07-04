@@ -7286,6 +7286,20 @@ def setup1_miletos(gdat):
         gdat.numbinst[b] = len(gdat.listlablinst[b])
         gdat.indxinst[b] = np.arange(gdat.numbinst[b])
     
+    # Boolean flag indicating if the simulated target is a synthetic one
+    gdat.booltargsynt = False
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrgtypedata[b][p] == 'simutargsynt':
+                gdat.booltargsynt = True
+    
+    # Boolean flag indicating if there is any simulated data
+    gdat.boolsimusome = False
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrgtypedata[b][p] != 'obsd':
+                gdat.boolsimusome = True
+    
 
 def init( \
          
@@ -7784,20 +7798,6 @@ def init( \
 
     setup1_miletos(gdat)
 
-    # Boolean flag indicating if the simulated target is a synthetic one
-    gdat.booltargsynt = False
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] == 'simutargsynt':
-                gdat.booltargsynt = True
-    
-    # Boolean flag indicating if there is any simulated data
-    gdat.boolsimusome = False
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] != 'obsd':
-                gdat.boolsimusome = True
-    
     print('gdat.boolsimusome')
     print(gdat.boolsimusome)
     print('gdat.dicttrue')
@@ -9750,6 +9750,16 @@ def init( \
             for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
                 paracompprio = getattr(gdat, namepara + 'compprio')
                 for j in gdat.true.indxcomp:
+                    
+                    if gdat.booldiag:
+                        if paracompprio is None:
+                            print('')
+                            print('')
+                            print('')
+                            print('namepara')
+                            print(namepara)
+                            raise Exception('')
+
                     tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracompprio[j])
             
             if gdat.true.boolmodlpsys:
