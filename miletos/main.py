@@ -4500,9 +4500,12 @@ def setp_modlbase(gdat, strgmodl, h=None):
         gmod.listnamecompmodl += ['FlaringStar']
     if gmod.typemodl == 'CompactObjectStellarCompanion' or gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
         gmod.listnamecompmodl += ['Transit']
-
+        
         if gmod.boolmodltran:
-            gmod.numbcomp = gdat.epocmtracompprio.size
+            if strgmodl == 'true':
+                gmod.numbcomp = gdat.true.epocmtracomp.size
+            else:
+                gmod.numbcomp = gdat.epocmtracompprio.size
         else:
             gmod.numbcomp = 0
         
@@ -5123,6 +5126,8 @@ def srch_outlperi(time, flux, stdvflux):
     else:
         dictoutp['boolposi'] = False
     
+    dictoutp['peri'] = np.mean(metr)
+
     return dictoutp
 
 
@@ -7299,7 +7304,14 @@ def setup1_miletos(gdat):
         for p in gdat.indxinst[b]:
             if gdat.liststrgtypedata[b][p] != 'obsd':
                 gdat.boolsimusome = True
-    
+
+    # Boolean flag indicating if all data are observed
+    gdat.booldataobsv = True
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrgtypedata[b][p] != 'obsd':
+                gdat.booldataobsv = False
+
 
 def init( \
          
@@ -7852,13 +7864,6 @@ def init( \
     # dictionary to be returned
     gdat.dictmileoutp = dict()
     
-    gdat.boolsrchoutlperi = False
-    gdat.boolsrchpbox = False
-    gdat.boolcalclspe = False
-    
-    gdat.boolusedrvel = False
-    gdat.boolusedrflx = True
-
     # labels of the instruments
     if gdat.listlablinst is None:
         gdat.listlablinst = [['TESS'], []]
@@ -9343,7 +9348,13 @@ def init( \
             elif gdat.boolexof:
                 gdat.typepriocomp = 'exof'
             else:
-                gdat.typepriocomp = 'pdim'
+                if gdat.listtypeanls is not None:
+                    if 'pdim' in gdat.listtypeanls and 'outlperi' in gdat.listtypeanls:
+                        gdat.typepriocomp = 'pdim'
+                    else:
+                        gdat.typepriocomp = gdat.listtypeanls[0]
+                else:
+                    gdat.typepriocomp = 'pdim'
         if gdat.typeverb > 0:
             print('Source of prior parameters for the companions (typepriocomp): %s' % gdat.typepriocomp)
         
@@ -9748,39 +9759,47 @@ def init( \
             gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
             
             for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
-                paracompprio = getattr(gdat, namepara + 'compprio')
+                paracomp = getattr(gdat.true, namepara + 'comp')
                 for j in gdat.true.indxcomp:
                     
                     if gdat.booldiag:
-                        if paracompprio is None:
+                        if paracomp is None or np.isscalar(paracomp):
                             print('')
                             print('')
                             print('')
                             print('namepara')
                             print(namepara)
+                            print('paracomp')
+                            print(paracomp)
                             raise Exception('')
-
-                    tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracompprio[j])
+                    
+                    if len(paracomp) > 0:
+                        tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracomp[j])
             
             if gdat.true.boolmodlpsys:
                 for j in gdat.true.indxcomp:
-                    if gdat.numbener[p] > 1:
-                        tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
-                        for e in range(gdat.numbener[p]):
-                            tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, e), getattr(gdat, 'rratcompprio')[j][p])
-                    else:
-                        if gdat.booldiag:
-                            if not np.isscalar(getattr(gdat, 'rratcompprio')[p][j]):
-                                print('')
-                                print('')
-                                print('')
-                                print('gdat.numbener[p]')
-                                print(gdat.numbener[p])
-                                print('getattr(gdat, rratcompprio)[p][j]')
-                                print(getattr(gdat, 'rratcompprio')[p][j])
-                                raise Exception('gdat.numbener[p] == 1, but len(getattr(gdat, rratcompprio)[p][j]) > 1')
+                    rratcomp = dicttrue['rratcomp'][j]
+                    if gdat.booldiag:
+                        if np.isscalar(rratcomp):
+                            print('')
+                            print('')
+                            print('')
+                            print('gdat.numbener[p]')
+                            print(gdat.numbener[p])
+                            print('rratcomp')
+                            print(rratcomp)
+                            raise Exception('')
                         
-                        tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[p][j])
+                    if gdat.numbener[p] == 1:
+                        tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, rratcomp[0])
+                    else:
+                        #tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
+                        for p in gdat.indxinst[b]:
+                            if gdat.numbener[p] == 1:
+                                tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, p), rratcomp[p])
+                            else:
+                                for e in range(gdat.numbener[p]):
+                                    tdpy.setp_para_defa(gdat, 'true', 'rratcom%dins%dener%04d' % (j, p, e), rratcomp[p, e])
                     
             if gdat.true.typemodl == 'CompactObjectStellarCompanion':
                 tdpy.setp_para_defa(gdat, 'true', 'radistar', 1.)
@@ -9944,9 +9963,6 @@ def init( \
             gdat.fitt.listdictsamp = []
         else:
             gdat.fitt.listdictmlik = []
-
-    # generate the time axis
-    setp_time(gdat, 'Raw')
 
     if gdat.boolsimurflx:
     
@@ -10115,9 +10131,11 @@ def init( \
     # concatenate data across sectors
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            #if gdat.liststrgtypedata[b][p] == 'inpt' and gdat.liststrgtypedata[b][p].startswith('simu'):
             gdat.arrytser['Raw'][b][p] = np.concatenate(gdat.listarrytser['Raw'][b][p])
     
+    # generate the time axis
+    setp_time(gdat, 'Raw')
+
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -10305,8 +10323,6 @@ def init( \
             for y in gdat.indxchun[b][p]:
                 if gdat.boolplottser:
                     plot_tser_mile(gdat, None, b, p, y, 'Raw')
-            if gdat.boolplottser:
-                gdat.arrytser['Raw'][b][p] = np.concatenate(gdat.listarrytser['Raw'][b][p], axis=0)
     
             for e in gdat.indxener[p]:
 
@@ -10658,11 +10674,11 @@ def init( \
             gdat.maxmdeltrebn =  0.3 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0])
             gdat.listdeltrebn[b][p] = np.linspace(gdat.minmdeltrebn, gdat.maxmdeltrebn, gdat.numbrebn)
     
+    print('gdat.boolsrchoutlperi')
+    print(gdat.boolsrchoutlperi)
     # match the outliers to search for periodicity
     if gdat.boolsrchoutlperi:
         
-        print('gdat.indxinst')
-        print(gdat.indxinst)
         # temp
         for p in gdat.indxinst[0]:
             
@@ -10674,6 +10690,7 @@ def init( \
             stdvflux = arry[:, 2]
             dictoutlperi = srch_outlperi(time, flux, stdvflux)
             
+            gdat.pericompprio = dictoutlperi['peri']
             print('dictoutlperi')
             print(dictoutlperi)
 
