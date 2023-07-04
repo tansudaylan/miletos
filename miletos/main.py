@@ -575,6 +575,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             elif gmod.typemodl == 'FlaringStar':
                 sgnl = dictlistmodl['FlaringStar'][0][p]
             else:
+                print('gmod.typemodl')
+                print(gmod.typemodl)
                 raise Exception('')
 
             dictlistmodl['Total'][0][p] = sgnl + dictlistmodl['Baseline'][0][p] - 1.
@@ -7203,7 +7205,7 @@ def read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolma
         return listhdun, indxtimequalgood, tsec, tcam, tccd
 
 
-def setp_time(gdat, namevarb):
+def setp_time(gdat, namevarb=None):
 
     gdat.listtime = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.listtimefine = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -7211,11 +7213,18 @@ def setp_time(gdat, namevarb):
     gdat.timefineconc = [[] for b in gdat.indxdatatser]
     gdat.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.timefine = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            gdat.time[b][p] = gdat.arrytser[namevarb][b][p][:, 0, 0]
+            if namevarb is None:
+                gdat.time[b][p] = gdat.true.time[b][p]
+            else:
+                gdat.time[b][p] = gdat.arrytser[namevarb][b][p][:, 0, 0]
             for y in gdat.indxchun[b][p]:
-                gdat.listtime[b][p][y] = gdat.listarrytser[namevarb][b][p][y][:, 0, 0]
+                if namevarb is None:
+                    gdat.listtime[b][p][y] = gdat.true.listtime[b][p][y]
+                else:
+                    gdat.listtime[b][p][y] = gdat.listarrytser[namevarb][b][p][y][:, 0, 0]
                 difftimefine = 0.5 * np.amin(gdat.listtime[b][p][y][1:] - gdat.listtime[b][p][y][:-1])
                 gdat.listtimefine[b][p][y] = np.arange(np.amin(gdat.listtime[b][p][y]), np.amax(gdat.listtime[b][p][y]) + difftimefine, difftimefine)
             gdat.timefine[b][p] = np.concatenate(gdat.listtimefine[b][p])
@@ -7234,6 +7243,49 @@ def setp_time(gdat, namevarb):
     if gdat.timeoffs is None:
         gdat.timeoffs = tdpy.retr_offstime(gdat.timeconcconc)
 
+
+def setup_miletos(gdat):
+
+    # list of data types
+    if gdat.liststrgtypedata is None:
+        gdat.liststrgtypedata = [[] for b in gdat.indxdatatser]
+        for b in gdat.indxdatatser:
+            if gdat.boolsimutargpartfprt:
+                gdat.liststrgtypedata[b] = ['simutargpartfprt' for p in gdat.indxinst[b]]
+            else:
+                gdat.liststrgtypedata[b] = ['obsd' for p in gdat.indxinst[b]]
+    
+    if gdat.typeverb > 0:
+        print('gdat.liststrgtypedata')
+        print(gdat.liststrgtypedata)
+
+
+def retr_strginst(gdat, listlablinst):
+
+    ## list of strings indicating instruments
+    liststrginst = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            liststrginst[b][p] = ''.join(listlablinst[b][p].split(' '))
+
+    return liststrginst
+
+
+def setup1_miletos(gdat):
+
+    # types of data
+    gdat.listlabldatatser = ['Relative Flux', 'Relative Velocity']
+    gdat.liststrgdatatser = ['RelativeFlux', 'RelativeVelocity']
+    gdat.numbdatatser = len(gdat.listlabldatatser)
+    gdat.indxdatatser = np.arange(gdat.numbdatatser)
+    
+    # instruments
+    gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
+    gdat.indxinst = [[] for b in gdat.indxdatatser]
+    for b in gdat.indxdatatser:
+        gdat.numbinst[b] = len(gdat.listlablinst[b])
+        gdat.indxinst[b] = np.arange(gdat.numbinst[b])
+    
 
 def init( \
          
@@ -7428,9 +7480,6 @@ def init( \
          ## list of labels indicating instruments
          listlablinst=None, \
          
-         ## list of strings indicating instruments
-         liststrginst=None, \
-         
          ## list of strings indicating chunks in the filenames
          liststrgchun=None, \
          
@@ -7506,12 +7555,17 @@ def init( \
          ### 'quad': quadratic in the cosine of the angle between the observer and the surface normal (i.e., gamma)
          #typemodllmdkterm='quad', \
          
-         # limits of time between which the fit is performed
-         limttimefitt=None, \
-
          ## flare model
          ### type of model for finding flares
-         typemodlflar='outl', \
+         #typemodlflar='outl', \
+
+         # type of model for lensing
+         ## 'phdy': photodynamically calculated
+         ## 'gaus': Gaussian
+         #typemodllens='phdy', \
+
+         # limits of time between which the fit is performed
+         limttimefitt=None, \
 
          ## transit model
          ## dilution: None (no correction), 'lygos' for estimation via lygos, or float value
@@ -7542,11 +7596,6 @@ def init( \
          # threshold LS periodogram power for disposing the target as positive
          thrslspecosc=0.2, \
                 
-         # type of model for lensing
-         ## 'phdy': photodynamically calculated
-         ## 'gaus': Gaussian
-         typemodllens='phdy', \
-
          ### type of priors for stars: 'TICID', 'exar', 'inpt'
          typepriostar=None, \
 
@@ -7554,7 +7603,7 @@ def init( \
          typepriocomp=None, \
          
          # type of simulation parameters for companions
-         typesimucomp=None, \
+         typesourparasimucomp=None, \
          
          # Boolean flag to turn on transit for each companion
          booltrancomp=None, \
@@ -7733,13 +7782,64 @@ def init( \
     if gdat.decltarg is not None and gdat.declstar is not None:
         raise Exception('')
 
+    setup1_miletos(gdat)
+
+    # Boolean flag indicating if the simulated target is a synthetic one
+    gdat.booltargsynt = False
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrgtypedata[b][p] == 'simutargsynt':
+                gdat.booltargsynt = True
+    
+    # Boolean flag indicating if there is any simulated data
+    gdat.boolsimusome = False
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrgtypedata[b][p] != 'obsd':
+                gdat.boolsimusome = True
+    
+    print('gdat.boolsimusome')
+    print(gdat.boolsimusome)
+    print('gdat.dicttrue')
+    print(gdat.dicttrue)
+    print('gdat.booldiag')
+    print(gdat.booldiag)
+
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if not gdat.liststrgtypedata[b][p] in ['simutargsynt', 'simutargpartsynt', 'simutargpartfprt', 'simutargpartinje', 'obsd']:
+                    print('')
+                    print('')
+                    print('')
+                    print('gdat.liststrgtypedata')
+                    print(gdat.liststrgtypedata)
+                    raise Exception('Undefined entry in liststrgtypedata')
+
+        if gdat.boolsimusome and not 'typemodl' in gdat.dicttrue:
+            print('')
+            print('')
+            print('')
+            print('gdat.dicttrue')
+            print(gdat.dicttrue)
+            raise Exception('Some of the data are simulated, but dicttrue does not have typemodl.')
+        
+        # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
+        if gdat.booltargsynt:
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    if gdat.liststrgtypedata[b][p] != 'simutargsynt':
+                        print('')
+                        print('')
+                        print('')
+                        raise Exception('If liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
+
     gdat.arrytser = dict()
     ## ensure target identifiers are not conflicting
     if gdat.listarrytser is None:
         gdat.listarrytser = dict()
-        if gdat.ticitarg is None and gdat.strgmast is None and gdat.toiitarg is None and (gdat.rasctarg is None or gdat.decltarg is None):
-            print('Warning: No TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) was provided.')
-        
+        if not gdat.booltargsynt and gdat.ticitarg is None and gdat.strgmast is None and gdat.toiitarg is None and (gdat.rasctarg is None or gdat.decltarg is None):
+            raise Exception('Target is not sythetic and no TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) was provided.')
         if gdat.ticitarg is not None and (gdat.strgmast is not None or gdat.toiitarg is not None or gdat.rasctarg is not None or gdat.decltarg is not None):
             raise Exception('Either a TIC ID (ticitarg), RA&DEC (rasctarg and decltarg), MAST key (strgmast) or a TOI ID (toiitarg) should be provided.')
         if gdat.strgmast is not None and (gdat.ticitarg is not None or gdat.toiitarg is not None or gdat.rasctarg is not None or gdat.decltarg is not None):
@@ -7759,12 +7859,6 @@ def init( \
     gdat.boolusedrvel = False
     gdat.boolusedrflx = True
 
-    # types of data
-    gdat.listlabldatatser = ['Relative Flux', 'Relative Velocity']
-    gdat.liststrgdatatser = ['RelativeFlux', 'RelativeVelocity']
-    gdat.numbdatatser = len(gdat.listlabldatatser)
-    gdat.indxdatatser = np.arange(gdat.numbdatatser)
-    
     # labels of the instruments
     if gdat.listlablinst is None:
         gdat.listlablinst = [['TESS'], []]
@@ -7773,13 +7867,6 @@ def init( \
         print('gdat.listlablinst')
         print(gdat.listlablinst)
     
-    # instruments
-    gdat.numbinst = np.empty(gdat.numbdatatser, dtype=int)
-    gdat.indxinst = [[] for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        gdat.numbinst[b] = len(gdat.listlablinst[b])
-        gdat.indxinst[b] = np.arange(gdat.numbinst[b])
-        
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -7804,46 +7891,10 @@ def init( \
     # number of energy bins for each photometric data set
     gdat.numbener = [[] for p in gdat.indxinst[0]]
     
-    # list of data types
-    if gdat.liststrgtypedata is None:
-        gdat.liststrgtypedata = [[] for b in gdat.indxdatatser]
-        for b in gdat.indxdatatser:
-            if gdat.boolsimutargpartfprt:
-                gdat.liststrgtypedata[b] = ['simutargpartfprt' for p in gdat.indxinst[b]]
-            else:
-                gdat.liststrgtypedata[b] = ['obsd' for p in gdat.indxinst[b]]
+    setup_miletos(gdat)
     
-    if gdat.booldiag:
-        if 'simutargsynt' in gdat.liststrgtypedata[0] or 'simutargsynt' in gdat.liststrgtypedata[1]:
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    print('b, p')
-                    print(b, p)
-                    print('gdat.liststrgtypedata')
-                    print(gdat.liststrgtypedata)
-                    if gdat.liststrgtypedata[b][p] != 'simutargsynt':
-                        print('')
-                        print('')
-                        print('')
-                        raise Exception('If gdat.liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
+    gdat.liststrginst = retr_strginst(gdat, gdat.listlablinst)
 
-    # Boolean flag indicating if the simulated target is a synthetic one
-    gdat.booltargsynt = False
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] == 'simutargsynt':
-                gdat.booltargsynt = True
-    
-    if gdat.typeverb > 0:
-        print('gdat.liststrgtypedata')
-        print(gdat.liststrgtypedata)
-
-    if gdat.liststrginst is None:
-        gdat.liststrginst = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                gdat.liststrginst[b][p] = ''.join(gdat.listlablinst[b][p].split(' '))
-    
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             if len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b]):
@@ -7963,7 +8014,7 @@ def init( \
             print('name')
             print(name)
             print('valu')
-            print(valu)
+            summgene(valu)
             setattr(gdat.fitt, name, valu)
     
     # Boolean flag to perform inference
@@ -7978,7 +8029,12 @@ def init( \
     
         gdat.true = tdpy.gdatstrt()
         if gdat.dicttrue is not None:
+            print('Transferring the contents of dicttrue to gdat...')
             for name, valu in gdat.dicttrue.items():
+                print('name')
+                print(name)
+                print('valu')
+                summgene(valu)
                 setattr(gdat.true, name, valu)
             
     gdat.maxmradisrchmast = 10. # arcsec
@@ -8352,11 +8408,17 @@ def init( \
     if not gdat.booltargsynt:
         if gdat.strgmast is not None:
             strgmasttemp = gdat.strgmast
-        elif rasctarg is not None:
-            strgmasttemp = '%g %g' % (rasctarg, decltarg)
+        elif gdat.rasctarg is not None:
+            strgmasttemp = '%g %g' % (gdat.rasctarg, gdat.decltarg)
         elif gdat.ticitarg is not None:
             strgmasttemp = 'TIC %d' % gdat.ticitarg
         else:
+            print('gdat.strgmast')
+            print(gdat.strgmast)
+            print('gdat.rasctarg')
+            print(gdat.rasctarg)
+            print('gdat.ticitarg')
+            print(gdat.ticitarg)
             raise Exception('')
         
     if gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None:
@@ -9250,17 +9312,26 @@ def init( \
         gdat.boolexof = gdat.toiitarg is not None and gdat.dicttoiitarg is not None
         gdat.boolexar = gdat.strgexar is not None and gdat.dictexartarg is not None or gdat.typepriocomp == 'exar'
         
-        if gdat.typesimucomp is None:
-            if gdat.epocmtracompprio is not None:
-                gdat.typesimucomp = 'inpt'
-            elif gdat.boolexar:
-                gdat.typesimucomp = 'exar'
-            elif gdat.boolexof:
-                gdat.typesimucomp = 'exof'
-            else:
-                raise Exception('')
+        if 'epocmtracomp' in gdat.dicttrue:
+            gdat.typesourparasimucomp = 'inpt'
+        elif gdat.boolexar:
+            gdat.typesourparasimucomp = 'exar'
+        elif gdat.boolexof:
+            gdat.typesourparasimucomp = 'exof'
+        else:
+            print('')
+            print('')
+            print('')
+            print('gdat.dicttrue')
+            print(gdat.dicttrue)
+            print('gdat.boolexar')
+            print(gdat.boolexar)
+            print('gdat.boolexof')
+            print(gdat.boolexof)
+            raise Exception('Could not define the type of the source of the parameters for the simulation, typesourparasimucomp.')
+        
         if gdat.typeverb > 0:
-            print('Source of simulation parameters for the companions (typesimucomp): %s' % gdat.typesimucomp)
+            print('Source of simulation parameters for the companions (typesourparasimucomp): %s' % gdat.typesourparasimucomp)
         
         print('gdat.typepriocomp')
         print(gdat.typepriocomp)
@@ -9276,19 +9347,6 @@ def init( \
         if gdat.typeverb > 0:
             print('Source of prior parameters for the companions (typepriocomp): %s' % gdat.typepriocomp)
         
-        if gdat.booldiag:
-            if gdat.typepriocomp == 'pdim' and gdat.boolsimurflx:
-                print('')
-                print('')
-                print('')
-                print('gdat.epocmtracompprio')
-                print(gdat.epocmtracompprio)
-                print('gdat.boolexar')
-                print(gdat.boolexar)
-                print('gdat.boolexof')
-                print(gdat.boolexof)
-                raise Exception('gdat.typepriocomp == pdim and gdat.boolsimurflx')
-
         if not gdat.boolexar and gdat.typepriocomp == 'exar':
             raise Exception('')
     
@@ -9503,122 +9561,12 @@ def init( \
     # list of strings to be attached to file names for each energy bin
     gdat.liststrgener = [[] for p in gdat.indxinst[0]]
     
-    if gdat.boolsimurflx:
-        
-        # type of baseline
-        ## 'cons': constant
-        ## 'step': step function
-        gdat.true.typemodlblinshap = 'cons'
-
-        for p in gdat.indxinst[0]:
-            for e in range(gdat.numbener[p]):
-                gdat.liststrgener[p].append('ener%04d' % e)
-        
-        if gdat.true.typemodlblinshap == 'cons':
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    if b == 0 and gdat.numbener[p] > 1 and gdat.true.typemodlblinener[p] == 'ener':
-                        for e in range(gdat.numbener[p]):
-                            tdpy.setp_para_defa(gdat, 'true', 'consblin%s%s' % (gdat.liststrginst[b][p], gdat.liststrgener[p][e]), np.array([0.]))
-                    else:
-                        tdpy.setp_para_defa(gdat, 'true', 'consblin%s' % gdat.liststrginst[b][p], np.array([0.]))
-                    
-        elif gdat.true.typemodlblinshap == 'step':
-            tdpy.setp_para_defa(gdat, 'true', 'consblinfrst', np.array([0.]))
-            tdpy.setp_para_defa(gdat, 'true', 'consblinseco', np.array([0.]))
-            tdpy.setp_para_defa(gdat, 'true', 'timestep', np.array([0.]))
-            tdpy.setp_para_defa(gdat, 'true', 'scalstep', np.array([1.]))
-        
-        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
-            if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
-                
-                numbcomp = gdat.numbcompprio
-                
-                if gdat.booldiag:
-                    if gdat.numbcompprio is None:
-                        print('')
-                        print('')
-                        print('')
-                        print('gdat.true.boolmodlpsys')
-                        print(gdat.true.boolmodlpsys)
-                        print('gdat.typepriocomp')
-                        print(gdat.typepriocomp)
-                        print('gdat.true.typemodl')
-                        print(gdat.true.typemodl)
-                        raise Exception('gdat.numbcompprio is None while generating true data.')
-            else:
-                numbcomp = 1
-            
-            tdpy.setp_para_defa(gdat, 'true', 'numbcomp', numbcomp)
-
-            gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
-            
-            for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
-                paracompprio = getattr(gdat, namepara + 'compprio')
-                print('namepara')
-                print(namepara)
-                print('paracompprio')
-                print(paracompprio)
-                for j in gdat.true.indxcomp:
-                    tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracompprio[j])
-            
-            if gdat.true.boolmodlpsys:
-                for j in gdat.true.indxcomp:
-                    if gdat.numbener[p] > 1:
-                        tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
-                        for e in range(gdat.numbener[p]):
-                            tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, e), getattr(gdat, 'rratcompprio')[j][p])
-                    else:
-                        if gdat.booldiag:
-                            if not np.isscalar(getattr(gdat, 'rratcompprio')[p][j]):
-                                print('')
-                                print('')
-                                print('')
-                                print('gdat.numbener[p]')
-                                print(gdat.numbener[p])
-                                print('getattr(gdat, rratcompprio)[p][j]')
-                                print(getattr(gdat, 'rratcompprio')[p][j])
-                                raise Exception('gdat.numbener[p] == 1, but len(getattr(gdat, rratcompprio)[p][j]) > 1')
-                        
-                        tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[p][j])
-                    
-            if gdat.true.typemodl == 'CompactObjectStellarCompanion':
-                tdpy.setp_para_defa(gdat, 'true', 'radistar', 1.)
-                tdpy.setp_para_defa(gdat, 'true', 'massstar', 1.)
-                tdpy.setp_para_defa(gdat, 'true', 'masscom0', 1.)
-        
-        if gdat.true.typemodl == 'Supernova':
-            # temp
-            minmtimesupn = np.amin(gdat.true.listtime[0][0][0]) + 0. * (np.amax(gdat.true.listtime[0][0][0]) - np.amin(gdat.true.listtime[0][0][0]))
-            maxmtimesupn = np.amin(gdat.true.listtime[0][0][0]) + 1. * (np.amax(gdat.true.listtime[0][0][0]) - np.amin(gdat.true.listtime[0][0][0]))
-            timesupn = tdpy.icdf_self(0.25, minmtimesupn, maxmtimesupn) - gdat.timeoffs
-            tdpy.setp_para_defa(gdat, 'true', 'timesupn', timesupn)
-
-            tdpy.setp_para_defa(gdat, 'true', 'coeflinesupn', 0.)
-
-            tdpy.setp_para_defa(gdat, 'true', 'sigmgprobase', 2.) # [ppt]
-            
-            tdpy.setp_para_defa(gdat, 'true', 'rhoogprobase', 0.1) # [day]
-                            
-            tdpy.setp_para_defa(gdat, 'true', 'timebumpoffs', 0.5) # [day]
-                            
-            tdpy.setp_para_defa(gdat, 'true', 'amplbump', 10.) # [ppt]
-                            
-            tdpy.setp_para_defa(gdat, 'true', 'scalbump', 1.) # [day]
-                            
-            tdpy.setp_para_defa(gdat, 'true', 'coefquadsupn', 0.5) # [ppt]
-                            
     # determine number of chunks
     print('Determining the number of chunks...')
     gdat.numbchun = [np.zeros(gdat.numbinst[b], dtype=int) for b in gdat.indxdatatser]
 
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if not gdat.booltargsynt:
-                if b == 0:
-                    if len(gdat.listtseclygo) > 0:
-                        if not gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
-                            print('Warning: lygos data were not incorporated into miletos!')
             gdat.numbchun[b][p] = len(gdat.listipnt[b][p])
             
             if gdat.booldiag:
@@ -9631,7 +9579,7 @@ def init( \
                             print('gdat.listarrylcurmast[p][y]')
                             summgene(gdat.listarrylcurmast[p][y])
                             raise Exception('gdat.listarrylcurmast[p][y].ndim != 3')
-                
+    
     gdat.indxchun = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -9649,85 +9597,11 @@ def init( \
                     raise Exception('gdat.numbchun[b][p] < 1')
 
             gdat.indxchun[b][p] = np.arange(gdat.numbchun[b][p], dtype=int)
-    
-    if gdat.numbener[p] == 1:
-        gdat.numbenermodl = 1
-        gdat.numbeneriter = 1
-        gdat.numbenerefes = 1
-    elif gdat.fitt.typemodlenerfitt == 'full':
-        gdat.numbenermodl = gdat.numbener[p]
-        gdat.numbeneriter = 2
-        gdat.numbenerefes = 2
-    else:
-        gdat.numbenermodl = 1
-        gdat.numbeneriter = gdat.numbener[p] + 1
-        gdat.numbenerefes = gdat.numbener[p] + 1
-    gdat.indxfittiter = np.arange(gdat.numbeneriter)
-    gdat.indxenermodl = np.arange(gdat.numbenermodl)
 
-    if not 'Raw' in gdat.listarrytser:
-        gdat.listarrytser['Raw'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    
-    gdat.arrytser['bdtrlowr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['bdtrlowr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['bdtrmedi'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['bdtrmedi'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['bdtruppr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['bdtruppr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    
-    gdat.arrytser['Raw'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['maskcust'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['Detrended'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['bdtrbind'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    
-    gdat.listarrytser['maskcust'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['temp'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['trnd'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['Detrended'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    
-    if gdat.booltesskepl and gdat.booltargpartanyy:
-        gdat.dictmileoutp['listipnt'] = gdat.listipnt
-        print('List of pointing IDs:')
-        print(gdat.listipnt)
-    
-    # load data
-    print('Loading data into gdat.listarrytser[raww]...')
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            
-            ## from MAST
-            if gdat.boolretrlcurmast[b][p]:
-                for o in range(len(gdat.listipnt[b][p])):
-                    indxspoc = np.where(gdat.listipnt[b][p][o] == gdat.listtsecspoc)[0][0]
-                    gdat.listarrytser['Raw'][b][p][o] = gdat.listarrylcurmast[p][indxspoc]
-            
-            ## TESS and Kepler data via lygos
-            if gdat.booltesskepl and gdat.booltargpartanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
-                for o in range(len(gdat.listipnt[b][p])):
-                    #for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
-                    print('gdat.dictlygooutp[listipnt][0]')
-                    print(gdat.dictlygooutp['listipnt'][0])
-                    indxlygo = np.where(gdat.listipnt[b][p][o] == gdat.dictlygooutp['listipnt'][0])[0][0]
-                    gdat.listarrytser['Raw'][b][p][o] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxlygo][:, None, :]
-                
-    ## user-input data
-    if gdat.listpathdatainpt is not None:
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                for y in gdat.indxchun[b][p]:
-                    arry = np.loadtxt(gdat.listpathdatainpt[b][p][y], delimiter=',', skiprows=1)
-                    gdat.listarrytser['Raw'][b][p][y] = np.empty((arry.shape[0], arry.shape[1], 3))
-                    gdat.listarrytser['Raw'][b][p][y][:, :, 0:2] = arry[:, :, 0:2]
-                    gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-4 * arry[:, :, 1]
-                    indx = np.argsort(gdat.listarrytser['Raw'][b][p][y][:, 0])
-                    gdat.listarrytser['Raw'][b][p][y] = gdat.listarrytser['Raw'][b][p][y][indx, :, :]
-                    indx = np.where(gdat.listarrytser['Raw'][b][p][y][:, 1] < 1e6)[0]
-                    gdat.listarrytser['Raw'][b][p][y] = gdat.listarrytser['Raw'][b][p][y][indx, :, :]
-                    gdat.listisec = None
-    
+
     ## simulated data
     if gdat.boolsimurflx:
+        
         gdat.true.listtime = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.true.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
@@ -9811,17 +9685,204 @@ def init( \
                                 print(gdat.liststrgtypedata[b][p])
                                 raise Exception('len(gdat.true.listtime[b][p][y]) == 0')
         
-        gdat.time = gdat.true.time
-        gdat.timeconc = [[] for b in gdat.indxdatatser]
-        gdat.minmtimeconc = np.empty(gdat.numbdatatser)
-        gdat.maxmtimeconc = np.empty(gdat.numbdatatser)
-        for b in gdat.indxdatatser:
-            if len(gdat.time[b]) > 0:
-                gdat.timeconc[b] = np.concatenate(gdat.time[b])
-                if len(gdat.timeconc[b]) > 0:
-                    gdat.minmtimeconc[b] = np.amin(gdat.timeconc[b])
-                    gdat.maxmtimeconc[b] = np.amax(gdat.timeconc[b])
+        # generate the time axis
+        setp_time(gdat)
+
+        #gdat.time = gdat.true.time
+        #gdat.timeconc = [[] for b in gdat.indxdatatser]
+        #gdat.minmtimeconc = np.empty(gdat.numbdatatser)
+        #gdat.maxmtimeconc = np.empty(gdat.numbdatatser)
+        #for b in gdat.indxdatatser:
+        #    if len(gdat.time[b]) > 0:
+        #        gdat.timeconc[b] = np.concatenate(gdat.time[b])
+        #        if len(gdat.timeconc[b]) > 0:
+        #            gdat.minmtimeconc[b] = np.amin(gdat.timeconc[b])
+        #            gdat.maxmtimeconc[b] = np.amax(gdat.timeconc[b])
         
+        # type of baseline
+        ## 'cons': constant
+        ## 'step': step function
+        gdat.true.typemodlblinshap = 'cons'
+
+        for p in gdat.indxinst[0]:
+            for e in range(gdat.numbener[p]):
+                gdat.liststrgener[p].append('ener%04d' % e)
+        
+        if gdat.true.typemodlblinshap == 'cons':
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    if b == 0 and gdat.numbener[p] > 1 and gdat.true.typemodlblinener[p] == 'ener':
+                        for e in range(gdat.numbener[p]):
+                            tdpy.setp_para_defa(gdat, 'true', 'consblin%s%s' % (gdat.liststrginst[b][p], gdat.liststrgener[p][e]), np.array([0.]))
+                    else:
+                        tdpy.setp_para_defa(gdat, 'true', 'consblin%s' % gdat.liststrginst[b][p], np.array([0.]))
+                    
+        elif gdat.true.typemodlblinshap == 'step':
+            tdpy.setp_para_defa(gdat, 'true', 'consblinfrst', np.array([0.]))
+            tdpy.setp_para_defa(gdat, 'true', 'consblinseco', np.array([0.]))
+            tdpy.setp_para_defa(gdat, 'true', 'timestep', np.array([0.]))
+            tdpy.setp_para_defa(gdat, 'true', 'scalstep', np.array([1.]))
+        
+        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
+            if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
+                
+                numbcomp = gdat.numbcompprio
+                
+                if gdat.booldiag:
+                    if gdat.numbcompprio is None:
+                        print('')
+                        print('')
+                        print('')
+                        print('gdat.true.boolmodlpsys')
+                        print(gdat.true.boolmodlpsys)
+                        print('gdat.typepriocomp')
+                        print(gdat.typepriocomp)
+                        print('gdat.true.typemodl')
+                        print(gdat.true.typemodl)
+                        raise Exception('gdat.numbcompprio is None while generating true data.')
+            else:
+                numbcomp = 1
+            
+            tdpy.setp_para_defa(gdat, 'true', 'numbcomp', numbcomp)
+
+            gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
+            
+            for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
+                paracompprio = getattr(gdat, namepara + 'compprio')
+                for j in gdat.true.indxcomp:
+                    tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracompprio[j])
+            
+            if gdat.true.boolmodlpsys:
+                for j in gdat.true.indxcomp:
+                    if gdat.numbener[p] > 1:
+                        tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
+                        for e in range(gdat.numbener[p]):
+                            tdpy.setp_para_defa(gdat, 'true', 'rratcom%dener%04d' % (j, e), getattr(gdat, 'rratcompprio')[j][p])
+                    else:
+                        if gdat.booldiag:
+                            if not np.isscalar(getattr(gdat, 'rratcompprio')[p][j]):
+                                print('')
+                                print('')
+                                print('')
+                                print('gdat.numbener[p]')
+                                print(gdat.numbener[p])
+                                print('getattr(gdat, rratcompprio)[p][j]')
+                                print(getattr(gdat, 'rratcompprio')[p][j])
+                                raise Exception('gdat.numbener[p] == 1, but len(getattr(gdat, rratcompprio)[p][j]) > 1')
+                        
+                        tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, getattr(gdat, 'rratcompprio')[p][j])
+                    
+            if gdat.true.typemodl == 'CompactObjectStellarCompanion':
+                tdpy.setp_para_defa(gdat, 'true', 'radistar', 1.)
+                tdpy.setp_para_defa(gdat, 'true', 'massstar', 1.)
+                tdpy.setp_para_defa(gdat, 'true', 'masscom0', 1.)
+        
+        if gdat.true.typemodl == 'Supernova':
+            # temp
+            minmtimesupn = np.amin(gdat.true.listtime[0][0][0]) + 0. * (np.amax(gdat.true.listtime[0][0][0]) - np.amin(gdat.true.listtime[0][0][0]))
+            maxmtimesupn = np.amin(gdat.true.listtime[0][0][0]) + 1. * (np.amax(gdat.true.listtime[0][0][0]) - np.amin(gdat.true.listtime[0][0][0]))
+            timesupn = tdpy.icdf_self(0.25, minmtimesupn, maxmtimesupn) - gdat.timeoffs
+            tdpy.setp_para_defa(gdat, 'true', 'timesupn', timesupn)
+
+            tdpy.setp_para_defa(gdat, 'true', 'coeflinesupn', 0.)
+
+            tdpy.setp_para_defa(gdat, 'true', 'sigmgprobase', 2.) # [ppt]
+            
+            tdpy.setp_para_defa(gdat, 'true', 'rhoogprobase', 0.1) # [day]
+                            
+            tdpy.setp_para_defa(gdat, 'true', 'timebumpoffs', 0.5) # [day]
+                            
+            tdpy.setp_para_defa(gdat, 'true', 'amplbump', 10.) # [ppt]
+                            
+            tdpy.setp_para_defa(gdat, 'true', 'scalbump', 1.) # [day]
+                            
+            tdpy.setp_para_defa(gdat, 'true', 'coefquadsupn', 0.5) # [ppt]
+                            
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if not gdat.booltargsynt:
+                    if b == 0:
+                        if len(gdat.listtseclygo) > 0:
+                            if not gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
+                                print('Warning: lygos data were not incorporated into miletos!')
+            
+    if gdat.numbener[p] == 1:
+        gdat.numbenermodl = 1
+        gdat.numbeneriter = 1
+        gdat.numbenerefes = 1
+    elif gdat.fitt.typemodlenerfitt == 'full':
+        gdat.numbenermodl = gdat.numbener[p]
+        gdat.numbeneriter = 2
+        gdat.numbenerefes = 2
+    else:
+        gdat.numbenermodl = 1
+        gdat.numbeneriter = gdat.numbener[p] + 1
+        gdat.numbenerefes = gdat.numbener[p] + 1
+    gdat.indxfittiter = np.arange(gdat.numbeneriter)
+    gdat.indxenermodl = np.arange(gdat.numbenermodl)
+
+    if not 'Raw' in gdat.listarrytser:
+        gdat.listarrytser['Raw'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    
+    gdat.arrytser['bdtrlowr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['bdtrlowr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['bdtrmedi'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['bdtrmedi'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['bdtruppr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['bdtruppr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    
+    gdat.arrytser['Raw'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['maskcust'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['Detrended'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.arrytser['bdtrbind'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    
+    gdat.listarrytser['maskcust'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['temp'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['trnd'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['Detrended'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listarrytser['bdtrbind'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    
+    if gdat.booltesskepl and gdat.booltargpartanyy:
+        gdat.dictmileoutp['listipnt'] = gdat.listipnt
+        print('List of pointing IDs:')
+        print(gdat.listipnt)
+    
+    # load data
+    print('Loading data into gdat.listarrytser[raww]...')
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            
+            ## from MAST
+            if gdat.boolretrlcurmast[b][p]:
+                for o in range(len(gdat.listipnt[b][p])):
+                    indxspoc = np.where(gdat.listipnt[b][p][o] == gdat.listtsecspoc)[0][0]
+                    gdat.listarrytser['Raw'][b][p][o] = gdat.listarrylcurmast[p][indxspoc]
+            
+            ## TESS and Kepler data via lygos
+            if gdat.booltesskepl and gdat.booltargpartanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
+                for o in range(len(gdat.listipnt[b][p])):
+                    #for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
+                    print('gdat.dictlygooutp[listipnt][0]')
+                    print(gdat.dictlygooutp['listipnt'][0])
+                    indxlygo = np.where(gdat.listipnt[b][p][o] == gdat.dictlygooutp['listipnt'][0])[0][0]
+                    gdat.listarrytser['Raw'][b][p][o] = gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][indxlygo][:, None, :]
+                
+    ## user-input data
+    if gdat.listpathdatainpt is not None:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    arry = np.loadtxt(gdat.listpathdatainpt[b][p][y], delimiter=',', skiprows=1)
+                    gdat.listarrytser['Raw'][b][p][y] = np.empty((arry.shape[0], arry.shape[1], 3))
+                    gdat.listarrytser['Raw'][b][p][y][:, :, 0:2] = arry[:, :, 0:2]
+                    gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-4 * arry[:, :, 1]
+                    indx = np.argsort(gdat.listarrytser['Raw'][b][p][y][:, 0])
+                    gdat.listarrytser['Raw'][b][p][y] = gdat.listarrytser['Raw'][b][p][y][indx, :, :]
+                    indx = np.where(gdat.listarrytser['Raw'][b][p][y][:, 1] < 1e6)[0]
+                    gdat.listarrytser['Raw'][b][p][y] = gdat.listarrytser['Raw'][b][p][y][indx, :, :]
+                    gdat.listisec = None
+    
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
@@ -9873,6 +9934,9 @@ def init( \
             gdat.fitt.listdictsamp = []
         else:
             gdat.fitt.listdictmlik = []
+
+    # generate the time axis
+    setp_time(gdat, 'Raw')
 
     if gdat.boolsimurflx:
     
@@ -9971,8 +10035,8 @@ def init( \
                                     print('')
                                     print('')
                                     print('')
-                                    print('gdat.typesimucomp')
-                                    print(gdat.typesimucomp)
+                                    print('gdat.typesourparasimucomp')
+                                    print(gdat.typesourparasimucomp)
                                     print('gdat.tmagsyst')
                                     print(gdat.tmagsyst)
                                     raise Exception('When synthetic TESS data is being generated, tmagsyst should not be None.')
@@ -10172,9 +10236,6 @@ def init( \
                     summgene(indxbadd)
                     raise Exception('not np.isfinite(gdat.arrytser[raww][b][p]).all()')
     
-    # update the time axis
-    setp_time(gdat, 'Raw')
-
     # check availability of data 
     booldataaval = False
     for b in gdat.indxdatatser:
