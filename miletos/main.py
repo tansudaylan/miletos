@@ -9759,6 +9759,10 @@ def init( \
             gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
             
             for namepara in ['epocmtra', 'peri', 'rsma', 'cosi']:
+                
+                print('gdat.dicttrue[namepara + comp]')
+                print(gdat.dicttrue[namepara + 'comp'])
+                
                 paracomp = getattr(gdat.true, namepara + 'comp')
                 for j in gdat.true.indxcomp:
                     
