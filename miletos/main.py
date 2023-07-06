@@ -9782,7 +9782,9 @@ def init( \
             
             if gdat.true.boolmodlpsys:
                 for j in gdat.true.indxcomp:
-                    rratcomp = dicttrue['rratcomp'][j]
+                    print('gdat.true.rratcomp')
+                    print(gdat.true.rratcomp)
+                    rratcomp = gdat.true.rratcomp[j]
                     if gdat.booldiag:
                         if np.isscalar(rratcomp):
                             print('')
@@ -11027,6 +11029,13 @@ def init( \
         
             gdat.duraprio = gdat.duraprio[indxcompsort]
         
+        if gdat.booldiag:
+            if gdat.pericompprio is None:
+                print('')
+                print('')
+                print('')
+                raise Exception('gdat.pericompprio is None.')
+
         # if stellar features are NaN, use Solar defaults
         for featstar in gdat.listfeatstar:
             if not hasattr(gdat, featstar) or getattr(gdat, featstar) is None or not np.isfinite(getattr(gdat, featstar)):
