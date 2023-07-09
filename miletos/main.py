@@ -114,7 +114,8 @@ def retr_timetran(gdat):
         for p in gdat.indxinst[0]:
             for j in gdat.indxcompprio:
                 gdat.durafullprio = (1. - gdat.rratcompprio[p][j]) / (1. + gdat.rratcompprio[p][j]) * gdat.duraprio
-                if not gdat.booltrancomp[j]:
+                
+                if not gdat.booltrancompprio[j]:
                     continue
 
                 gdat.listindxtimetranineg[j][0][p][0] = retr_indxtimetran(gdat.arrytser['Detrended'][0][p][:, 0, 0], \
@@ -3835,21 +3836,24 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
     if strgener is not None:
         nameparabasefinl += strgener
 
-    if hasattr(gmod, nameparabasefinl):
-        if gdat.typeverb > 0:
+    if gdat.typeverb > 0 or gdat.booldiag:
+        if hasattr(gmod, nameparabasefinl):
             para = getattr(gmod, nameparabasefinl)
             if gdat.booldiag:
-                if not isinstance(para, float) and len(getattr(gmod, nameparabasefinl)) == 0:
+                if not isinstance(para, float) and len(para) == 0:
                     print('')
                     print('')
                     print('')
+                    print('strgmodl')
+                    print(strgmodl)
                     print('getattr(gmod, nameparabasefinl)')
                     print(getattr(gmod, nameparabasefinl))
                     print('nameparabasefinl')
                     print(nameparabasefinl)
                     raise Exception('gmod.nameparabasefinl is empty.')
 
-            print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
+            if gdat.typeverb > 0:
+                print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
     gmod.listlablpara.append(lablpara)
     gmod.listminmpara.append(minmpara)
@@ -4812,16 +4816,15 @@ def setp_modlbase(gdat, strgmodl, h=None):
         if gmod.typemodlsupn == 'quad':
             setp_para(gdat, strgmodl, 'coefquadsupn', -20., 50., ['$c_2$', 'ppt'])
 
-    if gmod.boolmodltran and strgmodl == 'true':
-        booltrancomp = np.zeros(gmod.numbcomp, dtype=bool)
+    if gmod.boolmodltran and strgmodl == 'fitt':
+        gdat.booltrancompprio = np.zeros(gmod.numbcomp, dtype=bool)
         print('gdat.duraprio')
         print(gdat.duraprio)
         print('np.isfinite(gdat.duraprio)')
         print(np.isfinite(gdat.duraprio))
         print('np.where(np.isfinite(gdat.duraprio))')
         print(np.where(np.isfinite(gdat.duraprio)))
-        booltrancomp[np.where(np.isfinite(gdat.duraprio))] = True
-        tdpy.setp_para_defa(gdat, strgmodl, 'booltrancomp', booltrancomp)
+        gdat.booltrancompprio[np.where(np.isfinite(gdat.duraprio))] = True
 
 
 def exec_lspe( \
@@ -7672,9 +7675,6 @@ def init( \
          # type of simulation parameters for companions
          typesourparasimucomp=None, \
          
-         # Boolean flag to turn on transit for each companion
-         booltrancomp=None, \
-
          ### photometric and RV model
          #### means
          rratcompprio=None, \
@@ -8077,12 +8077,19 @@ def init( \
         if gdat.dicttrue is not None:
             print('Transferring the contents of dicttrue to gdat...')
             for name, valu in gdat.dicttrue.items():
-                print('name')
-                print(name)
-                print('valu')
-                summgene(valu)
                 setattr(gdat.true, name, valu)
-            
+
+                if gdat.booldiag:
+                    if not isinstance(valu, int) and len(valu) == 0:
+                        print('')
+                        print('')
+                        print('')
+                        print('name')
+                        print(name)
+                        print('valu')
+                        summgene(valu)
+                        raise Exception('len(valu) == 0')
+
     gdat.maxmradisrchmast = 10. # arcsec
     gdat.strgradi = '%gs' % gdat.maxmradisrchmast
     
@@ -9931,7 +9938,7 @@ def init( \
         
         if gdat.booldiag:
             for j in gdat.true.indxcomp:
-                for namepara in gmod.listnameparacomp[j]:
+                for namepara in gdat.true.listnameparacomp[j]:
                     para = getattr(gdat.true, namepara)
                     if len(para) == 0:
                         print('')
@@ -11057,7 +11064,6 @@ def init( \
             
             indxcompsort = np.argsort(gdat.pericompprio)
             
-            #gdat.booltrancomp = gdat.booltrancomp[indxcompsort]
             print('gdat.pericompprio')
             print(gdat.pericompprio)
             print('indxcompsort')
