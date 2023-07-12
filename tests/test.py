@@ -223,6 +223,21 @@ def cnfg_TOI2406():
                       )
 
 
+def cnfg_ULTRASAT():
+    
+    dictlygoinpt = dict()
+    dictlygoinpt['numbside'] = 51
+    dictlygoinpt['maxmtmagcatl'] = 9.
+    liststrgtypedata = [['simutargpartinje', ''], []]
+    miletos.init( \
+         strgmast='Sirius', \
+         booldiag=True, \
+         listlablinst=[['TESS', 'ULTRASAT'], []], \
+         liststrgtypedata=liststrgtypedata, \
+         dictlygoinpt=dictlygoinpt, \
+        )
+        
+
 def cnfg_Sirius():
     
     dictlygoinpt = dict()
@@ -244,11 +259,11 @@ def cnfg_TOI1797():
     for a in range(2):
         
         if a == 0:
-            boolsimutargpartfprt = True
-            strgcnfg = 'Simulated'
-        if a == 1:
             boolsimutargpartfprt = False
             strgcnfg = 'Observed'
+        if a == 1:
+            boolsimutargpartfprt = True
+            strgcnfg = 'Simulated'
 
         #dictlygoinpt = dict()
         #dictlygoinpt['numbside'] = 51
@@ -367,12 +382,12 @@ def cnfg_flare_simulated():
             strgcnfg = 'simu'
             liststrgtypedata = [['simutargpartinje'], []]
             dicttrue = dict()
-            dicttrue['typemodl'] = 'flar'
+            dicttrue['typemodl'] = 'StarFlaring'
         else:
             lablcnfg = ''
             strgcnfg = 'real'
         dictfitt = dict()
-        dictfitt['typemodl'] = 'flar'
+        dictfitt['typemodl'] = 'StarFlaring'
         
         print('dicttic8.keys()')
         print(dicttic8.keys())
@@ -423,12 +438,12 @@ def cnfg_ATEL15755():
             strgcnfg = 'simu'
             liststrgtypedata = [['simutargpartinje'], []]
             dicttrue = dict()
-            dicttrue['typemodl'] = 'flar'
+            dicttrue['typemodl'] = 'StarFlaring'
         else:
             lablcnfg = ''
             strgcnfg = 'real'
         dictfitt = dict()
-        dictfitt['typemodl'] = 'flar'
+        dictfitt['typemodl'] = 'StarFlaring'
         miletos.main.init( \
                       labltarg=labltarg, \
                       rasctarg=rasctarg, \
