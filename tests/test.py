@@ -238,6 +238,20 @@ def cnfg_ULTRASAT():
         )
         
 
+def cnfg_TESSGEO():
+    
+    dictlygoinpt = dict()
+    dictlygoinpt['numbside'] = 51
+    liststrgtypedata = [['simutargpartinje', ''], []]
+    miletos.init( \
+         strgmast='Sirius', \
+         booldiag=True, \
+         listlablinst=[['TESS', 'ULTRASAT'], []], \
+         liststrgtypedata=liststrgtypedata, \
+         dictlygoinpt=dictlygoinpt, \
+        )
+        
+
 def cnfg_Sirius():
     
     dictlygoinpt = dict()

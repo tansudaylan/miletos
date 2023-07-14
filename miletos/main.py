@@ -302,6 +302,16 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
+                if isinstance(time[b][p], list):
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    print('time[b][p]')
+                    summgene(time[b][p])
+                    raise Exception('isinstance(time[b][p], list)')
+
                 if time[b][p].ndim != 1:
                     print('')
                     print('')
@@ -7270,10 +7280,23 @@ def setp_time(gdat, namevarb=None):
             else:
                 gdat.time[b][p] = gdat.arrytser[namevarb][b][p][:, 0, 0]
             for y in gdat.indxchun[b][p]:
-                if namevarb is None:
+                
+                if namevarb is None and gdat.liststrgtypedata[b][p] != 'obsd':
                     gdat.listtime[b][p][y] = gdat.true.listtime[b][p][y]
                 else:
-                    gdat.listtime[b][p][y] = gdat.listarrytser[namevarb][b][p][y][:, 0, 0]
+                    gdat.listtime[b][p][y] = gdat.listarrytser['Raw'][b][p][y][:, 0, 0]
+                
+                if gdat.booldiag:
+                    if isinstance(gdat.listtime[b][p][y], list):
+                        print('')
+                        print('')
+                        print('')
+                        print('namevarb')
+                        print(namevarb)
+                        print('gdat.listtime[b][p][y]')
+                        print(gdat.listtime[b][p][y])
+                        raise Exception('gdat.listtime[b][p][y] should be a numpy array.')
+
                 difftimefine = 0.5 * np.amin(gdat.listtime[b][p][y][1:] - gdat.listtime[b][p][y][:-1])
                 gdat.listtimefine[b][p][y] = np.arange(np.amin(gdat.listtime[b][p][y]), np.amax(gdat.listtime[b][p][y]) + difftimefine, difftimefine)
             gdat.timefine[b][p] = np.concatenate(gdat.listtimefine[b][p])
@@ -7859,8 +7882,8 @@ def init( \
                     print('')
                     print('')
                     print('')
-                    print('gdat.liststrgtypedata')
-                    print(gdat.liststrgtypedata)
+                    print('gdat.liststrgtypedata[b][p]')
+                    print(gdat.liststrgtypedata[b][p])
                     raise Exception('Undefined entry in liststrgtypedata')
 
         if gdat.boolsimusome and not 'typemodl' in gdat.dicttrue:
@@ -9752,6 +9775,10 @@ def init( \
         gdat.true.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
+                
+                if gdat.liststrgtypedata[b][p] == 'obsd':
+                    continue
+
                 if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                     for y in gdat.indxchun[b][p]:
                         if gdat.liststrginst[b][p] == 'TESS':
@@ -9788,17 +9815,30 @@ def init( \
                 elif gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt':
                     for y in gdat.indxchun[b][p]:
                         gdat.true.listtime[b][p][y] = gdat.listarrytser['Raw'][b][p][y][:, 0, 0] 
-                elif gdat.liststrgtypedata[b][p] != 'obsd':
+                else:
                     print('')
                     print('')
                     print('')
                     print('gdat.liststrgtypedata[b][p]')
                     print(gdat.liststrgtypedata[b][p])
                     raise Exception('Unknown gdat.liststrgtypedata[b][p]')
-
+                
                 gdat.true.time[b][p] = np.concatenate(gdat.true.listtime[b][p])
                 
                 if gdat.booldiag:
+                    for y in gdat.indxchun[b][p]:
+                        if isinstance(gdat.true.listtime[b][p][y], list):
+                            print('')
+                            print('')
+                            print('')
+                            print('gdat.liststrgtypedata[b][p]')
+                            print(gdat.liststrgtypedata[b][p])
+                            print('gdat.liststrginst[b][p]')
+                            print(gdat.liststrginst[b][p])
+                            print('gdat.true.listtime[b][p][y]')
+                            print(gdat.true.listtime[b][p][y])
+                            raise Exception('gdat.true.listtime[b][p][y] should be a numpy array.')
+
                     if gdat.liststrgtypedata[b][p] != 'obsd':
                         if len(gdat.true.time[b][p]) == 0:
                             print('')
@@ -10059,7 +10099,7 @@ def init( \
         
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
-                    if gdat.true.time[b][p].size == 0 and gdat.liststrgtypedata[b][p] != 'obsd':
+                    if gdat.liststrgtypedata[b][p] != 'obsd' and gdat.true.time[b][p].size == 0:
                         print('')
                         print('')
                         print('')
