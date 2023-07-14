@@ -7852,13 +7852,6 @@ def init( \
     
     setup1_miletos(gdat)
 
-    print('gdat.boolsimusome')
-    print(gdat.boolsimusome)
-    print('gdat.dicttrue')
-    print(gdat.dicttrue)
-    print('gdat.booldiag')
-    print(gdat.booldiag)
-
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -9916,7 +9909,6 @@ def init( \
             tdpy.setp_para_defa(gdat, 'true', 'numbflar', 1)
             gdat.true.indxflar = np.arange(gdat.true.numbflar)
         
-        if gdat.true.typemodl == 'StarFlaring':
             for k in gdat.true.indxflar:
                 tdpy.setp_para_defa(gdat, 'true', 'amplflar%04d' % k, 0.1)
                 timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.maxmtimeconc[0]) 
@@ -9928,8 +9920,10 @@ def init( \
         if gdat.booldiag:
             if gdat.true.boolmodlcomp:
                 for j in gdat.true.indxcomp:
+                    print('gdat.true.listnameparacomp')
+                    print(gdat.true.listnameparacomp)
                     for namepara in gdat.true.listnameparacomp[j]:
-                        para = getattr(gdat.true, namepara)
+                        para = getattr(gdat.true, '%scomp' % namepara)
                         if len(para) == 0:
                             print('')
                             print('')
@@ -9988,7 +9982,8 @@ def init( \
                     print('gdat.true.rratcomp')
                     print(gdat.true.rratcomp)
                     rratcomp = gdat.true.rratcomp[j]
-                    if gdat.booldiag:
+                    print('temp')
+                    if False and gdat.booldiag:
                         if np.isscalar(rratcomp):
                             print('')
                             print('')
@@ -10000,7 +9995,7 @@ def init( \
                             raise Exception('')
                         
                     if gdat.numbener[p] == 1:
-                        tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, rratcomp[0])
+                        tdpy.setp_para_defa(gdat, 'true', 'rratcom%d' % j, rratcomp)
                     else:
                         #tdpy.setp_para_defa(gdat, 'true', 'rratcom0whit', 0.1)
                         for p in gdat.indxinst[b]:
