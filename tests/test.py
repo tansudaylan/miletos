@@ -114,7 +114,42 @@ def cnfg_TICsFromGV():
                          )
 
 
-def cnfg_FermiLAT_AGN():
+def cnfg_FermiLAT():
+    '''
+    Targets drawn from Fermi-LAT data with Manel and Banfsheh
+    '''
+
+    # Blazars for ADAP 2022
+    path = os.environ['LYGOS_DATA_PATH'] + '/data/interesting_blazars_CVZ.txt'
+    print('Reading from %s...' % path)
+    dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
+    
+    listname = []
+    for strg in dictagns['_Search_Offset               ']:
+        listname.append(strg.split('(')[1].split(')')[0])
+    print('listname')
+    print(listname)
+
+    liststrgmast = [ \
+               'BL Lacertae', \
+               'PKS 2155-304', \
+               
+               # CCD edge
+               '3C 279', \
+               
+               # no data
+               '3C 454.3', \
+               'PG 1553+113', \
+               'PKS 1502+106', \
+               '4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371', 'Mkn 421', 'Mkn 501', \
+               'CGCG 050-083', '1RXS J234354.4+054713', \
+               ]
+    
+    dictlygoinpt = dict()
+    dictlygoinpt['typepsfninfe'] = 'fixd'
+    
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'AGN'
     
     liststrgmast = []
     path = os.environ['MILETOS_DATA_PATH'] + '/data/ListVariability_AssN_BanafshehManel.txt'
@@ -130,31 +165,25 @@ def cnfg_FermiLAT_AGN():
     print('Extracting the TESS light curves of Fermi-LAT AGNs...')
     print('Number of targets: %d' % numbtarg)
     
-    listtimescalbdtrspln = [[6.]]
-    for strgmast in liststrgmast:
-        print(strgmast)
-    
     dictlygoinpt = dict()
     dictlygoinpt['boolutiltpxf'] = False
 
-    strgclus = 'FermiLAT_AGN'
+    strgclus = 'FermiLAT_Targets'
     
     typelcurtpxftess = 'SPOC_only'
-    #liststrgmast = ['4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371']
-    liststrgmast = ['Mkn 421', 'Mkn 501', 'CGCG 050-083', '1RXS J234354.4+054713', '3C 371']
-    #listtsecsele = [26]
 
-    #listtimescalbdtrspln = [1. / 24, 1., 5.]
-    listtimescalbdtrspln = []
+    listtimescalbdtr = [[6.]]
+    #listtimescalbdtr = [1. / 24, 1., 5.]
+    listtimescalbdtr = []
     
     for strgmast in liststrgmast:
         miletos.main.init( \
                           strgmast=strgmast, \
                           strgclus=strgclus, \
                           typelcurtpxftess=typelcurtpxftess, \
-                          #listtsecsele=listtsecsele, \
-                          listtimescalbdtrspln=listtimescalbdtrspln, \
+                          listtimescalbdtr=listtimescalbdtr, \
                           dictlygoinpt=dictlygoinpt, \
+                          dictfitt=dictfitt, \
                          )
 
 
@@ -534,51 +563,6 @@ def cnfg_PhotCalibPPAStars():
                        #boolplotpopl=True, \
                       )
 
-
-def cnfg_ADAP2022_AGNs():
-    '''
-    ADAP 2022 AGN targets with Manel et al.
-    '''
-    path = os.environ['LYGOS_DATA_PATH'] + '/data/interesting_blazars_CVZ.txt'
-    print('Reading from %s...' % path)
-    dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
-    
-    listname = []
-    for strg in dictagns['_Search_Offset               ']:
-        listname.append(strg.split('(')[1].split(')')[0])
-    print('listname')
-    print(listname)
-
-    #listname = [ \
-    #           #'BL Lacertae', \
-    #           #'Mkn 501', 'PKS 2155-304', \
-    #           #'Mkn 421', \
-    #           
-    #           # CCD edge
-    #           '3C 279', \
-    #           
-    #           # no data
-    #           #'3C 454.3', \
-    #           #'PG 1553+113', \
-    #           #'PKS 1502+106', \
-    #           ]
-    
-    dictlygoinpt = dict()
-    dictlygoinpt['typepsfninfe'] = 'fixd'
-    
-    #dictlygoinpt['numbside'] = 25
-    
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'agns'
-    
-    for name in listname:
-        miletos.main.init( \
-                   strgclus='ADAP2022_AGNs', \
-                   strgmast=name, \
-                   dictfitt=dictfitt, \
-                   dictlygoinpt=dictlygoinpt, \
-                  )
-    
 
 def cnfg_WhiteDwarfs_Candidates_TESS_GI():
     
@@ -1386,9 +1370,9 @@ def cnfg_ASASSN20qc():
     listnumbside = [7, 11, 15]
     for numbside in listnumbside:
         if numbside == 11:
-            listtimescalbdtrspln = [0., 0.1, 0.5]
+            listtimescalbdtr = [0., 0.1, 0.5]
         else:
-            listtimescalbdtrspln = [0.]
+            listtimescalbdtr = [0.]
         miletos.main.init( \
                       labltarg=labltarg, \
                       rasctarg=rasctarg, \
