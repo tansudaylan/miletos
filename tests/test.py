@@ -131,7 +131,7 @@ def cnfg_TICsFromGV():
 
 def cnfg_FermiLAT():
     '''
-    Targets drawn from Fermi-LAT data with Manel and Banfsheh
+    Targets drawn from Fermi-LAT data with Manel and Banafsheh
     '''
 
     # Blazars for ADAP 2022
@@ -169,6 +169,7 @@ def cnfg_FermiLAT():
     liststrgmast = []
     path = os.environ['MILETOS_DATA_PATH'] + '/data/ListVariability_AssN_BanafshehManel.txt'
     k = 0
+    print('Reading from %s...' % path)
     for line in open(path, 'r'):
         if k == 0:
             k += 1

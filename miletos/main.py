@@ -8562,7 +8562,12 @@ def init( \
         # get observation tables
         if typeverb > 0:
             print('Querying the MAST for observation tables with MAST keyword %s within %g arcseconds...' % (strgmasttemp, maxmradisrchmast))
-        listtablobsv = astroquery.mast.Observations.query_object(strgmasttemp, radius=strgradi)
+        try:
+            listtablobsv = astroquery.mast.Observations.query_object(strgmasttemp, radius=strgradi)
+        except:
+            print('MAST search failed. Will quit.')
+            return gdat.dictmileoutp
+        
         print('Found %d tables...' % len(listtablobsv))
         listname = list(listtablobsv.keys())
         
@@ -9970,6 +9975,13 @@ def init( \
         else:
             gdat.fitt.listdictmlik = []
 
+    if gdat.booldiag:
+        if gdat.boolsimurflx and gdat.typesourparasimucomp == 'exar' and gdat.true.boolmodlpsys and not hasattr(gdat.true, 'epocmtracomp'):
+            print('')
+            print('')
+            print('')
+            raise Exception('')
+        
     if gdat.boolsimurflx:
     
         init_modl(gdat, 'true')
@@ -9983,7 +9995,16 @@ def init( \
                 timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.maxmtimeconc[0]) 
                 tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
                 tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.) # [1 hour]
-                
+        
+        if gdat.booldiag:
+            if gdat.typesourparasimucomp == 'exar' and gdat.true.boolmodlpsys and not hasattr(gdat.true, 'epocmtracomp'):
+                print('')
+                print('')
+                print('')
+                raise Exception('')
+        
+        print('gdat.typesourparasimucomp')
+        print(gdat.typesourparasimucomp)
         setp_modlbase(gdat, 'true')
         
         if gdat.booldiag:
