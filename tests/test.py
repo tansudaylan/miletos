@@ -43,6 +43,21 @@ def cnfg_TOI_multis():
                       )
 
 
+def cnfg_TOI1410():
+    '''
+    SPACE Program
+    '''
+
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'PlanetarySystem'
+    
+    miletos.main.init( \
+                       toiitarg=1410, \
+                       typeplotback='black', \
+                       dictfitt=dictfitt, \
+                      )
+
+
 def cnfg_Interesting_TICs_PlanetarySystem():
     
     # include

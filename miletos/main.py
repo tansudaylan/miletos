@@ -302,6 +302,10 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
+                
+                if strgmodl == 'true' and gdat.liststrgtypedata[b][p] == 'obsd':
+                    continue
+
                 if isinstance(time[b][p], list):
                     print('')
                     print('')
@@ -529,13 +533,18 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
         
     # baseline
     if gmod.typemodlblinshap == 'cons':
-        for p in gdat.indxinst[0]:
-            dictlistmodl['Baseline'][0][p] = np.ones((time[0][p].size, gdat.numbener[p]))
-            if gdat.numbener[p] > 1 and gmod.typemodlblinener[p] == 'ener':
-                for e in gdat.indxener[p]:
-                    dictlistmodl['Baseline'][0][p][:, e] += dictparainpt['consblinener%04d' % e] * 1e-3 * np.ones_like(time[0][p])
-            else:
-                dictlistmodl['Baseline'][0][p][:, 0] += dictparainpt['consblin%s' % gdat.liststrginst[0][p]] * 1e-3 * np.ones_like(time[0][p])
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                
+                if strgmodl == 'true' and gdat.liststrgtypedata[b][p] == 'obsd':
+                    continue
+
+                dictlistmodl['Baseline'][b][p] = np.ones((time[b][p].size, gdat.numbener[p]))
+                if gdat.numbener[p] > 1 and gmod.typemodlblinener[p] == 'ener':
+                    for e in gdat.indxener[p]:
+                        dictlistmodl['Baseline'][b][p][:, e] += dictparainpt['consblinener%04d' % e] * 1e-3 * np.ones_like(time[b][p])
+                else:
+                    dictlistmodl['Baseline'][b][p][:, 0] += dictparainpt['consblin%s' % gdat.liststrginst[b][p]] * 1e-3 * np.ones_like(time[b][p])
     
     elif gmod.typemodlblinshap == 'step':
         for p in gdat.indxinst[0]:
@@ -2747,11 +2756,21 @@ def plot_popl(gdat, strgpdfn):
         axis.axvline(xposmedi, color=gdat.listcolrcomp[j], ls='--', label=gdat.liststrgcomp[j])
         axis.text(0.7, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], \
                                                                                     va='center', ha='center', transform=axis.transAxes)
+    
+    if typeplotback == 'white':
+        colrbkgd = 'white'
+        colrdraw = 'black'
+    elif typeplotback == 'black':
+        colrbkgd = 'black'
+        colrdraw = 'white'
+    
+    # plot the occurrence rate
     xerr = (timeoccu[1:] - timeoccu[:-1]) / 2.
     xerr = np.concatenate([xerr[0, None], xerr])
-    axis.errorbar(timeoccu, occumean, yerr=occuyerr, xerr=xerr, color='black', ls='', marker='o', lw=1, zorder=10)
+    axis.errorbar(timeoccu, occumean, yerr=occuyerr, xerr=xerr, color=colrdraw, ls='', marker='o', lw=1, zorder=10)
     axis.set_xlabel('Radius [$R_E$]')
     axis.set_ylabel('Occurrence rate of planets per star')
+    
     plt.subplots_adjust(bottom=0.2)
     plt.subplots_adjust(left=0.2)
     path = pathvisufeatplan + 'occuradi_%s_%s.%s' % (gdat.strgtarg, strgpdfn, gdat.typefileplot)
@@ -3037,7 +3056,7 @@ def plot_popl(gdat, strgpdfn):
                     normfact = 1.
                 varbtargnorm = varbtarg / normfact
                 varbnorm = varb[indx] / normfact
-                axis.scatter(varbnorm, dictpopl['numbplanstar'][indx], s=1, color='black')
+                axis.scatter(varbnorm, dictpopl['numbplanstar'][indx], s=1, color=colrdraw)
                 
                 indxsort = np.argsort(varbnorm)
                 if b == 2 or b == 3:
@@ -3056,8 +3075,8 @@ def plot_popl(gdat, strgpdfn):
                     cntr += 1
                     if len(listnameaddd) == maxmnumbname: 
                         break
-                axis.scatter(varbtargnorm, gmod.numbcomp, s=5, color='black', marker='x')
-                axis.text(varbtargnorm, gmod.numbcomp + 0.5, gdat.labltarg, size=8, color='black', \
+                axis.scatter(varbtargnorm, gmod.numbcomp, s=5, color=colrdraw, marker='x')
+                axis.text(varbtargnorm, gmod.numbcomp + 0.5, gdat.labltarg, size=8, color=colrdraw, \
                                                                                             va='center', ha='center', rotation=45)
                 axis.set_ylabel(r'Number of transiting planets')
                 axis.set_xlabel(lablxaxi)
@@ -3071,8 +3090,8 @@ def plot_popl(gdat, strgpdfn):
 
                 figr, axis = plt.subplots(figsize=gdat.figrsize)
                 axis.hist(varbnorm, 50)
-                axis.axvline(varbtargnorm, color='black', ls='--')
-                axis.text(0.3, 0.9, gdat.labltarg, size=8, color='black', transform=axis.transAxes, va='center', ha='center')
+                axis.axvline(varbtargnorm, color=colrdraw, ls='--')
+                axis.text(0.3, 0.9, gdat.labltarg, size=8, color=colrdraw, transform=axis.transAxes, va='center', ha='center')
                 axis.set_ylabel(r'Number of systems')
                 axis.set_xlabel(lablxaxi)
                 plt.subplots_adjust(bottom=0.2)
@@ -3552,7 +3571,10 @@ def plot_tser_mile_core(gdat, strgmodl, strgarry, b, p, y=None, boolcolrtran=Tru
         else:
             axis.set_ylabel(gdat.listlabltser[b])
         titl = retr_tsertitl(gdat, b, p, y=y)
-    
+        
+        if gdat.typeplotback == 'black':
+            axis.set_facecolor('black')
+
         axis.set_title(titl)
         plt.subplots_adjust(bottom=0.2)
         
@@ -5752,7 +5774,7 @@ def srch_pbox(arry, \
                     axis.set_ylabel('Power')
                     axis.set_xlabel('Period [days]')
                     axis.set_xscale('log')
-                    axis.plot(dictpboxinte['listperi'], dictpboxinte['list' + strg], color='black', lw=0.5)
+                    axis.plot(dictpboxinte['listperi'], dictpboxinte['list' + strg], color=colrdraw, lw=0.5)
                     axis.set_title(strgtitl)
                     plt.subplots_adjust(bottom=0.2)
                     path = dictpathplot[strg][j]
@@ -7784,6 +7806,9 @@ def init( \
          # Boolean flag to diagnose the code using potentially computationally-expensive sanity checks, which may slow down the execution
          booldiag=True, \
          
+         # type of plot background
+         typeplotback='white', \
+
          # type of verbosity
          ## -1: absolutely no text
          ##  0: no text output except critical warnings
@@ -9388,6 +9413,10 @@ def init( \
             print('')
             print('gdat.dicttrue')
             print(gdat.dicttrue)
+            print('gdat.toiitarg')
+            print(gdat.toiitarg)
+            print('gdat.dicttoiitarg')
+            print(gdat.dicttoiitarg)
             print('gdat.boolexar')
             print(gdat.boolexar)
             print('gdat.boolexof')
@@ -10111,6 +10140,8 @@ def init( \
         print(dictparainpt)
         print('gdat.true.typemodl')
         print(gdat.true.typemodl)
+        print('gdat.liststrgtypedata')
+        print(gdat.liststrgtypedata)
         gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
         
         print('gdat.true.dictmodl')
