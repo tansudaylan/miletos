@@ -120,7 +120,7 @@ def cnfg_FermiLAT():
     '''
 
     # Blazars for ADAP 2022
-    path = os.environ['LYGOS_DATA_PATH'] + '/data/interesting_blazars_CVZ.txt'
+    path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_variability/interesting_blazars_CVZ.txt'
     print('Reading from %s...' % path)
     dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
     
