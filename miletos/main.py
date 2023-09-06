@@ -9662,6 +9662,16 @@ def init( \
             gdat.kmagsyst = listdictticinear[0]['Kmag']
             gdat.vmagsyst = listdictticinear[0]['Vmag']
     
+    # to be deleted
+    #if gdat.booldiag:
+    #    if gdat.boolsimurflx and gdat.typesourparasimucomp == 'exar' and gdat.true.boolmodlpsys and not hasattr(gdat, 'epocmtracompprio'):
+    #        print('')
+    #        print('')
+    #        print('')
+    #        print('gdat.true.boolmodlpsys')
+    #        print(gdat.true.boolmodlpsys)
+    #        raise Exception('gdat.boolsimurflx and gdat.typesourparasimucomp == exar and gdat.true.boolmodlpsys and not hasattr(gdat.true, epocmtracompprio)')
+        
     # list of strings to be attached to file names for each energy bin
     gdat.liststrgener = [[] for p in gdat.indxinst[0]]
     
@@ -9820,7 +9830,7 @@ def init( \
                             delttime = cade / 60. / 24. # [day]
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
-                        elif gdat.liststrginst[b][p].startswith('TGEO'):
+                        elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
                             print('temp')
                             cade = 40. / 60. # [min]
                             delttime = cade / 60. / 24. # [day]
@@ -9975,13 +9985,6 @@ def init( \
         else:
             gdat.fitt.listdictmlik = []
 
-    if gdat.booldiag:
-        if gdat.boolsimurflx and gdat.typesourparasimucomp == 'exar' and gdat.true.boolmodlpsys and not hasattr(gdat.true, 'epocmtracomp'):
-            print('')
-            print('')
-            print('')
-            raise Exception('')
-        
     if gdat.boolsimurflx:
     
         init_modl(gdat, 'true')
@@ -9995,13 +9998,6 @@ def init( \
                 timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.maxmtimeconc[0]) 
                 tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
                 tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.) # [1 hour]
-        
-        if gdat.booldiag:
-            if gdat.typesourparasimucomp == 'exar' and gdat.true.boolmodlpsys and not hasattr(gdat.true, 'epocmtracomp'):
-                print('')
-                print('')
-                print('')
-                raise Exception('')
         
         print('gdat.typesourparasimucomp')
         print(gdat.typesourparasimucomp)
@@ -10211,7 +10207,7 @@ def init( \
                                     print(gdat.tmagsyst)
                                     raise Exception('When synthetic TESS data is being generated, tmagsyst should not be None.')
                             nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
-                        elif gdat.liststrginst[b][p].startswith('TGEO'):
+                        elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
                             nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
                         else:
                             raise Exception('')
