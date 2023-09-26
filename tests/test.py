@@ -133,41 +133,43 @@ def cnfg_FermiLAT():
     '''
     Targets drawn from Fermi-LAT data with Manel and Banafsheh
     '''
-
-    # Blazars for ADAP 2022
-    path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_variability/interesting_blazars_CVZ.txt'
-    print('Reading from %s...' % path)
-    dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
-    
-    listname = []
-    for strg in dictagns['_Search_Offset               ']:
-        listname.append(strg.split('(')[1].split(')')[0])
-    print('listname')
-    print(listname)
-
-    liststrgmast = [ \
-               'BL Lacertae', \
-               'PKS 2155-304', \
-               
-               # CCD edge
-               '3C 279', \
-               
-               # no data
-               '3C 454.3', \
-               'PG 1553+113', \
-               'PKS 1502+106', \
-               '4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371', 'Mkn 421', 'Mkn 501', \
-               'CGCG 050-083', '1RXS J234354.4+054713', \
-               ]
-    
-    dictlygoinpt = dict()
-    dictlygoinpt['typepsfninfe'] = 'fixd'
-    
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'AGN'
     
     liststrgmast = []
-    path = os.environ['MILETOS_DATA_PATH'] + '/data/ListVariability_AssN_BanafshehManel.txt'
+
+    ## Blazars for ADAP 2022
+    #path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/interesting_blazars_CVZ.txt'
+    #print('Reading from %s...' % path)
+    #dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
+    #for strg in dictagns['_Search_Offset               ']:
+    #    liststrgmast.append(strg.split('(')[1].split(')')[0])
+
+    #
+    #liststrgmast.extend([ \
+    #           'BL Lacertae', \
+    #           'PKS 2155-304', \
+    #           
+    #           # CCD edge
+    #           '3C 279', \
+    #           
+    #           # no data
+    #           '3C 454.3', \
+    #           'PG 1553+113', \
+    #           'PKS 1502+106', \
+    #           '4FGL J1800.6+7828', '4FGL J1700.0+6830', '4FGL J1821.6+6819', '4FGL J0601.1-7035', '4FGL J1748.6+7005', '3C 371', 'Mkn 421', 'Mkn 501', \
+    #           'CGCG 050-083', '1RXS J234354.4+054713', \
+    #           ])
+    #
+    #path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/.txt'
+    #k = 0
+    #print('Reading from %s...' % path)
+    #for line in open(path, 'r'):
+    #    if k == 0:
+    #        k += 1
+    #        continue
+    #    liststrgmast.append(line[1:18])
+    #    k += 1
+    
+    path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/BLLac.txt'
     k = 0
     print('Reading from %s...' % path)
     for line in open(path, 'r'):
@@ -177,9 +179,16 @@ def cnfg_FermiLAT():
         liststrgmast.append(line[1:18])
         k += 1
 
+
     numbtarg = len(liststrgmast)
     print('Extracting the TESS light curves of Fermi-LAT AGNs...')
     print('Number of targets: %d' % numbtarg)
+    
+    dictlygoinpt = dict()
+    dictlygoinpt['typepsfninfe'] = 'fixd'
+    
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'AGN'
     
     dictlygoinpt = dict()
     dictlygoinpt['boolutiltpxf'] = False
