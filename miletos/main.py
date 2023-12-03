@@ -1640,7 +1640,7 @@ def proc_alle(gdat, typemodl):
                     
                 if gdat.typeverb > 0:
                     print('Writing to %s...' % path)
-                np.savetxt(path, listarrytserbdtrtemp, delimiter=',', header=gdat.strgheadtser)
+                np.savetxt(path, listarrytserbdtrtemp, delimiter=',', header=gdat.strgheadtser[b])
     
     ## params_star
     pathparastar = gdat.pathalle[typemodl] + 'params_star.csv'
@@ -1910,7 +1910,7 @@ def proc_alle(gdat, typemodl):
             if not os.path.exists(path):
                 if gdat.typeverb > 0:
                     print('Writing to %s...' % path)
-                np.savetxt(path, gdat.arrytser['modl'+typemodl][b][p], delimiter=',', header=gdat.strgheadtser)
+                np.savetxt(path, gdat.arrytser['modl'+typemodl][b][p], delimiter=',', header=gdat.strgheadtser[b])
 
     # number of samples to plot
     gdat.arrypcur['primbdtr'+typemodl] = [[[[] for j in gmod.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
@@ -2099,7 +2099,7 @@ def proc_alle(gdat, typemodl):
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, typemodl)][b][p][j], delimiter=',', header=gdat.strgheadpser)
+                        np.savetxt(path, gdat.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, typemodl)][b][p][j], delimiter=',', header=gdat.strgheadpser[b])
                     
                     if gdat.boolplot:
                         plot_pser(gdat, strgmodl, 'quad'+strgpcurcomp+typemodl, boolpost=boolpost)
@@ -7185,15 +7185,18 @@ def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5,
     return arryfold
 
 
-def read_tesskplr_fold(pathfold, pathwrit, boolmaskqual=True, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolnorm=None):
+def read_tesskplr_fold(pathfold, pathfoldsave, boolmaskqual=True, typeinst='TESS', strgtypelcur='PDCSAP_FLUX', boolnorm=None, liststrgtypelcursave=None):
     '''
     Reads all TESS or Kepler light curves in a folder and returns a data cube with time, flux and flux error.
     '''
-
+    
     listpath = fnmatch.filter(os.listdir(pathfold), '%s*' % typeinst)
     listarry = []
     for path in listpath:
-        arry = read_tesskplr_file(pathfold + path + '/' + path + '_lc.fits', typeinst=typeinst, strgtypelcur=strgtypelcur, boolmaskqual=boolmaskqual, boolnorm=boolnorm)
+        arry = read_tesskplr_file(pathfold + path + '/' + path + '_lc.fits', typeinst=typeinst, strgtypelcur=strgtypelcur, boolmaskqual=boolmaskqual, boolnorm=boolnorm, \
+                                  pathfoldsave=pathfoldsave, \
+                                  liststrgtypelcursave=liststrgtypelcursave, \
+                                 )
         listarry.append(arry)
     
     # merge sectors
@@ -7203,14 +7206,14 @@ def read_tesskplr_fold(pathfold, pathwrit, boolmaskqual=True, typeinst='tess', s
     indxsort = np.argsort(arry[:, 0])
     arry = arry[indxsort, :]
     
-    # save
-    pathoutp = '%s/%s.csv' % (pathwrit, typeinst)
-    np.savetxt(pathoutp, arry, delimiter=',')
-
     return arry 
 
 
-def read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolmaskqual=True, boolmasknann=True, boolnorm=None, booldiag=True, \
+def read_tesskplr_file(path, typeinst='TESS', strgtypelcur='PDCSAP_FLUX', boolmaskqual=True, boolmasknann=True, boolnorm=None, \
+                       
+                       booldiag=True, \
+                       pathfoldsave=None, \
+                       liststrgtypelcursave=None, \
                        # type of verbosity
                        ## -1: absolutely no text
                        ##  0: no text output except critical warnings
@@ -7229,6 +7232,9 @@ def read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolma
         print('Reading from %s...' % path)
     listhdun = astropy.io.fits.open(path)
     
+    if liststrgtypelcursave is None:
+        liststrgtypelcursave = ['SAP_FLUX', 'SAP_BKG']
+    
     tsec = listhdun[0].header['SECTOR']
     tcam = listhdun[0].header['CAMERA']
     tccd = listhdun[0].header['CCD']
@@ -7236,51 +7242,63 @@ def read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', boolma
     # Boolean flag indicating whether the target file is a light curve or target pixel file
     boollcur = 'lc.fits' in path
     
-    # indices of times where the quality flag is not raised (i.e., good quality)
-    if boollcur:
-        indxtimequalgood = np.where((listhdun[1].data['QUALITY'] == 0) & np.isfinite(listhdun[1].data[strgtypelcur]))[0]
-    else:
-        indxtimequalgood = np.where((listhdun[1].data['QUALITY'] == 0) & np.isfinite(listhdun[1].data['TIME']))[0]
-    time = listhdun[1].data['TIME']
-    
-    if boollcur:
-        strgtype = strgtypelcur
+    liststrgtypelcur = [strgtypelcur]
+    if liststrgtypelcursave is not None:
+        liststrgtypelcur += liststrgtypelcursave
 
-        time = listhdun[1].data['TIME'] + 2457000
-        if typeinst == 'TESS':
-            time += 2457000
-        if typeinst == 'kplr':
-            time += 2454833
-    
-        flux = listhdun[1].data[strgtype]
-        stdv = listhdun[1].data[strgtype+'_ERR']
-        #print(listhdun[1].data.names)
+    for strgtypelcur in liststrgtypelcur:
         
-        if boolmaskqual:
-            # filtering for good quality
-            if typeverb > 0:
-                print('Masking out bad data... %d temporal samples (%.3g%%) will survive.' % (indxtimequalgood.size, 100. * indxtimequalgood.size / time.size))
-            time = time[indxtimequalgood]
-            flux = flux[indxtimequalgood, ...]
-            if boollcur:
-                stdv = stdv[indxtimequalgood]
-    
-        numbtime = time.size
-        arry = np.empty((numbtime, 3))
-        arry[:, 0] = time
-        arry[:, 1] = flux
-        arry[:, 2] = stdv
+        # indices of times where the quality flag is not raised (i.e., good quality)
+        if boollcur:
+            indxtimequalgood = np.where((listhdun[1].data['QUALITY'] == 0) & np.isfinite(listhdun[1].data[strgtypelcur]))[0]
+        else:
+            indxtimequalgood = np.where((listhdun[1].data['QUALITY'] == 0) & np.isfinite(listhdun[1].data['TIME']))[0]
+        time = listhdun[1].data['TIME']
         
-        #indxtimenanngood = np.where(~np.any(np.isnan(arry), axis=1))[0]
-        #if boolmasknann:
-        #    arry = arry[indxtimenanngood, :]
+        if boollcur:
+
+            time = listhdun[1].data['TIME']
+            if typeinst == 'TESS':
+                time += 2457000
+            if typeinst == 'Kepler':
+                time += 2454833
         
-        # normalize
-        if boolnorm:
-            factnorm = np.median(arry[:, 1])
-            arry[:, 1] /= factnorm
-            arry[:, 2] /= factnorm
+            flux = listhdun[1].data[strgtypelcur]
+            stdv = listhdun[1].data[strgtypelcur+'_ERR']
+            #print(listhdun[1].data.names)
+            
+            if boolmaskqual:
+                # filtering for good quality
+                if typeverb > 0:
+                    print('Masking out bad data... %d temporal samples (%.3g%%) will survive.' % (indxtimequalgood.size, 100. * indxtimequalgood.size / time.size))
+                time = time[indxtimequalgood]
+                flux = flux[indxtimequalgood, ...]
+                if boollcur:
+                    stdv = stdv[indxtimequalgood]
         
+            numbtime = time.size
+            arry = np.empty((numbtime, 3))
+            arry[:, 0] = time
+            arry[:, 1] = flux
+            arry[:, 2] = stdv
+            
+            #indxtimenanngood = np.where(~np.any(np.isnan(arry), axis=1))[0]
+            #if boolmasknann:
+            #    arry = arry[indxtimenanngood, :]
+            
+            # normalize
+            if boolnorm:
+                factnorm = np.median(arry[:, 1])
+                arry[:, 1] /= factnorm
+                arry[:, 2] /= factnorm
+        
+        # save
+        if pathfoldsave is not None:
+            path = '%s%s_%s_Sector%02d.csv' % (pathfoldsave, typeinst, strgtypelcur, tsec)
+            print('Writing to %s...' % path)
+            np.savetxt(path, arry, delimiter=',', header='time, relative flux, relative flux error')
+        
+    if boollcur:
         return arry, tsec, tcam, tccd
     else:
         return listhdun, indxtimequalgood, tsec, tcam, tccd
@@ -8126,7 +8144,7 @@ def init( \
                         summgene(valu)
                         raise Exception('len(valu) == 0')
 
-    gdat.maxmradisrchmast = 10. # arcsec
+    gdat.maxmradisrchmast = 2. # arcsec
     gdat.strgradi = '%gs' % gdat.maxmradisrchmast
     
     if gdat.typeverb > 0:
@@ -8266,7 +8284,7 @@ def init( \
     if (gdat.typetarg == 'TICID' or gdat.typetarg == 'TOIID' or gdat.typetarg == 'MASTKey') and not gdat.boolsrchmastdone and not gdat.boolexecoffl:
         # temp -- check that the closest TIC to a given TIC is itself
         if gdat.typeverb > 0:
-            print('Querying the TIC within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source to the MAST keyword %s...' % (gdat.strgradi, gdat.strgmast))
+            print('Querying the TIC on MAST with keyword %s within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source...' % (gdat.strgmast, gdat.strgradi))
         listdictticinear = astroquery.mast.Catalogs.query_region(gdat.strgmast, radius=gdat.strgradi, catalog="TIC")
         gdat.boolsrchmastdone = True
         if gdat.typeverb > 0:
@@ -8535,9 +8553,6 @@ def init( \
         #if gdat.liststrginst is None:
         #    gdat.liststrginst = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
         
-        maxmradisrchmast = 10. # arcsec
-        strgradi = '%gs' % maxmradisrchmast
-        
         gdat.pathdatamast = os.environ['MAST_DATA_PATH'] + '/'
         os.system('mkdir -p %s' % gdat.pathdatamast)
         
@@ -8546,8 +8561,8 @@ def init( \
             ticitsec = None
             if gdat.ticitarg is None:
                 print('Will determine the TIC ID of the target using MAST keyword %s.' % strgmasttemp)
-                print('Querying the TIC for sources within %s of %s...' % (strgradi, strgmasttemp))
-                listdictticinear = astroquery.mast.Catalogs.query_object(strgmasttemp, catalog='TIC', radius=strgradi)
+                print('Querying the TIC on MAST with keyword %s for sources within %s of %s...' % (strgmasttemp, gdat.strgradi))
+                listdictticinear = astroquery.mast.Catalogs.query_object(strgmasttemp, catalog='TIC', radius=gdat.strgradi)
                 if len(listdictticinear) > 0 and listdictticinear[0]['dstArcSec'] < 1.:
                     print('TIC associated with the search is %d' % ticitsec)
                     ticitsec = int(listdictticinear[0]['ID'])
@@ -8561,11 +8576,12 @@ def init( \
         
         # get observation tables
         if typeverb > 0:
-            print('Querying the MAST for observation tables with MAST keyword %s within %g arcseconds...' % (strgmasttemp, maxmradisrchmast))
+            print('Querying observations on MAST with keyword %s within %g arcseconds...' % (strgmasttemp, gdat.maxmradisrchmast))
         try:
-            listtablobsv = astroquery.mast.Observations.query_object(strgmasttemp, radius=strgradi)
+            listtablobsv = astroquery.mast.Observations.query_object(strgmasttemp, radius=gdat.strgradi)
         except:
             print('MAST search failed. Will quit.')
+            print('')
             return gdat.dictmileoutp
         
         print('Found %d tables...' % len(listtablobsv))
@@ -8648,7 +8664,7 @@ def init( \
             #print('listtablobsv')
             #print(listtablobsv)
 
-            print('%d tables...' % len(listtablobsv[indx]))
+            print('Found %d tables...' % len(listtablobsv[indx]))
             
             if strgexprtemp == 'K2':
                 #print('K2 chunks')
@@ -8753,7 +8769,10 @@ def init( \
                         print('indxprodgood')
                         print(indxprodgood)
                         raise Exception('')
-            
+                
+                if indxprodgood.size == 0:
+                    print('No good product. Skipping the table...')
+
                 #print('listprod')
                 #for name in listname:
                 #    print(name)
@@ -8774,6 +8793,11 @@ def init( \
                 # download data from MAST
                 manifest = astroquery.mast.Observations.download_products(listprod[indxprodgood], download_dir=gdat.pathdatamast)
                 
+                ## make folders
+                for attr, valu in gdat.__dict__.items():
+                    if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
+                        os.system('mkdir -p %s' % valu)
+            
                 if manifest is not None:
                     for path in manifest['Local Path']:
                         print('Reading from %s...' % path)
@@ -8805,7 +8829,7 @@ def init( \
                             #    continue
 
                             arrylcur, tsec, tcam, tccd = \
-                                read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
+                                read_tesskplr_file(path, typeinst='TESS', strgtypelcur='PDCSAP_FLUX', pathfoldsave=gdat.pathdatatarg, \
                                                                          booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
                             
                             gdat.listtsecspoc.append(tsec)
@@ -8864,15 +8888,6 @@ def init( \
                                 for t in tqdm(range(numbtime)):
                                     arry[t, 0, 0] = np.mean(listtime[t][1:]) + 2400000
                                     numbener[t] = listhdun[t+2].data['WAVELENGTH'].size
-                                    print('numbener[t]')
-                                    print(numbener[t])
-                                    #print('')
-                                    #print('listhdun[%d+2].data[WAVELENGTH]' % t)
-                                    #summgene(listhdun[t+2].data['WAVELENGTH'])
-                                    #print('listhdun[%d+2].data[FLUX]' % t)
-                                    #summgene(listhdun[t+2].data['FLUX'])
-                                    #print('listhdun[%d+2].data[FLUX_ERROR]' % t)
-                                    #summgene(listhdun[t+2].data['FLUX_ERROR'])
                                     
                                     if gdat.booldiag:
                                         if listhdun[t+2].data['FLUX'].ndim != 1:
@@ -8889,21 +8904,9 @@ def init( \
                                         arry[t, :, 2] = listhdun[t+2].data['FLUX_ERROR']
                                 print('Writing to %s...' % pathmile)
                                 np.save(pathmile, arry)
-                            print('arry[:, :, 0]')
-                            summgene(arry[:, :, 0])
-                            print('arry[:, :, 1]')
-                            summgene(arry[:, :, 1])
-                            print('arry[:, :, 2]')
-                            summgene(arry[:, :, 2])
                             gdat.listarrylcurmast[mm] = [arry]
 
-                        print('')
-                        print('')
-                        print('')
                 cntrtess += 1
-            print('')
-            print('')
-            print('')
             
             if strgexprtemp == 'TESS':
                 gdat.listtsecspoc = np.array(gdat.listtsecspoc, dtype=int)
@@ -9278,37 +9281,9 @@ def init( \
 
     if gdat.numbdatagood == 0:
         print('No good data has been found. Will quit.')
+        print('')
         return gdat.dictmileoutp
         
-    if gdat.booltesskepl:
-        
-        if gdat.booltargpartanyy and len(gdat.listtsecspoc) > 0 and gdat.typelcurtpxftess == 'SPOC':
-            
-            ## read SPOC light curves
-            gdat.listarrylcurmastsapp = [[] for o in indxtsecspoc]
-            gdat.listarrylcurmastpdcc = [[] for o in indxtsecspoc]
-            
-            gdat.listtcamspoc = [[] for o in indxtsecspoc]
-            gdat.listtccdspoc = [[] for o in indxtsecspoc]
-            
-            for indx, tsecspoc in enumerate(gdat.listtsecspoc):
-                path = gdat.listpathspocmast[indx]
-                if typeverb > 0:
-                    print('Reading the SAP light curves...')
-                
-                gdat.listarrylcurmastsapp[indx], gdat.listtsecsapp[indx], gdat.listtcamspoc[indx], gdat.listtccdspoc[indx] = \
-                                       read_tesskplr_file(path, typeinst='tess', strgtypelcur='SAP_FLUX', \
-                                                                    booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
-                if typeverb > 0:
-                    print('Reading the PDC light curves...')
-                gdat.listarrylcurmastpdcc[indx], gdat.listtsecpdcc[indx], gdat.listtcamspoc[indx], gdat.listtccdspoc[indx] = \
-                                       read_tesskplr_file(path, typeinst='tess', strgtypelcur='PDCSAP_FLUX', \
-                                                                    booldiag=gdat.booldiag, boolmaskqual=gdat.boolmaskqual, boolnorm=gdat.boolnormphot)
-                    
-            # merge light curves from different sectors
-            arrylcursapp = np.concatenate([arry for arry in gdat.listarrylcurmastsapp if len(arry) > 0], 0)
-            arrylcurpdcc = np.concatenate([arry for arry in gdat.listarrylcurmastpdcc if len(arry) > 0], 0)
-    
     if gdat.typeverb > 1:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -9527,7 +9502,7 @@ def init( \
             setattr(gdat, 'pathvisufeatsyst' + strgpdfn, pathvisupdfn + 'featsyst/')
             setattr(gdat, 'pathvisudataplan' + strgpdfn, pathvisupdfn + 'dataplan/')
     
-    ## make folders
+    ## make folders again (needed because of path definitions since the last mkdir)
     for attr, valu in gdat.__dict__.items():
         if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
             os.system('mkdir -p %s' % valu)
@@ -10358,9 +10333,13 @@ def init( \
     gdat.listlabltser = [gdat.labltserphot, 'Radial Velocity [km/s]']
     gdat.liststrgdatatsercsvv = ['flux', 'rv']
     
-    gdat.strgheadtser = 'time,%s,%s_err' % (gdat.liststrgdatatsercsvv[b], gdat.liststrgdatatsercsvv[b])
-    gdat.strgheadpser = 'phase,%s,%s_err' % (gdat.liststrgdatatsercsvv[b], gdat.liststrgdatatsercsvv[b])
-
+    gdat.strgheadtserphot = 'time,%s,%s_err' % (gdat.liststrgdatatsercsvv[0], gdat.liststrgdatatsercsvv[0])
+    gdat.strgheadpserphot = 'phase,%s,%s_err' % (gdat.liststrgdatatsercsvv[0], gdat.liststrgdatatsercsvv[0])
+    gdat.strgheadtserrvel = 'time,%s,%s_err' % (gdat.liststrgdatatsercsvv[1], gdat.liststrgdatatsercsvv[1])
+    gdat.strgheadpserrvel = 'phase,%s,%s_err' % (gdat.liststrgdatatsercsvv[1], gdat.liststrgdatatsercsvv[1])
+    gdat.strgheadtser = [gdat.strgheadtserphot, gdat.strgheadtserrvel]
+    gdat.strgheadpser = [gdat.strgheadpserphot, gdat.strgheadpserrvel]
+    
     if gdat.offstextatmoraditmpt is None:
         gdat.offstextatmoraditmpt = [[0.3, -0.5], [0.3, -0.5], [0.3, -0.5], [0.3, 0.5]]
     if gdat.offstextatmoradimetr is None:
@@ -10471,7 +10450,7 @@ def init( \
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrytser['Raw'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser)
+                        np.savetxt(path, gdat.arrytser['Raw'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser[b])
                 
                 for y in gdat.indxchun[0][p]:
                     path = gdat.pathdatatarg + '%s_DataCube_%s_%s%s%s.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], gdat.liststrgchun[0][p][y], \
@@ -10479,7 +10458,7 @@ def init( \
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.listarrytser['Raw'][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
+                        np.savetxt(path, gdat.listarrytser['Raw'][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser[b])
     
     # obtain 'maskcust' (obtained after custom mask, if any) time-series bundle after applying user-defined custom mask, if any
     if gdat.listlimttimemask is not None:
@@ -10743,7 +10722,7 @@ def init( \
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.listarrytser[strgarrybdtr][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
+                        np.savetxt(path, gdat.listarrytser[strgarrybdtr][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser[0])
         
         # place the output of detrending into the baseline-detrended 'Detrended' light curve
         if gdat.listtimescalbdtr[0] == 0.:
@@ -10768,7 +10747,7 @@ def init( \
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.arrytser['Detrended'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser)
+                        np.savetxt(path, gdat.arrytser['Detrended'][0][p][:, e, :], delimiter=',', header=gdat.strgheadtser[0])
                 
                 for y in gdat.indxchun[0][p]:
                     path = gdat.pathdatatarg + '%s_DataCube_Detrended_%s_%s%s%s.csv' % (gdat.liststrgdatatser[0], gdat.liststrginst[0][p], \
@@ -10776,7 +10755,7 @@ def init( \
                     if not os.path.exists(path):
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
-                        np.savetxt(path, gdat.listarrytser['Detrended'][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser)
+                        np.savetxt(path, gdat.listarrytser['Detrended'][0][p][y][:, e, :], delimiter=',', header=gdat.strgheadtser[0])
     
         if gdat.boolplottser:
             for p in gdat.indxinst[0]:

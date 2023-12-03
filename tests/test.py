@@ -168,11 +168,23 @@ def cnfg_FermiLAT():
     #        continue
     #    liststrgmast.append(line[1:18])
     #    k += 1
-    
-    path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/BLLac.txt'
+
+    #path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/BLLac.txt'
+    #k = 0
+    #print('Reading from %s...' % path)
+    #for line in open(path, 'r'):
+    #    if k == 0:
+    #        k += 1
+    #        continue
+    #    liststrgmast.append(line[1:18])
+    #    k += 1
+
+
+    path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/AllNameListInfo_last.txt'
     k = 0
     print('Reading from %s...' % path)
-    for line in open(path, 'r'):
+    objtfile = open(path, 'r')
+    for line in objtfile:
         if k == 0:
             k += 1
             continue
@@ -201,7 +213,10 @@ def cnfg_FermiLAT():
     #listtimescalbdtr = [1. / 24, 1., 5.]
     listtimescalbdtr = []
     
-    for strgmast in liststrgmast:
+    numbtarg = len(liststrgmast)
+    for k, strgmast in enumerate(liststrgmast):
+        print('Target number: %d out of %d' % (k, numbtarg))
+        
         miletos.main.init( \
                           strgmast=strgmast, \
                           strgclus=strgclus, \
