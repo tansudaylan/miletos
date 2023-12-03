@@ -9974,17 +9974,31 @@ def init( \
                 tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
                 tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.) # [1 hour]
         
-        print('gdat.typesourparasimucomp')
-        print(gdat.typesourparasimucomp)
+        if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'psyspcur' or gdat.true.typemodl == 'psysttvr':
+            epocmtracomp = tdpy.icdf_self(np.random.rand(), np.amin(gdat.timeconcconc), np.amax(gdat.timeconcconc)) 
+            tdpy.setp_para_defa(gdat, 'true', 'epocmtracomp', epocmtracomp)
+        
+        if gdat.booldiag:
+            if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'psyspcur' or gdat.true.typemodl == 'psysttvr':
+                if not hasattr(gdat.true, 'epocmtracomp'):
+                    raise Exception('not hasattr(gdat.true, epocmtracomp')
+        
         setp_modlbase(gdat, 'true')
         
         if gdat.booldiag:
             if gdat.true.boolmodlcomp:
                 for j in gdat.true.indxcomp:
-                    print('gdat.true.listnameparacomp')
-                    print(gdat.true.listnameparacomp)
                     for namepara in gdat.true.listnameparacomp[j]:
-                        para = getattr(gdat.true, '%scomp' % namepara)
+                        strgparacomp = '%scomp' % namepara
+                        if not hasattr(gdat.true, strgparacomp):
+                            print('gdat.true.listnameparacomp')
+                            print(gdat.true.listnameparacomp)
+                            print('')
+                            print('')
+                            print('')
+                            raise Exception('')
+
+                        para = getattr(gdat.true, strgparacomp)
                         if len(para) == 0:
                             print('')
                             print('')
