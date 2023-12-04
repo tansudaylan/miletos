@@ -4557,6 +4557,15 @@ def setp_modlbase(gdat, strgmodl, h=None):
         else:
             gmod.numbcomp = 0
         
+        print('gdat.true.epocmtracomp')
+        print(gdat.true.epocmtracomp)
+        print('gmod.numbcomp')
+        print(gmod.numbcomp)
+        print('')
+        print('')
+        print('')
+        print('')
+        print('')
         if gdat.typeverb > 0:
             print('gmod.numbcomp')
             print(gmod.numbcomp)
@@ -4690,6 +4699,14 @@ def setp_modlbase(gdat, strgmodl, h=None):
         #gmod.listnameparasyst = []
 
         # list of companion parameter names
+        print('gmod.indxcomp')
+        print(gmod.indxcomp)
+        print('')
+        print('')
+        print('')
+        print('')
+        print('')
+        print('')
         gmod.listnameparacomp = [[] for j in gmod.indxcomp]
         for j in gmod.indxcomp:
             if gmod.typemodl == 'psysttvr':
@@ -4732,11 +4749,13 @@ def setp_modlbase(gdat, strgmodl, h=None):
         #if strgmodl == 'fitt' or strgmodl == 'true' and gmod.numbcomp > 0:
         for j in gmod.indxcomp:
             for namepara in gmod.listnameparacomp[j]:
-                if gdat.numbener[p] > 1:
+                if gmod.listnameparacomp[j] != 'rrat' or gmod.listnameparacomp[j] == 'rrat' and gdat.numbener[p] == 1:
                     gmod.dictindxpara[namepara + 'comp'] = np.empty(gmod.numbcomp, dtype=int)
-
-                if gdat.numbener[p] > 1 and gdat.fitt.typemodlenerfitt == 'full':
-                    gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
+                else:
+                    if gdat.numbener[p] > 1 and gdat.fitt.typemodlenerfitt == 'full':
+                        gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
+                    else:
+                        gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
     
         # limb darkening
         if gmod.typemodllmdkterm != 'none':
@@ -9959,6 +9978,11 @@ def init( \
             gdat.fitt.listdictsamp = []
         else:
             gdat.fitt.listdictmlik = []
+    
+    # gdat.epocmtracompprio may potentially be modified later, so this will need to be rerun
+    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr'):
+        gdat.numbcompprio = gdat.epocmtracompprio.size
+        gdat.indxcompprio = np.arange(gdat.numbcompprio)
 
     if gdat.boolsimurflx:
     
@@ -9974,29 +9998,44 @@ def init( \
                 tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
                 tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.) # [1 hour]
         
-        if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'psyspcur' or gdat.true.typemodl == 'psysttvr':
-            epocmtracomp = tdpy.icdf_self(np.random.rand(), np.amin(gdat.timeconcconc), np.amax(gdat.timeconcconc)) 
-            tdpy.setp_para_defa(gdat, 'true', 'epocmtracomp', epocmtracomp)
+        # probably to be deleted
+        #if gdat.booldiag:
+        #    if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'psyspcur' or gdat.true.typemodl == 'psysttvr':
+        #        if not hasattr(gdat.true, 'epocmtracomp'):
+        #            raise Exception('not hasattr(gdat.true, epocmtracomp')
         
-        if gdat.booldiag:
-            if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'psyspcur' or gdat.true.typemodl == 'psysttvr':
-                if not hasattr(gdat.true, 'epocmtracomp'):
-                    raise Exception('not hasattr(gdat.true, epocmtracomp')
+        # copy priors to the true elements
+        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
+            for j in gdat.true.indxcomp:
+                for namepara in gdat.true.listnameparacomp[j]:
+                    tdpy.setp_para_defa(gdat, 'true', '%scomp' % namepara, getattr(gdat, namepara + 'compprio'))
         
         setp_modlbase(gdat, 'true')
         
-        if gdat.booldiag:
+        if False and gdat.booldiag:
             if gdat.true.boolmodlcomp:
                 for j in gdat.true.indxcomp:
                     for namepara in gdat.true.listnameparacomp[j]:
                         strgparacomp = '%scomp' % namepara
                         if not hasattr(gdat.true, strgparacomp):
+                            print('')
+                            print('')
+                            print('')
+                            print('namepara')
+                            print(namepara)
+                            print('strgparacomp')
+                            print(strgparacomp)
                             print('gdat.true.listnameparacomp')
                             print(gdat.true.listnameparacomp)
-                            print('')
-                            print('')
-                            print('')
-                            raise Exception('')
+                            print('gdat.liststrgtypedata')
+                            print(gdat.liststrgtypedata)
+                            print('gdat.liststrginst')
+                            print(gdat.liststrginst)
+                            print('gdat.true.typemodl')
+                            print(gdat.true.typemodl)
+                            print('gdat.true.keys()')
+                            print(gdat.true.__dict__.keys())
+                            raise Exception('not hasattr(gdat.true, strgparacomp)')
 
                         para = getattr(gdat.true, strgparacomp)
                         if len(para) == 0:
@@ -10009,32 +10048,41 @@ def init( \
                             print(namepara)
                             raise Exception('A true component parameter is empty.')
             
-        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
-            if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
-                
-                numbcomp = gdat.numbcompprio
-                
-                if gdat.booldiag:
-                    if gdat.numbcompprio is None:
-                        print('')
-                        print('')
-                        print('')
-                        print('gdat.true.boolmodlpsys')
-                        print(gdat.true.boolmodlpsys)
-                        print('gdat.typepriocomp')
-                        print(gdat.typepriocomp)
-                        print('gdat.true.typemodl')
-                        print(gdat.true.typemodl)
-                        raise Exception('gdat.numbcompprio is None while generating true data.')
-            else:
-                numbcomp = 1
-            
-            tdpy.setp_para_defa(gdat, 'true', 'numbcomp', numbcomp)
+        #if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
+        #    print('gdat.numbcompprio')
+        #    print(gdat.numbcompprio)
+        #    print('gdat.typepriocomp')
+        #    print(gdat.typepriocomp)
+        #    if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
+        #        
+        #        numbcomp = gdat.numbcompprio
+        #        
+        #        if gdat.booldiag:
+        #            if gdat.numbcompprio is None:
+        #                print('')
+        #                print('')
+        #                print('')
+        #                print('gdat.true.boolmodlpsys')
+        #                print(gdat.true.boolmodlpsys)
+        #                print('gdat.typepriocomp')
+        #                print(gdat.typepriocomp)
+        #                print('gdat.true.typemodl')
+        #                print(gdat.true.typemodl)
+        #                raise Exception('gdat.numbcompprio is None while generating true data.')
+        #    else:
+        #        numbcomp = 1
+        #    print('numbcomp')
+        #    print(numbcomp)
+        #    #tdpy.setp_para_defa(gdat, 'true', 'numbcomp', numbcomp)
 
-            gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
+        #    #gdat.true.indxcomp = np.arange(gdat.true.numbcomp)
+        #    print('gdat.true.numbcomp')
+        #    print(gdat.true.numbcomp)
             
         if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
             for j in gdat.true.indxcomp:
+                
+                # copy "array" true element parameters to scalar true element parameters 
                 for namepara in gdat.true.listnameparacomp[j]:
                     paracomp = getattr(gdat.true, namepara + 'comp')
                     
@@ -10989,6 +11037,7 @@ def init( \
         #gdat.tserdatastdv = gdat.tserdatastdv[indxtimegood]
         #gdat.numbtime = gdat.time.size
 
+    # rerunning this as gdat.epocmtracompprio may have been modified
     if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr'):
         gdat.numbcompprio = gdat.epocmtracompprio.size
         gdat.indxcompprio = np.arange(gdat.numbcompprio)
