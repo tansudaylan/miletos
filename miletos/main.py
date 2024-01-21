@@ -972,12 +972,12 @@ def retr_llik_albbepsi(para, gdat):
 def retr_modl_spec(gdat, tmpt, boolthpt=False, strgtype='intg'):
     
     if boolthpt:
-        thpt = scipy.interpolate.interp1d(gdat.meanwlenband, gdat.thptband)(wlen)
+        thpt = scipy.interpolate.interp1d(gdat.cntrwlenband, gdat.thptband)(wlen)
     else:
         thpt = 1.
     
     if strgtype == 'intg':
-        spec = tdpy.retr_specbbod(tmpt, gdat.meanwlen)
+        spec = tdpy.retr_specbbod(tmpt, gdat.cntrwlen)
         spec = np.sum(gdat.diffwlen * spec)
     if strgtype == 'diff' or strgtype == 'logt':
         spec = tdpy.retr_specbbod(tmpt, gdat.cntrwlen)
@@ -1489,7 +1489,7 @@ def calc_feat(gdat, strgpdfn):
         wlenctrb = np.loadtxt(path, skiprows=1)
    
         ### spectrum of the host star
-        gdat.meanwlenthomraww = arrymodl[:, 0]
+        gdat.cntrwlenthomraww = arrymodl[:, 0]
         gdat.specstarthomraww = arrymodl[:, 9]
         
         ## calculate the geometric albedo "informed" by the ATMO posterior
@@ -1533,21 +1533,16 @@ def calc_feat(gdat, strgpdfn):
             
             if not (k == 0 or k == gdat.numbdatatmpt - 1):
                 continue
-            gdat.minmwlen = arrydata[k, 0] - arrydata[k, 1]
-            gdat.maxmwlen = arrydata[k, 0] + arrydata[k, 1]
-            gdat.binswlen = np.linspace(gdat.minmwlen, gdat.maxmwlen, 100)
-            gdat.meanwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
-            gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
-            gdat.cntrwlen = np.mean(gdat.meanwlen)
+            gdat.meanwlen = np.mean(gdat.cntrwlen)
             strgextn = 'tmpt_%d' % k
             gdat.indxenerdata = k
 
             gdat.specstarintg = retr_modl_spec(gdat, gdat.tmptstar, strgtype='intg')
             
-            gdat.specstarthomlogt = scipy.interpolate.interp1d(gdat.meanwlenthomraww, gdat.specstarthomraww)(gdat.cntrwlen)
+            gdat.specstarthomlogt = scipy.interpolate.interp1d(gdat.cntrwlenthomraww, gdat.specstarthomraww)(gdat.cntrwlen)
             gdat.specstarthomdiff = gdat.specstarthomlogt / gdat.cntrwlen
             gdat.specstarthomintg = np.sum(gdat.diffwlen * \
-                                    scipy.interpolate.interp1d(gdat.meanwlenthomraww, gdat.specstarthomraww)(gdat.meanwlen) / gdat.meanwlen)
+                                    scipy.interpolate.interp1d(gdat.cntrwlenthomraww, gdat.specstarthomraww)(gdat.cntrwlen) / gdat.cntrwlen)
 
             gdat.deptobsd = arrydata[k, 2]
             gdat.stdvdeptobsd = arrydata[k, 3]
@@ -2521,7 +2516,7 @@ def proc_alle(gdat, typemodl):
                     axis[0].set_ylabel(r'$\nu F_{\nu}$ [10$^9$ erg/s/cm$^2$]')
                     axis[0].legend(fancybox=True, bbox_to_anchor=[0.7, 0.22, 0.2, 0.2])
                     axistwin = axis[0].twinx()
-                    axistwin.plot(gdat.meanwlenband, gdat.thptband, color='grey', ls='--', label='TESS')
+                    axistwin.plot(gdat.cntrwlenband, gdat.thptband, color='grey', ls='--', label='TESS')
                     axistwin.set_ylabel(r'Throughput')
                     
                     ## secondary eclipse depths
@@ -2602,7 +2597,7 @@ def proc_alle(gdat, typemodl):
                     ctrb = np.loadtxt(path)
                     presctrb = ctrb[0, :]
                     # interpolate the throughput
-                    gdat.thptbandctrb = scipy.interpolate.interp1d(gdat.meanwlenband, gdat.thptband, fill_value=0, bounds_error=False)(wlenctrb)
+                    gdat.thptbandctrb = scipy.interpolate.interp1d(gdat.cntrwlenband, gdat.thptband, fill_value=0, bounds_error=False)(wlenctrb)
                     numbwlenctrb = wlenctrb.size
                     indxwlenctrb = np.arange(numbwlenctrb)
                     numbpresctrb = presctrb.size
@@ -4735,14 +4730,13 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 setattr(gmod, namepara + 'comp', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
                     
         if strgmodl == 'true':
-            # determine priors for model component parameters when the target is synthetic
-            if gdat.booltargsynt:
-                for namepara in gdat.true.listnameparacomp[j]:
-                    setattr(gdat, namepara + 'compprio', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
-                    
-            # copy array base component parameters of the true model to scalar base parameters 
             for j in gdat.true.indxcomp:
-                
+                # determine priors for model component parameters when the target is synthetic
+                if gdat.booltargsynt:
+                    for namepara in gdat.true.listnameparacomp[j]:
+                        setattr(gdat, namepara + 'compprio', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
+                    
+                # copy array base component parameters of the true model to scalar base parameters 
                 for namepara in gdat.true.listnameparacomp[j]:
                     paracomp = getattr(gdat.true, namepara + 'comp')
                     
@@ -7828,6 +7822,11 @@ def init( \
          declstar=None, \
          vsiistar=None, \
          
+         # distance to the system
+         distsyst=None, \
+
+         # magnitudes
+         ## TESS
          tmagsyst=None, \
          umagsyst=None, \
          gmagsyst=None, \
@@ -8000,8 +7999,24 @@ def init( \
             print(gdat.dicttrue)
             raise Exception('Some of the data are simulated, but dicttrue does not have typemodl.')
         
-        # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
         if gdat.booltargsynt:
+            
+            # determine magnitudes
+            if gdat.distsyst is not None and gdat.tmptstar is not None:
+                
+
+                # define spectral grid (this may need to be taken outside the if statements for other purposes)
+                gdat.minmwlen = 0.1
+                gdat.maxmwlen = 10.
+                gdat.numbwlen = 100
+                gdat.binswlen = np.linspace(gdat.minmwlen, gdat.maxmwlen, gdat.numbwlen)
+                gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
+                gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
+                
+                gdat.fluxsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen) / gdat.distsyst**2
+                gdat.tmagsyst = -2.5 * np.log10(gdat.fluxsyst)
+
+            # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     if gdat.liststrgtypedata[b][p] != 'simutargsynt':
@@ -10253,19 +10268,19 @@ def init( \
             for p in gdat.indxinst[b]:
                 for y in gdat.indxchun[b][p]:
                     
+                    if gdat.booldiag:
+                        if len(gdat.listarrytser['Raw'][b][p][y]) == 0:
+                            print('')
+                            print('')
+                            print('')
+                            raise Exception('len(gdat.listarrytser[Raw][b][p][y]) == 0')
+
                     if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
                         if gdat.numbchun[b][p] > 1:
                             raise Exception('')
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] += gdat.true.dictmodl['Total'][0][p]
                     
                     if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt':
-
-                        print('gdat.true.dictmodl[Total][0][p]')
-                        summgene(gdat.true.dictmodl['Total'][0][p])
-                        print('gdat.true.dictmodl[Total][0][p][y]')
-                        summgene(gdat.true.dictmodl['Total'][0][p][y])
-                        print('gdat.true.listtime[b][p][y]')
-                        summgene(gdat.true.listtime[b][p][y])
 
                         # noise per cadence
                         if gdat.liststrginst[b][p].startswith('LSST'):
@@ -10276,6 +10291,7 @@ def init( \
                             magt = getattr(gdat, '%smagsyst' % strgband)
                             nois = nicomedia.retr_noislsst(magt) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS'):
+                            
                             if gdat.booldiag:
                                 if gdat.tmagsyst is None:
                                     print('')
@@ -10286,12 +10302,14 @@ def init( \
                                     print('gdat.tmagsyst')
                                     print(gdat.tmagsyst)
                                     raise Exception('When synthetic TESS data is being generated, tmagsyst should not be None.')
+                            
                             nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
                             nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
                         else:
                             raise Exception('')
-                        
+                        print('gdat.listarrytser[Raw][b][p][y]')
+                        print(gdat.listarrytser['Raw'][b][p][y])
                         gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-3 * nois
                         
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] = gdat.true.dictmodl['Total'][0][p]
@@ -11519,9 +11537,9 @@ def init( \
             if gdat.typeverb > 0:
                 print('Assuming TESS passband for estimating Dopller beaming...')
             gdat.binswlenbeam = np.linspace(0.6, 1., 101)
-            gdat.meanwlenbeam = (gdat.binswlenbeam[1:] + gdat.binswlenbeam[:-1]) / 2.
+            gdat.cntrwlenbeam = (gdat.binswlenbeam[1:] + gdat.binswlenbeam[:-1]) / 2.
             gdat.diffwlenbeam = (gdat.binswlenbeam[1:] - gdat.binswlenbeam[:-1]) / 2.
-            x = 2.248 / gdat.meanwlenbeam
+            x = 2.248 / gdat.cntrwlenbeam
             gdat.funcpcurmodu = .25 * x * np.exp(x) / (np.exp(x) - 1.)
             gdat.consbeam = np.sum(gdat.diffwlenbeam * gdat.funcpcurmodu)
 
@@ -11657,7 +11675,7 @@ def init( \
     
         ## TESS throughput 
         gdat.data = np.loadtxt(gdat.pathdatatarg + 'band.csv', delimiter=',', skiprows=9)
-        gdat.meanwlenband = gdat.data[:, 0] * 1e-3
+        gdat.cntrwlenband = gdat.data[:, 0] * 1e-3
         gdat.thptband = gdat.data[:, 1]
     
     if gdat.boolsrchpbox and not gdat.dictmileoutp['boolposianls'].any():

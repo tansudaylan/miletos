@@ -334,7 +334,14 @@ def cnfg_TESSGEO():
                      'ULTRASAT'], []]
     
     miletos.init( \
-         strgmast='Sirius', \
+         strgmast='SimulatedStar', \
+         
+         # temperature of the star [K]
+         tmptstar=6000., \
+         
+         # distance to the star [parsec]
+         distsyst=10, \
+
          dicttrue=dicttrue, \
          listlablinst=listlablinst, \
          liststrgtypedata=liststrgtypedata, \
