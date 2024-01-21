@@ -20,8 +20,11 @@ import nicomedia
 
 
 def cnfg_TOIs():
-    
-    for k in range(101, 5000):
+    '''
+    Analyze all TOIs
+    '''
+
+    for k in range(101, 7000):
         miletos.main.init( \
                    toiitarg=k, \
                    strgclus='TOIs', \
@@ -53,7 +56,6 @@ def cnfg_TOI1410():
     
     miletos.main.init( \
                        toiitarg=1410, \
-                       typeplotback='black', \
                        dictfitt=dictfitt, \
                       )
 
@@ -294,13 +296,16 @@ def cnfg_TOI2406():
 
 def cnfg_ULTRASAT():
     
+    dicttrue = dict()
+    dicttrue['typemodl'] = 'StarFlaring'
+    
     dictlygoinpt = dict()
     dictlygoinpt['numbside'] = 51
     dictlygoinpt['maxmtmagcatl'] = 9.
-    liststrgtypedata = [['simutargpartinje', ''], []]
+    liststrgtypedata = [['simutargpartinje', 'simutargpartsynt'], []]
     miletos.init( \
          strgmast='Sirius', \
-         booldiag=True, \
+         dicttrue=dicttrue, \
          listlablinst=[['TESS', 'ULTRASAT'], []], \
          liststrgtypedata=liststrgtypedata, \
          dictlygoinpt=dictlygoinpt, \
@@ -309,13 +314,29 @@ def cnfg_ULTRASAT():
 
 def cnfg_TESSGEO():
     
+    dicttrue = dict()
+    dicttrue['typemodl'] = 'PlanetarySystemWithPhaseCurve'
+    
     dictlygoinpt = dict()
     dictlygoinpt['numbside'] = 51
-    liststrgtypedata = [['simutargpartinje', ''], []]
+    
+    liststrgtypedata = [[ \
+                         'simutargsynt', \
+                         'simutargsynt', \
+                         'simutargsynt', \
+                         #'simutargpartsynt', \
+                         #'simutargpartinje', \
+                         #'simutargpartsynt', \
+                         ], []]
+    
+    listlablinst = [['TESS-GEO', \
+                     'TESS', \
+                     'ULTRASAT'], []]
+    
     miletos.init( \
          strgmast='Sirius', \
-         booldiag=True, \
-         listlablinst=[['TESS', 'ULTRASAT'], []], \
+         dicttrue=dicttrue, \
+         listlablinst=listlablinst, \
          liststrgtypedata=liststrgtypedata, \
          dictlygoinpt=dictlygoinpt, \
         )
@@ -328,7 +349,6 @@ def cnfg_Sirius():
     dictlygoinpt['maxmtmagcatl'] = 9.
     miletos.init( \
          strgmast='Sirius', \
-         booldiag=True, \
          listlablinst=[['TESS'], []], \
          dictlygoinpt=dictlygoinpt, \
         )
@@ -385,8 +405,6 @@ def cnfg_TRAPPIST1():
 
                    liststrgexpr=liststrgexpr, \
 
-                   booldiag=True, \
-                   
                    dictfitt=dictfitt, \
                    #typepriocomp='pdim', \
                   )
@@ -403,7 +421,6 @@ def cnfg_WASP18():
                    #boolplotpopl=True, \
                    boolforcoffl=True, \
                    liststrgtypedata=liststrgtypedata, \
-                   #booldiag=True, \
                    
                    dictfitt=dictfitt, \
                    #typepriocomp='pdim', \
@@ -449,7 +466,6 @@ def cnfg_WASP43():
                    listlablinst=listlablinst, \
                    listener=listener, \
 
-                   booldiag=True, \
                    liststrgtypedata=liststrgtypedata, \
                   )
 
@@ -497,8 +513,6 @@ def cnfg_flare_simulated():
 
                           dictfitt=dictfitt, \
                           dicttrue=dicttrue, \
-                          booldiag=True, \
-                          
                           liststrgtypedata=liststrgtypedata, \
 
                           #refrlistlabltser=refrlistlabltser, \
@@ -537,7 +551,6 @@ def cnfg_ATEL15755():
 
                       dictfitt=dictfitt, \
                       dicttrue=dicttrue, \
-                      booldiag=True, \
                       
                       liststrgtypedata=liststrgtypedata, \
 
@@ -780,7 +793,6 @@ def cnfg_WASP(strgiwas):
     miletos.main.init( \
                   strgmast=strgmast, \
                   dictfitt=dictfitt, \
-                  booldiag=True, \
                  )
 
 
@@ -1035,7 +1047,6 @@ def cnfg_TOI1233():
                           listarrytser=listarrytser, \
                           typepriocomp='exar', \
                           boolplotpopl=True, \
-                          booldiag=True, \
                          )
 
 

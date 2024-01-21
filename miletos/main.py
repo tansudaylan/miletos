@@ -364,7 +364,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             else:
                 numbener = 1
             dictlistmodl['Transit'][0][p] = np.empty((time[0][p].size, numbener))
-            #dictlistmodl['sgnl'][0][p] = np.empty((time[0][p].size, numbener))
+            #dictlistmodl['Signal'][0][p] = np.empty((time[0][p].size, numbener))
         
         # temp
         pericomp = np.empty(gmod.numbcomp)
@@ -375,6 +375,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             masscomp = np.empty(gmod.numbcomp)
         
         for j in gmod.indxcomp:
+            print('dictparainpt')
+            print(dictparainpt)
             pericomp[j] = dictparainpt['pericom%d' % j]
             rsmacomp[j] = dictparainpt['rsmacom%d' % j]
             epocmtracomp[j] = dictparainpt['epocmtracom%d' % j]
@@ -519,7 +521,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             indxpost = np.where(timeoffs > 0)[0]
             dflxsupn = np.zeros_like(time[0][p])
             dictlistmodl['Supernova'][0][p] = 1. + dflxsupn[:, None]
-            dictlistmodl['sgnl'][0][p] = np.copy(dictlistmodl['Supernova'][0][p])
+            dictlistmodl['Signal'][0][p] = np.copy(dictlistmodl['Supernova'][0][p])
 
             if gmod.typemodlexcs == 'bump':
                 dictlistmodl['excs'][0][p] = np.ones((time[0][p].size, gdat.numbener[p]))
@@ -529,7 +531,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                     temp = timeoffs[indxpost]**2 * np.exp(-timeoffs[indxpost])
                     temp /= np.amax(temp)
                     dictlistmodl['excs'][0][p][indxpost, 0] += dictparainpt['amplbump'] * temp * 1e-3
-                    dictlistmodl['sgnl'][0][p] += dictlistmodl['excs'][0][p] - 1.
+                    dictlistmodl['Signal'][0][p] += dictlistmodl['excs'][0][p] - 1.
         
     # baseline
     if gmod.typemodlblinshap == 'cons':
@@ -548,7 +550,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
     
     elif gmod.typemodlblinshap == 'step':
         for p in gdat.indxinst[0]:
-            rflxbase = np.ones_like(dictlistmodl['sgnl'][0][p])
+            rflxbase = np.ones_like(dictlistmodl['Signal'][0][p])
             if gdat.fitt.typemodlenerfitt == 'full':
                 consfrst = dictparainpt['consblinfrst'][None, :] * 1e-3
                 consseco = dictparainpt['consblinseco'][None, :] * 1e-3
@@ -584,7 +586,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         print('')
                         print('')
                         print('')
-                        print('sgnl')
+                        print('Signal')
                         summgene(sgnl)
                         print('dictlistmodl[blin][0][p]')
                         summgene(dictlistmodl['Baseline'][0][p])
@@ -4463,7 +4465,7 @@ def setp_modlinit(gdat, strgmodl):
     print('gmod.boolmodlcosc')
     print(gmod.boolmodlcosc)
     
-    gmod.boolmodlpsys = gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr'
+    gmod.boolmodlpsys = gmod.typemodl.startswith('PlanetarySystem')
     
     if gdat.typeverb > 0:
         print('gmod.boolmodlpsys')
@@ -4473,7 +4475,7 @@ def setp_modlinit(gdat, strgmodl):
     print('gmod.boolmodlcomp')
     print(gmod.boolmodlcomp)
         
-    gmod.boolmodlpcur = gmod.typemodl == 'pcur' or gmod.typemodl == 'psyspcur'
+    gmod.boolmodlpcur = gmod.typemodl == 'pcur' or gmod.typemodl == 'PlanetarySystemWithPhaseCurve'
     
     print('gmod.boolmodlpcur')
     print(gmod.boolmodlpcur)
@@ -4532,47 +4534,51 @@ def setp_modlbase(gdat, strgmodl, h=None):
     print('gmod.typemodl')
     print(gmod.typemodl)
 
-    gmod.boolmodlcomp = 'PlanetarySystem' in gmod.typemodl
-            
-    tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkener', 'cons')
-    tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkterm', 'quad')
-    
-    if gdat.typeverb > 0:
-        print('gmod.typemodllmdkener')
-        print(gmod.typemodllmdkener)
-        print('gmod.typemodllmdkterm')
-        print(gmod.typemodllmdkterm)
-
+    # systematic baseline
     gmod.listnamecompmodl = ['Baseline']
+    
     if gmod.typemodl == 'StarFlaring':
         gmod.listnamecompmodl += ['StarFlaring']
-    if gmod.typemodl == 'CompactObjectStellarCompanion' or gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'psyspcur' or gmod.typemodl == 'psysttvr':
+    
+    if gmod.typemodl == 'CompactObjectStellarCompanion' or gmod.boolmodlpsys:
         gmod.listnamecompmodl += ['Transit']
         
         if gmod.boolmodlcomp:
             if strgmodl == 'true':
-                gmod.numbcomp = gdat.true.epocmtracomp.size
+                if gdat.booltargsynt:
+                    gmod.numbcomp = gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All']['epocmtracomp'].size
+                    print('gdat.dictnico[dictpopl][comp][compstar_Synthetic_All][epocmtracomp]')
+                    print(gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All']['epocmtracomp'])
+
+                else:
+                    gmod.numbcomp = gdat.true.epocmtracomp.size
             else:
                 gmod.numbcomp = gdat.epocmtracompprio.size
         else:
             gmod.numbcomp = 0
         
-        print('gdat.true.epocmtracomp')
-        print(gdat.true.epocmtracomp)
-        print('gmod.numbcomp')
-        print(gmod.numbcomp)
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
+        if gdat.booldiag:
+            if gmod.numbcomp > 100:
+                print('')
+                print('')
+                print('')
+                raise Exception('Too many components.')
+
         if gdat.typeverb > 0:
             print('gmod.numbcomp')
             print(gmod.numbcomp)
         
         gmod.indxcomp = np.arange(gmod.numbcomp)
      
-    if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
+        tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkener', 'cons')
+        tdpy.setp_para_defa(gdat, strgmodl, 'typemodllmdkterm', 'quad')
+    
+        if gdat.typeverb > 0:
+            print('gmod.typemodllmdkener')
+            print(gmod.typemodllmdkener)
+            print('gmod.typemodllmdkterm')
+            print(gmod.typemodllmdkterm)
+
         # number of terms in the LD law
         if gmod.typemodllmdkterm == 'line':
             gmod.numbcoeflmdkterm = 1
@@ -4679,7 +4685,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
             setp_para(gdat, strgmodl, 'timeflar%04d' % k, 0., 0.15, ['$t_{f,%d}$' % k, 'day'])
 
     if strgmodl == 'true':
-        if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
+        if gmod.boolmodlpsys or gmod.typemodl == 'CompactObjectStellarCompanion':
             print('gdat.true.typemodllmdkener')
             print(gdat.true.typemodllmdkener)
             if gdat.true.typemodllmdkener == 'linr':
@@ -4694,19 +4700,11 @@ def setp_modlbase(gdat, strgmodl, h=None):
                     tdpy.setp_para_defa(gdat, 'true', 'coeflmdklinr' % strginst, 0.4)
                     tdpy.setp_para_defa(gdat, 'true', 'coeflmdkquad' % strginst, 0.25)
             
-    if gmod.typemodl == 'PlanetarySystem' or gmod.typemodl == 'CompactObjectStellarCompanion' or gmod.typemodl == 'psysttvr' or gmod.typemodl == 'psyspcur':
+    if gmod.boolmodlpsys or gmod.typemodl == 'CompactObjectStellarCompanion':
         
         #gmod.listnameparasyst = []
 
         # list of companion parameter names
-        print('gmod.indxcomp')
-        print(gmod.indxcomp)
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
-        print('')
         gmod.listnameparacomp = [[] for j in gmod.indxcomp]
         for j in gmod.indxcomp:
             if gmod.typemodl == 'psysttvr':
@@ -4732,6 +4730,42 @@ def setp_modlbase(gdat, strgmodl, h=None):
                     print(gmod.typemodl)
                     raise Exception('gmod.listnameparacomp[j] could not be defined.')
 
+            # transfer system parameters from nicomedia dictionary to directly under the true model
+            for namepara in gdat.true.listnameparacomp[j]:
+                setattr(gmod, namepara + 'comp', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
+                    
+        if strgmodl == 'true':
+            # determine priors for model component parameters when the target is synthetic
+            if gdat.booltargsynt:
+                for namepara in gdat.true.listnameparacomp[j]:
+                    setattr(gdat, namepara + 'compprio', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
+                    
+            # copy array base component parameters of the true model to scalar base parameters 
+            for j in gdat.true.indxcomp:
+                
+                for namepara in gdat.true.listnameparacomp[j]:
+                    paracomp = getattr(gdat.true, namepara + 'comp')
+                    
+                    if gdat.booldiag:
+                        if j > 100:
+                            print('')
+                            print('')
+                            print('')
+                            raise Exception('Too many components.')
+
+                        if paracomp is None or np.isscalar(paracomp):
+                            print('')
+                            print('')
+                            print('')
+                            print('namepara')
+                            print(namepara)
+                            print('paracomp')
+                            print(paracomp)
+                            raise Exception('')
+                    
+                    if len(paracomp) > 0:
+                        tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracomp[j])
+            
         if gdat.booldiag:
             if strgmodl == 'fitt' and gmod.boolmodlpsys and gmod.numbcomp == 0:
                 print('')
@@ -4742,10 +4776,6 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 raise Exception('Fitting PlanetarySystem model does not have any companions.')
 
         # define arrays of parameter indices for companions
-        print('gmod.listnameparacomp')
-        print(gmod.listnameparacomp)
-        print('strgmodl')
-        print(strgmodl)
         #if strgmodl == 'fitt' or strgmodl == 'true' and gmod.numbcomp > 0:
         for j in gmod.indxcomp:
             for namepara in gmod.listnameparacomp[j]:
@@ -4756,7 +4786,10 @@ def setp_modlbase(gdat, strgmodl, h=None):
                         gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
                     else:
                         gmod.dictindxpara['rratcompener'] = np.empty((gmod.numbcomp, gdat.numbener[p]), dtype=int)
-    
+        
+        print('gmod.typemodllmdkterm')
+        print(gmod.typemodllmdkterm)
+
         # limb darkening
         if gmod.typemodllmdkterm != 'none':
             if gmod.typemodllmdkener == 'ener' and gdat.fitt.typemodlenerfitt == 'full':
@@ -4768,6 +4801,9 @@ def setp_modlbase(gdat, strgmodl, h=None):
             #gmod.dictindxpara['coeflmdkquadener'] = np.empty(1, dtype=int)
             
             print('setp_para calls relevant to coeflmdk...')
+            
+            print('gmod.typemodllmdkener')
+            print(gmod.typemodllmdkener)
 
             if gmod.typemodllmdkener == 'cons':
                 setp_para(gdat, strgmodl, 'coeflmdklinr', 0., 1., None)
@@ -4804,9 +4840,16 @@ def setp_modlbase(gdat, strgmodl, h=None):
             
             #raise Exception('')
         
-        if strgmodl == 'fitt':
+        if True or strgmodl == 'fitt':
             for j in gmod.indxcomp:
                 
+                if gdat.booldiag:
+                    if j > 100:
+                        print('')
+                        print('')
+                        print('')
+                        raise Exception('Too many components.')
+
                 # define parameter limits
                 if gmod.typemodl == 'CompactObjectStellarCompanion':
                     setp_para(gdat, strgmodl, 'radistar', 0.1, 100., ['$R_*$', ''])
@@ -4816,8 +4859,6 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 
                 setp_para(gdat, strgmodl, 'rsma', 0.06, 0.14, None, strgcomp=strgcomp)
                 
-                print('gdat.boolmodlcomp')
-                print(gdat.boolmodlcomp)
                 # informed priors on the orbital period
                 setp_para(gdat, strgmodl, 'peri', gdat.pericompprio[j] - 0.01 * gdat.pericompprio[j], \
                                                   gdat.pericompprio[j] + 0.01 * gdat.pericompprio[j], None, strgcomp=strgcomp)
@@ -5299,6 +5340,7 @@ def srch_pbox(arry, \
               typeverb=1, \
               
               # Boolean flag to turn on diagnostic mode
+              ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
               booldiag=True, \
 
               # Boolean flag to force rerun and overwrite previous data and plots 
@@ -6918,6 +6960,7 @@ def plot_tser( \
               strgtitl='', \
               
               # Boolean flag to diagnose
+              ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
               booldiag=True, \
                       
               ## file type of the plot
@@ -7841,6 +7884,7 @@ def init( \
          boolwritover=False, \
          
          # Boolean flag to diagnose the code using potentially computationally-expensive sanity checks, which may slow down the execution
+         ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
          booldiag=True, \
          
          # type of plot background
@@ -8073,9 +8117,16 @@ def init( \
     gdat.boolretrlcurmast = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.boolretrlcurmastanyy = False
     
+    # Boolean flag to indicate all data is simulated
+    gdat.boolsimutotl = True
+
     gdat.booltargpartanyy = False
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
+            
+            if gdat.liststrgtypedata[b][p] == 'obsd':
+                gdat.boolsimutotl = False
+
             if gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt' or \
                                                                     gdat.liststrgtypedata[b][p] == 'simutargpartinje' or gdat.liststrgtypedata[b][p] == 'obsd':
                 gdat.booltargpartanyy = True
@@ -8300,7 +8351,7 @@ def init( \
     print('gdat.boolexecoffl')
     print(gdat.boolexecoffl)
     
-    if (gdat.typetarg == 'TICID' or gdat.typetarg == 'TOIID' or gdat.typetarg == 'MASTKey') and not gdat.boolsrchmastdone and not gdat.boolexecoffl:
+    if not gdat.booltargsynt and (gdat.typetarg == 'TICID' or gdat.typetarg == 'TOIID' or gdat.typetarg == 'MASTKey') and not gdat.boolsrchmastdone and not gdat.boolexecoffl:
         # temp -- check that the closest TIC to a given TIC is itself
         if gdat.typeverb > 0:
             print('Querying the TIC on MAST with keyword %s within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source...' % (gdat.strgmast, gdat.strgradi))
@@ -8329,10 +8380,14 @@ def init( \
         raise Exception('List of pointings can only be input when typetarg is "inpt".')
     
     # check if any GPU is available
-    import GPUtil
-    temp = GPUtil.getGPUs()
-    if len(temp) == 0:
-        print('No GPU is detected...')
+    try:
+        import GPUtil
+        temp = GPUtil.getGPUs()
+        if len(temp) == 0:
+            print('No GPU is detected...')
+    except:
+        pass
+        print('temp: check if this can be done without try ... except.')
 
     gdat.maxmnumbiterbdtr = 5
     
@@ -8357,7 +8412,7 @@ def init( \
     
     if gdat.boolinfe:
         if gdat.typeverb > 0:
-            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur':
+            if gdat.fitt.boolmodlpsys:
                 print('Stellar parameter prior type: %s' % gdat.typepriostar)
     
     # number of Boolean signal outputs
@@ -8547,12 +8602,11 @@ def init( \
             print(gdat.ticitarg)
             raise Exception('')
         
-    if gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None:
-        if gdat.boolexecoffl:
-            print('')
-            print('')
-            print('')
-            raise Exception('(gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) AND boolexecoffl is True.')
+    if (gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) and gdat.boolexecoffl and not gdat.boolsimutotl:
+        print('')
+        print('')
+        print('')
+        raise Exception('(gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) AND boolexecoffl is True AND not gdat.boolsimutotl.')
 
         strgtcut = strgmasttemp
         # get the list of sectors for which TESS FFI data are available via TESSCut
@@ -8561,7 +8615,7 @@ def init( \
         print('List of TESS sectors for which FFI data are available via TESSCut:')
         print(gdat.listtsectcut)
         
-    booltess = 'TESS' in gdat.liststrginst[0]
+    gdat.booltess = 'TESS' in gdat.liststrginst[0]
     gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
     
     print('gdat.booltesskepl')
@@ -9375,6 +9429,14 @@ def init( \
                 print(gdat.listarrylcurmast)
                 raise Exception('')
 
+    # generate a vector of random system parameters
+    if gdat.booltargsynt:
+        gdat.dictnico = nicomedia.retr_dictpoplstarcomp( \
+                                                   numbsyst=1, \
+                                                   typesyst=gdat.true.typemodl, \
+                                                   typepoplsyst='Synthetic', \
+                                                  )
+    
     if gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
         if gdat.strgexar is None:
             gdat.strgexar = gdat.strgmast
@@ -9406,6 +9468,8 @@ def init( \
             gdat.typesourparasimucomp = 'exar'
         elif gdat.boolexof:
             gdat.typesourparasimucomp = 'exof'
+        elif gdat.booltargsynt:
+            gdat.typesourparasimucomp = 'rand'
         else:
             print('')
             print('')
@@ -9452,7 +9516,7 @@ def init( \
     if gdat.listtypeanls is None:
         gdat.listtypeanls = []
         if gdat.boolinfe:
-            if (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur') and gdat.typepriocomp == 'pdim':
+            if (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve') and gdat.typepriocomp == 'pdim':
                 gdat.listtypeanls += ['pdim']
             if gdat.fitt.typemodl == 'CompactObjectStellarCompanion':
                 gdat.listtypeanls += ['pinc']
@@ -9467,7 +9531,7 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.boolinfe and len(gdat.listtimescalbdtr) > 0 and \
-                                (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur') and not gdat.liststrginst[b][p].startswith('LSST'):
+                                (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve') and not gdat.liststrginst[b][p].startswith('LSST'):
                 gdat.boolbdtr[b][p] = True
     
     gdat.boolbdtranyy = False
@@ -9547,6 +9611,8 @@ def init( \
                 gdat.duraprio[indx] = gdat.pericompprio[indx] * dcyc
             gdat.tmagsyst = gdat.dictexartarg['tmagsyst'][0]
         
+
+        
         if gdat.typepriocomp == 'exof':
             if gdat.typeverb > 0:
                 print('Retreiving the companion priors from ExoFOP-TESS...')
@@ -9598,7 +9664,7 @@ def init( \
             print('gdat.strgmast')
             print(gdat.strgmast)
         
-        if not gdat.boolexecoffl and gdat.strgmast is not None and not gdat.boolsrchmastdone:
+        if not gdat.booltargsynt and not gdat.boolexecoffl and gdat.strgmast is not None and not gdat.boolsrchmastdone:
             listdictticinear = astroquery.mast.Catalogs.query_object(gdat.strgmast, catalog='TIC', radius=gdat.strgradi)
             gdat.boolsrchmastdone = True
             if listdictticinear[0]['dstArcSec'] > 0.1:
@@ -9735,13 +9801,12 @@ def init( \
             tdpy.setp_para_defa(gdat, 'true', 'scalstep', np.array([1.]))
         
     
-
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 if not gdat.booltargsynt:
                     if b == 0:
-                        if len(gdat.listtseclygo) > 0:
+                        if gdat.liststrginst[b][p] == 'TESS' and len(gdat.listtseclygo) > 0:
                             if not gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
                                 print('Warning: lygos data were not incorporated into miletos!')
             
@@ -9831,6 +9896,8 @@ def init( \
                             lengobsv = 5.
                             #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., lengobsv, delttime)
+                        elif gdat.liststrginst[b][p] == 'ULTRASAT':
+                            gdat.true.listtime[b][p][y] = 2459000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
                         elif gdat.liststrginst[b][p] == 'JWST':
                             gdat.true.listtime[b][p][y] = 2459000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
                         elif gdat.liststrginst[b][p].startswith('LSST'):
@@ -9979,8 +10046,12 @@ def init( \
         else:
             gdat.fitt.listdictmlik = []
     
+    print('gdat.typepriocomp')
+    print(gdat.typepriocomp)
+
     # gdat.epocmtracompprio may potentially be modified later, so this will need to be rerun
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr'):
+    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.fitt.typemodl == 'psysttvr') \
+                                                                                                                                            and not gdat.boolsrchpbox:
         gdat.numbcompprio = gdat.epocmtracompprio.size
         gdat.indxcompprio = np.arange(gdat.numbcompprio)
 
@@ -10000,14 +10071,14 @@ def init( \
         
         # probably to be deleted
         #if gdat.booldiag:
-        #    if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'psyspcur' or gdat.true.typemodl == 'psysttvr':
+        #    if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.true.typemodl == 'psysttvr':
         #        if not hasattr(gdat.true, 'epocmtracomp'):
         #            raise Exception('not hasattr(gdat.true, epocmtracomp')
         
         # copy priors to the true elements
-        if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
-            for j in gdat.true.indxcomp:
-                for namepara in gdat.true.listnameparacomp[j]:
+        if (gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion') and not gdat.boolsrchpbox:
+            for j in gdat.indxcompprio:
+                for namepara in ['rrat', 'peri', 'rsma']:
                     tdpy.setp_para_defa(gdat, 'true', '%scomp' % namepara, getattr(gdat, namepara + 'compprio'))
         
         setp_modlbase(gdat, 'true')
@@ -10080,32 +10151,10 @@ def init( \
         #    print(gdat.true.numbcomp)
             
         if gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion':
-            for j in gdat.true.indxcomp:
-                
-                # copy "array" true element parameters to scalar true element parameters 
-                for namepara in gdat.true.listnameparacomp[j]:
-                    paracomp = getattr(gdat.true, namepara + 'comp')
-                    
-                    if gdat.booldiag:
-                        if paracomp is None or np.isscalar(paracomp):
-                            print('')
-                            print('')
-                            print('')
-                            print('namepara')
-                            print(namepara)
-                            print('paracomp')
-                            print(paracomp)
-                            raise Exception('')
-                    
-                    if len(paracomp) > 0:
-                        tdpy.setp_para_defa(gdat, 'true', namepara + 'com%d' % j, paracomp[j])
-            
             if gdat.true.boolmodlpsys:
                 for j in gdat.true.indxcomp:
-                    print('gdat.true.rratcomp')
-                    print(gdat.true.rratcomp)
                     rratcomp = gdat.true.rratcomp[j]
-                    print('temp')
+                    
                     if False and gdat.booldiag:
                         if np.isscalar(rratcomp):
                             print('')
@@ -10163,7 +10212,7 @@ def init( \
             gdat.numbenermodl = 1
             gdat.numbeneriter = gdat.numbener[p]
 
-        if gdat.true.boolmodlcomp:
+        if gdat.true.boolmodlcomp and not gdat.booltargsynt:
             for j in range(gdat.epocmtracompprio.size):
                 for name in gdat.true.listnameparacomp[j]:
                     if name == 'rrat':
@@ -10173,6 +10222,8 @@ def init( \
                     setattr(gdat.true, '%scom%d' % (name, j), compprio)
         
         dictparainpt = dict()
+        print('gdat.true.listnameparafull')
+        print(gdat.true.listnameparafull)
         for name in gdat.true.listnameparafull:
             dictparainpt[name] = getattr(gdat.true, name)
         
@@ -10189,18 +10240,10 @@ def init( \
                         print('b, p')
                         print(b, p)
                         raise Exception('gdat.true.time[b][p].size == 0')
-        
         print('dictparainpt')
         print(dictparainpt)
-        print('gdat.true.typemodl')
-        print(gdat.true.typemodl)
-        print('gdat.liststrgtypedata')
-        print(gdat.liststrgtypedata)
         gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
         
-        print('gdat.true.dictmodl')
-        print(gdat.true.dictmodl)
-
         if gdat.true.typemodlblinshap == 'GaussianProcess':
             dictrflx = retr_rflxmodl_mile_gpro(gdat, 'true', gdat.true.time, dictparainpt)
             gdat.true.dictrflxmodl['Baseline'] = dictrflx['Baseline']
@@ -10912,24 +10955,6 @@ def init( \
             gdat.dictpboxinpt['minmperi'] = 0.5
             gdat.dictpboxinpt['maxmperi'] = 30.
 
-            # to be deleted
-            #print('HACKING!')
-            #print('HACKING!')
-            #print('HACKING!')
-            #print('HACKING!')
-            #print('HACKING!')
-            #print('HACKING!')
-            #print('HACKING!')
-            #print('HACKING!')
-            #if gdat.boolsimurflx:
-            #    dictpboxoutp = dict()
-            #    for strg in ['peri', 'rsma', 'rrat', 'epocmtra', 'cosi']:
-            #        dictpboxoutp[strg + 'comp'] = np.array([getattr(gdat.true, strg + 'com0')])
-            #    dictpboxoutp['depttrancomp'] = 1e3 * dictpboxoutp['rratcomp']**2
-            #    dictpboxoutp['duracomp'] = nicomedia.retr_duratrantotl(dictpboxoutp['pericomp'], dictpboxoutp['rsmacomp'], dictpboxoutp['cosicomp'])
-            #    dictpboxoutp['sdeecomp'] = np.array([0.])
-            #else:
-            
             dictpboxoutp = srch_pbox(arry, **gdat.dictpboxinpt)
             
             gdat.dictmileoutp['dictpboxoutp'] = dictpboxoutp
@@ -11038,7 +11063,7 @@ def init( \
         #gdat.numbtime = gdat.time.size
 
     # rerunning this as gdat.epocmtracompprio may have been modified
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr'):
+    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.fitt.typemodl == 'psysttvr'):
         gdat.numbcompprio = gdat.epocmtracompprio.size
         gdat.indxcompprio = np.arange(gdat.numbcompprio)
 
@@ -11241,7 +11266,7 @@ def init( \
         
         if gdat.typeverb > 0:
             
-            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'psyspcur':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve':
                 print('Stellar priors:')
                 print('gdat.rascstar')
                 print(gdat.rascstar)
@@ -11640,7 +11665,7 @@ def init( \
 
     # do not continue if there is no trigger
     # Boolean flag to continue modeling the data based on the feature extraction
-    gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur') and \
+    gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve') and \
                                                                            not (gdat.boolsrchpbox and not gdat.dictmileoutp['boolposianls'].any())
     
     if gdat.boolmodl:
@@ -11721,7 +11746,7 @@ def init( \
         #    for p in gdat.indxinst[b]:
                 
         if gdat.typeverb > 0:
-            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve':
                 print('gdat.dictmileoutp[boolposianls]')
                 print(gdat.dictmileoutp['boolposianls'])
             
@@ -11881,7 +11906,7 @@ def init( \
                     plt.close()
 
 
-            elif gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur' or gdat.fitt.typemodl == 'psysttvr':
+            elif gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.fitt.typemodl == 'psysttvr':
                 
                 if gdat.fitt.typemodl == 'psysttvr':
                     if gdat.fitt.typemodlttvr == 'indilineuser':
@@ -11940,7 +11965,7 @@ def init( \
                 print('gdat.numbsampplot')
                 print(gdat.numbsampplot)
         
-        if gdat.numbener[p] > 1 and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'psyspcur'):
+        if gdat.numbener[p] > 1 and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve'):
             # plot the radius ratio spectrum
             path = gdat.pathvisutarg + 'spec%s.%s' % (gdat.strgcnfg, gdat.typefileplot)
             figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
