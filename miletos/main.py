@@ -8011,7 +8011,14 @@ def init( \
                 gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
                 gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
                 
-                gdat.fluxsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen) / gdat.distsyst**2
+                gdat.specsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen)
+                print('gdat.specsyst')
+                summgene(gdat.specsyst)
+                print('gdat.diffwlen')
+                summgene(gdat.diffwlen)
+                gdat.lumisyst = np.trapz(gdat.specsyst, x=gdat.cntrwlen)
+                gdat.fluxsyst = gdat.lumisyst / 4. / np.pi / gdat.distsyst**2
+                
                 gdat.tmagsyst = -2.5 * np.log10(gdat.fluxsyst)
 
             # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
@@ -9447,7 +9454,7 @@ def init( \
         gdat.dictnico = nicomedia.retr_dictpoplstarcomp( \
                                                    numbsyst=1, \
                                                    typesyst=gdat.true.typemodl, \
-                                                   typepoplsyst='Synthetic', \
+                                                   typepoplsyst='SyntheticPopulation', \
                                                   )
     
     if gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
@@ -10289,6 +10296,8 @@ def init( \
                             magt = getattr(gdat, '%smagsyst' % strgband)
                             nois = nicomedia.retr_noislsst(magt) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
+                            print('gdat.tmagsyst')
+                            print(gdat.tmagsyst)
                             nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
                             print('nois')
                             summgene(nois)
