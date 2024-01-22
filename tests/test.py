@@ -324,14 +324,18 @@ def cnfg_TESSGEO():
                          'simutargsynt', \
                          'simutargsynt', \
                          'simutargsynt', \
+                         'simutargsynt', \
                          #'simutargpartsynt', \
                          #'simutargpartinje', \
                          #'simutargpartsynt', \
                          ], []]
     
-    listlablinst = [['TESS-GEO', \
+    listlablinst = [[ \
+                     'TESS-GEO-UV', \
+                     'TESS-GEO-VIS', \
                      'TESS', \
-                     'ULTRASAT'], []]
+                     'ULTRASAT', \
+                     ], []]
     
     miletos.init( \
          strgmast='SimulatedStar', \

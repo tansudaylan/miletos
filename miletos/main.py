@@ -10288,6 +10288,10 @@ def init( \
                                 strgband = gdat.liststrginst[b][p][-1]
                             magt = getattr(gdat, '%smagsyst' % strgband)
                             nois = nicomedia.retr_noislsst(magt) # [ppt]
+                        elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
+                            nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
+                            print('nois')
+                            summgene(nois)
                         elif gdat.liststrginst[b][p].startswith('TESS'):
                             
                             if gdat.booldiag:
@@ -10302,10 +10306,6 @@ def init( \
                                     raise Exception('When synthetic TESS data is being generated, tmagsyst should not be None.')
                             
                             nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
-                        elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
-                            print('nois')
-                            summgene(nois)
                         else:
                             raise Exception('')
                         print('gdat.liststrginst[b][p]')
