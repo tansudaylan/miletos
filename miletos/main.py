@@ -375,8 +375,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             masscomp = np.empty(gmod.numbcomp)
         
         for j in gmod.indxcomp:
-            print('dictparainpt')
-            print(dictparainpt)
             pericomp[j] = dictparainpt['pericom%d' % j]
             rsmacomp[j] = dictparainpt['rsmacom%d' % j]
             epocmtracomp[j] = dictparainpt['epocmtracom%d' % j]
@@ -10009,12 +10007,12 @@ def init( \
                     gdat.listarrytser['Raw'][b][p][y] = gdat.listarrytser['Raw'][b][p][y][indx, :, :]
                     gdat.listisec = None
     
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
-                    for y in gdat.indxchun[b][p]:
-                        gdat.listarrytser['Raw'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
-                        gdat.listarrytser['Raw'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
+                for y in gdat.indxchun[b][p]:
+                    gdat.listarrytser['Raw'][b][p][y] = np.empty((gdat.true.listtime[b][p][y].size, gdat.numbener[p], 3))
+                    gdat.listarrytser['Raw'][b][p][y][:, :, 0] = gdat.true.listtime[b][p][y][:, None]
         
     if gdat.booldiag:
         for b in gdat.indxdatatser:
@@ -10237,8 +10235,6 @@ def init( \
                     setattr(gdat.true, '%scom%d' % (name, j), compprio)
         
         dictparainpt = dict()
-        print('gdat.true.listnameparafull')
-        print(gdat.true.listnameparafull)
         for name in gdat.true.listnameparafull:
             dictparainpt[name] = getattr(gdat.true, name)
         
@@ -10255,8 +10251,6 @@ def init( \
                         print('b, p')
                         print(b, p)
                         raise Exception('gdat.true.time[b][p].size == 0')
-        print('dictparainpt')
-        print(dictparainpt)
         gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
         
         if gdat.true.typemodlblinshap == 'GaussianProcess':
@@ -10273,6 +10267,10 @@ def init( \
                             print('')
                             print('')
                             print('')
+                            print('gdat.liststrgtypedata[b][p]')
+                            print(gdat.liststrgtypedata[b][p])
+                            print('gdat.liststrginst[b][p]')
+                            print(gdat.liststrginst[b][p])
                             raise Exception('len(gdat.listarrytser[Raw][b][p][y]) == 0')
 
                     if gdat.liststrgtypedata[b][p] == 'simutargpartinje':
@@ -10306,10 +10304,16 @@ def init( \
                             nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
                             nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
+                            print('nois')
+                            summgene(nois)
                         else:
                             raise Exception('')
+                        print('gdat.liststrginst[b][p]')
+                        print(gdat.liststrginst[b][p])
+                        print('nois')
+                        summgene(nois)
                         print('gdat.listarrytser[Raw][b][p][y]')
-                        print(gdat.listarrytser['Raw'][b][p][y])
+                        summgene(gdat.listarrytser['Raw'][b][p][y])
                         gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-3 * nois
                         
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] = gdat.true.dictmodl['Total'][0][p]
