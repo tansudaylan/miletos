@@ -4539,10 +4539,9 @@ def setp_modlbase(gdat, strgmodl, h=None):
         if gmod.boolmodlcomp:
             if strgmodl == 'true':
                 if gdat.booltargsynt:
-                    gmod.numbcomp = gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All']['epocmtracomp'].size
-                    print('gdat.dictnico[dictpopl][comp][compstar_Synthetic_All][epocmtracomp]')
-                    print(gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All']['epocmtracomp'])
-
+                    print('gdat.dictnico[dictpopl][comp]')
+                    print(gdat.dictnico['dictpopl']['comp'])
+                    gmod.numbcomp = gdat.dictnico['dictpopl']['comp']['compstar_SyntheticPopulation_All']['epocmtracomp'].size
                 else:
                     gmod.numbcomp = gdat.true.epocmtracomp.size
             else:
@@ -4725,14 +4724,14 @@ def setp_modlbase(gdat, strgmodl, h=None):
 
             # transfer system parameters from nicomedia dictionary to directly under the true model
             for namepara in gdat.true.listnameparacomp[j]:
-                setattr(gmod, namepara + 'comp', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
+                setattr(gmod, namepara + 'comp', gdat.dictnico['dictpopl']['comp']['compstar_SyntheticPopulation_All'][namepara + 'comp'])
                     
         if strgmodl == 'true':
             for j in gdat.true.indxcomp:
                 # determine priors for model component parameters when the target is synthetic
                 if gdat.booltargsynt:
                     for namepara in gdat.true.listnameparacomp[j]:
-                        setattr(gdat, namepara + 'compprio', gdat.dictnico['dictpopl']['comp']['compstar_Synthetic_All'][namepara + 'comp'])
+                        setattr(gdat, namepara + 'compprio', gdat.dictnico['dictpopl']['comp']['compstar_SyntheticPopulation_All'][namepara + 'comp'])
                     
                 # copy array base component parameters of the true model to scalar base parameters 
                 for namepara in gdat.true.listnameparacomp[j]:
@@ -10316,6 +10315,8 @@ def init( \
                             
                             nois = nicomedia.retr_noistess(gdat.tmagsyst) # [ppt]
                         else:
+                            print('gdat.liststrginst[b][p]')
+                            print(gdat.liststrginst[b][p])
                             raise Exception('')
                         print('gdat.liststrginst[b][p]')
                         print(gdat.liststrginst[b][p])
