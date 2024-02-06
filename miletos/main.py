@@ -110,34 +110,41 @@ def retr_timetran(gdat):
     # ingress and egress times
     if gdat.fitt.typemodl == 'psysdisktran':
         gdat.fracineg = np.zeros(2)
-        gdat.listindxtimetranineg = [[[[[] for k in range(4)] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
-        for p in gdat.indxinst[0]:
+        
+        if gmod.boolvarirratinst:
+            gdat.indxinstrrat = [np.concatenate(gdat.indxinst[0], np.array(gdat.numbinst[0])), np.concatenate(gdat.indxinst[1], np.array(gdat.numbinst[1]))]
+        else:
+            gdat.indxinstrrat = gdat.indxinst
+        
+        gdat.listindxtimetranineg = [[[[[] for k in range(4)] for p in gdat.indxinstrrat[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
+
+        for pp in gdat.indxinstrrat:
             for j in gdat.fitt.prio.indxcomp:
-                gdat.durafullprio = (1. - gdat.fitt.prio.meanpara.rratcomp[p][j]) / (1. + gdat.fitt.prio.meanpara.rratcomp[p][j]) * gdat.duraprio
+                gdat.durafullprio = (1. - gdat.fitt.prio.meanpara.rratcomp[pp][j]) / (1. + gdat.fitt.prio.meanpara.rratcomp[pp][j]) * gdat.duraprio
                 
                 if not gdat.fitt.prio.booltrancomp[j]:
                     continue
 
-                gdat.listindxtimetranineg[j][0][p][0] = retr_indxtimetran(gdat.arrytser['Detrended'][0][p][:, 0, 0], \
+                gdat.listindxtimetranineg[j][0][pp][0] = retr_indxtimetran(gdat.arrytser['Detrended'][0][pp][:, 0, 0], \
                                                                                   gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], \
                                                                                   gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='ingrinit')
-                gdat.listindxtimetranineg[j][0][p][1] = retr_indxtimetran(gdat.arrytser['Detrended'][0][p][:, 0, 0], \
+                gdat.listindxtimetranineg[j][0][pp][1] = retr_indxtimetran(gdat.arrytser['Detrended'][0][pp][:, 0, 0], \
                                                                                   gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], \
                                                                                   gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='ingrfinl')
-                gdat.listindxtimetranineg[j][0][p][2] = retr_indxtimetran(gdat.arrytser['Detrended'][0][p][:, 0, 0], \
+                gdat.listindxtimetranineg[j][0][pp][2] = retr_indxtimetran(gdat.arrytser['Detrended'][0][pp][:, 0, 0], \
                                                                                   gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], \
                                                                                   gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='eggrinit')
-                gdat.listindxtimetranineg[j][0][p][3] = retr_indxtimetran(gdat.arrytser['Detrended'][0][p][:, 0, 0], \
+                gdat.listindxtimetranineg[j][0][pp][3] = retr_indxtimetran(gdat.arrytser['Detrended'][0][pp][:, 0, 0], \
                                                                                   gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], \
                                                                                   gdat.duraprio[j], durafull=gdat.durafullprio[j], typeineg='eggrfinl')
                 
                 for k in range(2):
-                    indxtimefrst = gdat.listindxtimetranineg[j][0][p][2*k+0]
-                    indxtimeseco = gdat.listindxtimetranineg[j][0][p][2*k+1]
+                    indxtimefrst = gdat.listindxtimetranineg[j][0][pp][2*k+0]
+                    indxtimeseco = gdat.listindxtimetranineg[j][0][pp][2*k+1]
                     if indxtimefrst.size == 0 or indxtimeseco.size == 0:
                         continue
-                    rflxinit = np.mean(gdat.arrytser['Detrended'][0][p][indxtimefrst, 1])
-                    rflxfinl = np.mean(gdat.arrytser['Detrended'][0][p][indxtimeseco, 1])
+                    rflxinit = np.mean(gdat.arrytser['Detrended'][0][pp][indxtimefrst, 1])
+                    rflxfinl = np.mean(gdat.arrytser['Detrended'][0][pp][indxtimeseco, 1])
                     gdat.fracineg[k] = rflxinit / rflxfinl
                 
                 if (gdat.fracineg == 0).any():
@@ -149,13 +156,13 @@ def retr_timetran(gdat):
                     print('rflxfinl')
                     print(rflxfinl)
                     print('gdat.arrytser[bdtr][0][p]')
-                    summgene(gdat.arrytser['Detrended'][0][p])
-                    print('gdat.arrytser[bdtrnotr][0][p][:, 1]')
-                    summgene(gdat.arrytser['Detrended'][0][p][:, 1])
-                    print('gdat.arrytser[bdtrnotr][0][p][indxtimefrst, 1]')
-                    summgene(gdat.arrytser['Detrended'][0][p][indxtimefrst, 1])
-                    print('gdat.arrytser[bdtrnotr][0][p][indxtimeseco, 1]')
-                    summgene(gdat.arrytser['Detrended'][0][p][indxtimeseco, 1])
+                    summgene(gdat.arrytser['Detrended'][0][pp])
+                    print('gdat.arrytser[bdtrnotr][0][pp][:, 1]')
+                    summgene(gdat.arrytser['Detrended'][0][pp][:, 1])
+                    print('gdat.arrytser[bdtrnotr][0][pp][indxtimefrst, 1]')
+                    summgene(gdat.arrytser['Detrended'][0][pp][indxtimefrst, 1])
+                    print('gdat.arrytser[bdtrnotr][0][pp][indxtimeseco, 1]')
+                    summgene(gdat.arrytser['Detrended'][0][pp][indxtimeseco, 1])
                     raise Exception('(gdat.fracineg == 0).any()')
 
                 path = gdat.pathdatatarg + 'fracineg%04d.csv' % j
@@ -1649,7 +1656,7 @@ def proc_alle(gdat, typemodl):
             dictalleparadefa[strgrrat] = ['%f' % gdat.fitt.prio.meanpara.rratcomp[j], '1', 'uniform 0 %f' % (4 * gdat.fitt.prio.meanpara.rratcomp[j]), \
                                                                             '$R_{%s} / R_\star$' % gdat.liststrgcomp[j], '']
             
-            dictalleparadefa[strgrsma] = ['%f' % gdat.rsmacompprio[j], '1', 'uniform 0 %f' % (4 * gdat.rsmacompprio[j]), \
+            dictalleparadefa[strgrsma] = ['%f' % gdat.fitt.prio.meanpara.rsmacomp[j], '1', 'uniform 0 %f' % (4 * gdat.fitt.prio.meanpara.rsmacomp[j]), \
                                                                       '$(R_\star + R_{%s}) / a_{%s}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
             dictalleparadefa[strgcosi] = ['%f' % gdat.fitt.prio.meanpara.cosicomp[j], '1', 'uniform 0 %f' % max(0.1, 4 * gdat.fitt.prio.meanpara.cosicomp[j]), \
                                                                                         '$\cos{i_{%s}}$' % gdat.liststrgcomp[j], '']
@@ -10895,6 +10902,9 @@ def init( \
             
             gdat.fitt.prio.meanpara.pericomp = np.array([dictoutlperi['peri']])
             gdat.fitt.prio.meanpara.epocmtracomp = np.array([dictoutlperi['epocmtra']])
+            gdat.fitt.prio.meanpara.rsmacomp = np.array([0.1])
+            gdat.fitt.prio.meanpara.rratcomp = np.array([0.1])
+            gdat.fitt.prio.meanpara.cosicomp = np.array([0.1])
 
             if dictoutlperi['boolposi']:
                 gdat.fitt.prio.numbcomp = 1
@@ -10903,7 +10913,7 @@ def init( \
     if gdat.boolsrchboxsperi:
         
         # temp
-        for p in gdat.indxinst[0]:
+        for p in gdat.indxinstrrat[0]:
             
             # input data to the periodic box search pipeline
             arry = np.copy(gdat.arrytser['Detrended'][0][p][:, 0, :])
@@ -10944,8 +10954,8 @@ def init( \
             gdat.deptprio = 1. - 1e-3 * dictboxsperioutp['depttrancomp']
             gdat.duraprio = dictboxsperioutp['duracomp']
             gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(dictboxsperioutp['epocmtracomp']) 
-            gdat.fitt.prio.meanpara.rratcomp[p] = np.sqrt(1e-3 * gdat.deptprio)
-            gdat.rsmacompprio = np.sin(np.pi * gdat.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)
+            gdat.fitt.prio.meanpara.rratcomp[pp] = np.sqrt(1e-3 * gdat.deptprio)
+            gdat.fitt.prio.meanpara.rsmacomp = np.sin(np.pi * gdat.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)
             
             gdat.perimask = gdat.fitt.prio.meanpara.pericomp
             gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
@@ -11119,24 +11129,24 @@ def init( \
         if gdat.duraprio is None:
             
             if gdat.booldiag:
-                if gdat.fitt.prio.meanpara.pericomp is None or gdat.rsmacompprio is None or gdat.fitt.prio.meanpara.cosicomp is None:
+                if gdat.fitt.prio.meanpara.pericomp is None or gdat.fitt.prio.meanpara.rsmacomp is None or gdat.fitt.prio.meanpara.cosicomp is None:
                     print('')
                     print('')
                     print('')
                     print('gdat.fitt.prio.meanpara.pericomp')
                     print(gdat.fitt.prio.meanpara.pericomp)
-                    print('gdat.rsmacompprio')
-                    print(gdat.rsmacompprio)
+                    print('gdat.fitt.prio.meanpara.rsmacomp')
+                    print(gdat.fitt.prio.meanpara.rsmacomp)
                     print('gdat.fitt.prio.meanpara.cosicomp')
                     print(gdat.fitt.prio.meanpara.cosicomp)
                     raise Exception('')
 
-            gdat.duraprio = nicomedia.retr_duratrantotl(gdat.fitt.prio.meanpara.pericomp, gdat.rsmacompprio, gdat.fitt.prio.meanpara.cosicomp)
+            gdat.duraprio = nicomedia.retr_duratrantotl(gdat.fitt.prio.meanpara.pericomp, gdat.fitt.prio.meanpara.rsmacomp, gdat.fitt.prio.meanpara.cosicomp)
         
         if gdat.fitt.prio.meanpara.rratcomp is None:
             gdat.fitt.prio.meanpara.rratcomp[p] = np.sqrt(1e-3 * gdat.deptprio)
-        if gdat.rsmacompprio is None:
-            gdat.rsmacompprio = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)**2 + gdat.fitt.prio.meanpara.cosicomp**2)
+        if gdat.fitt.prio.meanpara.rsmacomp is None:
+            gdat.fitt.prio.meanpara.rsmacomp = np.sqrt(np.sin(np.pi * gdat.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)**2 + gdat.fitt.prio.meanpara.cosicomp**2)
         if gdat.ecoscompprio is None:
             gdat.ecoscompprio = np.zeros(gdat.fitt.prio.numbcomp)
         if gdat.esincompprio is None:
@@ -11190,14 +11200,14 @@ def init( \
             print('gdat.fitt.prio.meanpara.rratcomp')
             summgene(gdat.fitt.prio.meanpara.rratcomp)
             print(gdat.fitt.prio.meanpara.rratcomp)
-            for p in gdat.indxinst[0]:
+            for p in gdat.indxinstrrat[0]:
                 print('gdat.fitt.prio.meanpara.rratcomp[p]')
                 print(gdat.fitt.prio.meanpara.rratcomp[p])
                 summgene(gdat.fitt.prio.meanpara.rratcomp[p])
                 print('indxcompsort')
                 summgene(indxcompsort)
                 gdat.fitt.prio.meanpara.rratcomp[p] = gdat.fitt.prio.meanpara.rratcomp[p][indxcompsort]
-            gdat.rsmacompprio = gdat.rsmacompprio[indxcompsort]
+            gdat.fitt.prio.meanpara.rsmacomp = gdat.fitt.prio.meanpara.rsmacomp[indxcompsort]
             gdat.fitt.prio.meanpara.epocmtracomp = gdat.fitt.prio.meanpara.epocmtracomp[indxcompsort]
             gdat.fitt.prio.meanpara.pericomp = gdat.fitt.prio.meanpara.pericomp[indxcompsort]
             gdat.fitt.prio.meanpara.cosicomp = gdat.fitt.prio.meanpara.cosicomp[indxcompsort]
@@ -11276,8 +11286,8 @@ def init( \
                 print(gdat.duraprio)
                 print('gdat.fitt.prio.meanpara.rratcomp')
                 print(gdat.fitt.prio.meanpara.rratcomp)
-                print('gdat.rsmacompprio')
-                print(gdat.rsmacompprio)
+                print('gdat.fitt.prio.meanpara.rsmacomp')
+                print(gdat.fitt.prio.meanpara.rsmacomp)
                 print('gdat.fitt.prio.meanpara.epocmtracomp')
                 print(gdat.fitt.prio.meanpara.epocmtracomp)
                 print('gdat.fitt.prio.meanpara.pericomp')
@@ -11309,7 +11319,7 @@ def init( \
         
                 if not np.isfinite(gdat.fitt.prio.meanpara.rratcomp).all():
                     print('rrat is infinite!')
-                if not np.isfinite(gdat.rsmacompprio).all():
+                if not np.isfinite(gdat.fitt.prio.meanpara.rsmacomp).all():
                     print('rsma is infinite!')
                 if not np.isfinite(gdat.fitt.prio.meanpara.epocmtracomp).all():
                     print('epoc is infinite!')
