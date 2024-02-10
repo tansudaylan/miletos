@@ -365,34 +365,6 @@ def cnfg_Sirius():
         )
         
 
-def cnfg_TOI1797():
-    
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'PlanetarySystem'
-    
-    for a in range(2):
-        
-        if a == 0:
-            boolsimutargpartfprt = False
-            strgcnfg = 'Observed'
-        if a == 1:
-            boolsimutargpartfprt = True
-            strgcnfg = 'Simulated'
-
-        #dictlygoinpt = dict()
-        #dictlygoinpt['numbside'] = 51
-        #dictlygoinpt['maxmtmagcatl'] = 9.
-        miletos.init( \
-             toiitarg=1797, \
-             dictfitt=dictfitt, \
-             strgcnfg=strgcnfg, \
-             boolsimutargpartfprt=boolsimutargpartfprt, \
-             #booldiag=False, \
-             #listlablinst=[['TESS'], []], \
-             #dictlygoinpt=dictlygoinpt, \
-            )
-        
-
 def cnfg_TRAPPIST1():
     
     dictfitt = dict()
