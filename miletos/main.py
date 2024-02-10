@@ -5287,6 +5287,9 @@ def srch_boxsperi(arry, \
               ##  2: detailed description of the execution
               typeverb=1, \
               
+              # type of plot background
+              typeplotback='white', \
+
               # Boolean flag to turn on diagnostic mode
               ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
               booldiag=True, \
@@ -5333,6 +5336,13 @@ def srch_boxsperi(arry, \
                         if not os.path.exists(dictpathplot[strg][j]):
                             boolproc = True
             
+    if typeplotback == 'white':
+        colrbkgd = 'white'
+        colrdraw = 'black'
+    elif typeplotback == 'black':
+        colrbkgd = 'black'
+        colrdraw = 'white'
+    
     if boolproc:
         dictboxsperioutp = dict()
         if pathvisu is not None:
@@ -7985,11 +7995,13 @@ def init( \
                 gdat.minmwlen = 0.1
                 gdat.maxmwlen = 10.
                 gdat.numbwlen = 1000
-                gdat.binswlen = np.logspace(np.log10(gdat.minmwlen), np.log10(gdat.maxmwlen), gdat.numbwlen)
+                gdat.binswlen = np.logspace(np.log10(gdat.minmwlen), np.log10(gdat.maxmwlen), gdat.numbwlen + 1)
                 gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
                 gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
                 
                 gdat.specsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen)
+                print('gdat.cntrwlen')
+                summgene(gdat.cntrwlen)
                 print('gdat.specsyst')
                 summgene(gdat.specsyst)
                 print('gdat.diffwlen')
@@ -8006,16 +8018,24 @@ def init( \
                     
                     gdat.dictfunctran[gdat.liststrgband[pl]] = np.zeros_like(gdat.cntrwlen)
                     
-                    if gdat.liststrgband[pl] == 'ULTRASAT' or 'TESS-GEO-UV':
+                    if gdat.liststrgband[pl] == 'ULTRASAT' or gdat.liststrgband[pl] == 'TESS-GEO-UV':
                         indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
                         gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-
+                        pntszero = 20.
+                    
+                    elif gdat.liststrgband[pl] == 'TESS-GEO-VIS':
+                        indxwlen = np.where((gdat.cntrwlen < 0.7) & (gdat.cntrwlen > 0.4))[0]
+                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                        pntszero = 20.
+                    
                     elif gdat.liststrgband[pl] == 'TESS':
                         indxwlen = np.where((gdat.cntrwlen < 1.) & (gdat.cntrwlen > 0.6))[0]
                         gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                        pntszero = 20.
                     
                     elif gdat.liststrgband[pl] == 'Bolometric':
                         gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
+                        pntszero = 20.
                     
                     else:
                         print('')
@@ -8024,11 +8044,11 @@ def init( \
                         print('gdat.liststrgband[pl]')
                         print(gdat.liststrgband[pl])
                         raise Exception('Undefined gdat.liststrgband[pl]')
-
+                    
                     gdat.dictspecsyst[gdat.liststrgband[pl]] = np.trapz(gdat.specsyst * gdat.dictfunctran[gdat.liststrgband[pl]], x=gdat.cntrwlen)
                     gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.distsyst**2
-                    gdat.dictmagtsyst[gdat.liststrgband[pl]] = -2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
-    
+                    gdat.dictmagtsyst[gdat.liststrgband[pl]] = pntszero - 2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
+                
             # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
@@ -10976,6 +10996,10 @@ def init( \
             
             gdat.dictmileoutp['dictboxsperioutp'] = dictboxsperioutp
             
+            print('dictboxsperioutp')
+            print(dictboxsperioutp)
+            print('type(dictboxsperioutp)')
+            print(type(dictboxsperioutp))
             if gdat.fitt.prio.meanpara.epocmtracomp is None:
                 gdat.fitt.prio.meanpara.epocmtracomp = dictboxsperioutp['epocmtracomp']
             if gdat.fitt.prio.meanpara.pericomp is None:
