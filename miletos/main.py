@@ -454,13 +454,16 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
         timeconc = np.concatenate(time[0])
         if gmod.boolmodlpsys:
             
-            boolmakeanim = False
+            if strgmodl == 'true':
+                boolmakeanim = gdat.boolmakeanimefestrue
+            else:
+                boolmakeanim = False
+            
             boolmakeimaglfov = False
             pathvisu = None
             if strgmodl == 'true':
-                boolmakeanim = gdat.boolmakeanimefestrue
                 if gdat.boolplotefestrue:
-                    pathvisu = gdat.pathvisutarg + 'EphesosSimulatingData/'
+                    pathvisu = gdat.pathvisutarg + 'EphesosModel/'
                     boolmakeimaglfov = True
                     os.system('mkdir -p %s' % pathvisu)
             
@@ -7555,7 +7558,7 @@ def init( \
          boolplotefestrue=True, \
 
          # Boolean flag to animate the true ephesos model
-         boolmakeanimefestrue=False, \
+         boolmakeanimefestrue=True, \
         
          # paths
          ## the path of the folder in which the target folder will be placed
@@ -8018,7 +8021,12 @@ def init( \
                     
                     gdat.dictfunctran[gdat.liststrgband[pl]] = np.zeros_like(gdat.cntrwlen)
                     
-                    if gdat.liststrgband[pl] == 'ULTRASAT' or gdat.liststrgband[pl] == 'TESS-GEO-UV':
+                    if gdat.liststrgband[pl] == 'ULTRASAT':
+                        indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
+                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                        pntszero = 20.
+                    
+                    elif gdat.liststrgband[pl] == 'TESS-GEO-UV':
                         indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
                         gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
                         pntszero = 20.
@@ -10309,10 +10317,12 @@ def init( \
                                 strgband = gdat.liststrginst[b][p][-1]
                             magt = getattr(gdat, '%smagsyst' % strgband)
                             nois = nicomedia.retr_noislsst(magt) # [ppt]
-                        elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            nois = 10**(1. + 23.5 - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
+                        elif gdat.liststrginst[b][p] == 'TESS-GEO-UV':
+                            nois = 10**(21. - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
+                        elif gdat.liststrginst[b][p] == 'TESS-GEO-VIS':
+                            nois = 10**(21. - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
                         elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            nois = 10**(1. + 23.5 - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
+                            nois = 10**(21. - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS'):
                             
                             if gdat.booldiag:
@@ -10996,18 +11006,18 @@ def init( \
             
             gdat.dictmileoutp['dictboxsperioutp'] = dictboxsperioutp
             
-            print('dictboxsperioutp')
-            print(dictboxsperioutp)
-            print('type(dictboxsperioutp)')
-            print(type(dictboxsperioutp))
-            if gdat.fitt.prio.meanpara.epocmtracomp is None:
+            if not hasattr(gdat.fitt.prio.meanpara, 'epocmtracomp'):
                 gdat.fitt.prio.meanpara.epocmtracomp = dictboxsperioutp['epocmtracomp']
-            if gdat.fitt.prio.meanpara.pericomp is None:
+            if not hasattr(gdat.fitt.prio.meanpara, 'pericomp'):
                 gdat.fitt.prio.meanpara.pericomp = dictboxsperioutp['pericomp']
             gdat.deptprio = 1. - 1e-3 * dictboxsperioutp['depttrancomp']
             gdat.fitt.prio.meanpara.duraprio = dictboxsperioutp['duracomp']
             gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(dictboxsperioutp['epocmtracomp']) 
-            gdat.fitt.prio.meanpara.rratcomp[pp] = np.sqrt(1e-3 * gdat.deptprio)
+            if gdat.fitt.boolvarirratinst:
+                for pk in gdat.fitt.indxrratband[0]:
+                    gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
+            else:
+                gdat.fitt.prio.meanpara.rratcomp = np.sqrt(1e-3 * gdat.deptprio)
             gdat.fitt.prio.meanpara.rsmacomp = np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)
             
             gdat.perimask = gdat.fitt.prio.meanpara.pericomp
@@ -11311,9 +11321,9 @@ def init( \
                     print('Setting %s uncertainty to 50%%!' % featstar)
         
         if gdat.fitt.boolvarirratinst:
-            gdat.fitt.prio.radicomp = [[] for p in gdat.indxinst[0]]
-            for p in gdat.indxinst[0]:
-                gdat.fitt.prio.radicomp[p] = gdat.fitt.prio.meanpara.rratcomp[p] * gdat.radistar
+            gdat.fitt.prio.radicomp = [[] for pk in gdat.indxrratband[0]]
+            for pk in gdat.indxrratband[0]:
+                gdat.fitt.prio.radicomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk] * gdat.radistar
         else:
             gdat.fitt.prio.radicomp = gdat.fitt.prio.meanpara.rratcomp * gdat.radistar
         

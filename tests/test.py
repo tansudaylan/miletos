@@ -338,7 +338,7 @@ def cnfg_TESSGEO():
                      ], []]
     
     miletos.init( \
-         strgmast='SimulatedStar', \
+         strgmast='SimulatedData', \
          
          # temperature of the star [K]
          tmptstar=6000., \
