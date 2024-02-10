@@ -7931,12 +7931,34 @@ def init( \
     if gdat.decltarg is not None and gdat.declstar is not None:
         raise Exception('')
 
-    # labels of the instruments
+    setup_miletos(gdat)
+    
+    # human-readable labels of the instruments
     if gdat.listlablinst is None:
         gdat.listlablinst = [['TESS'], []]
     
-    setup_miletos(gdat)
+    if gdat.typeverb > 1:
+        print('gdat.listlablinst')
+        print(gdat.listlablinst)
     
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if len(gdat.listlablinst[b][p]) == 0:
+                    print('')
+                    print('')
+                    print('')
+                    raise Exception('gdat.listlablinst[b][p] is empty.')
+        
+        if len(gdat.listlablinst) != 2:
+            print('')
+            print('')
+            print('')
+            raise Exception('gdat.listlablinst should be a list with two elements.')
+
+    # strings for the instruments to be used in file names
+    gdat.liststrginst = retr_strginst(gdat, gdat.listlablinst)
+
     setup1_miletos(gdat)
 
     if gdat.booldiag:
@@ -7963,12 +7985,13 @@ def init( \
             # determine magnitudes
             if gdat.distsyst is not None and gdat.tmptstar is not None:
                 
+                print('Simulating the magnitudes of the synthetic target based on its temperature and distance...')
 
                 # define spectral grid (this may need to be taken outside the if statements for other purposes)
                 gdat.minmwlen = 0.1
                 gdat.maxmwlen = 10.
-                gdat.numbwlen = 100
-                gdat.binswlen = np.linspace(gdat.minmwlen, gdat.maxmwlen, gdat.numbwlen)
+                gdat.numbwlen = 1000
+                gdat.binswlen = np.logspace(np.log10(gdat.minmwlen), np.log10(gdat.maxmwlen), gdat.numbwlen)
                 gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
                 gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
                 
@@ -7977,11 +8000,37 @@ def init( \
                 summgene(gdat.specsyst)
                 print('gdat.diffwlen')
                 summgene(gdat.diffwlen)
-                gdat.lumisyst = np.trapz(gdat.specsyst, x=gdat.cntrwlen)
-                gdat.fluxsyst = gdat.lumisyst / 4. / np.pi / gdat.distsyst**2
+                gdat.dictspecsyst = dict()
+                gdat.dictfluxsyst = dict()
+                gdat.dictmagtsyst = dict()
+                gdat.dictfunctran = dict()
                 
-                gdat.tmagsyst = -2.5 * np.log10(gdat.fluxsyst)
+                gdat.liststrgband = gdat.liststrginst[b] + ['Bolometric']
+                
+                gdat.numbband = len(gdat.liststrgband)
+                gdat.indxband = np.arange(gdat.numbband)
+                for pl in gdat.indxband:
+                    
+                    gdat.dictfunctran[gdat.liststrgband[pl]] = np.zeros_like(gdat.cntrwlen)
+                    
+                    if gdat.liststrgband[pl] == 'ULTRASAT':
+                        indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
+                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
 
+                    elif gdat.liststrgband[pl] == 'TESS':
+                        indxwlen = np.where((gdat.cntrwlen < 1.) & (gdat.cntrwlen > 0.6))[0]
+                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                    
+                    elif gdat.liststrgband[pl] == 'Bolometric':
+                        gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
+                    
+                    else:
+                        raise Exception('')
+
+                    gdat.dictspecsyst[gdat.liststrgband[pl]] = np.trapz(gdat.specsyst * gdat.dictfunctran[gdat.liststrgband[pl]], x=gdat.cntrwlen)
+                    gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.distsyst**2
+                    gdat.dictmagtsyst[gdat.liststrgband[pl]] = -2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
+    
             # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
@@ -8009,25 +8058,6 @@ def init( \
     # dictionary to be returned
     gdat.dictmileoutp = dict()
     
-    if gdat.typeverb > 1:
-        print('gdat.listlablinst')
-        print(gdat.listlablinst)
-    
-    if gdat.booldiag:
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if len(gdat.listlablinst[b][p]) == 0:
-                    print('')
-                    print('')
-                    print('')
-                    raise Exception('gdat.listlablinst[b][p] is empty.')
-        
-        if len(gdat.listlablinst) != 2:
-            print('')
-            print('')
-            print('')
-            raise Exception('gdat.listlablinst should be a list with two elements.')
-
     # instrument index of TESS
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -8037,8 +8067,6 @@ def init( \
     # number of energy bins for each photometric data set
     gdat.numbener = [[] for p in gdat.indxinst[0]]
     
-    gdat.liststrginst = retr_strginst(gdat, gdat.listlablinst)
-
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             if len(gdat.liststrgtypedata[b]) != len(gdat.liststrginst[b]):
@@ -10255,11 +10283,9 @@ def init( \
                             magt = getattr(gdat, '%smagsyst' % strgband)
                             nois = nicomedia.retr_noislsst(magt) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            print('gdat.tmagsyst')
-                            print(gdat.tmagsyst)
                             nois = nicomedia.retr_noistess(gdat.tmagsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
-                            print('nois')
-                            summgene(nois)
+                        elif gdat.liststrginst[b][p] == 'ULTRASAT':
+                            nois = nicomedia.retr_noistess(gdat.magtusatsyst, typeinst=gdat.liststrginst[b][p]) # [ppt]
                         elif gdat.liststrginst[b][p].startswith('TESS'):
                             
                             if gdat.booldiag:
