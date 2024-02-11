@@ -412,7 +412,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 raise Exception('')
         
         cntr = 0
-        listindxtimeinst = [[] for p in gdat.indxinst[0]]
         for p in gdat.indxinst[0]:
             
             if strgmodl == 'true' and gdat.liststrgtypedata[0][p] == 'obsd':
@@ -445,13 +444,11 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                     for j in gmod.indxcomp:
                         rratcomp[j] = dictparainpt['rratcom%d' % j]
                 
-                listindxtimeinst[p] = cntr + np.arange(time[0][p].size)
                 cntr += time[0][p].size
 
             else:
                 rratcomp = None
         
-        timeconc = np.concatenate(time[0])
         if gmod.boolmodlpsys:
             
             if strgmodl == 'true':
@@ -466,7 +463,6 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                     pathvisu = gdat.pathvisutarg + 'EphesosModel/'
                     boolmakeimaglfov = True
                     os.system('mkdir -p %s' % pathvisu)
-            
 
             if gdat.booldiag:
                 if len(rratcomp) == 0 and gmod.typemodl.startswith('PlanetarySystem') and gmod.numbcomp > 1:
@@ -479,37 +475,35 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                     print(rratcomp)
                     raise Exception('len(rratcomp) == 0')
 
-            dictoutpmodl = ephesos.eval_modl(timeconc, \
-                                                     pericomp=pericomp, \
-                                                     epocmtracomp=epocmtracomp, \
-                                                     rsmacomp=rsmacomp, \
-                                                     cosicomp=cosicomp, \
-                                                     
-                                                     massstar=massstar, \
-                                                     radistar=radistar, \
-                                                     masscomp=masscomp, \
-                                                     
-                                                     boolmakeanim=boolmakeanim, \
-                                                     pathvisu=pathvisu, \
-                                                     boolmakeimaglfov=boolmakeimaglfov, \
+            for p in gdat.indxinst[0]:
+                dictoutpmodl = ephesos.eval_modl(time[0][p], \
+                                                 pericomp=pericomp, \
+                                                 epocmtracomp=epocmtracomp, \
+                                                 rsmacomp=rsmacomp, \
+                                                 cosicomp=cosicomp, \
+                                                 
+                                                 massstar=massstar, \
+                                                 radistar=radistar, \
+                                                 masscomp=masscomp, \
+                                                 
+                                                 boolmakeanim=boolmakeanim, \
+                                                 pathvisu=pathvisu, \
+                                                 boolmakeimaglfov=boolmakeimaglfov, \
 
-                                                     typelmdk='quadkipp', \
-                                                     
-                                                     booldiag=gdat.booldiag, \
+                                                 typelmdk='quadkipp', \
+                                                 
+                                                 booldiag=gdat.booldiag, \
 
-                                                     coeflmdk=coeflmdk, \
+                                                 coeflmdk=coeflmdk, \
 
-                                                     rratcomp=rratcomp, \
-                                                     typesyst=gmod.typemodl, \
-                                                     
-                                                     typeverb=0, \
-                                                    
-                                                    )
+                                                 rratcomp=rratcomp, \
+                                                 typesyst=gmod.typemodl, \
+                                                 
+                                                 typeverb=0, \
+                                                
+                                                )
                 
-        for p in gdat.indxinst[0]:
-            if gmod.boolmodlpsys:
-
-                dictlistmodl['Transit'][0][p] = dictoutpmodl['rflx'][listindxtimeinst[p]]
+                dictlistmodl['Transit'][0][p] = dictoutpmodl['rflx']
                 if dictlistmodl['Transit'][0][p].ndim == 1:
                     dictlistmodl['Transit'][0][p] = dictlistmodl['Transit'][0][p][:, None]
 
@@ -524,7 +518,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                         summgene(rratcomp)
                         raise Exception('dictlistmodl[tran][0][p] has gone negative.')
                 
-            timeredu = dictoutpmodl['timeredu']
+                timeredu = dictoutpmodl['timeredu']
 
     # baseline
     if gmod.typemodlblinshap == 'cons':
@@ -3708,8 +3702,6 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
     #if strgarry != 'Raw' and gdat.typepriocomp is not None:
     #    strgprioplan = '_%s' % gdat.typepriocomp
     
-    print('gdat.strgextncade')
-    print(gdat.strgextncade)
     path = gdat.pathvisutarg + 'rflx_DetrendProcess%s_%s_%s_%s%s%s%s_ts%02dit%02d.%s' % (gdat.strgcnfg, gdat.liststrginst[b][p], \
                                  gdat.liststrgchun[b][p][y], gdat.strgtarg, strgprioplan, gdat.strgextncade[b][p], gdat.liststrgener[p][gdat.indxenerclip], z, r, gdat.typefileplot)
     gdat.listdictdvrp[0].append({'path': path, 'limt':[0., 0.05, 1.0, 0.2]})
@@ -4437,7 +4429,7 @@ def setp_modlinit(gdat, strgmodl):
     print('gmod.boolmodlcomp')
     print(gmod.boolmodlcomp)
         
-    gmod.boolmodlpcur = gmod.typemodl == 'pcur' or gmod.typemodl == 'PlanetarySystemWithPhaseCurve'
+    gmod.boolmodlpcur = gmod.typemodl == 'pcur' or gmod.typemodl == 'PlanetarySystemEmittingCompanion'
     
     print('gmod.boolmodlpcur')
     print(gmod.boolmodlpcur)
@@ -6916,6 +6908,9 @@ def plot_tser( \
               
               # type of signature for the generating code
               typesigncode=None, \
+              
+              # Boolean flag to draw a center line to guide the eye
+              booldrawcntr=None, \
 
               # title for the plot
               strgtitl='', \
@@ -6997,6 +6992,20 @@ def plot_tser( \
 
     figr, axis = plt.subplots(figsize=sizefigr)
     
+    # time offset
+    if typexdat == 'time' and timeoffs is None:
+        # obtained a concatenated array of all times
+        listarrytimeconc = []
+        if timedata is not None:
+            listarrytimeconc.append(timedata)
+        if timedatabind is not None:
+            listarrytimeconc.append(timedatabind)
+        if dictmodl is not None:
+            for attr in dictmodl:
+                listarrytimeconc.append(dictmodl[attr]['time'])
+        # determine the time offset
+        timeoffs = tdpy.retr_offstime(np.concatenate(listarrytimeconc))
+
     if typexdat == 'phas':
         xdatoffs = phasoffs
     else:
@@ -7030,6 +7039,11 @@ def plot_tser( \
             summgene(tserdatabind)
             raise Exception('tserdatabind.ndim != 1')
     
+    if dictmodl is not None:
+        booldrawcntr = True
+    else:
+        booldrawcntr = False
+
     # model
     if dictmodl is not None:
         
@@ -7057,15 +7071,28 @@ def plot_tser( \
                 print('dictmodl[attr][tser]')
                 summgene(dictmodl[attr]['tser'])
                 raise Exception('dictmodl[attr][tser].ndim != 1')
-
+            
             if boolbrekmodl:
+                
                 diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
                 
+                minmdiftimemodl = np.amin(diftimemodl)
+
+                if minmdiftimemodl < 0:
+                    print('')
+                    print('')
+                    print('')
+                    print('minmdiftimemodl [minutes]')
+                    print(minmdiftimemodl * 24. * 60.)
+                    print('diftimemodl')
+                    summgene(diftimemodl)
+                    raise Exception('minmdiftimemodl is negative when boolbrekmodl is True. Time array should be sorted.')
+
                 indxtimebrekregi = np.where(diftimemodl > 2 * np.amin(diftimemodl))[0] + 1
                 indxtimebrekregi = np.concatenate([np.array([0]), indxtimebrekregi, np.array([dictmodl[attr]['time'].size - 1])])
                 numbtimebrekregi = indxtimebrekregi.size
                 numbtimechun = numbtimebrekregi - 1
-
+                
                 xdat = []
                 ydat = []
                 for n in range(numbtimechun):
@@ -7080,7 +7107,8 @@ def plot_tser( \
             if numbchun > 0.5 * dictmodl[attr]['time'].size:
                 print('Miletos.plot_tser(): Warning! Number of regions (%d) is more than half the number of data points (%d).' % (numbchun, dictmodl[attr]['time'].size))
                 print('Perhaps the data is undersampled. Model light curve plot will not look reasonable.')
-            
+                raise Exception('')
+
             for n in range(numbchun):
                 if n == 0 and 'labl' in dictmodl[attr]:
                     label = dictmodl[attr]['labl']
@@ -7125,6 +7153,11 @@ def plot_tser( \
                 
                 axis.plot(xdattemp, ydat[n], color=color, lw=1, label=label, ls=ls, alpha=alpha)
             k += 1
+    
+    if booldrawcntr:
+        xdatcntr = np.array(axis.get_xlim())
+        ydatcntr = np.ones_like(xdatcntr)
+        axis.plot(xdatcntr, ydatcntr, color='gray', lw=1, ls='-.', alpha=alpha, zorder=-1)
     
     if lablxaxi is None:
         if typexdat == 'time':
@@ -7569,7 +7602,7 @@ def init( \
          boolplotefestrue=True, \
 
          # Boolean flag to animate the true ephesos model
-         boolmakeanimefestrue=True, \
+         boolmakeanimefestrue=False, \
         
          # paths
          ## the path of the folder in which the target folder will be placed
@@ -9576,7 +9609,7 @@ def init( \
     if gdat.listtypeanls is None:
         gdat.listtypeanls = []
         if gdat.boolinfe:
-            if (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve') and gdat.typepriocomp == 'boxsperinega':
+            if (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and gdat.typepriocomp == 'boxsperinega':
                 gdat.listtypeanls += ['boxsperinega']
             if gdat.fitt.typemodl == 'CompactObjectStellarCompanion':
                 gdat.listtypeanls += ['boxsperiposi']
@@ -9591,7 +9624,7 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.boolinfe and len(gdat.listtimescalbdtr) > 0 and \
-                                (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve') and not gdat.liststrginst[b][p].startswith('LSST'):
+                                (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and not gdat.liststrginst[b][p].startswith('LSST'):
                 gdat.boolbdtr[b][p] = True
     
     gdat.boolbdtranyy = False
@@ -9940,16 +9973,21 @@ def init( \
                         if gdat.liststrginst[b][p] == 'TESS':
                             cade = 2. # [min]
                             delttime = cade / 60. / 24. # [day]
-                            gdat.true.listtime[b][p][y] = 2462000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
+                            #gdat.true.listtime[b][p][y] = 2462000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
+                            lengobsv = 1.
+                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            cade = 2. # [min]
+                            cade = 1. # [min]
                             delttime = cade / 60. / 24. # [day]
-                            lengobsv = 30.
+                            lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
+                            cade = 5. # [min]
+                            delttime = cade / 60. / 24. # [day]
+                            lengobsv = 1.
+                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'JWST':
-                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
+                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p].startswith('LSST'):
                             # WFD
                             numbtimelsst = 100
@@ -10103,7 +10141,7 @@ def init( \
     print(gdat.boolsrchboxsperi)
 
     # gdat.fitt.prio.meanpara.epocmtracomp may potentially be modified later, so this will need to be rerun
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.fitt.typemodl == 'psysttvr') \
+    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr') \
                                                                                                                            and not (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
         gdat.fitt.prio.numbcomp = gdat.fitt.prio.meanpara.epocmtracomp.size
         gdat.fitt.prio.indxcomp = np.arange(gdat.fitt.prio.numbcomp)
@@ -10124,7 +10162,7 @@ def init( \
         
         # probably to be deleted
         #if gdat.booldiag:
-        #    if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.true.typemodl == 'psysttvr':
+        #    if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.true.typemodl == 'psysttvr':
         #        if not hasattr(gdat.true, 'epocmtracomp'):
         #            raise Exception('not hasattr(gdat.true, epocmtracomp')
         
@@ -11122,7 +11160,7 @@ def init( \
         #gdat.numbtime = gdat.time.size
 
     # rerunning this as gdat.fitt.prio.meanpara.epocmtracomp may have been modified
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.fitt.typemodl == 'psysttvr'):
+    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr'):
         gdat.fitt.prio.numbcomp = gdat.fitt.prio.meanpara.epocmtracomp.size
         gdat.fitt.prio.indxcomp = np.arange(gdat.fitt.prio.numbcomp)
 
@@ -11337,7 +11375,7 @@ def init( \
         
         if gdat.typeverb > 0:
             
-            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion':
                 print('Stellar priors:')
                 print('gdat.rascstar')
                 print(gdat.rascstar)
@@ -11758,7 +11796,7 @@ def init( \
     # do not continue if there is no trigger
     # Boolean flag to continue modeling the data based on the feature extraction
     gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or \
-                                        gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve') and \
+                                        gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and \
                                                                            not (gdat.boolsrchboxsperi and not gdat.dictmileoutp['boolposianls'].any())
     
     if gdat.boolmodl:
@@ -11834,7 +11872,7 @@ def init( \
         #    for p in gdat.indxinst[b]:
                 
         if gdat.typeverb > 0:
-            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve':
+            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion':
                 print('gdat.dictmileoutp[boolposianls]')
                 print(gdat.dictmileoutp['boolposianls'])
             
@@ -11979,7 +12017,7 @@ def init( \
                     plt.close()
 
 
-            elif gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve' or gdat.fitt.typemodl == 'psysttvr':
+            elif gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr':
                 
                 if gdat.fitt.typemodl == 'psysttvr':
                     if gdat.fitt.typemodlttvr == 'indilineuser':
@@ -12038,7 +12076,8 @@ def init( \
                 print('gdat.numbsampplot')
                 print(gdat.numbsampplot)
         
-        if gdat.numbener[p] > 1 and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemWithPhaseCurve'):
+        if gdat.numbener[p] > 1 and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'CompactObjectStellarCompanion' \
+                                                                    or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion'):
             # plot the radius ratio spectrum
             path = gdat.pathvisutarg + 'spec%s.%s' % (gdat.strgcnfg, gdat.typefileplot)
             figr, axis = plt.subplots(figsize=gdat.figrsizeydob)

@@ -315,7 +315,7 @@ def cnfg_ULTRASAT():
 def cnfg_TESSGEO():
     
     dicttrue = dict()
-    dicttrue['typemodl'] = 'PlanetarySystemWithPhaseCurve'
+    dicttrue['typemodl'] = 'PlanetarySystemEmittingCompanion'
     
     dictlygoinpt = dict()
     dictlygoinpt['numbside'] = 51
@@ -337,20 +337,25 @@ def cnfg_TESSGEO():
                      'ULTRASAT', \
                      ], []]
     
-    miletos.init( \
-         strgmast='SimulatedData', \
-         
-         # temperature of the star [K]
-         tmptstar=6000., \
-         
-         # distance to the star [parsec]
-         distsyst=10, \
+    for k in range(5):
+        
+        np.random.seed(k)
+        
+        miletos.init( \
+             strgmast='Simulation %02d' % k, \
+             
+             # temperature of the star [K]
+             tmptstar=6000., \
+             
+             # distance to the star [parsec]
+             distsyst=10, \
 
-         dicttrue=dicttrue, \
-         listlablinst=listlablinst, \
-         liststrgtypedata=liststrgtypedata, \
-         dictlygoinpt=dictlygoinpt, \
-        )
+             strgclus='TESS-GEO', \
+             dicttrue=dicttrue, \
+             listlablinst=listlablinst, \
+             liststrgtypedata=liststrgtypedata, \
+             dictlygoinpt=dictlygoinpt, \
+            )
         
 
 def cnfg_Sirius():
@@ -413,7 +418,7 @@ def cnfg_WASP18():
 def cnfg_WASP121():
     
     dictfitt = dict()
-    dictfitt['typemodl'] = 'PlanetarySystemWithPhaseCurve'
+    dictfitt['typemodl'] = 'PlanetarySystemEmittingCompanion'
     
     # the following two are mutually exclusive
     liststrgtypedata = [['simutargpartsynt'], []]
@@ -437,7 +442,7 @@ def cnfg_WASP43():
     liststrgtypedata = [['simutargpartinje'], []]
     
     dicttrue = dict()
-    dicttrue['typemodl'] = 'PlanetarySystemWithPhaseCurve'
+    dicttrue['typemodl'] = 'PlanetarySystemEmittingCompanion'
     listlablinst = [['JWST'], []]
 
     listener = [np.linspace(0.5, 5., 10)]
