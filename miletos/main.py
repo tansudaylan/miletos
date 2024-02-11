@@ -1936,7 +1936,7 @@ def proc_alle(gdat, typemodl):
                 for j in gmod.indxcomp:
                     gdat.listarrypcur['quadmodl'+typemodl][b][p][j][ii, :, :] = \
                                             fold_tser(gdat.listarrytsermodl[b][p][ii, gmod.listindxtimeclen[j][b][p], :, :], \
-                                                                                   gdat.dicterrr['epocmtracomp'][0, j], gdat.dicterrr['pericomp'][0, j], phasshft=0.25)
+                                                                                   gdat.dicterrr['epocmtracomp'][0, j], gdat.dicterrr['pericomp'][0, j], phascntr=0.25)
                     
             ## plot components in the zoomed panel
             for j in gmod.indxcomp:
@@ -2060,7 +2060,7 @@ def proc_alle(gdat, typemodl):
                     else:
                         boolpost = False
                     gmod.arrypcur['quad'+strgpcurcomp+typemodl][b][p][j] = \
-                                        fold_tser(arrytsertemp, gdat.dicterrr['epocmtracomp'][0, j], gdat.dicterrr['pericomp'][0, j], phasshft=0.25) 
+                                        fold_tser(arrytsertemp, gdat.dicterrr['epocmtracomp'][0, j], gdat.dicterrr['pericomp'][0, j], phascntr=0.25) 
                 
                     gmod.arrypcur['quad'+strgpcurcomp+typemodl+'bindtotl'][b][p][j] = rebn_tser(gmod.arrypcur['quad'+strgpcurcomp+typemodl][b][p][j], \
                                                                                                                 blimxdat=gdat.binsphasquadtotl)
@@ -3857,18 +3857,6 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
             if gdat.typeverb > 0:
                 print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
-    if lablpara is None:
-        pass
-
-    if gdat.booldiag:
-        if lablpara is None:
-            print('')
-            print('')
-            print('')
-            print('nameparabase')
-            print(nameparabase)
-            raise Exception('lablpara is None')
-
     gmod.listlablpara.append(lablpara)
     gmod.listminmpara.append(minmpara)
     gmod.listmaxmpara.append(maxmpara)
@@ -3954,6 +3942,12 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     gmod.listminmpara = np.array(gmod.listminmpara)
     gmod.listmaxmpara = np.array(gmod.listmaxmpara)
 
+    # get default parameter labels if they have not been provided
+    gmod.listlablpara, _, _, _, _ = tdpy.retr_listlablscalpara(gdat.fitt.listnameparafull, gmod.listlablpara, booldiag=gdat.booldiag)
+    
+    # merge variable labels with units
+    gmod.listlablparatotl = tdpy.retr_labltotl(gmod.listlablpara)
+    
     if gdat.booldiag:
         if None in gmod.listlablpara:
             print('')
@@ -3962,9 +3956,6 @@ def proc_modl(gdat, strgmodl, strgextn, h):
             print('gmod.listlablpara')
             print(gmod.listlablpara)
             raise Exception('')
-    
-    gmod.listlablpara, _, _, _, _ = tdpy.retr_listlablscalpara(gdat.fitt.listnameparafull, gmod.listlablpara, booldiag=gdat.booldiag)
-    gmod.listlablparatotl = tdpy.retr_labltotl(gmod.listlablpara)
     
     gdat.numbpara = len(gdat.fitt.listnameparafullvari)
     gdat.meanpara = np.empty(gdat.numbpara)
@@ -5746,8 +5737,8 @@ def srch_boxsperi(arry, \
                     arrymetamodl = np.zeros((numbtimeplot, 3))
                     arrymetamodl[:, 0] = timemodlplot
                     arrymetamodl[:, 1] = dictboxsperiinte['rflxtsermodl']
-                    arrypsermodl = fold_tser(arrymetamodl, dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['pericomp'][j], phasshft=0.5)
-                    arrypserdata = fold_tser(listarrysrch[0], dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['pericomp'][j], phasshft=0.5)
+                    arrypsermodl = fold_tser(arrymetamodl, dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['pericomp'][j], phascntr=0.5)
+                    arrypserdata = fold_tser(listarrysrch[0], dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['pericomp'][j], phascntr=0.5)
                         
                     dictboxsperiinte['timedata'] = listarrysrch[0][:, 0]
                     dictboxsperiinte['rflxtserdata'] = listarrysrch[0][:, 1]
@@ -6887,6 +6878,9 @@ def plot_tser( \
               
               ## Boolean flag to fold input time-series
               boolfold=False, \
+              
+              # the phase to center when phase folding
+              phascntr=0., \
 
               ## epoch for optional phase-folding
               epoc=None, \
@@ -6907,7 +6901,7 @@ def plot_tser( \
               listcolrvert=None, \
               
               # time offset
-              timeoffs=0., \
+              timeoffs=None, \
               
               # phase offset
               phasoffs=0., \
@@ -6969,6 +6963,11 @@ def plot_tser( \
         typexdat = 'phas'
     else:
         typexdat = 'time'
+    
+    print('boolfold')
+    print(boolfold)
+    print('typexdat')
+    print(typexdat)
 
     if typeplotback == 'white':
         colrbkgd = 'white'
@@ -6997,7 +6996,7 @@ def plot_tser( \
             arrylcurdata = np.empty((timedata.size, 3))
             arrylcurdata[:, 0] = timedata
             arrylcurdata[:, 1] = tserdata
-            arrypcurdata = fold_tser(arrylcurdata, epoc, peri)
+            arrypcurdata = fold_tser(arrylcurdata, epoc, peri, phascntr=phascntr)
     
     if sizefigr is None:
         sizefigr = [8., 2.5]
@@ -7134,8 +7133,8 @@ def plot_tser( \
                     arrylcurmodl[:, 0] = xdat[n]
                     arrylcurmodl[:, 1] = ydat[n]
                     arrypcurmodl = fold_tser(arrylcurmodl, epoc, peri)
-                    xdat[n] = arrylcurmodl[:, 0]
-                    #ydat[n] = arrylcurmodl[:, 0]
+                    xdat[n] = arrypcurmodl[:, 0]
+                    ydat[n] = arrypcurmodl[:, 1]
                 
                 xdattemp = xdat[n] - xdatoffs
                 
@@ -7178,10 +7177,10 @@ def plot_tser( \
             else:
                 lablxaxi = 'Time [BJD-%d]' % xdatoffs
         else:
-            if typephasunit == 'time':
-                lablxaxi = 'Time [%s]' % lablunittime
-            else:
-                lablxaxi = 'Phase'
+            #if typephasunit == 'time':
+            #    lablxaxi = 'Time [%s]' % lablunittime
+            #else:
+            lablxaxi = 'Phase'
             
     axis.set_xlabel(lablxaxi)
     
@@ -7229,7 +7228,7 @@ def plot_tser( \
 
 
 
-def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5, booldiag=True):
+def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phascntr=0.5, booldiag=True):
     
     if arry.ndim == 3:
         time = arry[:, 0, 0]
@@ -7245,7 +7244,27 @@ def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phasshft=0.5,
 
     arryfold = np.empty_like(arry)
     
-    xdat = (((time - epoc) % peri) / peri + phasshft) % 1. - phasshft
+    phasinit = ((time - epoc) % peri) / peri
+    phasdiff = 0.5 - phascntr
+    xdat = (phasinit + phasdiff) % 1. - phasdiff
+    
+    print('phasinit')
+    summgene(phasinit)
+    print('phascntr')
+    print(phascntr)
+    print('phasdiff')
+    print(phasdiff)
+    print('(phasinit + phasdiff) % 1.')
+    summgene((phasinit + phasdiff) % 1.)
+    print('(phasinit + phasdiff) % 1. - phasdiff')
+    summgene((phasinit + phasdiff) % 1. - phasdiff)
+    print('')
+    print('')
+    print('')
+    print('')
+    print('')
+    print('')
+    print('')
     
     if boolxdattime:
         xdat *= peri
@@ -11756,7 +11775,7 @@ def init( \
                                                                                                             blimxdat=gdat.binsphasprimzoom[j])
                         
                         gmod.arrypcur['quadbdtr'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gmod.listindxtimeclen[j][b][p], :, :], \
-                                                                                      gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], phasshft=0.25)
+                                                                                      gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], phascntr=0.25)
                         
                         gmod.arrypcur['quadbdtrbindtotl'][b][p][j] = rebn_tser(gmod.arrypcur['quadbdtr'][b][p][j], \
                                                                                                             blimxdat=gdat.binsphasquadtotl)
