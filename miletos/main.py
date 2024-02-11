@@ -5291,7 +5291,7 @@ def srch_boxsperi(arry, \
               typeverb=1, \
               
               # type of plot background
-              typeplotback='white', \
+              typeplotback='black', \
 
               # Boolean flag to turn on diagnostic mode
               ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
@@ -6926,6 +6926,10 @@ def plot_tser( \
                       
               ## file type of the plot
               typefileplot='png', \
+            
+              # type of plot background
+              typeplotback='black', \
+
              ):
     '''
     Plot time-series data and model
@@ -6959,6 +6963,13 @@ def plot_tser( \
     else:
         typexdat = 'time'
 
+    if typeplotback == 'white':
+        colrbkgd = 'white'
+        colrdraw = 'black'
+    elif typeplotback == 'black':
+        colrbkgd = 'black'
+        colrdraw = 'white'
+    
     if pathvisu is not None:
         dicttdpy = tdpy.retr_dictstrg()
 
@@ -7853,7 +7864,7 @@ def init( \
          booldiag=True, \
          
          # type of plot background
-         typeplotback='white', \
+         typeplotback='black', \
 
          # type of verbosity
          ## -1: absolutely no text
@@ -9927,21 +9938,18 @@ def init( \
                 if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                     for y in gdat.indxchun[b][p]:
                         if gdat.liststrginst[b][p] == 'TESS':
-                            cade = 200. / 60. # [min]
+                            cade = 2. # [min]
                             delttime = cade / 60. / 24. # [day]
-                            #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
-                            gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., 2. / 24., 1. / 3600. / 24.)
+                            gdat.true.listtime[b][p][y] = 2462000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            print('temp')
-                            cade = 40. / 60. # [min]
+                            cade = 2. # [min]
                             delttime = cade / 60. / 24. # [day]
-                            lengobsv = 5.
-                            #gdat.true.listtime[b][p][y] = 2460000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
-                            gdat.true.listtime[b][p][y] = 2460000. + np.arange(0., lengobsv, delttime)
+                            lengobsv = 30.
+                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            gdat.true.listtime[b][p][y] = 2459000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
+                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
                         elif gdat.liststrginst[b][p] == 'JWST':
-                            gdat.true.listtime[b][p][y] = 2459000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
+                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0.3, 0.7, 2. / 60. / 24.)
                         elif gdat.liststrginst[b][p].startswith('LSST'):
                             # WFD
                             numbtimelsst = 100
