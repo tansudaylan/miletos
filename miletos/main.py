@@ -3857,6 +3857,18 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
             if gdat.typeverb > 0:
                 print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
+    if lablpara is None:
+        pass
+
+    if gdat.booldiag:
+        if lablpara is None:
+            print('')
+            print('')
+            print('')
+            print('nameparabase')
+            print(nameparabase)
+            raise Exception('lablpara is None')
+
     gmod.listlablpara.append(lablpara)
     gmod.listminmpara.append(minmpara)
     gmod.listmaxmpara.append(maxmpara)
@@ -3939,12 +3951,18 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     #gdat.stdvrflxthis = gdat.arrytser['Detrended'][b][p][:, :, 2]
     #gdat.varirflxthis = gdat.stdvrflxthis**2
 
-
     gmod.listminmpara = np.array(gmod.listminmpara)
     gmod.listmaxmpara = np.array(gmod.listmaxmpara)
 
-    print('gmod.listlablpara')
-    print(gmod.listlablpara)
+    if gdat.booldiag:
+        if None in gmod.listlablpara:
+            print('')
+            print('')
+            print('')
+            print('gmod.listlablpara')
+            print(gmod.listlablpara)
+            raise Exception('')
+    
     gmod.listlablpara, _, _, _, _ = tdpy.retr_listlablscalpara(gdat.fitt.listnameparafull, gmod.listlablpara, booldiag=gdat.booldiag)
     gmod.listlablparatotl = tdpy.retr_labltotl(gmod.listlablpara)
     
@@ -3958,12 +3976,6 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     gdat.stdvduratran = 1e-1 * gdat.bfitduratran # [hours]
     gdat.bfitamplslen = 0.14 # [relative]
     gdat.stdvamplslen = 1e-1 * gdat.bfitamplslen # [relative]
-    
-    #gmod.listlablpara = [['$R_s$', 'R$_{\odot}$'], ['$P$', 'days'], ['$M_c$', 'M$_{\odot}$'], ['$M_s$', 'M$_{\odot}$']]
-    #gmod.listlablparaderi = [['$A$', ''], ['$D$', 'hours'], ['$a$', 'R$_{\odot}$'], ['$R_{Sch}$', 'R$_{\odot}$']]
-    #gmod.listlablpara += [['$M$', '$M_E$'], ['$T_{0}$', 'BJD'], ['$P$', 'days']]
-    #gmod.listminmpara = np.concatenate([gmod.listminmpara, np.array([ 10., minmtime,  50.])])
-    #gmod.listmaxmpara = np.concatenate([gmod.listmaxmpara, np.array([1e4, maxmtime, 200.])])
     
     meangauspara = None
     stdvgauspara = None
@@ -4132,16 +4144,16 @@ def proc_modl(gdat, strgmodl, strgextn, h):
         #lcurdata = gdat.rflxthisfitt[:, e]
             
         for b in gdat.indxdatatser:
-            #plot_modl(gdat, strgmodl, b, None, None, e)
+            #plot_tsermodlpost(gdat, strgmodl, b, None, None, e)
             for p in gdat.indxinst[b]:
                 for e in gdat.indxener[p]:
                     if e < 5:
-                        #plot_modl(gdat, strgmodl, b, p, None, e)
+                        #plot_tsermodlpost(gdat, strgmodl, b, p, None, e)
                         for y in gdat.indxchun[b][p]:
-                            plot_modl(gdat, strgmodl, b, p, y, e, h)
+                            plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h)
 
 
-def plot_modl(gdat, strgmodl, b, p, y, e, h):
+def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
     
     gmod = getattr(gdat, strgmodl)
             
