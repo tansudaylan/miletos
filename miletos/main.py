@@ -476,6 +476,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                     raise Exception('len(rratcomp) == 0')
 
             for p in gdat.indxinst[0]:
+                
+                strgextn = '%s' % gdat.liststrginst[0][p]
                 dictoutpmodl = ephesos.eval_modl(time[0][p], \
                                                  pericomp=pericomp, \
                                                  epocmtracomp=epocmtracomp, \
@@ -495,6 +497,8 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                  booldiag=gdat.booldiag, \
 
                                                  coeflmdk=coeflmdk, \
+                                                 
+                                                 strgextn=strgextn, \
 
                                                  rratcomp=rratcomp, \
                                                  typesyst=gmod.typemodl, \
@@ -7132,7 +7136,7 @@ def plot_tser( \
                     arrylcurmodl = np.empty((xdat[n].size, 3))
                     arrylcurmodl[:, 0] = xdat[n]
                     arrylcurmodl[:, 1] = ydat[n]
-                    arrypcurmodl = fold_tser(arrylcurmodl, epoc, peri)
+                    arrypcurmodl = fold_tser(arrylcurmodl, epoc, peri, phascntr=phascntr)
                     xdat[n] = arrypcurmodl[:, 0]
                     ydat[n] = arrypcurmodl[:, 1]
                 
@@ -7247,18 +7251,6 @@ def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phascntr=0.5,
     phasinit = ((time - epoc) % peri) / peri
     phasdiff = 0.5 - phascntr
     xdat = (phasinit + phasdiff) % 1. - phasdiff
-    
-    print('fold_tser()')
-    print('phasinit')
-    summgene(phasinit)
-    print('phascntr')
-    print(phascntr)
-    print('phasdiff')
-    print(phasdiff)
-    print('(phasinit + phasdiff) % 1.')
-    summgene((phasinit + phasdiff) % 1.)
-    print('(phasinit + phasdiff) % 1. - phasdiff')
-    summgene((phasinit + phasdiff) % 1. - phasdiff)
     
     if boolxdattime:
         xdat *= peri
@@ -8056,84 +8048,14 @@ def init( \
             print(gdat.dicttrue)
             raise Exception('Some of the data are simulated, but dicttrue does not have typemodl.')
         
-        if gdat.booltargsynt:
-            
-            # determine magnitudes
-            if gdat.distsyst is not None and gdat.tmptstar is not None:
-                
-                print('Simulating the magnitudes of the synthetic target based on its temperature and distance...')
-
-                # define spectral grid (this may need to be taken outside the if statements for other purposes)
-                gdat.minmwlen = 0.1
-                gdat.maxmwlen = 10.
-                gdat.numbwlen = 1000
-                gdat.binswlen = np.logspace(np.log10(gdat.minmwlen), np.log10(gdat.maxmwlen), gdat.numbwlen + 1)
-                gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
-                gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
-                
-                gdat.specsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen)
-                print('gdat.cntrwlen')
-                summgene(gdat.cntrwlen)
-                print('gdat.specsyst')
-                summgene(gdat.specsyst)
-                print('gdat.diffwlen')
-                summgene(gdat.diffwlen)
-                gdat.dictspecsyst = dict()
-                gdat.dictfluxsyst = dict()
-                gdat.dictmagtsyst = dict()
-                gdat.dictfunctran = dict()
-                gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
-                
-                gdat.numbband = len(gdat.liststrgband)
-                gdat.indxband = np.arange(gdat.numbband)
-                for pl in gdat.indxband:
-                    
-                    gdat.dictfunctran[gdat.liststrgband[pl]] = np.zeros_like(gdat.cntrwlen)
-                    
-                    if gdat.liststrgband[pl] == 'ULTRASAT':
-                        indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
-                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                        pntszero = 20.
-                    
-                    elif gdat.liststrgband[pl] == 'TESS-GEO-UV':
-                        indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
-                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                        pntszero = 20.
-                    
-                    elif gdat.liststrgband[pl] == 'TESS-GEO-VIS':
-                        indxwlen = np.where((gdat.cntrwlen < 0.7) & (gdat.cntrwlen > 0.4))[0]
-                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                        pntszero = 20.
-                    
-                    elif gdat.liststrgband[pl] == 'TESS':
-                        indxwlen = np.where((gdat.cntrwlen < 1.) & (gdat.cntrwlen > 0.6))[0]
-                        gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                        pntszero = 20.
-                    
-                    elif gdat.liststrgband[pl] == 'Bolometric':
-                        gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
-                        pntszero = 20.
-                    
-                    else:
-                        print('')
-                        print('')
-                        print('')
-                        print('gdat.liststrgband[pl]')
-                        print(gdat.liststrgband[pl])
-                        raise Exception('Undefined gdat.liststrgband[pl]')
-                    
-                    gdat.dictspecsyst[gdat.liststrgband[pl]] = np.trapz(gdat.specsyst * gdat.dictfunctran[gdat.liststrgband[pl]], x=gdat.cntrwlen)
-                    gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.distsyst**2
-                    gdat.dictmagtsyst[gdat.liststrgband[pl]] = pntszero - 2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
-                
-            # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    if gdat.liststrgtypedata[b][p] != 'simutargsynt':
-                        print('')
-                        print('')
-                        print('')
-                        raise Exception('If liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
+        # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if gdat.liststrgtypedata[b][p] != 'simutargsynt':
+                    print('')
+                    print('')
+                    print('')
+                    raise Exception('If liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
 
     gdat.arrytser = dict()
     ## ensure target identifiers are not conflicting
@@ -8637,6 +8559,100 @@ def init( \
         
         return gdat.dictmileoutp
 
+    ## make folders
+    for attr, valu in gdat.__dict__.items():
+        if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
+            os.system('mkdir -p %s' % valu)
+            
+    if gdat.booltargsynt:
+        
+        # determine magnitudes
+        if gdat.distsyst is not None and gdat.tmptstar is not None:
+            
+            print('Simulating the magnitudes of the synthetic target based on its temperature and distance...')
+
+            # define spectral grid (this may need to be taken outside the if statements for other purposes)
+            gdat.minmwlen = 0.1
+            gdat.maxmwlen = 10.
+            gdat.numbwlen = 1000
+            gdat.binswlen = np.logspace(np.log10(gdat.minmwlen), np.log10(gdat.maxmwlen), gdat.numbwlen + 1)
+            gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
+            gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
+            
+            gdat.specsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen)
+            gdat.dictspecsyst = dict()
+            gdat.dictfluxsyst = dict()
+            gdat.dictmagtsyst = dict()
+            gdat.dictfunctran = dict()
+            gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
+            
+            gdat.numbband = len(gdat.liststrgband)
+            gdat.indxband = np.arange(gdat.numbband)
+            
+            path = gdat.pathvisutarg + 'spec_%s' % gdat.strgtarg
+            for pl in gdat.indxband:
+                path += '_' + gdat.liststrgband[pl]
+            path += '.%s' % gdat.typefileplot
+            if not os.path.exists(path):
+                figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
+                axistwin = axis.twinx()
+                axis.plot(gdat.cntrwlen, gdat.specsyst, color='k', ls='-', ms=1, rasterized=True)
+            
+            for pl in gdat.indxband:
+                
+                gdat.dictfunctran[gdat.liststrgband[pl]] = np.zeros_like(gdat.cntrwlen)
+                
+                if gdat.liststrgband[pl] == 'ULTRASAT':
+                    indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
+                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                    pntszero = 20.
+                
+                elif gdat.liststrgband[pl] == 'TESS-GEO-UV':
+                    indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
+                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                    pntszero = 20.
+                
+                elif gdat.liststrgband[pl] == 'TESS-GEO-VIS':
+                    indxwlen = np.where((gdat.cntrwlen < 0.7) & (gdat.cntrwlen > 0.4))[0]
+                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                    pntszero = 20.
+                
+                elif gdat.liststrgband[pl] == 'TESS':
+                    indxwlen = np.where((gdat.cntrwlen < 1.) & (gdat.cntrwlen > 0.6))[0]
+                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                    pntszero = 20.
+                
+                elif gdat.liststrgband[pl] == 'Bolometric':
+                    gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
+                    pntszero = 20.
+                
+                else:
+                    print('')
+                    print('')
+                    print('')
+                    print('gdat.liststrgband[pl]')
+                    print(gdat.liststrgband[pl])
+                    raise Exception('Undefined gdat.liststrgband[pl]')
+                
+                gdat.dictspecsyst[gdat.liststrgband[pl]] = np.trapz(gdat.specsyst * gdat.dictfunctran[gdat.liststrgband[pl]], x=gdat.cntrwlen)
+                gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.distsyst**2
+                gdat.dictmagtsyst[gdat.liststrgband[pl]] = pntszero - 2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
+            
+                if not os.path.exists(path) and gdat.liststrgband[pl] != 'Bolometric':
+                    axistwin.plot(gdat.cntrwlen, gdat.dictfunctran[gdat.liststrgband[pl]], ls='-', ms=1, rasterized=True, label=gdat.liststrgband[pl])
+            
+            if not os.path.exists(path):
+                axis.set_xscale('log')
+                axis.set_xlabel('Wavelength [$\mu$m]')
+                axis.set_ylabel('Spectrum')
+                axistwin.legend()
+                axistwin.set_ylabel('Transfer function')
+                plt.subplots_adjust(hspace=0.)
+                if gdat.typeverb > 0:
+                    print('Writing to %s...' % path)
+                plt.savefig(path)
+                plt.close()
+    
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
         raise Exception('')
     
@@ -8984,11 +9000,6 @@ def init( \
                 # download data from MAST
                 manifest = astroquery.mast.Observations.download_products(listprod[indxprodgood], download_dir=gdat.pathdatamast)
                 
-                ## make folders
-                for attr, valu in gdat.__dict__.items():
-                    if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
-                        os.system('mkdir -p %s' % valu)
-            
                 if manifest is not None:
                     for path in manifest['Local Path']:
                         print('Reading from %s...' % path)
