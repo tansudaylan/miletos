@@ -9491,23 +9491,6 @@ def init( \
         print('')
         return gdat.dictmileoutp
         
-    if gdat.typeverb > 1:
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if gdat.boolretrlcurmast[b][p]:
-                    for y in gdat.indxchun[b][p]:
-                        print('bpy')
-                        print(b, p, y)
-                        print('gdat.listarrylcurmast[p][y]')
-                        summgene(gdat.listarrylcurmast[p][y])
-                        print('gdat.listarrylcurmast[p][y][:, :, 0]')
-                        summgene(gdat.listarrylcurmast[p][y][:, :, 0])
-                        print('gdat.listarrylcurmast[p][y][:, :, 1]')
-                        summgene(gdat.listarrylcurmast[p][y][:, :, 1])
-                        print('gdat.listarrylcurmast[p][y][:, :, 2]')
-                        summgene(gdat.listarrylcurmast[p][y][:, :, 2])
-                        print('')
-
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -9544,12 +9527,6 @@ def init( \
 
     else:
         gdat.numbener[p] = 1
-    
-    if gdat.typeverb >= 1:
-        print('gdat.numbener')
-        print(gdat.numbener)
-        print('gdat.listener')
-        print(gdat.listener)
     
     if gdat.booldiag:
         for p in gdat.indxinst[b]:
@@ -10025,7 +10002,7 @@ def init( \
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            cade = 1. # [min]
+                            cade = 0.1 # [min]
                             delttime = cade / 60. / 24. # [day]
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
@@ -10348,12 +10325,6 @@ def init( \
         dictparainpt = dict()
         for namepara in gdat.true.listnameparafull:
             dictparainpt[namepara] = getattr(gdat.true, namepara)
-            print('namepara')
-            print(namepara)
-            print('dictparainpt[namepara]')
-            print(dictparainpt[namepara])
-            print('')
-        raise Exception('')
 
         if gdat.booldiag:
             if len(dictparainpt) == 0:

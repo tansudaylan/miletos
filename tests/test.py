@@ -348,6 +348,7 @@ def cnfg_TESSGEO():
                      ], []]
     
     numbwdwf = 3
+    dictnicoinpt['typestar'] = 'wdwf'
     dictnicoinpt['minmnumbcompstar'] = 1
     dictnicoinpt['maxmnumbcompstar'] = 1
     dicttrue['dictnicoinpt'] = dictnicoinpt
