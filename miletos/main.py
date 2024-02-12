@@ -7248,6 +7248,7 @@ def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phascntr=0.5,
     phasdiff = 0.5 - phascntr
     xdat = (phasinit + phasdiff) % 1. - phasdiff
     
+    print('fold_tser()')
     print('phasinit')
     summgene(phasinit)
     print('phascntr')
@@ -7258,13 +7259,6 @@ def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phascntr=0.5,
     summgene((phasinit + phasdiff) % 1.)
     print('(phasinit + phasdiff) % 1. - phasdiff')
     summgene((phasinit + phasdiff) % 1. - phasdiff)
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
     
     if boolxdattime:
         xdat *= peri
