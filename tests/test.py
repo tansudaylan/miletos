@@ -315,13 +315,14 @@ def cnfg_ULTRASAT():
 def cnfg_TESSGEO():
     
     dicttrue = dict()
-    dicttrue['typemodl'] = 'PlanetarySystemEmittingCompanion'
+    #dicttrue['typemodl'] = 'PlanetarySystemEmittingCompanion'
+    dicttrue['typemodl'] = 'PlanetarySystem'
     
     # temperature of the star [K]
     dicttrue['tmptstar'] = 10000. # [K]
 
     # distance to the star [parsec]
-    dicttrue['distsyst'] = 100.
+    dicttrue['distsyst'] = 20.
 
     # radius of the star [R_S]
     dicttrue['radistar'] = 0.01

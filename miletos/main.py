@@ -7119,7 +7119,14 @@ def plot_tser( \
                 ydat = [dictmodl[attr]['tser']]
             numbchun = len(xdat)
             
-            if numbchun > 0.5 * dictmodl[attr]['time'].size:
+            if boolbrekmodl and numbchun > 0.5 * dictmodl[attr]['time'].size:
+                print('')
+                print('')
+                print('')
+                print('diftimemodl')
+                summgene(diftimemodl)
+                print('minmdiftimemodl')
+                print(minmdiftimemodl)
                 print('Miletos.plot_tser(): Warning! Number of regions (%d) is more than half the number of data points (%d).' % (numbchun, dictmodl[attr]['time'].size))
                 print('Perhaps the data is undersampled. Model light curve plot will not look reasonable.')
                 raise Exception('')
@@ -8164,9 +8171,13 @@ def init( \
                 if gdat.liststrginst[b][p] == 'ZTF':
                     gdat.boolretrlcurzwtf = True
     
-    print('gdat.boolretrlcurmastanyy')
-    print(gdat.boolretrlcurmastanyy)
-
+    if typeplotback == 'white':
+        colrbkgd = 'white'
+        colrdraw = 'black'
+    elif typeplotback == 'black':
+        colrbkgd = 'black'
+        colrdraw = 'white'
+    
     # decide whether to run in offline mode
     if gdat.boolforcoffl:
         gdat.boolexecoffl = True
@@ -8601,7 +8612,7 @@ def init( \
             if not os.path.exists(path):
                 figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
                 axistwin = axis.twinx()
-                axis.plot(gdat.cntrwlen, gdat.specsyst, color='k', ls='-', ms=1, rasterized=True)
+                axis.plot(gdat.cntrwlen, gdat.specsyst, color=colrdraw, ls='-', ms=1, rasterized=True)
             
             for pl in gdat.indxband:
                 
@@ -8646,6 +8657,9 @@ def init( \
                 if not os.path.exists(path) and gdat.liststrgband[pl] != 'Bolometric':
                     axistwin.plot(gdat.cntrwlen, gdat.dictfunctran[gdat.liststrgband[pl]], ls='-', ms=1, rasterized=True, label=gdat.liststrgband[pl])
             
+            print('gdat.dictmagtsyst')
+            print(gdat.dictmagtsyst)
+
             if not os.path.exists(path):
                 axis.set_xscale('log')
                 axis.set_xlabel('Wavelength [$\mu$m]')
@@ -9650,7 +9664,10 @@ def init( \
         for p in gdat.indxinst[b]:
             if gdat.boolinfe and len(gdat.listtimescalbdtr) > 0 and \
                                 (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and not gdat.liststrginst[b][p].startswith('LSST'):
-                gdat.boolbdtr[b][p] = True
+                
+                print('temp: suppressing detrending')
+                gdat.boolbdtr[b][p] = False
+                #gdat.boolbdtr[b][p] = True
     
     gdat.boolbdtranyy = False
     for b in gdat.indxdatatser:
@@ -9987,6 +10004,7 @@ def init( \
         
         gdat.true.listtime = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.true.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.true.cade = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 
@@ -9996,19 +10014,19 @@ def init( \
                 if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                     for y in gdat.indxchun[b][p]:
                         if gdat.liststrginst[b][p] == 'TESS':
-                            cade = 2. # [min]
-                            delttime = cade / 60. / 24. # [day]
+                            gdat.true.cade[b][p] = 2. # [min]
+                            delttime = gdat.true.cade[b][p] / 60. / 24. # [day]
                             #gdat.true.listtime[b][p][y] = 2462000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            cade = 0.1 # [min]
-                            delttime = cade / 60. / 24. # [day]
+                            gdat.true.cade[b][p] = 0.1 # [min]
+                            delttime = gdat.true.cade[b][p] / 60. / 24. # [day]
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            cade = 5. # [min]
-                            delttime = cade / 60. / 24. # [day]
+                            gdat.true.cade[b][p] = 5. # [min]
+                            delttime = gdat.true.cade[b][p] / 60. / 24. # [day]
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'JWST':
@@ -10380,43 +10398,17 @@ def init( \
                     
                     if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartfprt':
 
-                        # noise per cadence
-                        if gdat.liststrginst[b][p].startswith('LSST'):
-                            if gdat.liststrginst[b][p].endswith('band'):
-                                strgband = gdat.liststrginst[b][p][-5]
-                            else:
-                                strgband = gdat.liststrginst[b][p][-1]
-                            magt = getattr(gdat, '%smagsyst' % strgband)
-                            nois = nicomedia.retr_noislsst(magt) # [ppt]
-                        elif gdat.liststrginst[b][p] == 'TESS-GEO-UV':
-                            nois = 10**(21. - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
-                        elif gdat.liststrginst[b][p] == 'TESS-GEO-VIS':
-                            nois = 10**(21. - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
-                        elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            nois = 10**(21. - gdat.dictmagtsyst[gdat.liststrginst[b][p]]) # [ppt]
-                        elif gdat.liststrginst[b][p].startswith('TESS'):
-                            
-                            if gdat.booldiag:
-                                if gdat.dictmagtsyst['TESS'] is None:
-                                    print('')
-                                    print('')
-                                    print('')
-                                    print('gdat.typesourparasimucomp')
-                                    print(gdat.typesourparasimucomp)
-                                    print('gdat.dictmagtsyst[TESS]')
-                                    print(gdat.dictmagtsyst['TESS'])
-                                    raise Exception('When synthetic TESS data is being generated, gdat.dictmagtsyst[TESS] should not be None.')
-                            
-                            nois = nicomedia.retr_noistess(gdat.dictmagtsyst['TESS']) # [ppt]
-                        else:
-                            print('gdat.liststrginst[b][p]')
-                            print(gdat.liststrginst[b][p])
-                            raise Exception('')
-                        gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-3 * nois
-                        
-                        gdat.listarrytser['Raw'][b][p][y][:, :, 1] = gdat.true.dictmodl['Total'][0][p]
-                        
                         if gdat.booldiag:
+                            if gdat.dictmagtsyst[gdat.liststrginst[b][p]] is None:
+                                print('')
+                                print('')
+                                print('')
+                                print('gdat.typesourparasimucomp')
+                                print(gdat.typesourparasimucomp)
+                                print('gdat.dictmagtsyst[TESS]')
+                                print(gdat.dictmagtsyst['TESS'])
+                                raise Exception('When synthetic TESS data is being generated, gdat.dictmagtsyst[TESS] should not be None.')
+                            
                             if gdat.listarrytser['Raw'][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size:
                                 print('')
                                 print('')
@@ -10426,6 +10418,13 @@ def init( \
                                 print('(gdat.true.listtime[b][p][y].size, gdat.numbener[p])')
                                 print((gdat.true.listtime[b][p][y].size, gdat.numbener[p]))
                                 raise Exception('gdat.listarrytser[raww][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size')
+                        
+                        # noise per cadence
+                        nois = nicomedia.retr_noisphot(gdat.dictmagtsyst[gdat.liststrginst[b][p]], gdat.liststrginst[b][p]) * np.sqrt(3600. / gdat.true.cade[b][p]) # [ppt]
+                        
+                        gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-3 * nois
+                        
+                        gdat.listarrytser['Raw'][b][p][y][:, :, 1] = gdat.true.dictmodl['Total'][0][p]
                         
                         # add noise to the synthetic data
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] += \
@@ -10476,6 +10475,31 @@ def init( \
     # generate the time axis
     setp_time(gdat, 'Raw')
 
+    # sampling rate (cadence)
+    ## temporal
+    gdat.cadetime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    for b in gdat.indxdatatser:
+        for p in gdat.indxinst[b]:
+            timeconctemp = gdat.arrytser['Raw'][0][p][:, 0, 0]
+            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1])
+            
+            if gdat.booldiag:
+                if not (np.sort(timeconctemp) - timeconctemp == 0).all() or gdat.cadetime[b][p] <= 0:
+                    print('')
+                    print('')
+                    print('')
+                    print('gdat.listarrytser[Raw][0][p]')
+                    print(gdat.listarrytser['Raw'][0][p])
+                    print('gdat.arrytser[Raw][0][p][:, 0]')
+                    print(gdat.arrytser['Raw'][0][p][:, 0])
+                    print('timeconctemp')
+                    summgene(timeconctemp)
+                    print('gdat.liststrgtypedata[b][p]')
+                    print(gdat.liststrgtypedata[b][p])
+                    print('gdat.cadetime[b][p]')
+                    print(gdat.cadetime[b][p])
+                    raise Exception('timeconctemp is not sorted or gdat.cadetime[b][p] <= 0!')
+            
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -10621,31 +10645,6 @@ def init( \
             print('No data found. Returning...')
         return gdat.dictmileoutp
     
-    # sampling rate (cadence)
-    ## temporal
-    gdat.cadetime = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            timeconctemp = gdat.arrytser['Raw'][0][p][:, 0, 0]
-            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1])
-            
-            if gdat.booldiag:
-                if not (np.sort(timeconctemp) - timeconctemp == 0).all() or gdat.cadetime[b][p] <= 0:
-                    print('')
-                    print('')
-                    print('')
-                    print('gdat.listarrytser[Raw][0][p]')
-                    print(gdat.listarrytser['Raw'][0][p])
-                    print('gdat.arrytser[Raw][0][p][:, 0]')
-                    print(gdat.arrytser['Raw'][0][p][:, 0])
-                    print('timeconctemp')
-                    summgene(timeconctemp)
-                    print('gdat.liststrgtypedata[b][p]')
-                    print(gdat.liststrgtypedata[b][p])
-                    print('gdat.cadetime[b][p]')
-                    print(gdat.cadetime[b][p])
-                    raise Exception('timeconctemp is not sorted or gdat.cadetime[b][p] <= 0!')
-            
     if gdat.numbener[p] > 1:
         gdat.ratesampener = np.amin(gdat.listener[p][1:] - gdat.listener[p][:-1])
     
