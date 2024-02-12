@@ -3945,6 +3945,11 @@ def proc_modl(gdat, strgmodl, strgextn, h):
 
     gmod.listminmpara = np.array(gmod.listminmpara)
     gmod.listmaxmpara = np.array(gmod.listmaxmpara)
+    
+    print('gmod.listminmpara')
+    print(gmod.listminmpara)
+    print('gmod.listmaxmpara')
+    print(gmod.listmaxmpara)
 
     # get default parameter labels if they have not been provided
     gmod.listlablpara, _, _, _, _ = tdpy.retr_listlablscalpara(gdat.fitt.listnameparafull, gmod.listlablpara, booldiag=gdat.booldiag)
@@ -6968,11 +6973,6 @@ def plot_tser( \
     else:
         typexdat = 'time'
     
-    print('boolfold')
-    print(boolfold)
-    print('typexdat')
-    print(typexdat)
-
     if typeplotback == 'white':
         colrbkgd = 'white'
         colrdraw = 'black'
@@ -7842,15 +7842,15 @@ def init( \
          #### uncertainties
          stdvprojoblqprio=None, \
 
-         radistar=None, \
-         massstar=None, \
-         tmptstar=None, \
-         rascstar=None, \
-         declstar=None, \
-         vsiistar=None, \
+         #radistar=None, \
+         #massstar=None, \
+         #tmptstar=None, \
+         #rascstar=None, \
+         #declstar=None, \
+         #vsiistar=None, \
          
          # distance to the system
-         distsyst=None, \
+         #distsyst=None, \
 
          # magnitudes
          ## TESS
@@ -7866,12 +7866,12 @@ def init( \
          hmagsyst=None, \
          kmagsyst=None, \
 
-         stdvradistar=None, \
-         stdvmassstar=None, \
-         stdvtmptstar=None, \
-         stdvrascstar=None, \
-         stdvdeclstar=None, \
-         stdvvsiistar=None, \
+         #stdvradistar=None, \
+         #stdvmassstar=None, \
+         #stdvtmptstar=None, \
+         #stdvrascstar=None, \
+         #stdvdeclstar=None, \
+         #stdvvsiistar=None, \
 
          ## Boolean flag to perform inference on the phase-folded (onto the period of the first planet) and binned data
          boolinfefoldbind=False, \
@@ -8445,7 +8445,7 @@ def init( \
     
     # priors
     if gdat.typepriostar is None:
-        if gdat.radistar is not None:
+        if hasattr(gdat.fitt, 'radistar'):
             gdat.typepriostar = 'inpt'
         else:
             gdat.typepriostar = 'TICID'
@@ -8567,7 +8567,10 @@ def init( \
     if gdat.booltargsynt:
         
         # determine magnitudes
-        if gdat.distsyst is not None and gdat.tmptstar is not None:
+        print('gdat.dicttrue')
+        print(gdat.dicttrue)
+        #if hasattr(gdat.dicttrue, 'distsyst') and hasattr(gdat.dicttrue, 'tmptstar') and hasattr(gdat.dicttrue, 'radistar'):
+        if hasattr(gdat.true, 'distsyst') and hasattr(gdat.true, 'tmptstar') and hasattr(gdat.true, 'radistar'):
             
             print('Simulating the magnitudes of the synthetic target based on its temperature and distance...')
 
@@ -8579,10 +8582,12 @@ def init( \
             gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
             gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
             
-            gdat.specsyst = tdpy.retr_specbbod(gdat.tmptstar, gdat.cntrwlen)
+            gdat.specsyst = tdpy.retr_specbbod(gdat.true.tmptstar, gdat.cntrwlen) * 4. * np.pi * gdat.dicttrue['radistar']
             gdat.dictspecsyst = dict()
             gdat.dictfluxsyst = dict()
             gdat.dictmagtsyst = dict()
+            print('gdat.dictmagtsyst')
+            print(gdat.dictmagtsyst)
             gdat.dictfunctran = dict()
             gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
             
@@ -8635,7 +8640,7 @@ def init( \
                     raise Exception('Undefined gdat.liststrgband[pl]')
                 
                 gdat.dictspecsyst[gdat.liststrgband[pl]] = np.trapz(gdat.specsyst * gdat.dictfunctran[gdat.liststrgband[pl]], x=gdat.cntrwlen)
-                gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.distsyst**2
+                gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.true.distsyst**2
                 gdat.dictmagtsyst[gdat.liststrgband[pl]] = pntszero - 2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
             
                 if not os.path.exists(path) and gdat.liststrgband[pl] != 'Bolometric':
@@ -9561,10 +9566,17 @@ def init( \
     # generate a vector of random system parameters
     if gdat.booltargsynt:
         if gdat.true.boolsampsystnico:
+            
+            if hasattr(gdat.true, 'dictnicoinpt'):
+                dictnicoinpt = gdat.true.dictnicoinpt
+            else:
+                dictnicoinpt = dict()
+
             gdat.dictnico = nicomedia.retr_dictpoplstarcomp( \
                                                        numbsyst=1, \
                                                        typesyst=gdat.true.typemodl, \
                                                        typepoplsyst='SyntheticPopulation', \
+                                                       **dictnicoinpt, \
                                                       )
     
     if gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
@@ -10334,9 +10346,15 @@ def init( \
                     setattr(gdat.true, '%scom%d' % (name, j), compprio)
         
         dictparainpt = dict()
-        for name in gdat.true.listnameparafull:
-            dictparainpt[name] = getattr(gdat.true, name)
-        
+        for namepara in gdat.true.listnameparafull:
+            dictparainpt[namepara] = getattr(gdat.true, namepara)
+            print('namepara')
+            print(namepara)
+            print('dictparainpt[namepara]')
+            print(dictparainpt[namepara])
+            print('')
+        raise Exception('')
+
         if gdat.booldiag:
             if len(dictparainpt) == 0:
                 raise Exception('')
@@ -11411,32 +11429,15 @@ def init( \
         
         if gdat.typeverb > 0:
             
+            print('Fitting model:')
             if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion':
                 print('Stellar priors:')
-                print('gdat.rascstar')
-                print(gdat.rascstar)
-                print('gdat.declstar')
-                print(gdat.declstar)
-                print('gdat.radistar [R_S]')
-                print(gdat.radistar)
-                print('gdat.stdvradistar [R_S]')
-                print(gdat.stdvradistar)
-                print('gdat.massstar')
-                print(gdat.massstar)
-                print('gdat.stdvmassstar')
-                print(gdat.stdvmassstar)
-                print('gdat.vsiistar')
-                print(gdat.vsiistar)
-                print('gdat.stdvvsiistar')
-                print(gdat.stdvvsiistar)
-                print('gdat.massstar [M_S]')
-                print(gdat.massstar)
-                print('gdat.stdvmassstar [M_S]')
-                print(gdat.stdvmassstar)
-                print('gdat.tmptstar')
-                print(gdat.tmptstar)
-                print('gdat.stdvtmptstar')
-                print(gdat.stdvtmptstar)
+                for nameparastar in ['rasc', 'decl', 'radi', 'mass', 'vsii', 'tmpt']:
+                    for strgstdv in ['', 'stdv']:
+                        nameparastartotl = strgstdv + nameparastar + 'star'
+                        if hasattr(gdat.fitt, nameparastartotl):
+                            print(nameparastartotl)
+                            print(getattr(gdat.fitt, nameparastartotl))
                 
                 print('Planetary priors:')
                 print('gdat.fitt.prio.meanpara.duraprio')

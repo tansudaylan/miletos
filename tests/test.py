@@ -317,6 +317,16 @@ def cnfg_TESSGEO():
     dicttrue = dict()
     dicttrue['typemodl'] = 'PlanetarySystemEmittingCompanion'
     
+    # temperature of the star [K]
+    dicttrue['tmptstar'] = 10000. # [K]
+
+    # distance to the star [parsec]
+    dicttrue['distsyst'] = 100.
+
+    # radius of the star [R_S]
+    dicttrue['radistar'] = 0.01
+
+    dictnicoinpt = dict()
     dictlygoinpt = dict()
     dictlygoinpt['numbside'] = 51
     
@@ -337,19 +347,17 @@ def cnfg_TESSGEO():
                      'ULTRASAT', \
                      ], []]
     
-    for k in range(5):
+    numbwdwf = 3
+    dictnicoinpt['minmnumbcompstar'] = 1
+    dictnicoinpt['maxmnumbcompstar'] = 1
+    dicttrue['dictnicoinpt'] = dictnicoinpt
+    for k in range(numbwdwf):
         
         np.random.seed(k)
         
         miletos.init( \
              strgmast='Simulation %02d' % k, \
              
-             # temperature of the star [K]
-             tmptstar=6000., \
-             
-             # distance to the star [parsec]
-             distsyst=10, \
-
              strgclus='TESS-GEO', \
              dicttrue=dicttrue, \
              listlablinst=listlablinst, \
