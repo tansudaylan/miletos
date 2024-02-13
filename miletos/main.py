@@ -7087,10 +7087,14 @@ def plot_tser( \
                 summgene(dictmodl[attr]['tser'])
                 raise Exception('dictmodl[attr][tser].ndim != 1')
             
-            if boolbrekmodl:
-                
-                diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
-                
+            
+            diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
+            print('np.std(diftimemodl)')
+            print(np.std(diftimemodl))
+            print('np.mean(diftimemodl)')
+            print(np.mean(diftimemodl))
+            if boolbrekmodl and np.std(diftimemodl) < 0.1 * np.mean(diftimemodl):
+
                 minmdiftimemodl = np.amin(diftimemodl)
 
                 if minmdiftimemodl < 0:
@@ -8575,6 +8579,7 @@ def init( \
         if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
             os.system('mkdir -p %s' % valu)
             
+    gdat.dictmagtsyst = dict()
     if gdat.booltargsynt:
         
         # determine magnitudes
@@ -8596,7 +8601,6 @@ def init( \
             gdat.specsyst = tdpy.retr_specbbod(gdat.true.tmptstar, gdat.cntrwlen) * 4. * np.pi * gdat.dicttrue['radistar']
             gdat.dictspecsyst = dict()
             gdat.dictfluxsyst = dict()
-            gdat.dictmagtsyst = dict()
             print('gdat.dictmagtsyst')
             print(gdat.dictmagtsyst)
             gdat.dictfunctran = dict()
@@ -8636,6 +8640,13 @@ def init( \
                 elif gdat.liststrgband[pl] == 'TESS':
                     indxwlen = np.where((gdat.cntrwlen < 1.) & (gdat.cntrwlen > 0.6))[0]
                     gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
+                    pntszero = 20.
+                
+                elif gdat.liststrgband[pl].startswith('LSST'):
+                    strgband = gdat.liststrgband[pl][-5]
+                    print('strgband')
+                    print(strgband)
+                    gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
                     pntszero = 20.
                 
                 elif gdat.liststrgband[pl] == 'Bolometric':

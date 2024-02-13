@@ -947,17 +947,20 @@ def cnfg_LSST_PlanetarySystem():
         listlablinst[0].append('LSST %s band' % strglsst)
         liststrgtypedata[0].append('simutargsynt')
     
+    # temperature of the star [K]
+    dicttrue['tmptstar'] = 10000. # [K]
+
+    # distance to the star [parsec]
+    dicttrue['distsyst'] = 20.
+
+    # radius of the star [R_S]
+    dicttrue['radistar'] = 0.01
+
     dicttrue['rratcomp'] = [np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1])]
     dicttrue['epocmtracomp'] = np.array([0.])
     dicttrue['pericomp'] = np.array([3.])
     dicttrue['rsmacomp'] = np.array([0.1])
     dicttrue['cosicomp'] = np.array([0.])
-    
-    #rratcompprio = [np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1]), np.array([0.1])]
-    #epocmtracompprio = np.array([0.])
-    #pericompprio = np.array([3.])
-    #rsmacompprio = np.array([0.1])
-    #cosicompprio = np.array([0.])
     
     for typeanls in ['outlperi', 'pdim']:
 
@@ -972,19 +975,6 @@ def cnfg_LSST_PlanetarySystem():
                               dictfitt=dictfitt, \
                               
                               listtypeanls=[typeanls], \
-                              
-                              #rratcompprio=rratcompprio, \
-                              #epocmtracompprio=epocmtracompprio, \
-                              #pericompprio=pericompprio, \
-                              #cosicompprio=cosicompprio, \
-                              #rsmacompprio=rsmacompprio, \
-                              
-                              umagsyst=20., \
-                              gmagsyst=20., \
-                              rmagsyst=20., \
-                              imagsyst=20., \
-                              zmagsyst=20., \
-                              ymagsyst=20., \
                               
                               listlablinst=listlablinst, \
                               liststrgtypedata=liststrgtypedata, \
