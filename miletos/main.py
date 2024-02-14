@@ -8,8 +8,6 @@ import scipy.stats
 
 from tqdm import tqdm
 
-import time as timemodu
-
 from numba import jit, prange
 
 import pandas as pd
@@ -3946,17 +3944,27 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     gmod.listminmpara = np.array(gmod.listminmpara)
     gmod.listmaxmpara = np.array(gmod.listmaxmpara)
     
-    print('gmod.listminmpara')
-    print(gmod.listminmpara)
-    print('gmod.listmaxmpara')
-    print(gmod.listmaxmpara)
-
     # get default parameter labels if they have not been provided
     gmod.listlablpara, _, _, _, _ = tdpy.retr_listlablscalpara(gdat.fitt.listnameparafull, gmod.listlablpara, booldiag=gdat.booldiag)
     
     # merge variable labels with units
     gmod.listlablparatotl = tdpy.retr_labltotl(gmod.listlablpara)
     
+    if (gmod.listminmpara == None).any():
+        print('')
+        print('')
+        print('')
+        print('gmod.listlablpara[k], gmod.listminmpara[k], gmod.listmaxmpara[k]')
+        for k in range(len(gmod.listminmpara)):
+            print(gmod.listlablpara[k], gmod.listminmpara[k], gmod.listmaxmpara[k])
+        print('gmod.listminmpara')
+        print(gmod.listminmpara)
+        print('gmod.listmaxmpara')
+        print(gmod.listmaxmpara)
+        print('gmod.listlablpara')
+        print(gmod.listlablpara)
+        raise Exception('(gmod.listminmpara == None).any()')
+
     if gdat.booldiag:
         if None in gmod.listlablpara:
             print('')
@@ -4560,58 +4568,64 @@ def setp_modlbase(gdat, strgmodl, h=None):
         gmod.listnamecompmodl += ['Total']
     
     # baseline
-    gmod.listnameparabase = []
+    gmod.listnameparablin = []
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
+            # string extension for the data type and instrument
             if gdat.numbener[p] > 1 and gmod.typemodlblinener[p] == 'ener':
                 for e in gdat.indxener[p]:
-                    strgextn = '%s%s%s' % (gdat.liststrginst[b][p], gdat.strgextncade[b][p], gdat.liststrgener[p][e]) 
+                    strgextninst = '%s%s%s' % (gdat.liststrginst[b][p], gdat.strgextncade[b][p], gdat.liststrgener[p][e]) 
             else:
-                strgextn = '%s' % (gdat.liststrginst[b][p])
-            if gmod.typemodlblinshap == 'GaussianProcess':
-                gmod.listnameparabase += ['sigmgprobase%s' % strgextn, 'rhoogprobase%s' % strgextn]
+                strgextninst = '%s' % (gdat.liststrginst[b][p])
+            
+            # list of parameters for each of photometry and RV and for each instrument
+            listnameparablinshap = []
             if gmod.typemodlblinshap == 'cons':
-                gmod.listnameparabase += ['consblin%s' % strgextn]
+                listnameparablinshap += ['consblin']
+            if gmod.typemodlblinshap == 'GaussianProcess':
+                listnameparablinshap += ['sigmgprobase', 'rhoogprobase']
             if gmod.typemodlblinshap == 'step':
-                gmod.listnameparabase += ['consblinfrst%s' % strgextn, 'consblinseco%s' % strgextn, 'timestep%s' % strgextn, 'scalstep%s' % strgextn]
+                listnameparablinshap += ['consblinfrst', 'consblinseco', 'timestep', 'scalstep']
+            
+            for nameparablinshap in listnameparablinshap:
+                
+                if nameparablinshap.startswith('sigmgprobase'):
+                    minmpara = 0.01 # [ppt]
+                    maxmpara = 4. # [ppt]
+                    lablpara = ['$\sigma_{GP}$', '']
+                if nameparablinshap.startswith('rhoogprobase'):
+                    minmpara = 1e-3
+                    maxmpara = 0.3
+                    lablpara = [r'$\rho_{GP}$', '']
+                if nameparablinshap.startswith('consblin'):
+                    if nameparablinshap == 'consblinfrst':
+                        lablpara = ['$C_1$', 'ppt']
+                        minmpara = -20. # [ppt]
+                        maxmpara = 20. # [ppt]
+                    elif nameparablinshap == 'consblinseco':
+                        lablpara = ['$C_2$', 'ppt']
+                        minmpara = -20. # [ppt]
+                        maxmpara = -4. # [ppt]
+                    else:
+                        lablpara = ['$C$, %s' % gdat.listlablinst[b][p], 'ppt']
+                        minmpara = -20. # [ppt]
+                        maxmpara = 20. # [ppt]
+                if nameparablinshap.startswith('timestep'):
+                    minmpara = 791.11
+                    maxmpara = 791.13
+                    lablpara = '$T_s$'
+                if nameparablinshap.startswith('scalstep'):
+                    minmpara = 0.0001
+                    maxmpara = 0.002
+                    lablpara = '$A_s$'
+                
+                nameparablin = nameparablinshap + strgextninst
+                setp_para(gdat, strgmodl, nameparablin, minmpara, maxmpara, lablpara)
+                gmod.listnameparablin += [nameparablin]
     
-    for nameparabase in gmod.listnameparabase:
-        
-        # collect group of parameters
-        #gmod.dictindxpara[nameparabase + 'ener'] = np.empty(gdat.numbenerthismodl, dtype=int)
-        
-        if nameparabase.startswith('sigmgprobase'):
-            minmpara = 0.01 # [ppt]
-            maxmpara = 4. # [ppt]
-            lablpara = ['$\sigma_{GP}$', '']
-        if nameparabase.startswith('rhoogprobase'):
-            minmpara = 1e-3
-            maxmpara = 0.3
-            lablpara = [r'$\rho_{GP}$', '']
-        if nameparabase.startswith('consblin'):
-            if nameparabase == 'consblinfrst':
-                lablpara = ['$C_1$', 'ppt']
-                minmpara = -20. # [ppt]
-                maxmpara = 20. # [ppt]
-            elif nameparabase == 'consblinseco':
-                lablpara = ['$C_2$', 'ppt']
-                minmpara = -20. # [ppt]
-                maxmpara = -4. # [ppt]
-            else:
-                lablpara = ['$C$', 'ppt']
-                minmpara = -20. # [ppt]
-                maxmpara = 20. # [ppt]
-        if nameparabase.startswith('timestep'):
-            minmpara = 791.11
-            maxmpara = 791.13
-            lablpara = '$T_s$'
-        if nameparabase.startswith('scalstep'):
-            minmpara = 0.0001
-            maxmpara = 0.002
-            lablpara = '$A_s$'
-
-        setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara)
-        
+    print('gmod.listnameparablin')
+    print(gmod.listnameparablin)
+    
     gmod.listindxdatainsteneriter = []
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -5133,7 +5147,7 @@ def srch_boxsperi_work(listperi, listarrytser, listdcyc, listepoc, listduratrant
                     #summgene(rflx[indxitra])
                     raise Exception('')
                     
-                #timechecloop[0][k, l, m] = timemodu.time()
+                #timechecloop[0][k, l, m] = modutime.time()
                 #print('pericomp')
                 #print(peri)
                 #print('dcyc')
@@ -5212,10 +5226,35 @@ def srch_outlperi(time, flux, stdvflux):
     
     if dictoutp['minmmetr'] < 0.1:
         dictoutp['boolposi'] = True
+        dictoutp['peri'] = np.mean(metr)
     else:
         dictoutp['boolposi'] = False
     
-    dictoutp['peri'] = np.mean(metr)
+    
+    print('indxtimesort')
+    print(indxtimesort)
+    print('time[indxtimesort]')
+    print(time[indxtimesort])
+    print('difftime')
+    print(difftime)
+    print('difftimesort')
+    print(difftimesort)
+    print('metr')
+    summgene(metr)
+    print('np.amin(metr)')
+    print(np.amin(metr))
+    print('dictoutp[boolposi]')
+    print(dictoutp['boolposi'])
+    if dictoutp['boolposi']:
+        print('dictoutp[peri]')
+        print(dictoutp['peri'])
+    print('')
+    print('')
+    print('')
+    print('')
+    print('')
+    print('')
+    
     # temp
     dictoutp['epocmtra'] = 0.
 
@@ -5380,7 +5419,7 @@ def srch_boxsperi(arry, \
 
         j = 0
         
-        timeinit = timemodu.time()
+        timeinit = modutime.time()
 
         dictfact = tdpy.retr_factconv()
         
@@ -5419,8 +5458,8 @@ def srch_boxsperi(arry, \
         listperi = 1. / listfreq
         
         # cadence
-        cade = minmdifftime * 24. # [hr]
-        print('Cadence: %g [hours]' % cade)
+        cade = minmdifftime * 24. * 3600. # [seconds]
+        print('Cadence: %g [seconds]' % cade)
         
         if pathvisu is not None:
             numbtimeplot = 100000
@@ -5478,8 +5517,8 @@ def srch_boxsperi(arry, \
             print('Trial transit durations at the largest period [hr]')
             print(listdcyc[0] * listperi[0] * 24)
 
-        meancade = np.mean(difftime) * 24. # [hr]
-        print('Average cadence: %g [hours]' % meancade)
+        meancade = np.mean(difftime) * 24. * 3600. # [seconds]
+        print('Average cadence: %g [seconds]' % meancade)
         
         if cade < 0:
             print('')
@@ -5870,7 +5909,7 @@ def srch_boxsperi(arry, \
         print(dictboxsperioutp)
         pd.DataFrame.from_dict(dictboxsperioutp).to_csv(pathsave, index=False)
                 
-        timefinl = timemodu.time()
+        timefinl = modutime.time()
         timetotl = timefinl - timeinit
         timeredu = timetotl / numbtime / np.sum(numbtria)
         
@@ -6094,7 +6133,7 @@ def corr_tmpt(time, lcur, meantimetmpt, listlcurtmpt, \
     time -= timeoffs
     
     if typeverb > 1:
-        timeinit = timemodu.time()
+        timeinit = modutime.time()
     
     print('corr_tmpt()')
     
@@ -6326,7 +6365,7 @@ def corr_tmpt(time, lcur, meantimetmpt, listlcurtmpt, \
                 else:
                     print('Skipping animation for kernel %d...' % k)
     if typeverb > 1:
-        print('Delta T (corr_tmpt, rest): %g' % (timemodu.time() - timeinit))
+        print('Delta T (corr_tmpt, rest): %g' % (modutime.time() - timeinit))
 
     return corrchun, listindxtimeposimaxm, listtimechun, listlcurchun
 
@@ -7987,6 +8026,9 @@ def init( \
         print('gdat.dictfitt')
         print(gdat.dictfitt)
 
+    if gdat.typeplotback == 'black':
+        plt.style.use('dark_background')
+        
     # paths
     gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
     
@@ -10016,6 +10058,7 @@ def init( \
         gdat.true.listtime = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.true.time = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         gdat.true.cade = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        gdat.true.timeexpo = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 
@@ -10025,19 +10068,24 @@ def init( \
                 if gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                     for y in gdat.indxchun[b][p]:
                         if gdat.liststrginst[b][p] == 'TESS':
-                            gdat.true.cade[b][p] = 2. # [min]
-                            delttime = gdat.true.cade[b][p] / 60. / 24. # [day]
+                            gdat.true.cade[b][p] = 120. # [seconds]
+                            # effective exposure time of TESS (80% efficiency due to cosmic ray rejection)
+                            gdat.true.timeexpo[b][p] = 96. # [seconds]
+                            delttime = gdat.true.cade[b][p] / 3600. / 24. # [day]
                             #gdat.true.listtime[b][p][y] = 2462000. + np.concatenate([np.arange(0., 13.2, delttime), np.arange(14.2, 27.3, delttime)])
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p].startswith('TESS-GEO'):
-                            gdat.true.cade[b][p] = 0.1 # [min]
-                            delttime = gdat.true.cade[b][p] / 60. / 24. # [day]
+                            gdat.true.cade[b][p] = 6. # [seconds]
+                            gdat.true.timeexpo[b][p] = 0.8 * gdat.true.cade[b][p]
+                            delttime = gdat.true.cade[b][p] / 3600. / 24. # [day]
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            gdat.true.cade[b][p] = 5. # [min]
-                            delttime = gdat.true.cade[b][p] / 60. / 24. # [day]
+                            # ULTRASAT short cadence will be five minutes
+                            gdat.true.cade[b][p] = 300. # [seconds]
+                            gdat.true.timeexpo[b][p] = 0.8 * gdat.true.cade[b][p]
+                            delttime = gdat.true.cade[b][p] / 3600. / 24. # [day]
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'JWST':
@@ -10045,9 +10093,12 @@ def init( \
                         elif gdat.liststrginst[b][p].startswith('LSST'):
                             # WFD
                             numbtimelsst = 100
+                            # LSST will have two 15-second exposures per visit
+                            gdat.true.timeexpo[b][p] = 30. # [sec]
                             # DDF
                             #numbtimelsst = 1000
-                            gdat.true.listtime[b][p][y] = (2460645. + np.random.rand(numbtimelsst)[:, None] * 365. * 0.7 + np.arange(gdat.dicttrue['numbyearlsst'])[None, :] * 365.).flatten()
+                            gdat.true.listtime[b][p][y] = (2460645. + np.random.rand(numbtimelsst)[:, None] * 365. * 0.7 + \
+                                                                                np.arange(gdat.dicttrue['numbyearlsst'])[None, :] * 365.).flatten()
                             gdat.true.listtime[b][p][y] = np.sort(gdat.true.listtime[b][p][y])
                         else:
                             print('')
@@ -10431,7 +10482,7 @@ def init( \
                                 raise Exception('gdat.listarrytser[raww][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size')
                         
                         # noise per cadence
-                        nois = nicomedia.retr_noisphot(gdat.dictmagtsyst[gdat.liststrginst[b][p]], gdat.liststrginst[b][p]) * np.sqrt(3600. / gdat.true.cade[b][p]) # [ppt]
+                        nois = nicomedia.retr_noisphot(gdat.dictmagtsyst[gdat.liststrginst[b][p]], gdat.liststrginst[b][p]) * np.sqrt(3600. / gdat.true.timeexpo[b][p]) # [ppt]
                         
                         gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-3 * nois
                         
@@ -10492,7 +10543,7 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             timeconctemp = gdat.arrytser['Raw'][0][p][:, 0, 0]
-            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1])
+            gdat.cadetime[b][p] = np.amin(timeconctemp[1:] - timeconctemp[:-1]) * 3600.
             
             if gdat.booldiag:
                 if not (np.sort(timeconctemp) - timeconctemp == 0).all() or gdat.cadetime[b][p] <= 0:
@@ -10664,10 +10715,7 @@ def init( \
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
             if gdat.liststrginst[b][p] == 'TESS':
-                if gdat.cadetime[b][p] == 200. / 3600 / 24 or gdat.cadetime[b][p] == 20. / 3600 / 24:
-                    gdat.strgextncade[b][p] = '_%dsec' % round(gdat.cadetime[b][p] * 3600 * 24)
-                else:
-                    gdat.strgextncade[b][p] = '_%dmin' % round(gdat.cadetime[b][p] * 60 * 24)
+                gdat.strgextncade[b][p] = '_%dsec' % round(gdat.cadetime[b][p] * 3600 * 24)
             else:
                 gdat.strgextncade[b][p] = ''
     
@@ -11012,7 +11060,7 @@ def init( \
         # size of the window for the flare search
         gdat.sizewndwflar = np.empty(gdat.numbinst[0], dtype=int)
         for p in gdat.indxinst[0]:
-            gdat.sizewndwflar[p] = int((1. / 24.) / gdat.cadetime[0][p])
+            gdat.sizewndwflar[p] = int(3600. / gdat.cadetime[0][p])
     
     # rebinning
     gdat.numbrebn = 50
@@ -11038,6 +11086,15 @@ def init( \
             time = arry[:, 0]
             flux = arry[:, 1]
             stdvflux = arry[:, 2]
+            
+            print('p')
+            print(p)
+            print('gdat.true.pericomp')
+            print(gdat.true.pericomp)
+            print('time')
+            summgene(time)
+            print('flux')
+            summgene(flux)
             dictoutlperi = srch_outlperi(time, flux, stdvflux)
             
             gdat.fitt.prio.meanpara.pericomp = np.array([dictoutlperi['peri']])
@@ -11045,10 +11102,12 @@ def init( \
             gdat.fitt.prio.meanpara.rsmacomp = np.array([0.1])
             gdat.fitt.prio.meanpara.rratcomp = np.array([0.1])
             gdat.fitt.prio.meanpara.cosicomp = np.array([0.])
-
+            
             if dictoutlperi['boolposi']:
                 gdat.fitt.prio.numbcomp = 1
-        
+    
+    raise Exception('')
+
     # search for periodic boxes
     if gdat.boolsrchboxsperi:
         
