@@ -3948,7 +3948,7 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     gmod.listlablpara, _, _, _, _ = tdpy.retr_listlablscalpara(gdat.fitt.listnameparafull, gmod.listlablpara, booldiag=gdat.booldiag)
     
     # merge variable labels with units
-    gmod.listlablparatotl = tdpy.retr_labltotl(gmod.listlablpara)
+    gmod.listlablparatotl = tdpy.retr_listlabltotl(gmod.listlablpara)
     
     if (gmod.listminmpara == None).any():
         print('')
@@ -7516,6 +7516,9 @@ def setup_miletos(gdat):
         gdat.numbinst[b] = len(gdat.listlablinst[b])
         gdat.indxinst[b] = np.arange(gdat.numbinst[b])
     
+    if gdat.boolsimutargpartfprt is None:
+        gdat.boolsimutargpartfprt = False
+
     # list of data types
     if gdat.liststrgtypedata is None:
         gdat.liststrgtypedata = [[] for b in gdat.indxdatatser]
@@ -7741,8 +7744,8 @@ def init( \
          ## 'obsd': observed data on a particular target
          liststrgtypedata=None, \
             
-         # Boolean flag to default into boolsimutargpartfprt for all data types and instruments
-         boolsimutargpartfprt=False, \
+         # Boolean flag to default gdat.liststrgtypedata into 'simutargpartfprt' for all data types and instruments
+         boolsimutargpartfprt=None, \
 
          ## list of labels indicating instruments
          listlablinst=None, \
@@ -7791,6 +7794,9 @@ def init( \
          # fitting
          # Boolean flag to reject the lowest log-likelihood during log-likelihood calculation
          boolrejeoutlllik=False, \
+            
+         # dictionary of system magnitudes
+         dictmagtsyst=dict(), \
 
          # model
          # type of inference
@@ -8102,13 +8108,16 @@ def init( \
             raise Exception('Some of the data are simulated, but dicttrue does not have typemodl.')
         
         # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                if gdat.liststrgtypedata[b][p] != 'simutargsynt':
-                    print('')
-                    print('')
-                    print('')
-                    raise Exception('If liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
+        if gdat.boolsimusome:
+            for b in gdat.indxdatatser:
+                for p in gdat.indxinst[b]:
+                    if gdat.liststrgtypedata[b][p] != 'simutargsynt':
+                        print('')
+                        print('')
+                        print('')
+                        print('gdat.liststrgtypedata')
+                        print(gdat.liststrgtypedata)
+                        raise Exception('If liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
 
     gdat.arrytser = dict()
     ## ensure target identifiers are not conflicting
@@ -8621,7 +8630,6 @@ def init( \
         if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
             os.system('mkdir -p %s' % valu)
             
-    gdat.dictmagtsyst = dict()
     if gdat.booltargsynt:
         
         # determine magnitudes
@@ -8643,8 +8651,6 @@ def init( \
             gdat.specsyst = tdpy.retr_specbbod(gdat.true.tmptstar, gdat.cntrwlen) * 4. * np.pi * gdat.dicttrue['radistar']
             gdat.dictspecsyst = dict()
             gdat.dictfluxsyst = dict()
-            print('gdat.dictmagtsyst')
-            print(gdat.dictmagtsyst)
             gdat.dictfunctran = dict()
             gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
             
@@ -8710,9 +8716,6 @@ def init( \
                 if not os.path.exists(path) and gdat.liststrgband[pl] != 'Bolometric':
                     axistwin.plot(gdat.cntrwlen, gdat.dictfunctran[gdat.liststrgband[pl]], ls='-', ms=1, rasterized=True, label=gdat.liststrgband[pl])
             
-            print('gdat.dictmagtsyst')
-            print(gdat.dictmagtsyst)
-
             if not os.path.exists(path):
                 axis.set_xscale('log')
                 axis.set_xlabel('Wavelength [$\mu$m]')
@@ -10467,9 +10470,7 @@ def init( \
                                 print('')
                                 print('gdat.typesourparasimucomp')
                                 print(gdat.typesourparasimucomp)
-                                print('gdat.dictmagtsyst[TESS]')
-                                print(gdat.dictmagtsyst['TESS'])
-                                raise Exception('When synthetic TESS data is being generated, gdat.dictmagtsyst[TESS] should not be None.')
+                                raise Exception('When synthetic data is being generated, gdat.dictmagtsyst[gdat.liststrginst[b][p]] should not be None.')
                             
                             if gdat.listarrytser['Raw'][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size:
                                 print('')
@@ -11106,8 +11107,6 @@ def init( \
             if dictoutlperi['boolposi']:
                 gdat.fitt.prio.numbcomp = 1
     
-    raise Exception('')
-
     # search for periodic boxes
     if gdat.boolsrchboxsperi:
         
