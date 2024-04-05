@@ -7729,8 +7729,8 @@ def init( \
          
          # Source of TESS TPF light curves (FFIs are always extracted by lygos)
          ## 'lygos': always lygos
-         ## 'SPOC': SPOC whenever available, otherwise lygos
-         ## 'SPOC_only': SPOC only
+         ## 'SPOC_first': SPOC whenever available, otherwise lygos
+         ## 'SPOC': SPOC only, which leaves out some sectors because SPOC has a magnitude limit
          typelcurtpxftess='SPOC', \
          
          ## type of SPOC light curve: 'PDC', 'SAP'
@@ -8395,24 +8395,44 @@ def init( \
 
     elif gdat.toiitarg is not None:
         gdat.typetarg = 'TOIID'
-        if gdat.typeverb > 0:
-            print('A TOI ID (%d) was provided as target identifier.' % gdat.toiitarg)
+        
+        if gdat.toiitarg - int(gdat.toiitarg) == 0:
+            if gdat.typeverb > 0:
+                print('A TOI host (%d) was provided as the target identifier.' % gdat.toiitarg)
+            gdat.typetoiitarg = 'host'
+        else:
+            if gdat.typeverb > 0:
+                print('A TOI (%d) was provided as target identifier.' % gdat.toiitarg)
+            gdat.typetoiitarg = 'toii'
+        
         # determine TIC ID
         gdat.strgtoiibase = str(gdat.toiitarg)
         indx = []
-        for k, strg in enumerate(gdat.dicttoii['TOIID']):
-            if str(strg).split('.')[0] == gdat.strgtoiibase:
+        print('gdat.strgtoiibase')
+        print(gdat.strgtoiibase)
+        for k, strg in enumerate(gdat.dicttoii['TOIID'][0]):
+            
+            if gdat.typetoiitarg == 'toii':
+                strgcomp = str(strg)
+            else:
+                strgcomp = str(strg).split('.')[0]
+            
+            if strgcomp == gdat.strgtoiibase:
                 indx.append(k)
         indx = np.array(indx)
         if indx.size == 0:
             print('')
             print('')
             print('')
-            print('gdat.dicttoii[TOI]')
-            summgene(gdat.dicttoii['TOIID'])
+            print('gdat.toiitarg')
+            print(gdat.toiitarg)
+            print('gdat.dicttoii[TOI][0]')
+            summgene(gdat.dicttoii['TOIID'][0])
             raise Exception('Did not find the TOI in the ExoFOP-TESS TOI list.')
 
-        gdat.ticitarg = gdat.dicttoii['TICID'][indx[0]]
+        print('indx')
+        print(indx)
+        gdat.ticitarg = gdat.dicttoii['TICID'][0][indx[0]]
 
         if gdat.strgexar is None:
             gdat.strgexar = 'TOI-%d' % gdat.toiitarg
@@ -8638,96 +8658,9 @@ def init( \
         #if hasattr(gdat.dicttrue, 'distsyst') and hasattr(gdat.dicttrue, 'tmptstar') and hasattr(gdat.dicttrue, 'radistar'):
         if hasattr(gdat.true, 'distsyst') and hasattr(gdat.true, 'tmptstar') and hasattr(gdat.true, 'radistar'):
             
-            print('Simulating the magnitudes of the synthetic target based on its temperature and distance...')
-
-            # define spectral grid (this may need to be taken outside the if statements for other purposes)
-            gdat.minmwlen = 0.1
-            gdat.maxmwlen = 10.
-            gdat.numbwlen = 1000
-            gdat.binswlen = np.logspace(np.log10(gdat.minmwlen), np.log10(gdat.maxmwlen), gdat.numbwlen + 1)
-            gdat.cntrwlen = (gdat.binswlen[1:] + gdat.binswlen[:-1]) / 2.
-            gdat.diffwlen = (gdat.binswlen[1:] - gdat.binswlen[:-1]) / 2.
-            
-            gdat.specsyst = tdpy.retr_specbbod(gdat.true.tmptstar, gdat.cntrwlen) * 4. * np.pi * gdat.dicttrue['radistar']
-            gdat.dictspecsyst = dict()
-            gdat.dictfluxsyst = dict()
-            gdat.dictfunctran = dict()
             gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
-            
-            gdat.numbband = len(gdat.liststrgband)
-            gdat.indxband = np.arange(gdat.numbband)
-            
-            path = gdat.pathvisutarg + 'spec_%s' % gdat.strgtarg
-            for pl in gdat.indxband:
-                path += '_' + gdat.liststrgband[pl]
-            path += '.%s' % gdat.typefileplot
-            if not os.path.exists(path):
-                figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
-                axistwin = axis.twinx()
-                axis.plot(gdat.cntrwlen, gdat.specsyst, color=colrdraw, ls='-', ms=1, rasterized=True)
-            
-            for pl in gdat.indxband:
-                
-                gdat.dictfunctran[gdat.liststrgband[pl]] = np.zeros_like(gdat.cntrwlen)
-                
-                if gdat.liststrgband[pl] == 'ULTRASAT':
-                    indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
-                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                    pntszero = 20.
-                
-                elif gdat.liststrgband[pl] == 'TESS-GEO-UV':
-                    indxwlen = np.where((gdat.cntrwlen < 0.29) & (gdat.cntrwlen > 0.23))[0]
-                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                    pntszero = 20.
-                
-                elif gdat.liststrgband[pl] == 'TESS-GEO-VIS':
-                    indxwlen = np.where((gdat.cntrwlen < 0.7) & (gdat.cntrwlen > 0.4))[0]
-                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                    pntszero = 20.
-                
-                elif gdat.liststrgband[pl] == 'TESS':
-                    indxwlen = np.where((gdat.cntrwlen < 1.) & (gdat.cntrwlen > 0.6))[0]
-                    gdat.dictfunctran[gdat.liststrgband[pl]][indxwlen] = 1.
-                    pntszero = 20.
-                
-                elif gdat.liststrgband[pl].startswith('LSST'):
-                    strgband = gdat.liststrgband[pl][-5]
-                    print('strgband')
-                    print(strgband)
-                    gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
-                    pntszero = 20.
-                
-                elif gdat.liststrgband[pl] == 'Bolometric':
-                    gdat.dictfunctran[gdat.liststrgband[pl]][:] = 1.
-                    pntszero = 20.
-                
-                else:
-                    print('')
-                    print('')
-                    print('')
-                    print('gdat.liststrgband[pl]')
-                    print(gdat.liststrgband[pl])
-                    raise Exception('Undefined gdat.liststrgband[pl]')
-                
-                gdat.dictspecsyst[gdat.liststrgband[pl]] = np.trapz(gdat.specsyst * gdat.dictfunctran[gdat.liststrgband[pl]], x=gdat.cntrwlen)
-                gdat.dictfluxsyst[gdat.liststrgband[pl]] = gdat.dictspecsyst[gdat.liststrgband[pl]] / 4. / np.pi / gdat.true.distsyst**2
-                gdat.dictmagtsyst[gdat.liststrgband[pl]] = pntszero - 2.5 * np.log10(gdat.dictfluxsyst[gdat.liststrgband[pl]])
-            
-                if not os.path.exists(path) and gdat.liststrgband[pl] != 'Bolometric':
-                    axistwin.plot(gdat.cntrwlen, gdat.dictfunctran[gdat.liststrgband[pl]], ls='-', ms=1, rasterized=True, label=gdat.liststrgband[pl])
-            
-            if not os.path.exists(path):
-                axis.set_xscale('log')
-                axis.set_xlabel('Wavelength [$\mu$m]')
-                axis.set_ylabel('Spectrum')
-                axistwin.legend()
-                axistwin.set_ylabel('Transfer function')
-                plt.subplots_adjust(hspace=0.)
-                if gdat.typeverb > 0:
-                    print('Writing to %s...' % path)
-                plt.savefig(path)
-                plt.close()
-    
+            dictspec = nicomedia.retr_dictspec(gdat.dicttrue['radistar'], gdat.dicttrue['tmptstar'], gdat.dicttrue['diststar'], gdat.liststrgband)
+
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
         raise Exception('')
     
@@ -8794,6 +8727,9 @@ def init( \
         print('magt')
         summgene(magt)
     
+    gdat.booltess = 'TESS' in gdat.liststrginst[0]
+    gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
+    
     # determine the MAST keyword to be used for the target
     if not gdat.booltargsynt:
         if gdat.strgmast is not None:
@@ -8811,21 +8747,19 @@ def init( \
             print(gdat.ticitarg)
             raise Exception('')
         
-    if (gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) and gdat.boolexecoffl and not gdat.boolsimutotl:
+        if gdat.booltess:
+            strgtcut = strgmasttemp
+            # get the list of sectors for which TESS FFI data are available via TESSCut
+            gdat.listtsectcut, temp, temp = retr_listtsectcut(strgtcut)
+        
+            print('List of TESS sectors for which FFI data are available via TESSCut:')
+            print(gdat.listtsectcut)
+        
+    if (gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None or gdat.toiitarg is not None) and gdat.boolexecoffl and not gdat.boolsimutotl:
         print('')
         print('')
         print('')
         raise Exception('(gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) AND boolexecoffl is True AND not gdat.boolsimutotl.')
-
-        strgtcut = strgmasttemp
-        # get the list of sectors for which TESS FFI data are available via TESSCut
-        gdat.listtsectcut, temp, temp = retr_listtsectcut(strgtcut)
-    
-        print('List of TESS sectors for which FFI data are available via TESSCut:')
-        print(gdat.listtsectcut)
-        
-    gdat.booltess = 'TESS' in gdat.liststrginst[0]
-    gdat.booltesskepl = 'Kepler' in gdat.liststrginst[0] or 'TESS' in gdat.liststrginst[0] or 'K2' in gdat.liststrginst[0]
     
     print('gdat.booltesskepl')
     print(gdat.booltesskepl)
@@ -9273,15 +9207,15 @@ def init( \
     if gdat.booltesskepl and gdat.booltargpartanyy:
         numbtsec = len(gdat.listtsectcut)
 
-        if gdat.typelcurtpxftess == 'lygos' or not gdat.boolutilcadehigh:
+        if gdat.typelcurtpxftess == 'lygos':
             boollygo = np.ones(numbtsec, dtype=bool)
             gdat.listtsecspoc = np.array([], dtype=int)
             gdat.listtseclygo = gdat.listtsectcut
         elif gdat.boolutilcadehigh:
-            if gdat.typelcurtpxftess == 'SPOC':
+            if gdat.typelcurtpxftess == 'SPOC_first':
                 boollygo = ~tdpy.retr_boolsubb(gdat.listtsectcut, gdat.listtsecspoc)
                 gdat.listtseclygo = gdat.listtsectcut[np.where(boollygo)]
-            elif gdat.typelcurtpxftess == 'SPOC_only':
+            elif gdat.typelcurtpxftess == 'SPOC':
                 boollygo = np.zeros_like(gdat.listtsectcut, dtype=bool)
                 gdat.listtseclygo = []
             else:
@@ -9353,7 +9287,7 @@ def init( \
 
         # Boolean flag to use the TPFs
         if not 'boolutiltpxf' in gdat.dictlygoinpt:
-            gdat.dictlygoinpt['boolutiltpxf'] = gdat.boolutilcadehigh and gdat.typelcurtpxftess == 'lygos'
+            gdat.dictlygoinpt['boolutiltpxf'] = gdat.boolutilcadehigh
         
         # name of the lygos analysis from which the light curve will be derived
         gdat.dictlygoinpt['listnameanls'] = ['psfn']
@@ -9425,7 +9359,7 @@ def init( \
                     gdat.dictlygooutp['listtccd'] = np.delete(gdat.dictlygooutp['listtccd'], indxtseclygodele)
         
         if gdat.booldiag:
-            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
+            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC_first') and len(gdat.listtseclygo) > 0:
                 for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
                     if len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]) == 0:
                         print('')
@@ -9472,7 +9406,7 @@ def init( \
                 gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][p][o] = arry[indxtimegood, :]
             
         if gdat.booldiag:
-            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
+            if gdat.booltesskepl and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC_first') and len(gdat.listtseclygo) > 0:
                 for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
                     if len(gdat.dictlygooutp['arryrflx'][gdat.nameanlslygo][0][o]) == 0:
                         print('')
@@ -9496,9 +9430,6 @@ def init( \
         numbtsecspoc = gdat.listtsecspoc.size
         indxtsecspoc = np.arange(numbtsecspoc)
 
-        print('gdat.typelcurtpxftess')
-        print(gdat.typelcurtpxftess)
-    
         gdat.listtsecpdcc = np.empty_like(gdat.listtsecspoc)
         gdat.listtsecsapp = np.empty_like(gdat.listtsecspoc)
 
@@ -9783,7 +9714,14 @@ def init( \
             
     gdat.fitt.prio.meanpara.duraprio = None
     
+    gdat.nomipara = tdpy.gdatstrt()
+    
     # retrieve values from literature
+    
+    print('gdat.boolinfe')
+    print(gdat.boolinfe)
+    print('')
+
     if gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
         
         print('gdat.typepriocomp')
@@ -9807,6 +9745,9 @@ def init( \
             gdat.nomipara.tmagsyst = gdat.dictexartarg['tmagsyst'][0]
         
         if gdat.typepriocomp == 'exof':
+            
+            raise Exception('')
+
             if gdat.typeverb > 0:
                 print('Retreiving the companion priors from ExoFOP-TESS...')
             
@@ -9913,7 +9854,7 @@ def init( \
         if gdat.booltargsynt:
             para = gdat.dictnico['dictpopl']['comp']['compstar_SyntheticPopulation_All'][namepara+'comp'][0]
         else:
-            para = getattr(gdat.nomipara, namepara)
+            para = getattr(gdat.nomipara, namepara + 'comp')
         setattr(gdat.fitt.prio.meanpara, namepara, para)
 
     # list of strings to be attached to file names for each energy bin
@@ -10047,7 +9988,7 @@ def init( \
                     gdat.listarrytser['Raw'][b][p][o] = gdat.listarrylcurmast[p][indxspoc]
             
             ## TESS and Kepler data via lygos
-            if gdat.booltesskepl and gdat.booltargpartanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC' and len(gdat.listtseclygo) > 0):
+            if gdat.booltesskepl and gdat.booltargpartanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC_first') and len(gdat.listtseclygo) > 0:
                 for o in range(len(gdat.listipnt[b][p])):
                     #for o, tseclygo in enumerate(gdat.dictlygooutp['listipnt'][0]):
                     print('gdat.dictlygooutp[listipnt][0]')
@@ -11106,7 +11047,9 @@ def init( \
             
             if dictoutlperi['boolposi']:
                 gdat.fitt.prio.numbcomp = 1
-    
+            else:
+                raise Exception('')
+
     # search for periodic boxes
     if gdat.boolsrchboxsperi:
         
