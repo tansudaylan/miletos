@@ -8301,17 +8301,6 @@ def init( \
             for name, valu in gdat.dicttrue.items():
                 setattr(gdat.true, name, valu)
 
-                if gdat.booldiag:
-                    if not isinstance(valu, int) and not isinstance(valu, float) and len(valu) == 0:
-                        print('')
-                        print('')
-                        print('')
-                        print('name')
-                        print(name)
-                        print('valu')
-                        summgene(valu)
-                        raise Exception('len(valu) == 0')
-
     gdat.maxmradisrchmast = 2. # arcsec
     gdat.strgradi = '%gs' % gdat.maxmradisrchmast
     
@@ -8653,13 +8642,12 @@ def init( \
     if gdat.booltargsynt:
         
         # determine magnitudes
-        print('gdat.dicttrue')
-        print(gdat.dicttrue)
-        #if hasattr(gdat.dicttrue, 'distsyst') and hasattr(gdat.dicttrue, 'tmptstar') and hasattr(gdat.dicttrue, 'radistar'):
         if hasattr(gdat.true, 'distsyst') and hasattr(gdat.true, 'tmptstar') and hasattr(gdat.true, 'radistar'):
             
             gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
-            dictspec = nicomedia.retr_dictspec(gdat.dicttrue['radistar'], gdat.dicttrue['tmptstar'], gdat.dicttrue['diststar'], gdat.liststrgband)
+            print('gdat.dicttrue')
+            print(gdat.dicttrue)
+            dictfluxband, _ = nicomedia.retr_dictfluxband(gdat.dicttrue['tmptstar'], gdat.liststrgband)
 
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
         raise Exception('')
@@ -10430,10 +10418,17 @@ def init( \
                         
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] = gdat.true.dictmodl['Total'][0][p]
                         
+                        print('gdat.listarrytser[Raw][b][p][y][:, :, 1]')
+                        summgene(gdat.listarrytser['Raw'][b][p][y][:, :, 1])
+
                         # add noise to the synthetic data
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] += \
                              np.random.randn(gdat.true.listtime[b][p][y].size * gdat.numbener[p]).reshape((gdat.true.listtime[b][p][y].size, gdat.numbener[p])) * \
                                                                                                                         gdat.listarrytser['Raw'][b][p][y][:, :, 2]
+
+                        print('gdat.listarrytser[Raw][b][p][y][:, :, 1]')
+                        summgene(gdat.listarrytser['Raw'][b][p][y][:, :, 1])
+
     else:
         for p in gdat.indxinst[0]:
             # define number of energy bins if any photometric data exist
@@ -10444,6 +10439,23 @@ def init( \
                 else:
                     gdat.liststrgener[p].append('ener%04d' % e)
 
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    if not np.isfinite(gdat.listarrytser['Raw'][b][p][y]).all():
+                        print('')
+                        print('')
+                        print('')
+                        print('b, p, y')
+                        print(b, p, y)
+                        indxbadd = np.where(~np.isfinite(gdat.listarrytser['Raw'][b][p][y]))[0]
+                        print('gdat.listarrytser[raww][b][p][y]')
+                        summgene(gdat.listarrytser['Raw'][b][p][y])
+                        print('indxbadd')
+                        summgene(indxbadd)
+                        raise Exception('not np.isfinite(gdat.listarrytser[raww][b][p]).all()')
+                
     # make white light curve
     if gdat.numbener[p] > 1:
         
