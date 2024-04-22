@@ -7924,6 +7924,9 @@ def init( \
          #stdvrascstar=None, \
          #stdvdeclstar=None, \
          #stdvvsiistar=None, \
+        
+         # Boolean flag to perform inference following the initial analyses
+         boolmcmc=False, \
 
          ## Boolean flag to perform inference on the phase-folded (onto the period of the first planet) and binned data
          boolinfefoldbind=False, \
@@ -8275,12 +8278,9 @@ def init( \
             summgene(valu)
             setattr(gdat.fitt, name, valu)
     
-    # Boolean flag to perform inference
-    gdat.boolinfe = hasattr(gdat.fitt, 'typemodl')
-    
     # list of models to be fitted to the data
     gdat.liststrgmodl = []
-    if gdat.boolinfe:
+    if gdat.boolmcmc:
         gdat.liststrgmodl += ['fitt']
     if gdat.boolsimurflx:
         gdat.liststrgmodl += ['true']
@@ -8301,12 +8301,12 @@ def init( \
     gdat.strgradi = '%gs' % gdat.maxmradisrchmast
     
     if gdat.typeverb > 0:
-        if gdat.boolinfe:
+        if gdat.boolmcmc:
             print('Type of fitting model: %s' % gdat.fitt.typemodl)
         else:
             print('No fitting will be performed.')
 
-    if gdat.boolinfe:
+    if gdat.boolmcmc:
         setp_modlmedi(gdat, 'fitt')
     
     if gdat.boolplottser is None:
@@ -8353,10 +8353,10 @@ def init( \
         gdat.numbpopl = len(gdat.liststrgpopl)
     
     if gdat.toiitarg is not None or gdat.ticitarg is not None \
-                                                               and (gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys):
+                                                               and (gdat.boolmcmc and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys):
         gdat.dicttoii = nicomedia.retr_dicttoii()
 
-    if gdat.boolinfe:
+    if gdat.boolmcmc:
         # model
         # type of likelihood
         ## 'sing': assume model is a single realization
@@ -8521,7 +8521,7 @@ def init( \
         else:
             gdat.typepriostar = 'TICID'
     
-    if gdat.boolinfe:
+    if gdat.boolmcmc:
         if gdat.typeverb > 0:
             if gdat.fitt.boolmodlpsys:
                 print('Stellar parameter prior type: %s' % gdat.typepriostar)
@@ -8682,7 +8682,7 @@ def init( \
 
     # Boolean flag to execute a search for flares
     if gdat.boolsrchflar is None:
-        if gdat.boolinfe and gdat.fitt.typemodl == 'StarFlaring':
+        if gdat.boolmcmc and gdat.fitt.typemodl == 'StarFlaring':
             gdat.boolsrchflar = True
         else:
             gdat.boolsrchflar = False
@@ -9539,7 +9539,7 @@ def init( \
                                                        **dictnicoinpt, \
                                                       )
     
-    if gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
+    if gdat.boolmcmc and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
         if gdat.strgexar is None:
             gdat.strgexar = gdat.strgmast
     
@@ -9616,7 +9616,7 @@ def init( \
     ## list of analysis types
     if gdat.listtypeanls is None:
         gdat.listtypeanls = []
-        if gdat.boolinfe:
+        if gdat.boolmcmc:
             if (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and gdat.typepriocomp == 'boxsperinega':
                 gdat.listtypeanls += ['boxsperinega']
             if gdat.fitt.typemodl == 'CompactObjectStellarCompanion':
@@ -9631,7 +9631,7 @@ def init( \
     gdat.boolbdtr = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.boolinfe and len(gdat.listtimescalbdtr) > 0 and \
+            if gdat.boolmcmc and len(gdat.listtimescalbdtr) > 0 and \
                                 (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and not gdat.liststrginst[b][p].startswith('LSST'):
                 
                 print('temp: suppressing detrending')
@@ -9646,6 +9646,7 @@ def init( \
     
     ## Boolean flag to calculate the power spectral density
     gdat.boolcalclspe = 'lspe' in gdat.listtypeanls
+    gdat.dictmileoutp['boolcalclspe'] = gdat.boolcalclspe
 
     # Boolean flag to execute a search for negative periodic boxes
     gdat.boolsrchboxsperinega = 'boxsperinega' in gdat.listtypeanls
@@ -9700,11 +9701,10 @@ def init( \
     
     # retrieve values from literature
     
-    print('gdat.boolinfe')
-    print(gdat.boolinfe)
-    print('')
+    print('gdat.boolmcmc')
+    print(gdat.boolmcmc)
 
-    if gdat.boolinfe and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
+    if gdat.boolmcmc and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
         
         print('gdat.typepriocomp')
         print(gdat.typepriocomp)
@@ -10172,7 +10172,7 @@ def init( \
     print(gdat.boolsrchboxsperi)
 
     # gdat.fitt.prio.meanpara.epocmtracomp may potentially be modified later, so this will need to be rerun
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr') \
+    if gdat.boolmcmc and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr') \
                                                                                                                            and not (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
         gdat.fitt.prio.numbcomp = gdat.fitt.prio.meanpara.epocmtracomp.size
         gdat.fitt.prio.indxcomp = np.arange(gdat.fitt.prio.numbcomp)
@@ -10711,11 +10711,11 @@ def init( \
         gdat.arrytser['maskcust'] = gdat.arrytser['Raw']
         gdat.listarrytser['maskcust'] = gdat.listarrytser['Raw']
     
-    gdat.boolmodlcomp = gdat.boolinfe and gdat.fitt.boolmodlcomp or gdat.boolsimurflx and gdat.true.boolmodlcomp
+    gdat.boolmodlcomp = gdat.boolmcmc and gdat.fitt.boolmodlcomp or gdat.boolsimurflx and gdat.true.boolmodlcomp
 
     # detrending
     ## determine whether to use any mask for detrending
-    if gdat.boolinfe and gdat.fitt.boolmodlcomp and gdat.fitt.prio.meanpara.duraprio is not None and len(gdat.fitt.prio.meanpara.duraprio) > 0:
+    if gdat.boolmcmc and gdat.fitt.boolmodlcomp and gdat.fitt.prio.meanpara.duraprio is not None and len(gdat.fitt.prio.meanpara.duraprio) > 0:
         # assign the prior orbital solution to the baseline-detrend mask
         gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
         gdat.perimask = gdat.nomipara.pericomp
@@ -11050,9 +11050,17 @@ def init( \
             else:
                 raise Exception('')
 
+    print('gdat.boolsrchboxsperi')
+    print(gdat.boolsrchboxsperi)
+
     # search for periodic boxes
     if gdat.boolsrchboxsperi:
         
+        if 'boolsrchposi' in gdat.dictboxsperiinpt:
+            raise Exception('Conflicting entry in dictboxsperiinpt.')
+        else:
+            gdat.dictboxsperiinpt['boolsrchposi'] = gdat.boolsrchboxsperiposi
+                
         # temp
         for p in gdat.fitt.indxrratband[0]:
             
@@ -11069,11 +11077,6 @@ def init( \
                 if gdat.boolplot:
                     gdat.dictboxsperiinpt['pathvisu'] = gdat.pathvisutarg
             
-            if not 'boolsrchposi' in gdat.dictboxsperiinpt:
-                if 'CompactObjectStellarCompanion' in gdat.listtypeanls:
-                    gdat.dictboxsperiinpt['boolsrchposi'] = True
-                else:
-                    gdat.dictboxsperiinpt['boolsrchposi'] = False
             gdat.dictboxsperiinpt['pathdata'] = gdat.pathdatatarg
             gdat.dictboxsperiinpt['timeoffs'] = gdat.timeoffs
             gdat.dictboxsperiinpt['strgextn'] = '%s_%s' % (gdat.liststrginst[0][p], gdat.strgtarg)
@@ -11196,7 +11199,7 @@ def init( \
         #gdat.numbtime = gdat.time.size
 
     # rerunning this as gdat.fitt.prio.meanpara.epocmtracomp may have been modified
-    if gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr'):
+    if gdat.boolmcmc and (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.fitt.typemodl == 'psysttvr'):
         gdat.fitt.prio.numbcomp = gdat.fitt.prio.meanpara.epocmtracomp.size
         gdat.fitt.prio.indxcomp = np.arange(gdat.fitt.prio.numbcomp)
 
@@ -11261,7 +11264,7 @@ def init( \
                     if gdat.boolplot:
                         gdat.listdictdvrp[0].append({'path': gdat.dictlspeoutp['pathplot'], 'limt':[0., 0.8, 0.5, 0.1]})
         
-    if gdat.boolmodlcomp:
+    if gdat.boolmodlcomp and gdat.boolmcmc:
         if gdat.liststrgcomp is None:
             gdat.liststrgcomp = nicomedia.retr_liststrgcomp(gdat.fitt.prio.numbcomp)
         if gdat.listcolrcomp is None:
@@ -11270,7 +11273,7 @@ def init( \
         if gdat.typeverb > 0:
             print('Planet letters: ')
             print(gdat.liststrgcomp)
-    
+        
         if gdat.fitt.prio.meanpara.duraprio is None:
             
             if gdat.booldiag:
@@ -11643,7 +11646,7 @@ def init( \
     for strgmodl in gdat.liststrgmodl:
         gmod = getattr(gdat, strgmodl)
 
-        if gdat.boolinfe and gmod.boolmodlpcur:
+        if gdat.boolmcmc and gmod.boolmodlpcur:
             ### Doppler beaming
             if gdat.typeverb > 0:
                 print('Assuming TESS passband for estimating Dopller beaming...')
@@ -11694,7 +11697,7 @@ def init( \
     #    gdat.arrytserdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrytser['Detrended'][b][p][y][:, 1])
     #gdat.arrytserdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrytser['Detrended'][b][p][y][:, 1])
     
-    if gdat.boolinfe and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
+    if gdat.boolmcmc and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
     ## number of bins in the phase curve
         gdat.numbbinspcurtotl = 100
     
@@ -11814,7 +11817,7 @@ def init( \
 
     # do not continue if there is no trigger
     # Boolean flag to continue modeling the data based on the feature extraction
-    gdat.boolmodl = gdat.boolinfe and (gdat.fitt.typemodl == 'PlanetarySystem' or \
+    gdat.boolmodl = gdat.boolmcmc and (gdat.fitt.typemodl == 'PlanetarySystem' or \
                                         gdat.fitt.typemodl == 'CompactObjectStellarCompanion' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and \
                                                                            not (gdat.boolsrchboxsperi and not gdat.dictmileoutp['boolposianls'].any())
     
@@ -11825,8 +11828,6 @@ def init( \
         print('gdat.liststrgpdfn')
         print(gdat.liststrgpdfn)
     
-    print('gdat.boolinfe')
-    print(gdat.boolinfe)
     if not gdat.boolmodl:
         print('Skipping the forward modeling of this prior transiting object...')
 
