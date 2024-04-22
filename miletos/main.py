@@ -7128,10 +7128,6 @@ def plot_tser( \
             
             
             diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
-            print('np.std(diftimemodl)')
-            print(np.std(diftimemodl))
-            print('np.mean(diftimemodl)')
-            print(np.mean(diftimemodl))
             if boolbrekmodl and np.std(diftimemodl) < 0.1 * np.mean(diftimemodl):
 
                 minmdiftimemodl = np.amin(diftimemodl)
