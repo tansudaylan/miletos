@@ -8645,8 +8645,6 @@ def init( \
         if hasattr(gdat.true, 'distsyst') and hasattr(gdat.true, 'tmptstar') and hasattr(gdat.true, 'radistar'):
             
             gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
-            print('gdat.dicttrue')
-            print(gdat.dicttrue)
             dictfluxband, _ = nicomedia.retr_dictfluxband(gdat.dicttrue['tmptstar'], gdat.liststrgband)
 
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
@@ -10418,16 +10416,10 @@ def init( \
                         
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] = gdat.true.dictmodl['Total'][0][p]
                         
-                        print('gdat.listarrytser[Raw][b][p][y][:, :, 1]')
-                        summgene(gdat.listarrytser['Raw'][b][p][y][:, :, 1])
-
                         # add noise to the synthetic data
                         gdat.listarrytser['Raw'][b][p][y][:, :, 1] += \
                              np.random.randn(gdat.true.listtime[b][p][y].size * gdat.numbener[p]).reshape((gdat.true.listtime[b][p][y].size, gdat.numbener[p])) * \
                                                                                                                         gdat.listarrytser['Raw'][b][p][y][:, :, 2]
-
-                        print('gdat.listarrytser[Raw][b][p][y][:, :, 1]')
-                        summgene(gdat.listarrytser['Raw'][b][p][y][:, :, 1])
 
     else:
         for p in gdat.indxinst[0]:
