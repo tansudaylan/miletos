@@ -458,7 +458,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             pathvisu = None
             if strgmodl == 'true':
                 if gdat.boolplotefestrue:
-                    pathvisu = gdat.pathvisutarg + 'EphesosModel/'
+                    pathvisu = gdat.pathvisutarg + 'PeriodicBoxSearchModelViaEphesos/'
                     boolmakeimaglfov = True
                     os.system('mkdir -p %s' % pathvisu)
 
@@ -1441,29 +1441,6 @@ def calc_feat(gdat, strgpdfn):
     
     if False and gdat.labltarg == 'WASP-121' and strgpdfn != 'prio':
         
-        # read and parse ATMO posterior
-        ## get secondary depth data from Tom
-        path = gdat.pathdatatarg + 'ascii_output/EmissionDataArray.txt'
-        print('Reading from %s...' % path)
-        arrydata = np.loadtxt(path)
-        print('arrydata')
-        summgene(arrydata)
-        print('arrydata[0, :]')
-        print(arrydata[0, :])
-        path = gdat.pathdatatarg + 'ascii_output/EmissionModelArray.txt'
-        print('Reading from %s...' % path)
-        arrymodl = np.loadtxt(path)
-        print('arrymodl')
-        summgene(arrymodl)
-        print('Secondary eclipse depth mean and standard deviation:')
-        # get wavelengths
-        path = gdat.pathdatatarg + 'ascii_output/ContribFuncWav.txt'
-        print('Reading from %s...' % path)
-        wlen = np.loadtxt(path)
-        path = gdat.pathdatatarg + 'ascii_output/ContribFuncWav.txt'
-        print('Reading from %s...' % path)
-        wlenctrb = np.loadtxt(path, skiprows=1)
-   
         ### spectrum of the host star
         gdat.cntrwlenthomraww = arrymodl[:, 0]
         gdat.specstarthomraww = arrymodl[:, 9]
@@ -2192,11 +2169,6 @@ def proc_alle(gdat, typemodl):
                             else:
                                 axis[k].plot(xdat, ydat, color='b', lw=2, label='Model', zorder=10)
                             
-                            # add Vivien's result
-                            if k == 2 and gdat.labltarg == 'WASP-121':
-                                axis[k].plot(gdat.phasvivi, gdat.deptvivi*1e3, color='orange', lw=2, label='GCM (Parmentier+2018)')
-                                axis[k].axhline(0., ls='-.', alpha=0.3, color='grey')
-
                             if k == 0:
                                 axis[k].set(xlabel='Time [BJD - %d]' % gdat.timeoffs)
                             if k > 0:
@@ -2205,10 +2177,6 @@ def proc_alle(gdat, typemodl):
                         axis[1].set(ylabel=gdat.labltserphot)
                         axis[2].set(ylabel='Relative flux - 1 [ppm]')
                         
-                        if gdat.labltarg == 'WASP-121':
-                            ylimpcur = [-400, 1000]
-                        else:
-                            ylimpcur = [-100, 300]
                         axis[2].set_ylim(ylimpcur)
                         
                         xdat = gmod.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 0]
@@ -6957,6 +6925,9 @@ def plot_tser( \
               # limits for the horizontal axis in the form of a two-tuple
               limtxaxi=None, \
               
+              # reference vertical value
+              ydatcntr=1., \
+
               # limits for the vertical axis in the form of a two-tuple
               limtyaxi=None, \
               
@@ -7217,7 +7188,7 @@ def plot_tser( \
     
     if booldrawcntr:
         xdatcntr = np.array(axis.get_xlim())
-        ydatcntr = np.ones_like(xdatcntr)
+        ydatcntr = np.full_like(xdatcntr, fill_value=ydatcntr)
         axis.plot(xdatcntr, ydatcntr, color='gray', lw=1, ls='-.', alpha=alpha, zorder=-1)
     
     if lablxaxi is None:
@@ -9656,6 +9627,7 @@ def init( \
     
     # Boolean flag to execute a search for periodic boxes
     gdat.boolsrchboxsperi = gdat.boolsrchboxsperiposi or gdat.boolsrchboxsperinega
+    gdat.dictmileoutp['boolsrchboxsperi'] = gdat.boolsrchboxsperi
     
     # Boolean flag to execute a search for periodic outliers
     gdat.boolsrchoutlperi = 'outlperi' in gdat.listtypeanls
@@ -11792,25 +11764,6 @@ def init( \
     #        print('Making plots highlighting the %s features of the target within its population...' % (strgpdfn))
     #    plot_popl(gdat, 'prio')
     #    #calc_feat(gdat, strgpdfn)
-    
-    if gdat.labltarg == 'WASP-121':
-        # get Vivien's GCM model
-        path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR.dat'
-        arryvivi = np.loadtxt(path, delimiter=',')
-        gdat.phasvivi = (arryvivi[:, 0] / 360. + 0.75) % 1. - 0.25
-        gdat.deptvivi = arryvivi[:, 4]
-        indxphasvivisort = np.argsort(gdat.phasvivi)
-        gdat.phasvivi = gdat.phasvivi[indxphasvivisort]
-        gdat.deptvivi = gdat.deptvivi[indxphasvivisort]
-        path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR-AllK.dat'
-        arryvivi = np.loadtxt(path, delimiter=',')
-        gdat.wlenvivi = arryvivi[:, 1]
-        gdat.specvivi = arryvivi[:, 2]
-    
-        ## TESS throughput 
-        gdat.data = np.loadtxt(gdat.pathdatatarg + 'band.csv', delimiter=',', skiprows=9)
-        gdat.cntrwlenband = gdat.data[:, 0] * 1e-3
-        gdat.thptband = gdat.data[:, 1]
     
     if gdat.boolsrchboxsperi and not gdat.dictmileoutp['boolposianls'].any():
         print('BLS was performed, but no super-threshold BLS signal was found.')
