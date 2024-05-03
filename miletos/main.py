@@ -5196,37 +5196,23 @@ def srch_outlperi( \
                   flux, \
                   # relative flux error of samples
                   stdvflux, \
+                  # number of outliers to include in the search
+                  numboutl=5, \
                   # Boolean flag to diagnose
                   booldiag=True, \
                  ):
-    
-    dictoutp = dict()
-    
-    numboutl = 5
-    
-    print('numboutl')
-    print(numboutl)
-    if booldiag:
-        if time.ndim != 1:
-            print('')
-            print('')
-            print('')
-            print('time')
-            summgene(time)
-            raise Exception('time.ndim != 1')
+    '''
+    Search for periodic outliers in a computationally efficient way
+    '''
     
     # indices of the outliers
     indxtimesort = np.argsort(flux)[::-1][:numboutl]
     
-    indxoutl = np.arange(numboutl)
-
     # the times of the outliers
-    dictoutp['timesrch'] = time[indxtimesort]
+    timeoutl = time[indxtimesort]
     
-    
+    # number of differences between times of outlier samples
     numbdiff = int(numboutl * (numboutl - 1) / 2)
-    print('numbdiff')
-    print(numbdiff)
     
     # differences between times of outlier samples
     difftimeoutl = np.empty(numbdiff)
@@ -5234,71 +5220,48 @@ def srch_outlperi( \
     # compute the differences between times of outlier samples
     listtemp = []
     c = 0
+    indxoutl = np.arange(numboutl)
     for a in indxoutl:
         for b in indxoutl:
             if a >= b:
                 continue
             listtemp.append([a, b])
-            difftimeoutl[c] = abs(dictoutp['timesrch'][a] - dictoutp['timesrch'][b])
+            difftimeoutl[c] = abs(timeoutl[a] - timeoutl[b])
             c += 1
     
     # incides that sort the differences between times of outlier samples
     indxsort = np.argsort(difftimeoutl)
     
-    print('difftimeoutl')
-    print(difftimeoutl)
-    
     # sorted differences between times of outlier samples
     difftimeoutlsort = difftimeoutl[indxsort]
-
-    print('difftimeoutlsort')
-    print(difftimeoutlsort)
 
     # fractional differences between differences of times of outlier samples
     frddtimeoutlsort = (difftimeoutlsort[1:] - difftimeoutlsort[:-1]) / ((difftimeoutlsort[1:] + difftimeoutlsort[:-1]) / 2.)
 
-    print('frddtimeoutlsort')
-    print(frddtimeoutlsort)
-
     # index of the minimum fractional difference between differences of times of outlier samples
     indxfrddtimeoutlsort = np.argmin(frddtimeoutlsort)
     
-    print('indxfrddtimeoutlsort')
-    print(indxfrddtimeoutlsort)
-
     # minimum fractional difference between differences of times of outlier samples
     minmfrddtimeoutlsort = frddtimeoutlsort[indxfrddtimeoutlsort]
     
-    print('minmfrddtimeoutlsort')
-    print(minmfrddtimeoutlsort)
+    # estimate of the epoch
+    epoccomp = timeoutl[0]
     
-    dictoutp['minmfrddtimeoutlsort'] = [minmfrddtimeoutlsort]
-    
+    # estimate of the period
     pericomp = difftimeoutlsort[indxfrddtimeoutlsort]
-
-    print('pericomp')
-    print(pericomp)
-
-    if dictoutp['minmfrddtimeoutlsort'][0] < 0.1:
+    
+    # output dictionary
+    dictoutp = dict()
+    
+    # populate the output dictionary
+    if minmfrddtimeoutlsort < 0.1:
         dictoutp['boolposi'] = True
         dictoutp['pericomp'] = [pericomp]
+        dictoutp['epocmtracomp'] = [epoccomp]
     else:
         dictoutp['boolposi'] = False
-    
-    print('dictoutp[boolposi]')
-    print(dictoutp['boolposi'])
-    if dictoutp['boolposi']:
-        print('dictoutp[pericomp]')
-        print(dictoutp['pericomp'])
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    print('')
-    
-    # temp
-    dictoutp['epocmtracomp'] = [0.]
+    dictoutp['minmfrddtimeoutlsort'] = [minmfrddtimeoutlsort]
+    dictoutp['timeoutl'] = timeoutl 
 
     return dictoutp
 
