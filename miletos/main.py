@@ -8001,7 +8001,9 @@ def init( \
             setattr(gdat, attr, valu)
 
     # paths
+    ## path of the miletos data folder
     gdat.pathbasemile = os.environ['MILETOS_DATA_PATH'] + '/'
+    ## base path of the run
     if gdat.pathbase is None:
         gdat.pathbase = gdat.pathbasemile
     
@@ -8115,13 +8117,15 @@ def init( \
             raise Exception('Some of the data are simulated, but dicttrue does not have typemodl.')
         
         # check that if the data type for one instrument is synthetic target, then the data type for all instruments should be a synthetic target
-        if gdat.boolsimusome:
+        if gdat.booltargsynt:
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     if gdat.liststrgtypedata[b][p] != 'simutargsynt':
                         print('')
                         print('')
                         print('')
+                        print('gdat.booltargsynt')
+                        print(gdat.booltargsynt)
                         print('gdat.liststrgtypedata')
                         print(gdat.liststrgtypedata)
                         raise Exception('If liststrgtypedata contains one simutargsynt then all data types should be simutargsynt.')
@@ -11081,9 +11085,7 @@ def init( \
             
         gdat.dictmileoutp['dictoutlperi'] = gdat.dictoutlperi
             
-    if gdat.typepriocomp == 'boxsperinega' or gdat.typepriocomp == 'boxsperiposi':
-        gdat.fitt.prio.numbcomp = len(dictboxsperioutp['epocmtracomp'])
-    elif gdat.typepriocomp == 'outlperi':
+    if gdat.typepriocomp == 'outlperi':
         gdat.fitt.prio.numbcomp = len(gdat.dictoutlperi['epocmtracomp'])
         
     print('gdat.boolsrchboxsperi')
@@ -11123,17 +11125,17 @@ def init( \
             gdat.dictboxsperiinpt['minmperi'] = 0.5
             gdat.dictboxsperiinpt['maxmperi'] = 30.
 
-            dictboxsperioutp = srch_boxsperi(arry, **gdat.dictboxsperiinpt)
+            gdat.dictboxsperioutp = srch_boxsperi(arry, **gdat.dictboxsperiinpt)
             
-            gdat.dictmileoutp['dictboxsperioutp'] = dictboxsperioutp
+            gdat.dictmileoutp['dictboxsperioutp'] = gdat.dictboxsperioutp
             
             if not hasattr(gdat.fitt.prio.meanpara, 'epocmtracomp'):
-                gdat.fitt.prio.meanpara.epocmtracomp = dictboxsperioutp['epocmtracomp']
+                gdat.fitt.prio.meanpara.epocmtracomp = gdat.dictboxsperioutp['epocmtracomp']
             if not hasattr(gdat.fitt.prio.meanpara, 'pericomp'):
-                gdat.fitt.prio.meanpara.pericomp = dictboxsperioutp['pericomp']
-            gdat.deptprio = 1. - 1e-3 * dictboxsperioutp['depttrancomp']
-            gdat.fitt.prio.meanpara.duraprio = dictboxsperioutp['duracomp']
-            gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(dictboxsperioutp['epocmtracomp']) 
+                gdat.fitt.prio.meanpara.pericomp = gdat.dictboxsperioutp['pericomp']
+            gdat.deptprio = 1. - 1e-3 * gdat.dictboxsperioutp['depttrancomp']
+            gdat.fitt.prio.meanpara.duraprio = gdat.dictboxsperioutp['duracomp']
+            gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epocmtracomp']) 
             if gdat.fitt.boolvarirratinst:
                 for pk in gdat.fitt.indxrratband[0]:
                     gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
@@ -11144,6 +11146,9 @@ def init( \
             gdat.perimask = gdat.fitt.prio.meanpara.pericomp
             gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
             gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duraprio
+    
+    if gdat.typepriocomp == 'boxsperinega' or gdat.typepriocomp == 'boxsperiposi':
+        gdat.fitt.prio.numbcomp = len(gdat.dictboxsperioutp['epocmtracomp'])
     
     if gdat.typeverb > 0:
         print('gdat.epocmask')
@@ -11261,14 +11266,8 @@ def init( \
         if gdat.boolsrchboxsperi and gdat.boolplot:
             for p in gdat.indxinst[0]:
                 for g, name in enumerate(['sigr', 'resisigr', 'stdvresisigr', 'sdeecomp', 'pcur', 'rflx']):
-                    for j in range(len(dictboxsperioutp['epocmtracomp'])):
-                        print('j')
-                        print(j)
-                        print('gdat.listdictdvrp)')
-                        print(gdat.listdictdvrp)
-                        print('dictboxsperioutp[listpathplot%s % name]')
-                        print(dictboxsperioutp['listpathplot%s' % name])
-                        gdat.listdictdvrp[j+1].append({'path': dictboxsperioutp['listpathplot%s' % name][j], 'limt':[0., 0.9 - g * 0.1, 0.5, 0.1]})
+                    for j in range(len(gdat.dictboxsperioutp['epocmtracomp'])):
+                        gdat.listdictdvrp[j+1].append({'path': gdat.dictboxsperioutp['listpathplot%s' % name][j], 'limt':[0., 0.9 - g * 0.1, 0.5, 0.1]})
     
     gdat.dictmileoutp['numbcompprio'] = gdat.fitt.prio.numbcomp
     
@@ -11682,7 +11681,7 @@ def init( \
             
     gdat.dictmileoutp['boolposianls'] = np.empty(gdat.numbtypeposi, dtype=bool)
     if gdat.boolsrchboxsperi:
-        gdat.dictmileoutp['boolposianls'][0] = dictboxsperioutp['sdeecomp'][0] > gdat.thrssdeecosc
+        gdat.dictmileoutp['boolposianls'][0] = gdat.dictboxsperioutp['sdeecomp'][0] > gdat.thrssdeecosc
     if gdat.boolcalclspe:
         gdat.dictmileoutp['boolposianls'][1] = gdat.dictmileoutp['powrlspempow'] > gdat.thrslspecosc
     gdat.dictmileoutp['boolposianls'][2] = gdat.dictmileoutp['boolposianls'][0] or gdat.dictmileoutp['boolposianls'][1]
