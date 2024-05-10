@@ -5043,7 +5043,7 @@ def srch_boxsperi_work_loop(m, phas, phasdiff, dydchalf):
     return indxitra
 
 
-def srch_boxsperi_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, i, boolrebn, pathvisu=None):
+def srch_boxsperi_work(listperi, listarrytser, listdcyc, listepoc, listduratrantotllevl, boolrebn, pathvisu, i):
     
     numbperi = len(listperi[i])
     
@@ -5093,10 +5093,6 @@ def srch_boxsperi_work(listperi, listarrytser, listdcyc, listepoc, listduratrant
             #print('')
             
             for m in range(len(listepoc[k][l])):
-                
-                #print('srch_boxsperi_work()')
-                #print('k, l, m')
-                #print(k, l, m)
 
                 indxitra = srch_boxsperi_work_loop(m, listphastemp, phasdiff, dydchalf)
                 
@@ -5168,23 +5164,24 @@ def srch_boxsperi_work(listperi, listarrytser, listdcyc, listepoc, listduratrant
                 #print('')
                 
                 if pathvisu is not None:
-                    figr, axis = plt.subplots(2, 1, figsize=(8, 8))
-                    axis[0].plot(listarrytser[b][:, 0], listarrytser[b][:, 1], color='b', ls='', marker='o', rasterized=True, ms=0.3)
-                    axis[0].plot(listarrytser[b][:, 0][indxitra], listarrytser[b][:, 1][indxitra], color='firebrick', ls='', marker='o', ms=2., rasterized=True)
-                    axis[0].axhline(1., ls='-.', alpha=0.3, color='k')
-                    axis[0].set_xlabel('Time [BJD]')
-                    
-                    axis[1].plot(listphas[b], listarrytser[b][:, 1], color='b', ls='', marker='o', rasterized=True, ms=0.3)
-                    axis[1].plot(listphas[b][indxitra], listarrytser[b][:, 1][indxitra], color='firebrick', ls='', marker='o', ms=2., rasterized=True)
-                    axis[1].plot(np.mean(listphas[b][indxitra]), rflxitra, color='g', ls='', marker='o', ms=4., rasterized=True)
-                    axis[1].axhline(1., ls='-.', alpha=0.3, color='k')
-                    axis[1].set_xlabel('Phase')
-                    titl = '$P$=%.3f, $T_0$=%.3f, $q_{tr}$=%.3g, $f$=%.6g' % (peri, listepoc[k][l][m], listdcyc[k][l], rflxitra)
-                    axis[0].set_title(titl, usetex=False)
-                    path = pathvisu + 'rflx_boxsperi_%04d%04d.pdf' % (l, m)
-                    print('Writing to %s...' % path)
-                    plt.savefig(path, usetex=False)
-                    plt.close()
+                    for b in indxlevlrebn:
+                        figr, axis = plt.subplots(2, 1, figsize=(8, 8))
+                        axis[0].plot(listarrytser[b][:, 0], listarrytser[b][:, 1], color='b', ls='', marker='o', rasterized=True, ms=0.3)
+                        axis[0].plot(listarrytser[b][:, 0][indxitra], listarrytser[b][:, 1][indxitra], color='firebrick', ls='', marker='o', ms=2., rasterized=True)
+                        axis[0].axhline(1., ls='-.', alpha=0.3, color='k')
+                        axis[0].set_xlabel('Time [BJD]')
+                        
+                        axis[1].plot(listphas[b], listarrytser[b][:, 1], color='b', ls='', marker='o', rasterized=True, ms=0.3)
+                        axis[1].plot(listphas[b][indxitra], listarrytser[b][:, 1][indxitra], color='firebrick', ls='', marker='o', ms=2., rasterized=True)
+                        axis[1].plot(np.mean(listphas[b][indxitra]), rflxitra, color='g', ls='', marker='o', ms=4., rasterized=True)
+                        axis[1].axhline(1., ls='-.', alpha=0.3, color='k')
+                        axis[1].set_xlabel('Phase')
+                        titl = '$P$=%.3f, $T_0$=%.3f, $q_{tr}$=%.3g, $f$=%.6g' % (peri, listepoc[k][l][m], listdcyc[k][l], rflxitra)
+                        axis[0].set_title(titl, usetex=False)
+                        path = pathvisu + 'rflx_boxsperi_b%03d_%04d%04d.pdf' % (b, l, m)
+                        print('Writing to %s...' % path)
+                        plt.savefig(path, usetex=False)
+                        plt.close()
         
     return rflxitraminm, dcycmaxm, epocmaxm
 
@@ -5298,21 +5295,25 @@ def srch_boxsperi(arry, \
               
               # density of the star
               densstar=None, \
+              
+              # size of the kernel that will be used to median-detrend the signal spectrum and estimate noise inside a window
+              sizekern = 51, \
 
               # epoc steps divided by trial duration
               factdeltepocdura=0.5, \
 
               # detection threshold
-              thrssdee=7.1, \
+              thrss2nr=7.1, \
               
               # number of processes
               numbproc=None, \
               
               # Boolean flag to enable multiprocessing
-              boolprocmult=False, \
+              boolprocmult=True, \
               
               # string extension to output files
               strgextn='', \
+              
               # path where the output data will be stored
               pathdata=None, \
               
@@ -5354,7 +5355,7 @@ def srch_boxsperi(arry, \
     '''
     
     boolproc = False
-    listnameplot = ['sigr', 'resisigr', 'stdvresisigr', 'sdeecomp', 'rflx', 'pcur']
+    listnameplot = ['ampl', 'amplbdtr', 'stdvampl', 's2nr', 'rflx', 'pcur']
     if pathdata is None:
         boolproc = True
     else:
@@ -5381,7 +5382,7 @@ def srch_boxsperi(arry, \
             
             if not pathvisu is None:
                 for strg in listnameplot:
-                    for j in range(len(dictboxsperioutp['pericomp'])):
+                    for j in range(len(dictboxsperioutp['peri'])):
                         dictpathplot[strg].append(pathvisu + strg + '_boxsperi_tce%d_%s.%s' % (j, strgextn, typefileplot))
          
                         if not os.path.exists(dictpathplot[strg][j]):
@@ -5414,7 +5415,7 @@ def srch_boxsperi(arry, \
         #ab, mass, mass_min, mass_max, radius, radius_min, radius_max = transitleastsquares.catalog_info(TIC_ID=int(ticitarg))
         
         dictboxsperiinte = dict()
-        liststrgvarbsave = ['pericomp', 'epocmtracomp', 'depttrancomp', 'duracomp', 'sdeecomp']
+        liststrgvarbsave = ['peri', 'epoc', 'ampl', 'dura', 's2nr']
         for strg in liststrgvarbsave:
             dictboxsperioutp[strg] = []
         
@@ -5605,8 +5606,8 @@ def srch_boxsperi(arry, \
             # mask out the detected transit
             if j > 0:
                 ## remove previously detected periodic box from the rebinned data
-                pericomp = [dictboxsperioutp['pericomp'][j]]
-                epocmtracomp = [dictboxsperioutp['epocmtracomp'][j]]
+                pericomp = [dictboxsperioutp['peri'][j]]
+                epocmtracomp = [dictboxsperioutp['epoc'][j]]
                 radicomp = [dictfact['rsre'] * np.sqrt(dictboxsperioutp['depttrancomp'][j] * 1e-3)]
                 cosicomp = [0]
                 rsmacomp = [nicomedia.retr_rsmacomp(dictboxsperioutp['pericomp'][j], dictboxsperioutp['duracomp'][j], cosicomp[0])]
@@ -5632,16 +5633,16 @@ def srch_boxsperi(arry, \
 
                 dictboxsperi = dict()
                 dictboxsperiinte['listperi'] = objtresu.periods
-                dictboxsperiinte['listsigr'] = objtresu.power
+                dictboxsperiinte['lists2nr'] = objtresu.power
                 
-                dictboxsperioutp['pericomp'].append(objtresu.period)
-                dictboxsperioutp['epocmtracomp'].append(objtresu.T0)
-                dictboxsperioutp['duracomp'].append(objtresu.duration)
-                dictboxsperioutp['depttrancomp'].append(objtresu.depth * 1e3)
-                dictboxsperioutp['sdeecomp'].append(objtresu.SDE)
+                dictboxsperioutp['peri'].append(objtresu.period)
+                dictboxsperioutp['epoc'].append(objtresu.T0)
+                dictboxsperioutp['dura'].append(objtresu.duration)
+                dictboxsperioutp['ampl'].append(-objtresu.depth * 1e3)
+                dictboxsperioutp['s2nr'].append(objtresu.SDE)
                 dictboxsperioutp['prfp'].append(objtresu.FAP)
                 
-                if objtresu.SDE < thrssdee:
+                if objtresu.SDE < thrss2nr:
                     break
                 
                 dictboxsperiinte['rflxtsermodl'] = objtresu.model_lightcurve_model
@@ -5667,6 +5668,8 @@ def srch_boxsperi(arry, \
                 
                 if boolprocmult:
                     
+                    import multiprocessing
+
                     if numbproc is None:
                         #numbproc = multiprocessing.cpu_count() - 1
                         numbproc = int(0.8 * multiprocessing.cpu_count())
@@ -5685,13 +5688,14 @@ def srch_boxsperi(arry, \
                     for i in indxproc:
                         indx = np.where(indxprocperi == i)[0]
                         listperiproc[i] = listperi[indx]
-                    data = objtpool.map(partial(srch_boxsperi_work, listperiproc, listarrysrch, listdcyc, listepoc, listduratrantotllevl), indxproc, boolrebn)
+                    data = objtpool.map(partial(srch_boxsperi_work, listperiproc, listarrysrch, listdcyc, listepoc, listduratrantotllevl, boolrebn), indxproc)
                     listrflxitra = np.concatenate([data[k][0] for k in indxproc])
-                    listdeptmaxm = np.concatenate([data[k][1] for k in indxproc])
+                    listamplmaxm = np.concatenate([data[k][1] for k in indxproc])
                     listdcycmaxm = np.concatenate([data[k][2] for k in indxproc])
                     listepocmaxm = np.concatenate([data[k][3] for k in indxproc])
                 else:
-                    listrflxitra, listdcycmaxm, listepocmaxm = srch_boxsperi_work([listperi], listarrysrch, listdcyc, listepoc, listduratrantotllevl, 0, boolrebn)
+                    print('Using a single process for the periodic box search...')
+                    listrflxitra, listdcycmaxm, listepocmaxm = srch_boxsperi_work([listperi], listarrysrch, listdcyc, listepoc, listduratrantotllevl, boolrebn, pathvisu, 0)
                 
                 if booldiag:
                     if (~np.isfinite(listrflxitra)).all():
@@ -5706,81 +5710,84 @@ def srch_boxsperi(arry, \
                         summgene(listarrysrch[0][:, 1])
                         raise Exception('')
 
-                listdept = (np.median(listarrysrch[0][:, 1]) - listrflxitra) * 1e3 # [ppt])
+                listampl = (listrflxitra - np.median(listarrysrch[0][:, 1])) * 1e3 # [ppt])
                 
-                listsigr = listdept
+                listamplbdtr = listampl - scipy.ndimage.median_filter(listampl, size=sizekern)
                 
-                sizekern = 51
-                listresisigr = listsigr - scipy.ndimage.median_filter(listsigr, size=sizekern)
+                #listamplbdtr = listamplbdtr**2
+                liststdvampl = retr_stdvwind(listamplbdtr, sizekern, boolcuttpeak=True)
                 
-                #listresisigr = listresisigr**2
-                liststdvresisigr = retr_stdvwind(listresisigr, sizekern, boolcuttpeak=True)
-                listsdee = listresisigr / liststdvresisigr
-                #listsdee -= np.amin(listsdee)
+                if boolsrchposi:
+                    listsgnl = listamplbdtr
+                else:
+                    listsgnl = -listamplbdtr
+                    
+                lists2nr =listsgnl / liststdvampl
                 
-                indxperimpow = np.nanargmax(listsdee)
-                sdee = listsdee[indxperimpow]
+                indxperimpow = np.nanargmax(lists2nr)
                 
-                if not np.isfinite(sdee):
-                    sdee = 0.
+                s2nr = lists2nr[indxperimpow]
+                
+                if not np.isfinite(s2nr):
+                    print('')
+                    print('')
+                    print('')
                     print('arry')
                     summgene(arry)
                     for b in indxlevlrebn:
                         print('listarrysrch[b]')
                         summgene(listarrysrch[b])
-                    print('listsigr')
-                    summgene(listsigr)
-                    indxperizerostdv = np.where(liststdvresisigr == 0)[0]
-                    print('indxperizerostdv')
+                    indxperizerostdv = np.where(liststdvampl == 0)[0]
+                    print('np.where(liststdvampl == 0)[0]')
                     summgene(indxperizerostdv)
-                    print('liststdvresisigr')
-                    summgene(liststdvresisigr)
-                    print('SDE is infinite! Making it zero')
-                    #raise Exception('SDE is infinite!')
+                    print('lists2nr')
+                    summgene(lists2nr)
+                    raise Exception('SNR is infinite!')
 
-                dictboxsperioutp['sdeecomp'].append(sdee)
-                dictboxsperioutp['pericomp'].append(listperi[indxperimpow])
-                dictboxsperioutp['duracomp'].append(24. * listdcycmaxm[indxperimpow] * listperi[indxperimpow]) # [hours]
-                dictboxsperioutp['epocmtracomp'].append(listepocmaxm[indxperimpow])
-                dictboxsperioutp['depttrancomp'].append(listdept[indxperimpow])
+                dictboxsperioutp['s2nr'].append(s2nr)
+                dictboxsperioutp['peri'].append(listperi[indxperimpow])
+                dictboxsperioutp['dura'].append(24. * listdcycmaxm[indxperimpow] * listperi[indxperimpow]) # [hours]
+                dictboxsperioutp['epoc'].append(listepocmaxm[indxperimpow])
+                dictboxsperioutp['ampl'].append(listampl[indxperimpow])
                 
                 # best-fit orbit
                 dictboxsperiinte['listperi'] = listperi
                 
                 print('temp: assuming power is SNR')
-                dictboxsperiinte['listsigr'] = listsigr
-                dictboxsperiinte['listresisigr'] = listresisigr
-                dictboxsperiinte['liststdvresisigr'] = liststdvresisigr
-                dictboxsperiinte['listsdeecomp'] = listsdee
+                dictboxsperiinte['listampl'] = listampl
+                dictboxsperiinte['listamplbdtr'] = listamplbdtr
+                dictboxsperiinte['liststdvampl'] = liststdvampl
+                dictboxsperiinte['lists2nr'] = lists2nr
                 
                 if pathvisu is not None:
                     for strg in listnameplot:
-                        for j in range(len(dictboxsperioutp['pericomp'])):
+                        for j in range(len(dictboxsperioutp['peri'])):
                             pathplot = pathvisu + strg + '_boxsperi_tce%d_%s.%s' % (j, strgextn, typefileplot)
                             dictpathplot[strg].append(pathplot)
             
-                    pericomp = [dictboxsperioutp['pericomp'][j]]
-                    epocmtracomp = [dictboxsperioutp['epocmtracomp'][j]]
+                    pericomp = [dictboxsperioutp['peri'][j]]
+                    epocmtracomp = [dictboxsperioutp['epoc'][j]]
                     cosicomp = [0]
-                    rsmacomp = [nicomedia.retr_rsmacomp(dictboxsperioutp['pericomp'][j], dictboxsperioutp['duracomp'][j], cosicomp[0])]
-                    rratcomp = [np.sqrt(dictboxsperioutp['depttrancomp'][j] * 1e-3)]
+                    rsmacomp = [nicomedia.retr_rsmacomp(dictboxsperioutp['peri'][j], dictboxsperioutp['dura'][j], cosicomp[0])]
+                    rratcomp = [np.sqrt(-dictboxsperioutp['ampl'][j] * 1e-3)]
                     
                     if booldiag:
                         if not np.isfinite(rratcomp).all():
                             print('')
                             print('')
                             print('')
-                            print('dictboxsperioutp[depttrancomp]')
-                            print(dictboxsperioutp['depttrancomp'])
-                            print('listsdee')
-                            print(listsdee)
-                            summgene(listsdee)
                             print('rratcomp')
                             print(rratcomp)
-                            print('listdept')
-                            print(listdept)
+                            print('listampl')
+                            summgene(listampl)
+                            print('lists2nr')
+                            summgene(lists2nr)
                             print('indxperimpow')
                             print(indxperimpow)
+                            print('listampl[indxperimpow]')
+                            print(listampl[indxperimpow])
+                            print('s2nr')
+                            print(s2nr)
                             raise Exception('rratcomp is not finite.')
 
                     dictoutp = ephesos.eval_modl(timemodlplot, typesyst='PlanetarySystem', pericomp=pericomp, epocmtracomp=epocmtracomp, \
@@ -5790,8 +5797,8 @@ def srch_boxsperi(arry, \
                     arrymetamodl = np.zeros((numbtimeplot, 3))
                     arrymetamodl[:, 0] = timemodlplot
                     arrymetamodl[:, 1] = dictboxsperiinte['rflxtsermodl']
-                    arrypsermodl = fold_tser(arrymetamodl, dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['pericomp'][j], phascntr=0.5)
-                    arrypserdata = fold_tser(listarrysrch[0], dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['pericomp'][j], phascntr=0.5)
+                    arrypsermodl = fold_tser(arrymetamodl, dictboxsperioutp['epoc'][j], dictboxsperioutp['peri'][j], phascntr=0.5)
+                    arrypserdata = fold_tser(listarrysrch[0], dictboxsperioutp['epoc'][j], dictboxsperioutp['peri'][j], phascntr=0.5)
                         
                     dictboxsperiinte['timedata'] = listarrysrch[0][:, 0]
                     dictboxsperiinte['rflxtserdata'] = listarrysrch[0][:, 1]
@@ -5811,32 +5818,32 @@ def srch_boxsperi(arry, \
            
             if pathvisu is not None:
                 strgtitl = 'P=%.3f d, $T_0$=%.3f, Dep=%.2g ppt, Dur=%.2g hr, SDE=%.3g' % \
-                            (dictboxsperioutp['pericomp'][j], dictboxsperioutp['epocmtracomp'][j], dictboxsperioutp['depttrancomp'][j], \
-                            dictboxsperioutp['duracomp'][j], dictboxsperioutp['sdeecomp'][j])
+                            (dictboxsperioutp['peri'][j], dictboxsperioutp['epoc'][j], dictboxsperioutp['ampl'][j], \
+                            dictboxsperioutp['dura'][j], dictboxsperioutp['s2nr'][j])
                 
-                # plot power spectra
+                # plot spectra
                 for a in range(4):
                     if a == 0:
-                        strg = 'sigr'
+                        strg = 'ampl'
                     if a == 1:
-                        strg = 'resisigr'
+                        strg = 'amplbdtr'
                     if a == 2:
-                        strg = 'stdvresisigr'
+                        strg = 'stdvampl'
                     if a == 3:
-                        strg = 'sdeecomp'
+                        strg = 's2nr'
 
                     figr, axis = plt.subplots(figsize=figrsizeydobskin)
                     
-                    axis.axvline(dictboxsperioutp['pericomp'][j], alpha=0.4, lw=3)
+                    axis.axvline(dictboxsperioutp['peri'][j], alpha=0.4, lw=3)
                     minmxaxi = np.amin(dictboxsperiinte['listperi'])
                     maxmxaxi = np.amax(dictboxsperiinte['listperi'])
                     for n in range(2, 10):
-                        xpos = n * dictboxsperioutp['pericomp'][j]
+                        xpos = n * dictboxsperioutp['peri'][j]
                         if xpos > maxmxaxi:
                             break
                         axis.axvline(xpos, alpha=0.4, lw=1, linestyle='dashed')
                     for n in range(2, 10):
-                        xpos = dictboxsperioutp['pericomp'][j] / n
+                        xpos = dictboxsperioutp['peri'][j] / n
                         if xpos < minmxaxi:
                             break
                         axis.axvline(xpos, alpha=0.4, lw=1, linestyle='dashed')
@@ -5899,7 +5906,7 @@ def srch_boxsperi(arry, \
             
             j += 1
         
-            if sdee < thrssdee or indxperimpow == listsdee.size - 1:
+            if s2nr < thrss2nr or indxperimpow == lists2nr.size - 1:
                 break
         
         # make the BLS features arrays
@@ -7858,8 +7865,8 @@ def init( \
          ### maximum frequency (per day) for LS periodogram
          maxmfreqlspe=None, \
          
-         # threshold BLS SDE for disposing the target as positive
-         thrssdeecosc=10., \
+         # threshold SNR for triggering the periodic box search pipeline
+         thrss2nrcosc=10., \
                 
          # threshold LS periodogram power for disposing the target as positive
          thrslspecosc=0.2, \
@@ -8284,10 +8291,6 @@ def init( \
     if gdat.dictfitt is not None:
         print('Transferring the contents of dictfitt to gdat...')
         for name, valu in gdat.dictfitt.items():
-            print('name')
-            print(name)
-            print('valu')
-            summgene(valu)
             setattr(gdat.fitt, name, valu)
     
     # list of models to be fitted to the data
@@ -11130,12 +11133,12 @@ def init( \
             gdat.dictmileoutp['dictboxsperioutp'] = gdat.dictboxsperioutp
             
             if not hasattr(gdat.fitt.prio.meanpara, 'epocmtracomp'):
-                gdat.fitt.prio.meanpara.epocmtracomp = gdat.dictboxsperioutp['epocmtracomp']
+                gdat.fitt.prio.meanpara.epocmtracomp = gdat.dictboxsperioutp['epoc']
             if not hasattr(gdat.fitt.prio.meanpara, 'pericomp'):
-                gdat.fitt.prio.meanpara.pericomp = gdat.dictboxsperioutp['pericomp']
-            gdat.deptprio = 1. - 1e-3 * gdat.dictboxsperioutp['depttrancomp']
-            gdat.fitt.prio.meanpara.duraprio = gdat.dictboxsperioutp['duracomp']
-            gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epocmtracomp']) 
+                gdat.fitt.prio.meanpara.pericomp = gdat.dictboxsperioutp['peri']
+            gdat.deptprio = 1. - 1e-3 * gdat.dictboxsperioutp['ampl']
+            gdat.fitt.prio.meanpara.duraprio = gdat.dictboxsperioutp['dura']
+            gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epoc']) 
             if gdat.fitt.boolvarirratinst:
                 for pk in gdat.fitt.indxrratband[0]:
                     gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
@@ -11148,7 +11151,7 @@ def init( \
             gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duraprio
     
     if gdat.typepriocomp == 'boxsperinega' or gdat.typepriocomp == 'boxsperiposi':
-        gdat.fitt.prio.numbcomp = len(gdat.dictboxsperioutp['epocmtracomp'])
+        gdat.fitt.prio.numbcomp = len(gdat.dictboxsperioutp['epoc'])
     
     if gdat.typeverb > 0:
         print('gdat.epocmask')
@@ -11265,8 +11268,8 @@ def init( \
         # add boxsperi plots to the DV report
         if gdat.boolsrchboxsperi and gdat.boolplot:
             for p in gdat.indxinst[0]:
-                for g, name in enumerate(['sigr', 'resisigr', 'stdvresisigr', 'sdeecomp', 'pcur', 'rflx']):
-                    for j in range(len(gdat.dictboxsperioutp['epocmtracomp'])):
+                for g, name in enumerate(['ampl', 'amplbdtr', 'stdvampl', 's2nr', 'pcur', 'rflx']):
+                    for j in range(len(gdat.dictboxsperioutp['epoc'])):
                         gdat.listdictdvrp[j+1].append({'path': gdat.dictboxsperioutp['listpathplot%s' % name][j], 'limt':[0., 0.9 - g * 0.1, 0.5, 0.1]})
     
     gdat.dictmileoutp['numbcompprio'] = gdat.fitt.prio.numbcomp
@@ -11681,7 +11684,7 @@ def init( \
             
     gdat.dictmileoutp['boolposianls'] = np.empty(gdat.numbtypeposi, dtype=bool)
     if gdat.boolsrchboxsperi:
-        gdat.dictmileoutp['boolposianls'][0] = gdat.dictboxsperioutp['sdeecomp'][0] > gdat.thrssdeecosc
+        gdat.dictmileoutp['boolposianls'][0] = gdat.dictboxsperioutp['s2nr'][0] > gdat.thrss2nrcosc
     if gdat.boolcalclspe:
         gdat.dictmileoutp['boolposianls'][1] = gdat.dictmileoutp['powrlspempow'] > gdat.thrslspecosc
     gdat.dictmileoutp['boolposianls'][2] = gdat.dictmileoutp['boolposianls'][0] or gdat.dictmileoutp['boolposianls'][1]
