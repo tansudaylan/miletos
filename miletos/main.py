@@ -5722,7 +5722,7 @@ def srch_boxsperi(arry, \
                 else:
                     listsgnl = -listamplbdtr
                     
-                lists2nr =listsgnl / liststdvampl
+                lists2nr = listsgnl / liststdvampl
                 
                 indxperimpow = np.nanargmax(lists2nr)
                 
@@ -5732,16 +5732,29 @@ def srch_boxsperi(arry, \
                     print('')
                     print('')
                     print('')
-                    print('arry')
-                    summgene(arry)
                     for b in indxlevlrebn:
                         print('listarrysrch[b]')
                         summgene(listarrysrch[b])
-                    indxperizerostdv = np.where(liststdvampl == 0)[0]
-                    print('np.where(liststdvampl == 0)[0]')
-                    summgene(indxperizerostdv)
+                    print('listampl')
+                    summgene(listampl)
+                    print('listamplbdtr')
+                    summgene(listamplbdtr)
+                    print('liststdvampl')
+                    summgene(liststdvampl)
+                    print('listsgnl')
+                    summgene(listsgnl)
                     print('lists2nr')
                     summgene(lists2nr)
+                    print('indxperimpow')
+                    print(indxperimpow)
+                    print('listsgnl[indxperimpow]')
+                    print(listsgnl[indxperimpow])
+                    print('liststdvampl[indxperimpow]')
+                    print(liststdvampl[indxperimpow])
+                    print('s2nr')
+                    print(s2nr)
+                    print('np.where(liststdvampl == 0)[0]')
+                    summgene(np.where(liststdvampl == 0)[0])
                     raise Exception('SNR is infinite!')
 
                 dictboxsperioutp['s2nr'].append(s2nr)
