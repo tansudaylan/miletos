@@ -9757,10 +9757,7 @@ def init( \
     
     if gdat.boolmodl and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys:
         
-        print('gdat.typepriocomp')
-        print(gdat.typepriocomp)
-
-        if gdat.typepriocomp == 'exar':
+        if gdat.boolmodl and gdat.typepriocomp == 'exar' or gdat.boolsimurflx and gdat.typesourparasimucomp == 'exar':
             if gdat.typeverb > 0:
                 print('Retreiving the companion priors from the NASA Exoplanet Archive...')
             gdat.nomipara.pericomp = gdat.dictexartarg['pericomp'][0]
@@ -9769,15 +9766,13 @@ def init( \
             gdat.nomipara.cosicomp = gdat.dictexartarg['cosicomp'][0]
             gdat.nomipara.epocmtracomp = gdat.dictexartarg['epocmtracomp'][0]
             gdat.nomipara.dura = gdat.dictexartarg['duratrantotl'][0]
-            print('gdat.nomipara.dura')
-            summgene(gdat.nomipara.dura)
             indxcompbadd = np.where(~np.isfinite(gdat.nomipara.dura))[0]
             if indx.size > 0:
                 dcyc = 0.15
                 if gdat.typeverb > 0:
-                    print('Duration from the Exoplanet Archive Composite PS table is infite for some companions. Assuming a duty cycle of %.3g.' % dcyc)
+                    print('Duration from the Exoplanet Archive Composite PS table is infinite for some companions. Assuming a duty cycle of %.3g.' % dcyc)
                 gdat.nomipara.dura[indxcompbadd] = gdat.nomipara.pericomp[indxcompbadd] * dcyc
-            gdat.nomipara.tmagsyst = gdat.dictexartarg['tmagsyst'][0]
+            gdat.nomipara.tmagsyst = gdat.dictexartarg['magtsystTESS'][0]
         
         if gdat.typepriocomp == 'exof':
             
@@ -9792,7 +9787,7 @@ def init( \
             gdat.nomipara.rsmacomp = gdat.dicttoiitarg['rsmacomp']
             gdat.nomipara.deptcomp = gdat.dicttoiitarg['depttrancomp']
             gdat.nomipara.duracomp = gdat.dicttoiitarg['duratrantotl']
-            gdat.nomipara.tmagsyst = gdat.dicttoiitarg['tmagsyst'][0]
+            gdat.nomipara.tmagsyst = gdat.dicttoiitarg['magtsystTESS'][0]
             gdat.nomipara.cosicomp = np.zeros_like(gdat.nomipara.epocmtracomp)
         
         if gdat.typepriocomp == 'inpt':
@@ -9813,9 +9808,14 @@ def init( \
             gdat.nomipara.rratcomp = [[] for p in gdat.indxinst[0]]
             for p in gdat.indxinst[0]:
                 if gdat.typepriocomp == 'exar':
-                    gdat.nomipara.meanpara.rratcomp[p] = gdat.dictexartarg['rratcomp'][0]
+                    gdat.nomipara.rratcomp[p] = gdat.dictexartarg['rratcomp'][0]
                 if gdat.typepriocomp == 'exof':
-                    gdat.nomipara.meanpara.rratcomp[p] = np.sqrt(gdat.nomipara.deptcomp)
+                    gdat.nomipara.rratcomp[p] = np.sqrt(gdat.nomipara.deptcomp)
+        
+        # move nominal parameters to fitting parameters
+        if gdat.boolmodl and (gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt'):
+            for namepara in ['peri', 'epocmtra', 'cosi', 'rsma', 'rrat']:
+                setattr(gdat.fitt.prio.meanpara, namepara + 'comp', getattr(gdat.nomipara, namepara + 'comp'))
 
         # check MAST
         if gdat.strgmast is None:
@@ -11633,7 +11633,7 @@ def init( \
                         summgene(indxbadd)
                         raise Exception('not np.isfinite(gdat.arrytser[bdtr][b][p]).all()')
         
-        if gdat.boolcalctimetran:
+        if gdat.boolmodl and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
             for strgmodl in gdat.liststrgmodl:
                 retr_timetran(gdat, strgmodl)
         
