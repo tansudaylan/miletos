@@ -115,7 +115,7 @@ def retr_timetran(gdat, strgmodl):
     if gdat.fitt.typemodl == 'psysdisktran':
         gdat.fracineg = np.zeros(2)
         
-        gmod.listindxtimetranineg = [[[[[] for k in range(4)] for p in gmod.indxrratband[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
+        gmod.listindxtimetranineg = [[[[[] for k in range(4)] for pk in gmod.indxrratband[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
 
         for pp in gmod.indxrratband:
             for j in gdat.fitt.prio.indxcomp:
@@ -297,17 +297,12 @@ def pars_para_mile(para, gdat, strgmodl):
         
         dictparainpt[name] = para[gmod.dictindxpara[name]]
         if gdat.booldiag:
-            if gmod.typemodl.startswith('PlanetarySystem') or gmod.typemodl == 'CompactObjectStellarCompanion':
-                if not 'paracom0' in dictparainpt:
-                    print('')
-                    print('')
-                    print('')
-                    print('dictparainpt')
-                    print(dictparainpt)
-                    raise Exception('paracom0 not in dictparainpt')
 
             if isinstance(gmod.dictindxpara[name], int) and gmod.dictindxpara[name] > 1e6 or \
                         not isinstance(gmod.dictindxpara[name], int) and (gmod.dictindxpara[name] > 1e6).any():
+                print('')
+                print('')
+                print('')
                 print('name')
                 print(name)
                 print('gmod.dictindxpara[name]')
@@ -922,6 +917,8 @@ def retr_dictderi_mile(para, gdat):
                 if gdat.booldiag:
                     for e in gdat.indxenermodl:
                         if not np.isfinite(dictvarbderi['stdvresi%s' % strg][k, e]):
+                            print('')
+                            print('')
                             print('')
                             print('arry')
                             summgene(arry)
@@ -4452,12 +4449,6 @@ def setp_modlinit(gdat, strgmodl):
     # Boolean flag to indicate that radius ratio is to be varied across passbands
     tdpy.setp_para_defa(gdat, strgmodl, 'boolvarirratinst', False)
     
-    # auxiliary array of incides of types of different dependences of radius ratio on bands
-    if gmod.boolvarirratinst:
-        gmod.indxrratband = [np.concatenate(gdat.indxinst[0], np.array(gdat.numbinst[0])), np.concatenate(gdat.indxinst[1], np.array(gdat.numbinst[1]))]
-    else:
-        gmod.indxrratband = gdat.indxinst
-        
 
 def setp_modlmedi(gdat, strgmodl):
     
@@ -4687,8 +4678,9 @@ def setp_modlbase(gdat, strgmodl, h=None):
                     raise Exception('gmod.listnameparacomp[j] could not be defined.')
 
             # transfer system parameters from nicomedia dictionary to directly under the true model
-            for namepara in gdat.true.listnameparacomp[j]:
-                setattr(gmod, namepara + 'comp', gdat.dicttrue[namepara + 'comp'])
+            if gdat.boolsimusome:
+                for namepara in gdat.true.listnameparacomp[j]:
+                    setattr(gmod, namepara + 'comp', gdat.dicttrue[namepara + 'comp'])
         if strgmodl == 'true':
             for j in gdat.true.indxcomp:
                 # determine priors for model component parameters when the target is synthetic
@@ -4808,7 +4800,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
             
             strgcomp = 'com%d' % j
             
-            if gdat.true.boolsampsystnico or 'pericomp' in gdat.dicttrue:
+            if strgmodl == 'true' and (gdat.true.boolsampsystnico or 'pericomp' in gdat.dicttrue):
                 # draw system parameters from a realistic population model using nicomedia
                 minmrsma = None
                 maxmrsma = None
@@ -8124,6 +8116,10 @@ def init( \
 
     # strings for the instruments to be used in file names
     gdat.liststrginst = retr_strginst(gdat.listlablinst)
+    
+    gdat.liststrgband = gdat.liststrginst[0]# + ['Bolometric']
+    gdat.numbband = len(gdat.liststrgband)
+    gdat.indxband = np.arange(gdat.numbband)
 
     setup1_miletos(gdat)
 
@@ -8381,6 +8377,11 @@ def init( \
     gdat.listfeatstar = ['radistar', 'massstar', 'tmptstar', 'rascstar', 'declstar', 'vsiistar', 'jmagsyst']
     gdat.listfeatstarpopl = ['radicomp', 'masscomp', 'tmptplan', 'radistar', 'jmagsyst', 'kmagsyst', 'tmptstar']
     
+    # auxiliary array of incides of types of different dependences of radius ratio on bands
+    print('gdat.indxinst')
+    print(gdat.indxinst)
+    gdat.indxrratband = [gdat.indxinst[0], []]
+        
     for strgmodl in gdat.liststrgmodl:
         setp_modlinit(gdat, strgmodl)
     
@@ -8683,7 +8684,6 @@ def init( \
         # determine magnitudes
         if hasattr(gdat.true, 'distsyst') and hasattr(gdat.true, 'tmptstar') and hasattr(gdat.true, 'radistar'):
             
-            gdat.liststrgband = gdat.liststrginst[0] + ['Bolometric']
             dictfluxband, _ = nicomedia.retr_dictfluxband(gdat.dicttrue['tmptstar'], gdat.liststrgband)
 
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
@@ -9685,10 +9685,7 @@ def init( \
         for p in gdat.indxinst[b]:
             if gdat.boolanls and len(gdat.listtimescalbdtr) > 0 and \
                     (gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion') and not gdat.liststrginst[b][p].startswith('LSST'):
-                
-                print('temp: suppressing detrending')
-                gdat.boolbdtr[b][p] = False
-                #gdat.boolbdtr[b][p] = True
+                gdat.boolbdtr[b][p] = True
     
     gdat.boolbdtranyy = False
     for b in gdat.indxdatatser:
@@ -10407,6 +10404,7 @@ def init( \
                     print('')
                     print('')
                     print('dictparainpt')
+                    print(dictparainpt.keys())
                     print(dictparainpt)
                     print('gdat.true.listnameparafull')
                     print(gdat.true.listnameparafull)
@@ -11094,6 +11092,12 @@ def init( \
             gdat.maxmdeltrebn =  0.3 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0])
             gdat.listdeltrebn[b][p] = np.linspace(gdat.minmdeltrebn, gdat.maxmdeltrebn, gdat.numbrebn)
     
+    if gdat.typepriocomp != 'inpt':
+        gdat.fitt.prio.meanpara.rratcomp = [[] for pk in gdat.indxband]
+    
+    print('gdat.fitt.prio.meanpara.rratcomp')
+    print(gdat.fitt.prio.meanpara.rratcomp)
+
     print('gdat.boolsrchoutlperi')
     print(gdat.boolsrchoutlperi)
     # match the outliers to search for periodicity
@@ -11116,7 +11120,8 @@ def init( \
             gdat.fitt.prio.meanpara.pericomp = np.array([gdat.dictoutlperi['peri']])
             gdat.fitt.prio.meanpara.epocmtracomp = np.array([gdat.dictoutlperi['epoc']])
             gdat.fitt.prio.meanpara.rsmacomp = np.array([0.1])
-            gdat.fitt.prio.meanpara.rratcomp = np.array([0.1])
+            for pk in gdat.indxband:
+                gdat.fitt.prio.meanpara.rratcomp[pk] = np.array([0.1])
             gdat.fitt.prio.meanpara.cosicomp = np.array([0.])
             
         gdat.dictmileoutp['dictoutlperi'] = gdat.dictoutlperi
@@ -11133,8 +11138,6 @@ def init( \
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 for name in gdat.arrytser:
-                    print('name')
-                    print(name)
                     if (abs(gdat.arrytser[name][b][p]) > 1e10).any():
                         print('')
                         print('')
@@ -11160,62 +11163,71 @@ def init( \
         else:
             gdat.dictboxsperiinpt['boolsrchposi'] = gdat.boolsrchboxsperiposi
         
-        # temp
-        for p in gdat.fitt.indxrratband[0]:
+        if gdat.dictboxsperiinpt is None:
+            gdat.dictboxsperiinpt = dict()
+            
+        gdat.dictboxsperiinpt['minmperi'] = 0.5
+        gdat.dictboxsperiinpt['maxmperi'] = 30.
+
+        gdat.dictboxsperiinpt['typefileplot'] = gdat.typefileplot
+        gdat.dictboxsperiinpt['figrsizeydobskin'] = gdat.figrsizeydobskin
+        gdat.dictboxsperiinpt['alphdata'] = gdat.alphdata
+        
+        if not 'typeverb' in gdat.dictboxsperiinpt:
+            gdat.dictboxsperiinpt['typeverb'] = gdat.typeverb
+        
+        if not 'pathvisu' in gdat.dictboxsperiinpt:
+            if gdat.boolplot:
+                gdat.dictboxsperiinpt['pathvisu'] = gdat.pathvisutarg
+            
+        gdat.dictboxsperiinpt['pathdata'] = gdat.pathdatatarg
+        gdat.dictboxsperiinpt['timeoffs'] = gdat.timeoffs
+        
+        gdat.fitt.boolvarirratinst = True
+        gdat.boolanlsbandmerg = True
+
+        if gdat.boolanlsbandmerg:
+            gdat.numbanlsband = 1
+        else:
+            gdat.numbanlsband = gdat.numbband
+        gdat.indxanlsband = np.arange(gdat.numbanlsband)
+
+        for tk in gdat.indxanlsband:
             
             # input data to the periodic box search pipeline
-            arry = np.copy(gdat.arrytser['Detrended'][0][p][:, 0, :])
+            if gdat.boolanlsbandmerg:
+                listarry = []
+                for tk_ in gdat.indxanlsband:
+                    listarry.append(gdat.arrytser['Detrended'][0][tk_][:, 0, :])
+                arry = np.concatenate(listarry)
+                strgextn = 'Merged'
+            else:
+                arry = np.copy(gdat.arrytser['Detrended'][0][tk][:, 0, :])
+                strgextn = '%s' % gdat.liststrginst[0][tk]
             
-            print('arry')
-            summgene(arry)
-            print('arry[:, 0]')
-            summgene(arry[:, 0])
-            print('arry[:, 1]')
-            summgene(arry[:, 1])
-            print('arry[:, 2]')
-            summgene(arry[:, 2])
-            
-            if gdat.dictboxsperiinpt is None:
-                gdat.dictboxsperiinpt = dict()
-            
-            if not 'typeverb' in gdat.dictboxsperiinpt:
-                gdat.dictboxsperiinpt['typeverb'] = gdat.typeverb
-            
-            if not 'pathvisu' in gdat.dictboxsperiinpt:
-                if gdat.boolplot:
-                    gdat.dictboxsperiinpt['pathvisu'] = gdat.pathvisutarg
-            
-            gdat.dictboxsperiinpt['pathdata'] = gdat.pathdatatarg
-            gdat.dictboxsperiinpt['timeoffs'] = gdat.timeoffs
-            gdat.dictboxsperiinpt['strgextn'] = '%s_%s' % (gdat.liststrginst[0][p], gdat.strgtarg)
-            gdat.dictboxsperiinpt['typefileplot'] = gdat.typefileplot
-            gdat.dictboxsperiinpt['figrsizeydobskin'] = gdat.figrsizeydobskin
-            gdat.dictboxsperiinpt['alphdata'] = gdat.alphdata
-            
-            gdat.dictboxsperiinpt['minmperi'] = 0.5
-            gdat.dictboxsperiinpt['maxmperi'] = 30.
+            strgextn += '_%s' % gdat.strgtarg
 
+            gdat.dictboxsperiinpt['strgextn'] = strgextn
+            
             gdat.dictboxsperioutp = srch_boxsperi(arry, **gdat.dictboxsperiinpt)
             
             gdat.dictmileoutp['dictboxsperioutp'] = gdat.dictboxsperioutp
             
-            if not hasattr(gdat.fitt.prio.meanpara, 'epocmtracomp'):
-                gdat.fitt.prio.meanpara.epocmtracomp = gdat.dictboxsperioutp['epoc']
-            if not hasattr(gdat.fitt.prio.meanpara, 'pericomp'):
-                gdat.fitt.prio.meanpara.pericomp = gdat.dictboxsperioutp['peri']
-            gdat.deptprio = 1. - 1e-3 * gdat.dictboxsperioutp['ampl']
-            gdat.fitt.prio.meanpara.duraprio = gdat.dictboxsperioutp['dura']
-            gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epoc']) 
-            if gdat.fitt.boolvarirratinst:
-                for pk in gdat.fitt.indxrratband[0]:
-                    gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
-            else:
-                gdat.fitt.prio.meanpara.rratcomp = np.sqrt(1e-3 * gdat.deptprio)
-            gdat.fitt.prio.meanpara.rsmacomp = np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)
-            
-            gdat.perimask = gdat.fitt.prio.meanpara.pericomp
-            gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
-            gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duraprio
+            if gdat.boolanlsbandmerg:
+                if not hasattr(gdat.fitt.prio.meanpara, 'epocmtracomp'):
+                    gdat.fitt.prio.meanpara.epocmtracomp = gdat.dictboxsperioutp['epoc']
+                if not hasattr(gdat.fitt.prio.meanpara, 'pericomp'):
+                    gdat.fitt.prio.meanpara.pericomp = gdat.dictboxsperioutp['peri']
+                gdat.deptprio = 1. - 1e-3 * gdat.dictboxsperioutp['ampl']
+                gdat.fitt.prio.meanpara.duraprio = gdat.dictboxsperioutp['dura']
+                gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epoc']) 
+                for tk_ in gdat.indxanlsband:
+                    gdat.fitt.prio.meanpara.rratcomp[tk] = np.sqrt(1e-3 * gdat.deptprio)
+                gdat.fitt.prio.meanpara.rsmacomp = np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)
+                
+                gdat.perimask = gdat.fitt.prio.meanpara.pericomp
+                gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
+                gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duraprio
     
     if gdat.boolmodl and gdat.fitt.boolmodlpsys:
         # transfer literature values to model priors
@@ -11224,10 +11236,6 @@ def init( \
             if gdat.booltargsynt:
                 para = gdat.dicttrue[namepara+'comp']
             else:
-                print('gdat.typepriocomp')
-                print(gdat.typepriocomp)
-                print('gdat.nomipara')
-                print(gdat.nomipara.__dict__.keys())
                 para = getattr(gdat.nomipara, namepara + 'comp')
             setattr(gdat.fitt.prio.meanpara, namepara + 'comp', para)
 
@@ -11391,271 +11399,282 @@ def init( \
                     if gdat.boolplot:
                         gdat.listdictdvrp[0].append({'path': gdat.dictlspeoutp['pathplot'], 'limt':[0., 0.8, 0.5, 0.1]})
         
-    if gdat.boolmodlcomp and gdat.boolmodl:
-        if gdat.liststrgcomp is None:
-            gdat.liststrgcomp = nicomedia.retr_liststrgcomp(gdat.fitt.prio.numbcomp)
-        if gdat.listcolrcomp is None:
-            gdat.listcolrcomp = nicomedia.retr_listcolrcomp(gdat.fitt.prio.numbcomp)
-        
-        if gdat.typeverb > 0:
-            print('Planet letters: ')
-            print(gdat.liststrgcomp)
-        
-        if gdat.fitt.prio.meanpara.duraprio is None:
-            
-            if gdat.booldiag:
-                if gdat.fitt.prio.meanpara.pericomp is None or gdat.fitt.prio.meanpara.rsmacomp is None or gdat.fitt.prio.meanpara.cosicomp is None:
-                    print('')
-                    print('')
-                    print('')
-                    print('gdat.fitt.prio.meanpara.pericomp')
-                    print(gdat.fitt.prio.meanpara.pericomp)
-                    print('gdat.fitt.prio.meanpara.rsmacomp')
-                    print(gdat.fitt.prio.meanpara.rsmacomp)
-                    print('gdat.fitt.prio.meanpara.cosicomp')
-                    print(gdat.fitt.prio.meanpara.cosicomp)
-                    raise Exception('')
-
-            gdat.fitt.prio.meanpara.duraprio = nicomedia.retr_duratrantotl(gdat.fitt.prio.meanpara.pericomp, gdat.fitt.prio.meanpara.rsmacomp, gdat.fitt.prio.meanpara.cosicomp)
-            if gdat.booldiag:
-                if (gdat.fitt.prio.meanpara.duraprio == 0).any():
-                    print('')
-                    print('')
-                    print('')
-                    print('gdat.fitt.prio.meanpara.pericomp')
-                    print(gdat.fitt.prio.meanpara.pericomp)
-                    print('gdat.fitt.prio.meanpara.rsmacomp')
-                    print(gdat.fitt.prio.meanpara.rsmacomp)
-                    print('gdat.fitt.prio.meanpara.cosicomp')
-                    print(gdat.fitt.prio.meanpara.cosicomp)
-                    print('gdat.fitt.prio.meanpara.duraprio')
-                    print(gdat.fitt.prio.meanpara.duraprio)
-                    raise Exception('(gdat.fitt.prio.meanpara.duraprio == 0).any()')
-
-        if gdat.fitt.prio.meanpara.rratcomp is None:
-            gdat.fitt.prio.meanpara.rratcomp[p] = np.sqrt(1e-3 * gdat.deptprio)
-        if gdat.fitt.prio.meanpara.rsmacomp is None:
-            gdat.fitt.prio.meanpara.rsmacomp = np.sqrt(np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / \
-                                                                            gdat.fitt.prio.meanpara.pericomp / 24.)**2 + gdat.fitt.prio.meanpara.cosicomp**2)
-        if gdat.ecoscompprio is None:
-            gdat.ecoscompprio = np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.esincompprio is None:
-            
-            if gdat.booldiag:
-                if gdat.fitt.prio.numbcomp is None:
-                    print('')
-                    print('')
-                    print('')
-                    raise Exception('gdat.fitt.prio.numbcomp is None')
-            
-            gdat.esincompprio = np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.rvelsemaprio is None:
-            gdat.rvelsemaprio = np.zeros(gdat.fitt.prio.numbcomp)
-        
-        if gdat.stdvrratcompprio is None:
-            gdat.stdvrratcompprio = 0.01 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvrsmacompprio is None:
-            gdat.stdvrsmacompprio = 0.01 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvepocmtracompprio is None:
-            gdat.stdvepocmtracompprio = 0.1 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvpericompprio is None:
-            gdat.stdvpericompprio = 0.01 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvcosicompprio is None:
-            gdat.stdvcosicompprio = 0.05 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvecoscompprio is None:
-            gdat.stdvecoscompprio = 0.1 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvesincompprio is None:
-            gdat.stdvesincompprio = 0.1 + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvrvelsemaprio is None:
-            gdat.stdvrvelsemaprio = 0.001 + np.zeros(gdat.fitt.prio.numbcomp)
-        
-        # others
-        if gdat.projoblqprio is None:
-            gdat.projoblqprio = 0. + np.zeros(gdat.fitt.prio.numbcomp)
-        if gdat.stdvprojoblqprio is None:
-            gdat.stdvprojoblqprio = 10. + np.zeros(gdat.fitt.prio.numbcomp)
-        
-        # order planets with respect to period
-        print('temp')
-        if gdat.typepriocomp != 'inpt' and False:
-            
-            if gdat.typeverb > 0:
-                print('Sorting the planets with respect to orbital period...')
-            
-            indxcompsort = np.argsort(gdat.fitt.prio.meanpara.pericomp)
-            
-            if gdat.fitt.boolvarirratinst:
-                strgpara = 'rratco%042' % ()
-                for pk in gdat.fitt.indxrratband[0]:
-                    gdat.fitt.prio.meanpara.rratcomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk][indxcompsort]
-            else:
-                gdat.fitt.prio.meanpara.rratcomp = gdat.fitt.prio.meanpara.rratcomp[indxcompsort]
-            
-            gdat.fitt.prio.meanpara.rsmacomp = gdat.fitt.prio.meanpara.rsmacomp[indxcompsort]
-            gdat.fitt.prio.meanpara.epocmtracomp = gdat.fitt.prio.meanpara.epocmtracomp[indxcompsort]
-            gdat.fitt.prio.meanpara.pericomp = gdat.fitt.prio.meanpara.pericomp[indxcompsort]
-            gdat.fitt.prio.meanpara.cosicomp = gdat.fitt.prio.meanpara.cosicomp[indxcompsort]
-            gdat.ecoscompprio = gdat.ecoscompprio[indxcompsort]
-            gdat.esincompprio = gdat.esincompprio[indxcompsort]
-            gdat.rvelsemaprio = gdat.rvelsemaprio[indxcompsort]
-        
-            gdat.fitt.prio.meanpara.duraprio = gdat.fitt.prio.meanpara.duraprio[indxcompsort]
+    if gdat.liststrgcomp is None:
+        gdat.liststrgcomp = nicomedia.retr_liststrgcomp(gdat.fitt.prio.numbcomp)
+    if gdat.listcolrcomp is None:
+        gdat.listcolrcomp = nicomedia.retr_listcolrcomp(gdat.fitt.prio.numbcomp)
+    
+    if gdat.typeverb > 0:
+        print('Planet letters: ')
+        print(gdat.liststrgcomp)
+    
+    if gdat.fitt.prio.meanpara.duraprio is None:
         
         if gdat.booldiag:
-            if gdat.fitt.prio.meanpara.pericomp is None or gdat.fitt.prio.meanpara.duraprio is None:
+            if gdat.fitt.prio.meanpara.pericomp is None or gdat.fitt.prio.meanpara.rsmacomp is None or gdat.fitt.prio.meanpara.cosicomp is None:
                 print('')
                 print('')
                 print('')
-                raise Exception('gdat.fitt.prio.meanpara.pericomp or gdat.fitt.prio.meanpara.duraprio is None.')
-
-        # if stellar features are NaN, use Solar defaults
-        for featstar in gdat.listfeatstar:
-            if not hasattr(gdat, featstar) or getattr(gdat, featstar) is None or not np.isfinite(getattr(gdat, featstar)):
-                if featstar == 'radistar':
-                    setattr(gdat, featstar, 1.)
-                if featstar == 'massstar':
-                    setattr(gdat, featstar, 1.)
-                if featstar == 'tmptstar':
-                    setattr(gdat, featstar, 5778.)
-                if featstar == 'vsiistar':
-                    setattr(gdat, featstar, 1e3)
-                if gdat.typeverb > 0:
-                    print('Setting %s to the Solar value!' % featstar)
-
-        # if stellar feature uncertainties are NaN, use 10%
-        for featstar in gdat.listfeatstar:
-            if (not hasattr(gdat, 'stdv' + featstar) or getattr(gdat, 'stdv' + featstar) is None or not np.isfinite(getattr(gdat, 'stdv' + featstar))) \
-                                                                        and not (featstar == 'rascstar' or featstar == 'declstar'):
-                varb = hasattr(gdat, featstar)
-                if varb is not None:
-                    setattr(gdat, 'stdv' + featstar, 0.5 * varb)
-                if gdat.typeverb > 0:
-                    print('Setting %s uncertainty to 50%%!' % featstar)
-        
-        if gdat.fitt.boolvarirratinst:
-            gdat.fitt.prio.radicomp = [[] for pk in gdat.indxrratband[0]]
-            for pk in gdat.indxrratband[0]:
-                gdat.fitt.prio.radicomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk] * gdat.radistar
-        else:
-            gdat.fitt.prio.radicomp = gdat.fitt.prio.meanpara.rratcomp * gdat.radistar
-        
-        if gdat.typeverb > 0:
-            
-            print('Fitting model:')
-            if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion':
-                print('Stellar priors:')
-                for nameparastar in ['rasc', 'decl', 'radi', 'mass', 'vsii', 'tmpt']:
-                    for strgstdv in ['', 'stdv']:
-                        nameparastartotl = strgstdv + nameparastar + 'star'
-                        if hasattr(gdat.fitt, nameparastartotl):
-                            print(nameparastartotl)
-                            print(getattr(gdat.fitt, nameparastartotl))
-                
-                print('Planetary priors:')
-                print('gdat.fitt.prio.meanpara.duraprio')
-                print(gdat.fitt.prio.meanpara.duraprio)
-                print('gdat.fitt.prio.meanpara.rratcomp')
-                print(gdat.fitt.prio.meanpara.rratcomp)
-                print('gdat.fitt.prio.meanpara.rsmacomp')
-                print(gdat.fitt.prio.meanpara.rsmacomp)
-                print('gdat.fitt.prio.meanpara.epocmtracomp')
-                print(gdat.fitt.prio.meanpara.epocmtracomp)
                 print('gdat.fitt.prio.meanpara.pericomp')
                 print(gdat.fitt.prio.meanpara.pericomp)
+                print('gdat.fitt.prio.meanpara.rsmacomp')
+                print(gdat.fitt.prio.meanpara.rsmacomp)
                 print('gdat.fitt.prio.meanpara.cosicomp')
                 print(gdat.fitt.prio.meanpara.cosicomp)
-                print('gdat.ecoscompprio')
-                print(gdat.ecoscompprio)
-                print('gdat.esincompprio')
-                print(gdat.esincompprio)
-                print('gdat.rvelsemaprio')
-                print(gdat.rvelsemaprio)
-                print('gdat.stdvrratcompprio')
-                print(gdat.stdvrratcompprio)
-                print('gdat.stdvrsmacompprio')
-                print(gdat.stdvrsmacompprio)
-                print('gdat.stdvepocmtracompprio')
-                print(gdat.stdvepocmtracompprio)
-                print('gdat.stdvpericompprio')
-                print(gdat.stdvpericompprio)
-                print('gdat.stdvcosicompprio')
-                print(gdat.stdvcosicompprio)
-                print('gdat.stdvecoscompprio')
-                print(gdat.stdvecoscompprio)
-                print('gdat.stdvesincompprio')
-                print(gdat.stdvesincompprio)
-                print('gdat.stdvrvelsemaprio')
-                print(gdat.stdvrvelsemaprio)
-        
-                if not np.isfinite(gdat.fitt.prio.meanpara.rratcomp).all():
-                    print('rrat is infinite!')
-                if not np.isfinite(gdat.fitt.prio.meanpara.rsmacomp).all():
-                    print('rsma is infinite!')
-                if not np.isfinite(gdat.fitt.prio.meanpara.epocmtracomp).all():
-                    print('epoc is infinite!')
-                if not np.isfinite(gdat.fitt.prio.meanpara.pericomp).all():
-                    print('peri is infinite!')
-                if not np.isfinite(gdat.fitt.prio.meanpara.cosicomp).all():
-                    print('cosi is infinite!')
-                if not np.isfinite(gdat.ecoscompprio).all():
-                    print('ecos is infinite!')
-                if not np.isfinite(gdat.esincompprio).all():
-                    print('esin is infinite!')
-                if not np.isfinite(gdat.rvelsemaprio).all():
-                    print('rvelsema is infinite!')
+                raise Exception('')
 
-        # carry over RV data as is, without any detrending
-        gdat.arrytser['Detrended'][1] = gdat.arrytser['Raw'][1]
-        gdat.listarrytser['Detrended'][1] = gdat.listarrytser['Raw'][1]
+        gdat.fitt.prio.meanpara.duraprio = nicomedia.retr_duratrantotl(gdat.fitt.prio.meanpara.pericomp, gdat.fitt.prio.meanpara.rsmacomp, gdat.fitt.prio.meanpara.cosicomp)
+        if gdat.booldiag:
+            if (gdat.fitt.prio.meanpara.duraprio == 0).any():
+                print('')
+                print('')
+                print('')
+                print('gdat.fitt.prio.meanpara.pericomp')
+                print(gdat.fitt.prio.meanpara.pericomp)
+                print('gdat.fitt.prio.meanpara.rsmacomp')
+                print(gdat.fitt.prio.meanpara.rsmacomp)
+                print('gdat.fitt.prio.meanpara.cosicomp')
+                print(gdat.fitt.prio.meanpara.cosicomp)
+                print('gdat.fitt.prio.meanpara.duraprio')
+                print(gdat.fitt.prio.meanpara.duraprio)
+                raise Exception('(gdat.fitt.prio.meanpara.duraprio == 0).any()')
+
+    if not gdat.boolsrchboxsperi:
+        for pk in gdat.indxband:
+            gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
+    if gdat.fitt.prio.meanpara.rsmacomp is None:
+        gdat.fitt.prio.meanpara.rsmacomp = np.sqrt(np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / \
+                                                                        gdat.fitt.prio.meanpara.pericomp / 24.)**2 + gdat.fitt.prio.meanpara.cosicomp**2)
+    if gdat.ecoscompprio is None:
+        gdat.ecoscompprio = np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.esincompprio is None:
         
         if gdat.booldiag:
-            for b in gdat.indxdatatser:
-                for p in gdat.indxinst[b]:
-                    for y in gdat.indxchun[b][p]:
-                        if len(gdat.listarrytser['Detrended'][b][p][y]) == 0:
-                            print('')
-                            print('')
-                            print('')
-                            print('bpy')
-                            print(b, p, y)
-                            raise Exception('len(gdat.listarrytser[bdtr][b][p][y]) == 0')
-            
-                    if not np.isfinite(gdat.arrytser['Detrended'][b][p]).all():
-                        print('')
-                        print('')
-                        print('')
-                        print('b, p')
-                        print(b, p)
-                        indxbadd = np.where(~np.isfinite(gdat.arrytser['Detrended'][b][p]))[0]
-                        print('gdat.arrytser[bdtr][b][p]')
-                        summgene(gdat.arrytser['Detrended'][b][p])
-                        print('indxbadd')
-                        summgene(indxbadd)
-                        raise Exception('not np.isfinite(gdat.arrytser[bdtr][b][p]).all()')
+            if gdat.fitt.prio.numbcomp is None:
+                print('')
+                print('')
+                print('')
+                raise Exception('gdat.fitt.prio.numbcomp is None')
         
-        if gdat.boolmodl and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
-            for strgmodl in gdat.liststrgmodl:
-                retr_timetran(gdat, strgmodl)
-        
-        if gdat.listindxchuninst is None:
-            gdat.listindxchuninst = [gdat.indxchun]
+        gdat.esincompprio = np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.rvelsemaprio is None:
+        gdat.rvelsemaprio = np.zeros(gdat.fitt.prio.numbcomp)
     
-        #    # plot PDCSAP and SAP light curves
-        #    figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
-        #    axis[0].plot(gdat.arrytsersapp[:, 0] - gdat.timeoffs, gdat.arrytsersapp[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
-        #    axis[1].plot(gdat.arrytserpdcc[:, 0] - gdat.timeoffs, gdat.arrytserpdcc[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
-        #    #axis[0].text(.97, .97, 'SAP', transform=axis[0].transAxes, size=20, color='r', ha='right', va='top')
-        #    #axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
-        #    axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
-        #    for a in range(2):
-        #        axis[a].set_ylabel(gdat.labltserphot)
-        #    plt.subplots_adjust(hspace=0.)
-        #    path = gdat.pathvisutarg + 'lcurspoc_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
-        #    gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.8, 0.8]})
-        #    if gdat.typeverb > 0:
-        #        print('Writing to %s...' % path)
-        #    plt.savefig(path)
-        #    plt.close()
+    if gdat.stdvrratcompprio is None:
+        gdat.stdvrratcompprio = 0.01 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvrsmacompprio is None:
+        gdat.stdvrsmacompprio = 0.01 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvepocmtracompprio is None:
+        gdat.stdvepocmtracompprio = 0.1 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvpericompprio is None:
+        gdat.stdvpericompprio = 0.01 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvcosicompprio is None:
+        gdat.stdvcosicompprio = 0.05 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvecoscompprio is None:
+        gdat.stdvecoscompprio = 0.1 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvesincompprio is None:
+        gdat.stdvesincompprio = 0.1 + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvrvelsemaprio is None:
+        gdat.stdvrvelsemaprio = 0.001 + np.zeros(gdat.fitt.prio.numbcomp)
+    
+    # others
+    if gdat.projoblqprio is None:
+        gdat.projoblqprio = 0. + np.zeros(gdat.fitt.prio.numbcomp)
+    if gdat.stdvprojoblqprio is None:
+        gdat.stdvprojoblqprio = 10. + np.zeros(gdat.fitt.prio.numbcomp)
+    
+    # order planets with respect to period
+    print('temp')
+    if gdat.typepriocomp != 'inpt' and False:
+        
+        if gdat.typeverb > 0:
+            print('Sorting the planets with respect to orbital period...')
+        
+        indxcompsort = np.argsort(gdat.fitt.prio.meanpara.pericomp)
+        
+        strgpara = 'rratco%042' % ()
+        for pk in gdat.indxband:
+            gdat.fitt.prio.meanpara.rratcomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk][indxcompsort]
+        
+        gdat.fitt.prio.meanpara.rsmacomp = gdat.fitt.prio.meanpara.rsmacomp[indxcompsort]
+        gdat.fitt.prio.meanpara.epocmtracomp = gdat.fitt.prio.meanpara.epocmtracomp[indxcompsort]
+        gdat.fitt.prio.meanpara.pericomp = gdat.fitt.prio.meanpara.pericomp[indxcompsort]
+        gdat.fitt.prio.meanpara.cosicomp = gdat.fitt.prio.meanpara.cosicomp[indxcompsort]
+        gdat.ecoscompprio = gdat.ecoscompprio[indxcompsort]
+        gdat.esincompprio = gdat.esincompprio[indxcompsort]
+        gdat.rvelsemaprio = gdat.rvelsemaprio[indxcompsort]
+    
+        gdat.fitt.prio.meanpara.duraprio = gdat.fitt.prio.meanpara.duraprio[indxcompsort]
+    
+    if gdat.booldiag:
+        if gdat.fitt.prio.meanpara.pericomp is None or gdat.fitt.prio.meanpara.duraprio is None:
+            print('')
+            print('')
+            print('')
+            raise Exception('gdat.fitt.prio.meanpara.pericomp or gdat.fitt.prio.meanpara.duraprio is None.')
+
+    # if stellar features are NaN, use Solar defaults
+    for featstar in gdat.listfeatstar:
+        if not hasattr(gdat, featstar) or getattr(gdat, featstar) is None or not np.isfinite(getattr(gdat, featstar)):
+            if featstar == 'radistar':
+                setattr(gdat, featstar, 1.)
+            if featstar == 'massstar':
+                setattr(gdat, featstar, 1.)
+            if featstar == 'tmptstar':
+                setattr(gdat, featstar, 5778.)
+            if featstar == 'vsiistar':
+                setattr(gdat, featstar, 1e3)
+            if gdat.typeverb > 0:
+                print('Setting %s to the Solar value!' % featstar)
+
+    # if stellar feature uncertainties are NaN, use 10%
+    for featstar in gdat.listfeatstar:
+        if (not hasattr(gdat, 'stdv' + featstar) or getattr(gdat, 'stdv' + featstar) is None or not np.isfinite(getattr(gdat, 'stdv' + featstar))) \
+                                                                    and not (featstar == 'rascstar' or featstar == 'declstar'):
+            varb = hasattr(gdat, featstar)
+            if varb is not None:
+                setattr(gdat, 'stdv' + featstar, 0.5 * varb)
+            if gdat.typeverb > 0:
+                print('Setting %s uncertainty to 50%%!' % featstar)
+    
+    if gdat.fitt.boolvarirratinst:
+        gdat.fitt.prio.radicomp = [[] for pk in gdat.indxband]
+        print('gdat.indxband')
+        print(gdat.indxband)
+        print('gdat.liststrgband')
+        print(gdat.liststrgband)
+        print('gdat.fitt.prio.meanpara.rratcomp')
+        print(gdat.fitt.prio.meanpara.rratcomp)
+        for pk in gdat.indxband:
+            gdat.fitt.prio.radicomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk] * gdat.radistar
+    else:
+        print('gdat.fitt.prio.meanpara.rratcomp')
+        print(gdat.fitt.prio.meanpara.rratcomp)
+        gdat.fitt.prio.radicomp = [[] for pk in gdat.indxband]
+        for pk in gdat.indxband:
+            print('pk')
+            print(pk)
+            print('gdat.indxband')
+            print(gdat.indxband)
+            gdat.fitt.prio.radicomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk] * gdat.radistar
+    
+    if gdat.typeverb > 0:
+        
+        print('Fitting model:')
+        if gdat.fitt.typemodl == 'PlanetarySystem' or gdat.fitt.typemodl == 'PlanetarySystemEmittingCompanion':
+            print('Stellar priors:')
+            for nameparastar in ['rasc', 'decl', 'radi', 'mass', 'vsii', 'tmpt']:
+                for strgstdv in ['', 'stdv']:
+                    nameparastartotl = strgstdv + nameparastar + 'star'
+                    if hasattr(gdat.fitt, nameparastartotl):
+                        print(nameparastartotl)
+                        print(getattr(gdat.fitt, nameparastartotl))
+            
+            print('Planetary priors:')
+            print('gdat.fitt.prio.meanpara.duraprio')
+            print(gdat.fitt.prio.meanpara.duraprio)
+            print('gdat.fitt.prio.meanpara.rratcomp')
+            print(gdat.fitt.prio.meanpara.rratcomp)
+            print('gdat.fitt.prio.meanpara.rsmacomp')
+            print(gdat.fitt.prio.meanpara.rsmacomp)
+            print('gdat.fitt.prio.meanpara.epocmtracomp')
+            print(gdat.fitt.prio.meanpara.epocmtracomp)
+            print('gdat.fitt.prio.meanpara.pericomp')
+            print(gdat.fitt.prio.meanpara.pericomp)
+            print('gdat.fitt.prio.meanpara.cosicomp')
+            print(gdat.fitt.prio.meanpara.cosicomp)
+            print('gdat.ecoscompprio')
+            print(gdat.ecoscompprio)
+            print('gdat.esincompprio')
+            print(gdat.esincompprio)
+            print('gdat.rvelsemaprio')
+            print(gdat.rvelsemaprio)
+            print('gdat.stdvrratcompprio')
+            print(gdat.stdvrratcompprio)
+            print('gdat.stdvrsmacompprio')
+            print(gdat.stdvrsmacompprio)
+            print('gdat.stdvepocmtracompprio')
+            print(gdat.stdvepocmtracompprio)
+            print('gdat.stdvpericompprio')
+            print(gdat.stdvpericompprio)
+            print('gdat.stdvcosicompprio')
+            print(gdat.stdvcosicompprio)
+            print('gdat.stdvecoscompprio')
+            print(gdat.stdvecoscompprio)
+            print('gdat.stdvesincompprio')
+            print(gdat.stdvesincompprio)
+            print('gdat.stdvrvelsemaprio')
+            print(gdat.stdvrvelsemaprio)
+    
+            if not np.isfinite(gdat.fitt.prio.meanpara.rratcomp).all():
+                print('rrat is infinite!')
+            if not np.isfinite(gdat.fitt.prio.meanpara.rsmacomp).all():
+                print('rsma is infinite!')
+            if not np.isfinite(gdat.fitt.prio.meanpara.epocmtracomp).all():
+                print('epoc is infinite!')
+            if not np.isfinite(gdat.fitt.prio.meanpara.pericomp).all():
+                print('peri is infinite!')
+            if not np.isfinite(gdat.fitt.prio.meanpara.cosicomp).all():
+                print('cosi is infinite!')
+            if not np.isfinite(gdat.ecoscompprio).all():
+                print('ecos is infinite!')
+            if not np.isfinite(gdat.esincompprio).all():
+                print('esin is infinite!')
+            if not np.isfinite(gdat.rvelsemaprio).all():
+                print('rvelsema is infinite!')
+
+    # carry over RV data as is, without any detrending
+    gdat.arrytser['Detrended'][1] = gdat.arrytser['Raw'][1]
+    gdat.listarrytser['Detrended'][1] = gdat.listarrytser['Raw'][1]
+    
+    if gdat.booldiag:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    if len(gdat.listarrytser['Detrended'][b][p][y]) == 0:
+                        print('')
+                        print('')
+                        print('')
+                        print('bpy')
+                        print(b, p, y)
+                        raise Exception('len(gdat.listarrytser[bdtr][b][p][y]) == 0')
+        
+                if not np.isfinite(gdat.arrytser['Detrended'][b][p]).all():
+                    print('')
+                    print('')
+                    print('')
+                    print('b, p')
+                    print(b, p)
+                    indxbadd = np.where(~np.isfinite(gdat.arrytser['Detrended'][b][p]))[0]
+                    print('gdat.arrytser[bdtr][b][p]')
+                    summgene(gdat.arrytser['Detrended'][b][p])
+                    print('indxbadd')
+                    summgene(indxbadd)
+                    raise Exception('not np.isfinite(gdat.arrytser[bdtr][b][p]).all()')
+    
+    if gdat.boolmodl and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
+        for strgmodl in gdat.liststrgmodl:
+            retr_timetran(gdat, strgmodl)
+    
+    if gdat.listindxchuninst is None:
+        gdat.listindxchuninst = [gdat.indxchun]
+    
+    #    # plot PDCSAP and SAP light curves
+    #    figr, axis = plt.subplots(2, 1, figsize=gdat.figrsizeydob)
+    #    axis[0].plot(gdat.arrytsersapp[:, 0] - gdat.timeoffs, gdat.arrytsersapp[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
+    #    axis[1].plot(gdat.arrytserpdcc[:, 0] - gdat.timeoffs, gdat.arrytserpdcc[:, 1], color='k', marker='.', ls='', ms=1, rasterized=True)
+    #    #axis[0].text(.97, .97, 'SAP', transform=axis[0].transAxes, size=20, color='r', ha='right', va='top')
+    #    #axis[1].text(.97, .97, 'PDC', transform=axis[1].transAxes, size=20, color='r', ha='right', va='top')
+    #    axis[1].set_xlabel('Time [BJD - %d]' % gdat.timeoffs)
+    #    for a in range(2):
+    #        axis[a].set_ylabel(gdat.labltserphot)
+    #    plt.subplots_adjust(hspace=0.)
+    #    path = gdat.pathvisutarg + 'lcurspoc_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
+    #    gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.8, 0.8]})
+    #    if gdat.typeverb > 0:
+    #        print('Writing to %s...' % path)
+    #    plt.savefig(path)
+    #    plt.close()
         
     # calculate the visibility of the target
     if gdat.boolcalcvisi:
@@ -11825,10 +11844,10 @@ def init( \
     #    gdat.arrytserdilu[:, 1] = 1. - gdat.dilucorr * (1. - gdat.listarrytser['Detrended'][b][p][y][:, 1])
     #gdat.arrytserdilu[:, 1] = 1. - gdat.contrati * gdat.contrati * (1. - gdat.listarrytser['Detrended'][b][p][y][:, 1])
     
-    if gdat.boolmodl and (gdat.fitt.boolmodlpsys or gdat.fitt.typemodl == 'CompactObjectStellarCompanion'):
-    ## number of bins in the phase curve
+    if not ((gdat.boolsrchboxsperi or gdat.boolsrchoutlperi) and not gdat.dictmileoutp['boolposianls'].any()):
+        ## number of bins in the phase curve
         gdat.numbbinspcurtotl = 100
-    
+        
         gdat.delttimebindzoom = gdat.fitt.prio.meanpara.duraprio / 24. / 50.
         
         for strgmodl in gdat.liststrgmodl:

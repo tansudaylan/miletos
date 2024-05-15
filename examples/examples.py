@@ -1092,6 +1092,7 @@ def cnfg_WD1856():
          strgmast=strgmast, \
          dictfitt=dictfitt, \
          typepriocomp=typepriocomp, \
+         boolmodl=False, \
 
          #boolmakeanim=True, \
          #dilucorr=0.01, \
