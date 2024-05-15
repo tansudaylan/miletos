@@ -117,9 +117,9 @@ def retr_timetran(gdat, strgmodl):
         
         gmod.listindxtimetranineg = [[[[[] for k in range(4)] for pk in gmod.indxrratband[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
 
-        for pp in gmod.indxrratband:
+        for pk in gmod.indxanlsband:
             for j in gdat.fitt.prio.indxcomp:
-                gdat.durafullprio = (1. - gdat.fitt.prio.meanpara.rratcomp[pp][j]) / (1. + gdat.fitt.prio.meanpara.rratcomp[pp][j]) * gdat.fitt.prio.meanpara.duraprio
+                gdat.durafullprio = (1. - gdat.fitt.prio.meanpara.rratcomp[pk][j]) / (1. + gdat.fitt.prio.meanpara.rratcomp[pk][j]) * gdat.fitt.prio.meanpara.duraprio
                 
                 if not gdat.fitt.prio.booltrancomp[j]:
                     continue
@@ -8048,6 +8048,8 @@ def init( \
     if gdat.boolplotvisi is None:
         gdat.boolplotvisi = gdat.boolcalcvisi
     
+    gdat.boolfoldprio = True
+
     # if either of dictfitt or dicttrue is defined, mirror it to the other
     if gdat.dicttrue is None and gdat.dictfitt is None:
         gdat.dicttrue = dict()
@@ -9810,9 +9812,14 @@ def init( \
                     gdat.nomipara.rratcomp[p] = np.sqrt(gdat.nomipara.deptcomp)
         
         # move nominal parameters to fitting parameters
-        if gdat.boolmodl and (gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt'):
-            for namepara in ['peri', 'epocmtra', 'cosi', 'rsma', 'rrat']:
-                setattr(gdat.fitt.prio.meanpara, namepara + 'comp', getattr(gdat.nomipara, namepara + 'comp'))
+        if gdat.boolfoldprio or gdat.boolmodl:
+            if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
+                for namepara in ['peri', 'epocmtra', 'cosi', 'rsma', 'rrat']:
+                    setattr(gdat.fitt.prio.meanpara, namepara + 'comp', getattr(gdat.nomipara, namepara + 'comp'))
+        
+        print('gdat.fitt.prio.meanpara.pericomp')
+        print(gdat.fitt.prio.meanpara.pericomp)
+        raise Exception('')
 
         # check MAST
         if gdat.strgmast is None:
@@ -11221,8 +11228,8 @@ def init( \
                 gdat.deptprio = 1. - 1e-3 * gdat.dictboxsperioutp['ampl']
                 gdat.fitt.prio.meanpara.duraprio = gdat.dictboxsperioutp['dura']
                 gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epoc']) 
-                for tk_ in gdat.indxanlsband:
-                    gdat.fitt.prio.meanpara.rratcomp[tk] = np.sqrt(1e-3 * gdat.deptprio)
+                for pk in gdat.indxband:
+                    gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
                 gdat.fitt.prio.meanpara.rsmacomp = np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / gdat.fitt.prio.meanpara.pericomp / 24.)
                 
                 gdat.perimask = gdat.fitt.prio.meanpara.pericomp
