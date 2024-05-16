@@ -7955,8 +7955,11 @@ def init( \
          # Boolean flag to perform initial analyses
          boolanls=True, \
 
-         # Boolean flag to perform inference following the initial analyses
-         boolmodl=True, \
+         # Boolean flag to perform phase-folding based on model priors
+         boolfoldprio=True, \
+
+         # Boolean flag to perform inference based on model priors
+         boolfitt=True, \
 
          ## Boolean flag to perform inference on the phase-folded (onto the period of the first planet) and binned data
          boolinfefoldbind=False, \
@@ -8048,8 +8051,6 @@ def init( \
     if gdat.boolplotvisi is None:
         gdat.boolplotvisi = gdat.boolcalcvisi
     
-    gdat.boolfoldprio = True
-
     # if either of dictfitt or dicttrue is defined, mirror it to the other
     if gdat.dicttrue is None and gdat.dictfitt is None:
         gdat.dicttrue = dict()
@@ -8314,6 +8315,8 @@ def init( \
         for name, valu in gdat.dictfitt.items():
             setattr(gdat.fitt, name, valu)
     
+    gdat.boolmodl = gdat.boolfoldprio or gdat.boolfitt
+
     # list of models to be fitted to the data
     gdat.liststrgmodl = []
     if gdat.boolmodl:
@@ -8342,7 +8345,7 @@ def init( \
     if gdat.typeverb > 0:
         if gdat.boolmodl:
             print('Type of fitting model: %s' % gdat.fitt.typemodl)
-        else:
+        if not gdat.boolfitt:
             print('No fitting will be performed.')
 
     if gdat.boolmodl:
@@ -8402,7 +8405,7 @@ def init( \
                                                                and (gdat.boolmodl and gdat.fitt.boolmodlpsys or gdat.boolsimurflx and gdat.true.boolmodlpsys):
         gdat.dicttoii = nicomedia.retr_dicttoii()
 
-    if gdat.boolmodl:
+    if gdat.boolfitt:
         # model
         # type of likelihood
         ## 'sing': assume model is a single realization
@@ -9812,15 +9815,11 @@ def init( \
                     gdat.nomipara.rratcomp[p] = np.sqrt(gdat.nomipara.deptcomp)
         
         # move nominal parameters to fitting parameters
-        if gdat.boolfoldprio or gdat.boolmodl:
+        if gdat.boolmodl:
             if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
                 for namepara in ['peri', 'epocmtra', 'cosi', 'rsma', 'rrat']:
                     setattr(gdat.fitt.prio.meanpara, namepara + 'comp', getattr(gdat.nomipara, namepara + 'comp'))
         
-        print('gdat.fitt.prio.meanpara.pericomp')
-        print(gdat.fitt.prio.meanpara.pericomp)
-        raise Exception('')
-
         # check MAST
         if gdat.strgmast is None:
             if gdat.typetarg != 'inpt' and not gdat.booltargsynt:
@@ -11445,15 +11444,18 @@ def init( \
                 print('gdat.fitt.prio.meanpara.duraprio')
                 print(gdat.fitt.prio.meanpara.duraprio)
                 raise Exception('(gdat.fitt.prio.meanpara.duraprio == 0).any()')
-
-    if not gdat.boolsrchboxsperi:
-        for pk in gdat.indxband:
-            gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
-    if gdat.fitt.prio.meanpara.rsmacomp is None:
-        gdat.fitt.prio.meanpara.rsmacomp = np.sqrt(np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / \
+    
+    if gdat.boolfitt:
+        if not gdat.boolsrchboxsperi:
+            for pk in gdat.indxband:
+                gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.deptprio)
+    
+        if gdat.fitt.prio.meanpara.rsmacomp is None:
+            gdat.fitt.prio.meanpara.rsmacomp = np.sqrt(np.sin(np.pi * gdat.fitt.prio.meanpara.duraprio / \
                                                                         gdat.fitt.prio.meanpara.pericomp / 24.)**2 + gdat.fitt.prio.meanpara.cosicomp**2)
     if gdat.ecoscompprio is None:
         gdat.ecoscompprio = np.zeros(gdat.fitt.prio.numbcomp)
+    
     if gdat.esincompprio is None:
         
         if gdat.booldiag:
