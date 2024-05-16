@@ -5448,10 +5448,10 @@ def srch_boxsperi(arry, \
         print(minmperi)
         print('maxmperi')
         print(maxmperi)
-        #raise Exception('')
         
         if maxmperi is None:
-            minmfreq = 2. / (maxmtime - minmtime)
+            # maximum period will stretch out to the baseline
+            minmfreq = 1. / (maxmtime - minmtime)
         else:
             minmfreq = 1. / maxmperi
 
@@ -5834,7 +5834,7 @@ def srch_boxsperi(arry, \
                         dictboxsperiinte['rflxpserdata'] = 2. - dictboxsperiinte['rflxpserdata']
            
             if pathvisu is not None:
-                strgtitl = 'P=%.3f d, $T_0$=%.3f, Dep=%.2g ppt, Dur=%.2g hr, SDE=%.3g' % \
+                strgtitl = 'P=%.3f d, $T_0$=%.3f, Dep=%.3g ppt, Dur=%.2g hr, SDE=%.3g' % \
                             (dictboxsperioutp['peri'][j], dictboxsperioutp['epoc'][j], dictboxsperioutp['ampl'][j], \
                             dictboxsperioutp['dura'][j], dictboxsperioutp['s2nr'][j])
                 
@@ -11211,8 +11211,8 @@ def init( \
         if gdat.dictboxsperiinpt is None:
             gdat.dictboxsperiinpt = dict()
             
-        gdat.dictboxsperiinpt['minmperi'] = 0.5
-        gdat.dictboxsperiinpt['maxmperi'] = 30.
+        print('temp: an optional, model-dependent, physics-based minmperi should be implemented')
+        #gdat.dictboxsperiinpt['minmperi'] = 
 
         gdat.dictboxsperiinpt['typefileplot'] = gdat.typefileplot
         gdat.dictboxsperiinpt['figrsizeydobskin'] = gdat.figrsizeydobskin
