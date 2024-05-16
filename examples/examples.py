@@ -64,13 +64,36 @@ def cnfg_TOI1233():
                           dictfitt=dictfitt, \
                           strgexar='HD 108236', \
                           listarrytser=listarrytser, \
+                          boolfitt=False, \
                           typepriocomp='exar', \
                           boolplotpopl=True, \
                          )
 
 
-def cnfg_WASP121b():
+def cnfg_WASP121():
     
+    dictfitt = dict()
+    dictfitt['typemodl'] = 'PlanetarySystemEmittingCompanion'
+    
+    # the following two are mutually exclusive
+    #liststrgtypedata = [['simutargpartsynt'], []]
+    #typepriocomp = 'pdim'
+    
+    boolbdtr = [[False], []]
+    listtypelcurtpxftess = ['lygos']
+    
+    for typelcurtpxftess in listtypelcurtpxftess:
+        miletos.main.init( \
+                       strgmast='WASP-121', \
+                       #liststrgtypedata=liststrgtypedata, \
+                       boolbdtr=boolbdtr, \
+                       boolfitt=False, \
+                       boolplotpopl=True, \
+                       #typelcurtpxftess=typelcurtpxftess, \
+                       dictfitt=dictfitt, \
+                       #typepriocomp=typepriocomp, \
+                      )
+
     # add Vivien's result
     axis[k].plot(gdat.phasvivi, gdat.deptvivi*1e3, color='orange', lw=2, label='GCM (Parmentier+2018)')
     axis[k].axhline(0., ls='-.', alpha=0.3, color='grey')
@@ -116,25 +139,6 @@ def cnfg_WASP121b():
     gdat.cntrwlenband = gdat.data[:, 0] * 1e-3
     gdat.thptband = gdat.data[:, 1]
     
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'PlanetarySystemEmittingCompanion'
-    
-    # the following two are mutually exclusive
-    liststrgtypedata = [['simutargpartsynt'], []]
-    #typepriocomp = 'pdim'
-
-    listtypelcurtpxftess = ['lygos']
-    
-    for typelcurtpxftess in listtypelcurtpxftess:
-        miletos.main.init( \
-                       strgmast='WASP-121', \
-                       liststrgtypedata=liststrgtypedata, \
-                       boolplotpopl=True, \
-                       typelcurtpxftess=typelcurtpxftess, \
-                       dictfitt=dictfitt, \
-                       #typepriocomp=typepriocomp, \
-                      )
-
 
 def cnfg_TOI1410():
     '''
@@ -1087,16 +1091,24 @@ def cnfg_WD1856():
     dictfitt['typemodl'] = 'PlanetarySystem'
     
     typepriocomp = 'exar'
-
-    miletos.main.init( \
-         strgmast=strgmast, \
-         dictfitt=dictfitt, \
-         typepriocomp=typepriocomp, \
-         boolfitt=False, \
-
-         #boolmakeanim=True, \
-         #dilucorr=0.01, \
-        )
+    
+    for k in range(2):
+        
+        if k == 0:
+            liststrgtypedata = [['simutargpartinje'], []]
+            strgcnfg = 'Simulated'
+        if k == 1:
+            liststrgtypedata = [['obsd'], []]
+            strgcnfg = 'Observed'
+            
+        miletos.main.init( \
+             strgmast=strgmast, \
+             strgcnfg=strgcnfg, \
+             dictfitt=dictfitt, \
+             liststrgtypedata=liststrgtypedata, \
+             typepriocomp=typepriocomp, \
+             boolfitt=False, \
+            )
 
 
 def cnfg_Faint():
