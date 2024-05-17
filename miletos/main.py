@@ -11946,15 +11946,15 @@ def init( \
                 for p in gdat.indxinst[b]:
                     for j in gmod.indxcomp:
 
+                        gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                                                                                                     objtpara.epocmtracomp[j], objtpara.pericomp[j])
+                        
                         if gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j].ndim > 3:
                             print('')
                             print('')
                             print('')
                             raise Exception('arrypcur[DetrendedPrimaryCentered][b][p][j].ndim > 3')
                     
-                        gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
-                                                                                                     objtpara.epocmtracomp[j], objtpara.pericomp[j])
-                        
                         gmod.arrypcur['DetrendedPrimaryCenteredbindtotl'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
                                                                                                             blimxdat=gdat.binsphasprimtotl)
                         
