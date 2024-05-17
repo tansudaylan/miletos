@@ -75,10 +75,6 @@ def cnfg_WASP121():
     dictfitt = dict()
     dictfitt['typemodl'] = 'PlanetarySystemEmittingCompanion'
     
-    # the following two are mutually exclusive
-    #liststrgtypedata = [['simutargpartsynt'], []]
-    #typepriocomp = 'pdim'
-    
     boolbdtr = [[False], []]
     listtypelcurtpxftess = ['lygos']
     
@@ -88,7 +84,7 @@ def cnfg_WASP121():
                        #liststrgtypedata=liststrgtypedata, \
                        boolbdtr=boolbdtr, \
                        boolfitt=False, \
-                       boolplotpopl=True, \
+                       #boolplotpopl=True, \
                        #typelcurtpxftess=typelcurtpxftess, \
                        dictfitt=dictfitt, \
                        #typepriocomp=typepriocomp, \
@@ -1107,6 +1103,7 @@ def cnfg_WD1856():
              dictfitt=dictfitt, \
              liststrgtypedata=liststrgtypedata, \
              typepriocomp=typepriocomp, \
+             boolfoldprio=False, \
              boolfitt=False, \
             )
 
