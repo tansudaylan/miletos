@@ -94,50 +94,50 @@ def cnfg_WASP121():
                        #typepriocomp=typepriocomp, \
                       )
 
-    # add Vivien's result
-    axis[k].plot(gdat.phasvivi, gdat.deptvivi*1e3, color='orange', lw=2, label='GCM (Parmentier+2018)')
-    axis[k].axhline(0., ls='-.', alpha=0.3, color='grey')
-    
-    # read and parse ATMO posterior
-    ## get secondary depth data from Tom
-    path = gdat.pathdatatarg + 'ascii_output/EmissionDataArray.txt'
-    print('Reading from %s...' % path)
-    arrydata = np.loadtxt(path)
-    print('arrydata')
-    summgene(arrydata)
-    print('arrydata[0, :]')
-    print(arrydata[0, :])
-    path = gdat.pathdatatarg + 'ascii_output/EmissionModelArray.txt'
-    print('Reading from %s...' % path)
-    arrymodl = np.loadtxt(path)
-    print('arrymodl')
-    summgene(arrymodl)
-    print('Secondary eclipse depth mean and standard deviation:')
-    # get wavelengths
-    path = gdat.pathdatatarg + 'ascii_output/ContribFuncWav.txt'
-    print('Reading from %s...' % path)
-    wlen = np.loadtxt(path)
-    path = gdat.pathdatatarg + 'ascii_output/ContribFuncWav.txt'
-    print('Reading from %s...' % path)
-    wlenctrb = np.loadtxt(path, skiprows=1)
+    ## read and parse ATMO posterior
+    ### get secondary depth data from Tom
+    #path = gdat.pathdatatarg + 'ascii_output/EmissionDataArray.txt'
+    #print('Reading from %s...' % path)
+    #arrydata = np.loadtxt(path)
+    #print('arrydata')
+    #summgene(arrydata)
+    #print('arrydata[0, :]')
+    #print(arrydata[0, :])
+    #path = gdat.pathdatatarg + 'ascii_output/EmissionModelArray.txt'
+    #print('Reading from %s...' % path)
+    #arrymodl = np.loadtxt(path)
+    #print('arrymodl')
+    #summgene(arrymodl)
+    #print('Secondary eclipse depth mean and standard deviation:')
+    ## get wavelengths
+    #path = gdat.pathdatatarg + 'ascii_output/ContribFuncWav.txt'
+    #print('Reading from %s...' % path)
+    #wlen = np.loadtxt(path)
+    #path = gdat.pathdatatarg + 'ascii_output/ContribFuncWav.txt'
+    #print('Reading from %s...' % path)
+    #wlenctrb = np.loadtxt(path, skiprows=1)
    
-    # get Vivien's GCM model
-    path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR.dat'
-    arryvivi = np.loadtxt(path, delimiter=',')
-    gdat.phasvivi = (arryvivi[:, 0] / 360. + 0.75) % 1. - 0.25
-    gdat.deptvivi = arryvivi[:, 4]
-    indxphasvivisort = np.argsort(gdat.phasvivi)
-    gdat.phasvivi = gdat.phasvivi[indxphasvivisort]
-    gdat.deptvivi = gdat.deptvivi[indxphasvivisort]
-    path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR-AllK.dat'
-    arryvivi = np.loadtxt(path, delimiter=',')
-    gdat.wlenvivi = arryvivi[:, 1]
-    gdat.specvivi = arryvivi[:, 2]
-    
-    ## TESS throughput 
-    gdat.data = np.loadtxt(gdat.pathdatatarg + 'band.csv', delimiter=',', skiprows=9)
-    gdat.cntrwlenband = gdat.data[:, 0] * 1e-3
-    gdat.thptband = gdat.data[:, 1]
+    ## add Vivien's result
+    #axis[k].plot(gdat.phasvivi, gdat.deptvivi*1e3, color='orange', lw=2, label='GCM (Parmentier+2018)')
+    #axis[k].axhline(0., ls='-.', alpha=0.3, color='grey')
+    #
+    ## get Vivien's GCM model
+    #path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR.dat'
+    #arryvivi = np.loadtxt(path, delimiter=',')
+    #gdat.phasvivi = (arryvivi[:, 0] / 360. + 0.75) % 1. - 0.25
+    #gdat.deptvivi = arryvivi[:, 4]
+    #indxphasvivisort = np.argsort(gdat.phasvivi)
+    #gdat.phasvivi = gdat.phasvivi[indxphasvivisort]
+    #gdat.deptvivi = gdat.deptvivi[indxphasvivisort]
+    #path = gdat.pathdatatarg + 'PC-Solar-NEW-OPA-TiO-LR-AllK.dat'
+    #arryvivi = np.loadtxt(path, delimiter=',')
+    #gdat.wlenvivi = arryvivi[:, 1]
+    #gdat.specvivi = arryvivi[:, 2]
+    #
+    ### TESS throughput 
+    #gdat.data = np.loadtxt(gdat.pathdatatarg + 'band.csv', delimiter=',', skiprows=9)
+    #gdat.cntrwlenband = gdat.data[:, 0] * 1e-3
+    #gdat.thptband = gdat.data[:, 1]
     
 
 def cnfg_TOI1410():
