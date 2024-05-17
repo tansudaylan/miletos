@@ -2050,7 +2050,7 @@ def proc_alle(gdat, typemodl):
                                                                                                                     blimxdat=gdat.binsphasprimtotl)
                 
                 gmod.arrypcur['DetrendedPrimaryCentered'+typemodl+'bindzoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'+typemodl][b][p][j], \
-                                                                                                                    blimxdat=gdat.binsphasprimzoom[j])
+                                                                                                                    blimxdat=gmod.binsphasprimzoom[j])
 
                 for strgpcurcomp in gdat.liststrgpcurcomp + gdat.liststrgpcur:
                     
@@ -10377,14 +10377,15 @@ def init( \
             gdat.numbenermodl = 1
             gdat.numbeneriter = gdat.numbener[p]
 
-        if gdat.true.boolmodlcomp and not gdat.booltargsynt:
-            for j in range(gdat.fitt.prio.meanpara.epocmtracomp.size):
-                for name in gdat.true.listnameparacomp[j]:
-                    if name == 'rrat':
-                        compprio = getattr(gdat, '%scompprio' % name)[p][j]
-                    else:
-                        compprio = getattr(gdat, '%scompprio' % name)[j]
-                    setattr(gdat.true, '%scom%d' % (name, j), compprio)
+        # to be deleted
+        #if gdat.true.boolmodlcomp and not gdat.booltargsynt:
+        #    for j in range(gdat.true.epocmtracomp.size):
+        #        for name in gdat.true.listnameparacomp[j]:
+        #            if name == 'rrat':
+        #                compprio = getattr(gdat, '%scompprio' % name)[p][j]
+        #            else:
+        #                compprio = getattr(gdat, '%scompprio' % name)[j]
+        #            setattr(gdat.true, '%scom%d' % (name, j), compprio)
         
         dictparainpt = dict()
         for namepara in gdat.true.listnameparafull:
@@ -11927,14 +11928,14 @@ def init( \
                     print(gmod.numbbinspcurzoom)
                     raise Exception('Bad gmod.numbbinspcurzoom.')
 
+            gmod.binsphasprimzoom = [[] for j in gdat.fitt.prio.indxcomp]
+            for j in gmod.indxcomp:
+                if np.isfinite(objtpara.duratrantotlcomp[j]):
+                    gmod.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gmod.numbbinspcurzoom[j] + 1)
+
             for strgarrypcur in liststrgarrypcur:
                 gmod.arrypcur[strgarrypcur] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
-        gdat.binsphasprimzoom = [[] for j in gdat.fitt.prio.indxcomp]
-        for j in gmod.indxcomp:
-            if np.isfinite(objtpara.duratrantotlcomp[j]):
-                gmod.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gmod.numbbinspcurzoom[j] + 1)
-
         if gdat.typeverb > 0:
             print('Phase folding and binning the light curve...')
         
@@ -11951,20 +11952,27 @@ def init( \
                 for p in gdat.indxinst[b]:
                     for j in gmod.indxcomp:
 
-                        gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
-                                                                                                     objtpara.epocmtracomp[j], objtpara.pericomp[j])
+                        gmod.arrypcur['DetrendedPrimaryCenteredFull'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                                                                                                     objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
                         
-                        if gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j].ndim > 3:
+                        if gmod.arrypcur['DetrendedPrimaryCenteredFull'][b][p][j].ndim > 3:
                             print('')
                             print('')
                             print('')
                             raise Exception('arrypcur[DetrendedPrimaryCentered][b][p][j].ndim > 3')
-                    
+                        
+
+                        gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                                                                                                                objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
+                        
+                        gmod.arrypcur['DetrendedSecondaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j], \
+                                                                                                                                        blimxdat=gdat.binsphasprimtotl)
+
                         gmod.arrypcur['DetrendedPrimaryCenteredBinnedFull'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
                                                                                                             blimxdat=gdat.binsphasprimtotl)
                         
                         gmod.arrypcur['DetrendedPrimaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
-                                                                                                            blimxdat=gdat.binsphasprimzoom[j])
+                                                                                                            blimxdat=gmod.binsphasprimzoom[j])
                         
                         gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
                                                                                       objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.25)
