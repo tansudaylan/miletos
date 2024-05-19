@@ -1093,11 +1093,6 @@ def plot_pser_mile( \
         
         arrypcur = gmod.arrypcur[strgarry]
         
-        arrypcurbindtotl = gmod.arrypcur[strgarry+'bindtotl']
-        
-        if strgarry.startswith('Primary'):
-            arrypcurbindzoom = gmod.arrypcur[strgarry+'bindzoom']
-        
         for p in gdat.indxinst[b]:
             
             titl = retr_tsertitl(gdat, b, p)
@@ -1116,6 +1111,15 @@ def plot_pser_mile( \
                     if b == 1:
                         yerr = arrypcur[b][p][j][:, gdat.indxenerclip, 2]
                     
+                    if gdat.booldiag:
+                        if len(arrypcur[b][p][j]) == 0:
+                            print('')
+                            print('')
+                            print('')
+                            print('strgarry')
+                            print(strgarry)
+                            raise Exception('len(arrypcur[b][p][j]) == 0')
+
                     axis.errorbar(arrypcur[b][p][j][:, gdat.indxenerclip, 0], arrypcur[b][p][j][:, gdat.indxenerclip, 1], \
                                                                 yerr=yerr, elinewidth=1, capsize=2, zorder=1, \
                                                                 color='grey', alpha=gdat.alphdata, marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
@@ -11887,8 +11891,8 @@ def init( \
         gdat.binsphasprimtotl = np.linspace(-0.5, 0.5, gdat.numbbinspcurfull + 1)
         gdat.binsphasquadtotl = np.linspace(-0.25, 0.75, gdat.numbbinspcurfull + 1)
         
-        liststrgarrypcur = [ \
-                            'DetrendedPrimaryCenteredFull', \
+        gdat.liststrgarrypcur = [ \
+                            'DetrendedPrimaryCentered', \
                             'DetrendedPrimaryCenteredZoom', \
                             'DetrendedPrimaryCenteredBinnedFull', \
                             'DetrendedPrimaryCenteredBinnedZoom', \
@@ -11933,7 +11937,7 @@ def init( \
                 if np.isfinite(objtpara.duratrantotlcomp[j]):
                     gmod.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gmod.numbbinspcurzoom[j] + 1)
 
-            for strgarrypcur in liststrgarrypcur:
+            for strgarrypcur in gdat.liststrgarrypcur:
                 gmod.arrypcur[strgarrypcur] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
         if gdat.typeverb > 0:
@@ -11952,18 +11956,24 @@ def init( \
                 for p in gdat.indxinst[b]:
                     for j in gmod.indxcomp:
 
-                        gmod.arrypcur['DetrendedPrimaryCenteredFull'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                        gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
                                                                                                      objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
                         
-                        if gmod.arrypcur['DetrendedPrimaryCenteredFull'][b][p][j].ndim > 3:
+                        if gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j].ndim > 3:
                             print('')
                             print('')
                             print('')
                             raise Exception('arrypcur[DetrendedPrimaryCentered][b][p][j].ndim > 3')
                         
+                        gmod.arrypcur['DetrendedPrimaryCenteredBinned'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
+                                                                                                                                        blimxdat=gdat.binsphasprimtotl)
 
                         gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
-                                                                                                                objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
+                        
+                        gmod.arrypcur['DetrendedPrimaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCenteredZoom'][b][p][j], \
+                                                                                                                                        blimxdat=gdat.binsphasprimtotl)
+
+                                                                                                                objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.5)
                         
                         gmod.arrypcur['DetrendedSecondaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j], \
                                                                                                                                         blimxdat=gdat.binsphasprimtotl)
@@ -11991,9 +12001,7 @@ def init( \
                                 np.savetxt(path, temp, delimiter=',', header=gdat.strgheadpser[b])
                     
             if gdat.boolplot:
-                for strg in ['DetrendedPrimaryCentered', \
-                             'DetrendedQuadratureCentered', \
-                            ]:
+                for strg in gdat.liststrgarrypcur:
                     plot_pser_mile(gdat, strgmodl, strg)
     
     gdat.numbsamp = 10
