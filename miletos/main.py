@@ -11894,14 +11894,9 @@ def init( \
         gdat.liststrgarrypcur = [ \
                             'DetrendedPrimaryCentered', \
                             'DetrendedPrimaryCenteredZoom', \
-                            'DetrendedPrimaryCenteredBinnedFull', \
-                            'DetrendedPrimaryCenteredBinnedZoom', \
-                            
                             'DetrendedSecondaryCenteredZoom', \
-                            'DetrendedSecondaryCenteredBinnedZoom', \
-                            
                             'DetrendedQuadratureCentered', \
-                            'DetrendedQuadratureCenteredBinned', \
+                            'DetrendedQuadratureCenteredMasked', \
                            ]
         
         for strgmodl in gdat.liststrgmodl:
@@ -11932,11 +11927,6 @@ def init( \
                     print(gmod.numbbinspcurzoom)
                     raise Exception('Bad gmod.numbbinspcurzoom.')
 
-            gmod.binsphasprimzoom = [[] for j in gdat.fitt.prio.indxcomp]
-            for j in gmod.indxcomp:
-                if np.isfinite(objtpara.duratrantotlcomp[j]):
-                    gmod.binsphasprimzoom[j] = np.linspace(-0.5, 0.5, gmod.numbbinspcurzoom[j] + 1)
-
             for strgarrypcur in gdat.liststrgarrypcur:
                 gmod.arrypcur[strgarrypcur] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
@@ -11951,12 +11941,14 @@ def init( \
             else:
                 gmod = gdat.fitt.prio
                 objtpara = gdat.fitt.prio.meanpara
+        
+            objtpara.dcyctrantotlcomp = objtpara.duratrantotlcomp / objtpara.pericomp / 24.
             
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for j in gmod.indxcomp:
 
-                        gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                        gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                                      objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
                         
                         if gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j].ndim > 3:
@@ -11965,30 +11957,20 @@ def init( \
                             print('')
                             raise Exception('arrypcur[DetrendedPrimaryCentered][b][p][j].ndim > 3')
                         
-                        gmod.arrypcur['DetrendedPrimaryCenteredBinned'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
-                                                                                                                                        blimxdat=gdat.binsphasprimtotl)
+                        indx = np.where(abs(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j][:, 0, 0] - 0.5) < objtpara.dcyctrantotlcomp[j] / 2.)[0]
+                        gmod.arrypcur['DetrendedPrimaryCenteredZoom'][b][p][j] = gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j][indx, :, :]
 
-                        gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
-                        
-                        gmod.arrypcur['DetrendedPrimaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCenteredZoom'][b][p][j], \
-                                                                                                                                        blimxdat=gdat.binsphasprimtotl)
-
+                        gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                                                 objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.5)
                         
-                        gmod.arrypcur['DetrendedSecondaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j], \
-                                                                                                                                        blimxdat=gdat.binsphasprimtotl)
-
-                        gmod.arrypcur['DetrendedPrimaryCenteredBinnedFull'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
-                                                                                                            blimxdat=gdat.binsphasprimtotl)
-                        
-                        gmod.arrypcur['DetrendedPrimaryCenteredBinnedZoom'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j], \
-                                                                                                            blimxdat=gmod.binsphasprimzoom[j])
-                        
-                        gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                        gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                       objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.25)
                         
-                        gmod.arrypcur['DetrendedQuadratureCenteredBinned'][b][p][j] = rebn_tser(gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j], \
-                                                                                                            blimxdat=gdat.binsphasquadtotl)
+                        gmod.arrypcur['DetrendedQuadratureCenteredMasked'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                                                                                      objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.25)
+                        
+                        for strgarrypcur in gdat.liststrgarrypcur:
+                            gmod.arrypcur[strgarrypcur + 'Binned'][b][p][j] = rebn_tser(gmod.arrypcur[strgarrypcur][b][p][j], blimxdat=gdat.dictbinsphas[strgarrypcur])
                         
                         for e in gdat.indxener[p]:
                             path = gdat.pathdatatarg + 'arrypcur_Primary_Detrended_Binned_%s%s%s_%s.csv' % (gdat.liststrginst[b][p], \
