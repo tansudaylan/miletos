@@ -11150,13 +11150,8 @@ def init( \
         gdat.dictmileoutp['dictoutlperi'] = gdat.dictoutlperi
             
     if gdat.typepriocomp == 'outlperi':
-        print('gdat.dictoutlperi')
-        print(gdat.dictoutlperi)
         gdat.fitt.prio.numbcomp = len(gdat.dictoutlperi['epoc'])
         
-    print('gdat.boolsrchboxsperi')
-    print(gdat.boolsrchboxsperi)
-
     if gdat.booldiag:
         if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
             print('')
@@ -11164,7 +11159,6 @@ def init( \
             print('')
             raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
 
-    if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 for name in gdat.arrytser:
