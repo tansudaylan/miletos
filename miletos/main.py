@@ -10260,7 +10260,7 @@ def init( \
         #            raise Exception('not hasattr(gdat.true, epocmtracomp')
         
         # copy nominal parameters to the true parameters
-        if (gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion') and not gdat.boolsrchboxsperi:
+        if (gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion') and not (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
             for namepara in ['rrat', 'peri', 'epocmtra', 'rsma', 'cosi']:
                 tdpy.setp_para_defa(gdat, 'true', '%scomp' % namepara, getattr(gdat.nomipara, namepara + 'comp'))
         
