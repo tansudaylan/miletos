@@ -672,53 +672,6 @@ def cnfg_PhotCalibPPAStars():
                       )
 
 
-def cnfg_WhiteDwarfs_Candidates_TESS_GI():
-    
-    pathoutp = os.environ['MILETOS_DATA_PATH'] + '/data/WD/'
-    os.system('mkdir -p %s' % pathoutp)
-    listisec = np.arange(27, 28)
-    
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'PlanetarySystem'
-    
-    for isec in listisec:
-        path = 'https://heasarc.gsfc.nasa.gov/docs/tess/data/target_lists/sector%03d_targets_lists/GI_20s_S%03d.csv' % (isec, isec)
-        pathfile = wget.download(path, out=pathoutp)
-        arry = pd.read_csv(pathfile, delimiter=',').to_numpy()
-        listtici = arry[:, 0]
-        numbtici = len(listtici)
-        indxtici = np.arange(numbtici)
-        for i in indxtici:
-            
-            miletos.main.init( \
-                 strgmast='TIC %d' % listtici[i], \
-                 dictfitt=dictfitt, \
-                 typepriocomp='pdim', \
-                 strgclus='WhiteDwarfs', \
-                )
-
-
-def cnfg_WhiteDwarf_Candidates_TOI_Process():
-    
-    listticitarg = [ \
-                    
-                    #686072378, \
-                    
-                    # from TOI vetting, small (subdwarf) star, 30 September 2021
-                    1400704733, \
-                   ]
-    
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'PlanetarySystem'
-    
-    for ticitarg in listticitarg:
-        miletos.main.init( \
-             ticitarg=ticitarg, \
-             strgclus='cnfg_WhiteDwarf_Candidates_TOI_Process', \
-             dictfitt=dictfitt, \
-            )
-
-
 def cnfg_V563Lyr():
     
     miletos.main.init( \

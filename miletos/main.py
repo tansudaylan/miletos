@@ -9763,7 +9763,7 @@ def init( \
             gdat.nomipara.epocmtracomp = gdat.dictexartarg['epocmtracomp'][0]
             gdat.nomipara.duratrantotlcomp = gdat.dictexartarg['duratrantotl'][0]
             indxcompbadd = np.where(~np.isfinite(gdat.nomipara.duratrantotlcomp))[0]
-            if indx.size > 0:
+            if indxcompbadd.size > 0:
                 dcyc = 0.15
                 if gdat.typeverb > 0:
                     print('Duration from the Exoplanet Archive Composite PS table is infinite for some companions. Assuming a duty cycle of %.3g.' % dcyc)
