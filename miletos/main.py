@@ -67,6 +67,7 @@ def retr_timetran(gdat, nametser):
                 
                 if not np.isfinite(gdat.fitt.prio.meanpara.duratrantotlcomp[j]):
                     continue
+                
                 # determine time mask
                 for y in gdat.indxchun[b][p]:
                 
@@ -78,15 +79,15 @@ def retr_timetran(gdat, nametser):
                 
                 # primary
                 gdat.listindxtimetran[j][b][p][0] = retr_indxtimetran(gdat.arrytser[nametser][b][p][:, 0, 0], \
-                                                                gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j])
+                                                        gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j])
                 
                 # primary individuals
                 gdat.listindxtimetranindi[j][b][p] = retr_indxtimetran(gdat.arrytser[nametser][b][p][:, 0, 0], \
-                                                      gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j], boolindi=True)
+                                              gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j], boolindi=True)
                 
                 # secondary
                 gdat.listindxtimetran[j][b][p][1] = retr_indxtimetran(gdat.arrytser[nametser][b][p][:, 0, 0], \
-                                                      gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j], boolseco=True)
+                                              gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j], boolseco=True)
                 
                 gdat.listindxtimeoutt[j][b][p] = np.setdiff1d(np.arange(gdat.arrytser[nametser][b][p].shape[0]), gdat.listindxtimetran[j][b][p][0])
                 gdat.numbtimeclen[b][p][j] = gdat.listindxtimeoutt[j][b][p].size
@@ -95,7 +96,8 @@ def retr_timetran(gdat, nametser):
         
         if len(gdat.listtimeconc) > 0:
             gdat.listtimeconc = np.concatenate(gdat.listtimeconc)
-            gdat.listindxtran = retr_indxtran(gdat.listtimeconc, gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j])
+            gdat.listindxtran = retr_indxtran(gdat.listtimeconc, gdat.fitt.prio.meanpara.epocmtracomp[j], \
+                                                            gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j])
             gdat.numbtran[j] = len(gdat.listindxtran)
     
     # indices of times outside the transit for each companion
