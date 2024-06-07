@@ -3854,6 +3854,19 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
             if gdat.typeverb > 0:
                 print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
+    if gdat.booldiag:
+        if minmpara is not None and (not isinstance(minmpara, float) or not isinstance(maxmpara, float)):
+            print('')
+            print('')
+            print('')
+            print('minmpara')
+            print(minmpara)
+            print('maxmpara')
+            print(maxmpara)
+            print('nameparabase')
+            print(nameparabase)
+            raise Exception('not isinstance(minmpara, float) or not isinstance(maxmpara, float)')
+
     gmod.listlablpara.append(lablpara)
     gmod.listminmpara.append(minmpara)
     gmod.listmaxmpara.append(maxmpara)
@@ -3936,6 +3949,8 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     #gdat.stdvrflxthis = gdat.arrytser['Detrended'][b][p][:, :, 2]
     #gdat.varirflxthis = gdat.stdvrflxthis**2
 
+    print('gmod.listminmpara')
+    print(gmod.listminmpara)
     gmod.listminmpara = np.array(gmod.listminmpara)
     gmod.listmaxmpara = np.array(gmod.listmaxmpara)
     
@@ -4455,8 +4470,11 @@ def setp_modlinit(gdat, strgmodl):
     # type of baseline shape
     tdpy.setp_para_defa(gdat, strgmodl, 'typemodlblinshap', 'cons')
     
-    # Boolean flag to indicate that radius ratio is to be varied across passbands
-    tdpy.setp_para_defa(gdat, strgmodl, 'boolvarirratinst', False)
+    # Boolean flag to indicate that radius ratio can be different across passbands
+    tdpy.setp_para_defa(gdat, strgmodl, 'boolvarirratband', False)
+    
+    # Boolean flag to indicate that radius ratio can be different across passbands
+    tdpy.setp_para_defa(gdat, strgmodl, 'boolvariduratranband', False)
     
 
 def setp_modlmedi(gdat, strgmodl):
@@ -4861,10 +4879,6 @@ def setp_modlbase(gdat, strgmodl, h=None):
             if gmod.typemodl == 'CompactObjectStellarCompanion':
                 
                 setp_para(gdat, strgmodl, 'mass', 0.1, 100., ['$M_c$', ''], strgcomp=strgcomp)
-
-    if gmod.boolmodlcomp and strgmodl == 'fitt':
-        gdat.fitt.prio.booltrancomp = np.zeros(gmod.numbcomp, dtype=bool)
-        gdat.fitt.prio.booltrancomp[np.where(np.isfinite(gdat.fitt.prio.meanpara.duratrantotlcomp))] = True
 
 
 def exec_lspe( \
@@ -6429,10 +6443,25 @@ def read_qlop(path, pathcsvv=None, stdvcons=None):
 
 
 # transits
-def retr_indxtran(time, epoc, peri, duratrantotl=None):
+def retr_indxtran(time, epoc, peri, duratrantotl=None, booldiag=True):
     '''
     Find the transit indices for a given time axis, epoch, period, and optionally transit duration.
     '''
+    
+    if booldiag:
+        if not np.isfinite(epoc) or not np.isfinite(peri):
+            print('')
+            print('')
+            print('')
+            print('time')
+            summgene(time)
+            print('epoc')
+            print(epoc)
+            print('peri')
+            print(peri)
+            print('duratrantotl')
+            print(duratrantotl)
+            raise Exception('not np.isfinite(epoc) or not np.isfinite(peri)')
     
     if np.isfinite(peri):
         if duratrantotl is None:
@@ -9752,7 +9781,6 @@ def init( \
     gdat.nomipara.duratrantotlcomp = None
     
     # retrieve values from literature
-    
     if gdat.boolmodl and gdat.fitt.boolmodlpsys or gdat.boolsimusome and gdat.true.boolmodlpsys:
         
         if gdat.boolmodl and gdat.typepriocomp == 'exar' or gdat.boolsimusome and gdat.typesourparasimucomp == 'exar':
@@ -10569,7 +10597,7 @@ def init( \
     
     # generate the time axis
     setp_time(gdat, 'Raw')
-
+    
     if gdat.boolmodl and gdat.fitt.boolmodlpsys and not (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
         retr_timetran(gdat, 'Raw')
     
@@ -11110,18 +11138,13 @@ def init( \
             gdat.maxmdeltrebn =  0.3 * (gdat.timeconc[0][-1] - gdat.timeconc[0][0])
             gdat.listdeltrebn[b][p] = np.linspace(gdat.minmdeltrebn, gdat.maxmdeltrebn, gdat.numbrebn)
     
-    if gdat.typepriocomp != 'inpt':
-        gdat.fitt.prio.meanpara.rratcomp = [[] for pk in gdat.indxband]
-    
     if gdat.booldiag:
-        if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
-            print('')
-            print('')
-            print('')
-            raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
-
-    print('gdat.fitt.prio.meanpara.rratcomp')
-    print(gdat.fitt.prio.meanpara.rratcomp)
+        if not (gdat.boolsrchoutlperi or gdat.boolsrchboxsperi):
+            if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
+                print('')
+                print('')
+                print('')
+                raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
 
     print('gdat.boolsrchoutlperi')
     print(gdat.boolsrchoutlperi)
@@ -11145,8 +11168,12 @@ def init( \
             gdat.fitt.prio.meanpara.pericomp = np.array([gdat.dictoutlperi['peri']])
             gdat.fitt.prio.meanpara.epocmtracomp = np.array([gdat.dictoutlperi['epoc']])
             gdat.fitt.prio.meanpara.rsmacomp = np.array([0.1])
-            for pk in gdat.indxband:
-                gdat.fitt.prio.meanpara.rratcomp[pk] = np.array([0.1])
+            
+            print('temp')
+            gdat.fitt.prio.meanpara.depttrancomp = np.array([0.01])
+            
+            gdat.fitt.prio.meanpara.booltrancomp = np.ones_like(gdat.fitt.prio.meanpara.depttrancomp, dtype=bool)
+            
             gdat.fitt.prio.meanpara.cosicomp = np.array([0.])
             
         gdat.dictmileoutp['dictoutlperi'] = gdat.dictoutlperi
@@ -11155,11 +11182,6 @@ def init( \
         gdat.fitt.prio.numbcomp = len(gdat.dictoutlperi['epoc'])
         
     if gdat.booldiag:
-        if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
-            print('')
-            print('')
-            print('')
-            raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
 
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
@@ -11180,6 +11202,11 @@ def init( \
                     for y in gdat.indxchun[b][p]:
                         if (abs(gdat.listarrytser[name][b][p][y]) > 1e10).any():
                             raise Exception('')
+    
+    
+    if gdat.boolsrchoutlperi or gdat.boolsrchboxsperi:
+        # Boolean flag to merge different bands during analyses on time-series photometric data
+        gdat.boolanlsbandmerg = True
 
     # search for periodic boxes
     if gdat.boolsrchboxsperi:
@@ -11209,9 +11236,6 @@ def init( \
         gdat.dictboxsperiinpt['pathdata'] = gdat.pathdatatarg
         gdat.dictboxsperiinpt['timeoffs'] = gdat.timeoffs
         
-        gdat.fitt.boolvarirratinst = True
-        gdat.boolanlsbandmerg = True
-
         if gdat.boolanlsbandmerg:
             gdat.numbanlsband = 1
         else:
@@ -11245,16 +11269,24 @@ def init( \
                 if not hasattr(gdat.fitt.prio.meanpara, 'pericomp'):
                     gdat.fitt.prio.meanpara.pericomp = gdat.dictboxsperioutp['peri']
                 gdat.fitt.prio.meanpara.depttrancomp = 1. - 1e-3 * gdat.dictboxsperioutp['ampl']
+                gdat.fitt.prio.meanpara.booltrancomp = np.ones_like(gdat.fitt.prio.meanpara.depttrancomp, dtype=bool)
                 gdat.fitt.prio.meanpara.duratrantotlcomp = gdat.dictboxsperioutp['dura']
                 gdat.fitt.prio.meanpara.cosicomp = np.zeros_like(gdat.dictboxsperioutp['epoc']) 
-                for pk in gdat.indxband:
-                    gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.fitt.prio.meanpara.depttrancomp)
                 gdat.fitt.prio.meanpara.rsmacomp = np.sin(np.pi * gdat.fitt.prio.meanpara.duratrantotlcomp / gdat.fitt.prio.meanpara.pericomp / 24.)
                 
                 gdat.perimask = gdat.fitt.prio.meanpara.pericomp
                 gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
                 gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duratrantotlcomp
     
+    if gdat.boolsrchoutlperi or gdat.boolsrchboxsperi:
+       gdat.fitt.prio.meanpara.rratcomp = [[] for pk in gdat.indxband]
+       if gdat.boolanlsbandmerg:
+           for pk in gdat.indxband:
+                gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.fitt.prio.meanpara.depttrancomp)
+
+    print('gdat.fitt.prio.meanpara.rratcomp')
+    print(gdat.fitt.prio.meanpara.rratcomp)
+
     if gdat.booldiag:
         if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
             print('')
@@ -11278,10 +11310,14 @@ def init( \
         print('gdat.fitt.duramask')
         print(gdat.fitt.duramask)
     
-    # define ephemerides following period-search analyses
-    if gdat.boolmodl and gdat.fitt.boolmodlpsys and (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
+    # define number of components
+    if gdat.boolmodl and gdat.fitt.boolmodlpsys and (gdat.boolsrchoutlperi or gdat.boolsrchboxsperi):
         gdat.fitt.prio.numbcomp = gdat.fitt.prio.meanpara.epocmtracomp.size
         gdat.fitt.prio.indxcomp = np.arange(gdat.fitt.prio.numbcomp)
+    
+    # find time samples inside estimated transits
+    # periodic outlier search is not included because it does not estimate the transit duration.
+    if gdat.boolmodl and gdat.fitt.boolmodlpsys and gdat.boolsrchboxsperi:
         retr_timetran(gdat, 'Raw')
 
     # search for flares
@@ -11574,7 +11610,7 @@ def init( \
             print('')
             raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
 
-    if gdat.fitt.boolvarirratinst:
+    if gdat.fitt.boolvarirratband:
         gdat.fitt.prio.radicomp = [[] for pk in gdat.indxband]
         print('gdat.indxband')
         print(gdat.indxband)

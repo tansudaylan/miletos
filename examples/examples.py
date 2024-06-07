@@ -136,21 +136,30 @@ def cnfg_WASP121():
     #gdat.thptband = gdat.data[:, 1]
     
 
-def cnfg_TOI1410():
+def cnfg_TOI():
     '''
-    SPACE Program
+    TOIs
     '''
 
     dictfitt = dict()
+    
     dictfitt['typemodl'] = 'PlanetarySystem'
     
-    miletos.main.init( \
-                       toiitarg=1410, \
+    listtoii = [ \
+                # Bryant et al., in prep
+                6894, \
+                # SPACE program
+                1410, \
+               ]
+    
+    for toii in listtoii:
+        miletos.main.init( \
+                       toiitarg=toii, \
                        dictfitt=dictfitt, \
                       )
 
 
-def cnfg_TOIs():
+def cnfg_TOIs_All():
     '''
     Analyze all TOIs
     '''
@@ -161,20 +170,6 @@ def cnfg_TOIs():
                    strgclus='TOIs', \
                    boolforcoffl=True, \
                   )
-
-
-def cnfg_TOI_multis():
-
-    dictfitt = dict()
-    dictfitt['typemodl'] = 'PlanetarySystem'
-    
-    for strgmast in ['TOI-270', 'TOI-700', 'TOI-1233', 'TOI-1339']:
-        
-        miletos.main.init( \
-                       strgmast=strgmast, \
-                       dictfitt=dictfitt, \
-                       strgclus='TOI_multis', \
-                      )
 
 
 def cnfg_Interesting_TICs_PlanetarySystem():
