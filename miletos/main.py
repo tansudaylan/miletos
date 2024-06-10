@@ -4846,7 +4846,10 @@ def setp_modlbase(gdat, strgmodl, h=None):
             
                 minmperi = 0.99 * gmod.prio.meanpara.pericomp[j]
                 maxmperi = 1.01 * gmod.prio.meanpara.pericomp[j]
-            
+                
+                print('gmod.prio.meanpara.pericomp[j]')
+                print(gmod.prio.meanpara.pericomp[j])
+
                 if gdat.fitt.prio.meanpara.epocmtracomp is not None:
                     ## informed prior
                     minmepocmtra = gdat.fitt.prio.meanpara.epocmtracomp[j] - 0.2
@@ -4862,6 +4865,9 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 minmrrat = 0.11
                 maxmrrat = 0.19
             
+            print('minmperi')
+            print(minmperi)
+
             setp_para(gdat, strgmodl, 'rsma', minmrsma, maxmrsma, None, strgcomp=strgcomp)
             
             setp_para(gdat, strgmodl, 'peri', minmperi, maxmperi, None, strgcomp=strgcomp)
