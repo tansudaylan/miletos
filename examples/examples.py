@@ -1144,6 +1144,37 @@ def cnfg_ASASSN20qc():
                      )
 
 
+def cnfg_MultiPlanetarySystems():
+
+    # plot multiplanetary system example
+    import miletos
+    
+    dicttrue = dict()
+    dicttrue['typemodl'] = 'PlanetarySystem'
+    
+    liststrgmast = ['HD 108236', 'TOI 270', 'TOI 178']
+    liststrgtypedata = [['obsd', 'simutargpartsynt', 'simutargpartsynt', 'simutargpartsynt'], []]
+    listlablinst = [['TESS', 'TESS-GEO-UV', 'TESS-GEO-VIS', 'TESS-GEO-IR'], []]
+    
+    for strgmast in liststrgmast:
+        miletos.main.init( \
+              #labltarg=labltarg, \
+              strgmast=strgmast, \
+              
+              listlablinst=listlablinst, \
+    
+              pathbase=pathbase, \
+              
+              dicttrue=dicttrue, \
+              booldiag=True, \
+              
+              liststrgtypedata=liststrgtypedata, \
+    
+              #refrlistlabltser=refrlistlabltser, \
+              #refrarrytser=refrarrytser, \
+              #dictlygoinpt=dictlygoinpt, \
+             )
+
 
 def cnfg_TESS_EB_Catalog():
 

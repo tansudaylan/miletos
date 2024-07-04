@@ -55,7 +55,6 @@ def retr_timetran(gdat, nametser):
     gdat.listindxtimetranindi = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
     gdat.listindxtimetran = [[[[[] for m in range(2)] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
     gdat.listindxtimetranchun = [[[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
-    gdat.listindxtimeoutt = [[[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser] for j in gdat.fitt.prio.indxcomp]
     gdat.numbtimeclen = [[np.empty((gdat.fitt.prio.numbcomp), dtype=int) for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     print('Determining indices...')
@@ -1094,6 +1093,7 @@ def plot_pser_mile( \
     for b in gdat.indxdatatser:
         
         arrypcur = gmod.arrypcur[strgarry]
+        arrypcurbind = gmod.arrypcur[strgarry+'Binned']
         
         for p in gdat.indxinst[b]:
             
@@ -1113,25 +1113,24 @@ def plot_pser_mile( \
                     if b == 1:
                         yerr = arrypcur[b][p][j][:, gdat.indxenerclip, 2]
                     
-                    if gdat.booldiag:
-                        if len(arrypcur[b][p][j]) == 0:
-                            print('')
-                            print('')
-                            print('')
-                            print('strgarry')
-                            print(strgarry)
-                            raise Exception('len(arrypcur[b][p][j]) == 0')
-
                     axis.errorbar(arrypcur[b][p][j][:, gdat.indxenerclip, 0], arrypcur[b][p][j][:, gdat.indxenerclip, 1], \
                                                                 yerr=yerr, elinewidth=1, capsize=2, zorder=1, \
                                                                 color='grey', alpha=gdat.alphdata, marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
-                    if b == 0:
-                        yerr = None
-                    if b == 1:
-                        yerr = arrypcurbindzoom[b][p][j][:, gdat.indxenerclip, 2]
-                    axis.errorbar(arrypcurbindtotl[b][p][j][:, gdat.indxenerclip, 0], arrypcurbindtotl[b][p][j][:, gdat.indxenerclip, 1], \
-                                                                                        color=gdat.listcolrcomp[j], elinewidth=1, capsize=2, \
-                                                                                                                     zorder=2, marker='o', ls='', ms=3)
+                    # binned
+                    if len(arrypcur[b][p][j]) > 0:
+                        if b == 0:
+                            yerr = None
+                        if b == 1:
+                            yerr = arrypcurbind[b][p][j][:, gdat.indxenerclip, 2]
+                        axis.errorbar(arrypcurbind[b][p][j][:, gdat.indxenerclip, 0], arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], \
+                                                                                            yerr=yerr, \
+                                                                                            color=gdat.listcolrcomp[j], elinewidth=1, capsize=2)
+                    else:
+                        print('')
+                        print('')
+                        print('')
+                        print('Warning! Phase curve (%s) is empty, possibly due to being a zoom-in!' % strgarry)
+
                     if gdat.boolwritplan:
                         axis.text(0.9, 0.9, r'\textbf{%s}' % gdat.liststrgcomp[j], \
                                             color=gdat.listcolrcomp[j], va='center', ha='center', transform=axis.transAxes)
@@ -1172,11 +1171,11 @@ def plot_pser_mile( \
                         if b == 0:
                             yerr = None
                         if b == 1:
-                            yerr = arrypcurbindzoom[b][p][j][:, gdat.indxenerclip, 2]
+                            yerr = arrypcurbind[b][p][j][:, gdat.indxenerclip, 2]
                         
                         if np.isfinite(gdat.fitt.prio.meanpara.duratrantotlcomp[j]):
-                            axis.errorbar(gdat.fitt.prio.meanpara.pericomp[j] * arrypcurbindzoom[b][p][j][:, gdat.indxenerclip, 0] * facttime, \
-                                                                 arrypcurbindzoom[b][p][j][:, gdat.indxenerclip, 1], zorder=2, \
+                            axis.errorbar(gdat.fitt.prio.meanpara.pericomp[j] * arrypcurbind[b][p][j][:, gdat.indxenerclip, 0] * facttime, \
+                                                                 arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], zorder=2, \
                                                                                                         yerr=yerr, elinewidth=1, capsize=2, \
                                                                                                               color=gdat.listcolrcomp[j], marker='o', ls='', ms=3)
                         if boolpost:
@@ -1212,8 +1211,8 @@ def plot_pser_mile( \
                     for jj, j in enumerate(gdat.fitt.prio.indxcomp):
                         axis[jj].plot(arrypcur[b][p][j][:, gdat.indxenerclip, 0], arrypcur[b][p][j][:, gdat.indxenerclip, 1], color='grey', alpha=gdat.alphdata, \
                                                                                             marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
-                        axis[jj].plot(arrypcurbindtotl[b][p][j][:, gdat.indxenerclip, 0], \
-                                            arrypcurbindtotl[b][p][j][:, gdat.indxenerclip, 1], color=gdat.listcolrcomp[j], marker='o', ls='', ms=1)
+                        axis[jj].plot(arrypcurbind[b][p][j][:, gdat.indxenerclip, 0], \
+                                            arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], color=gdat.listcolrcomp[j], marker='o', ls='', ms=1)
                         if gdat.boolwritplan:
                             axis[jj].text(0.97, 0.8, r'\textbf{%s}' % gdat.liststrgcomp[j], transform=axis[jj].transAxes, \
                                                                                                 color=gdat.listcolrcomp[j], va='center', ha='center')
@@ -1606,7 +1605,7 @@ def proc_alle(gdat, typemodl):
             if not os.path.exists(path):
             
                 if gdat.boolinfefoldbind:
-                    listarrytserbdtrtemp = np.copy(gmod.arrypcur['DetrendedPrimaryCenteredBinnedFull'][b][p][0])
+                    listarrytserbdtrtemp = np.copy(gmod.arrypcur['DetrendedPrimaryCenteredBinned'][b][p][0])
                     listarrytserbdtrtemp[:, 0] *= gdat.fitt.prio.meanpara.pericomp[0]
                     listarrytserbdtrtemp[:, 0] += gdat.fitt.prio.meanpara.epocmtracomp[0]
                 else:
@@ -5762,6 +5761,8 @@ def srch_boxsperi(arry, \
                         summgene(listarrysrch[b])
                     print('listampl')
                     summgene(listampl)
+                    print('listampl[indxperimpow]')
+                    print(listampl[indxperimpow])
                     print('liststdvsgnl')
                     summgene(liststdvsgnl)
                     print('listsgnl')
@@ -5778,7 +5779,7 @@ def srch_boxsperi(arry, \
                     print(liststdvsgnl[indxperimpow])
                     print('s2nr')
                     print(s2nr)
-                    raise Exception('SNR is infinite!')
+                    raise Exception('SNR is infinite or listampl[indxperimpow] < 0')
 
                 dictboxsperioutp['s2nr'].append(s2nr)
                 dictboxsperioutp['peri'].append(listperi[indxperimpow])
@@ -8512,7 +8513,7 @@ def init( \
             print('RA and DEC (%g %g) are provided as target identifier.' % (gdat.rasctarg, gdat.decltarg))
         gdat.strgmast = '%g %g' % (gdat.rasctarg, gdat.decltarg)
     elif gdat.listarrytser is not None:
-        gdat.typetarg = 'inpt'
+        gdat.typetarg = 'inptdata'
 
         if gdat.labltarg is None:
             raise Exception('')
@@ -9619,11 +9620,9 @@ def init( \
             for namepara in gdat.true.listnameparacomp[j]:
                 gdat.dicttrue[namepara+'comp'] = gdat.dictnico['dictpopl']['comp']['compstar_SyntheticPopulation_All'][namepara + 'comp'][0]
     
-    # determine whether the NASA Exoplanet Archive Composite PS catalog will be read
-    gdat.boolexar = gdat.boolplotpopl
-    if gdat.typepriocomp is None:
-        gdat.boolexar = True
-    if gdat.boolsimusome and not 'epocmtracomp' in gdat.dicttrue:
+    # determine whether the NASA Exoplanet Archive Composite PS catalog will be read for the target
+    gdat.boolexar = False
+    if gdat.typepriocomp is None and gdat.typetarg != 'synt' and gdat.typetarg != 'inptdata':
         gdat.boolexar = True
 
     # read NASA Excoplanet Archive
@@ -9636,6 +9635,15 @@ def init( \
             print(gdat.strgexar)
             
         gdat.dictexartarg = nicomedia.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp', typeverb=gdat.typeverb)
+        
+        if gdat.dictexartarg['pericomp'][0].size > 20:
+            print('gdat.strgmast')
+            print(gdat.strgmast)
+            print('gdat.strgexar')
+            print(gdat.strgexar)
+            print('gdat.typetarg')
+            print(gdat.typetarg)
+            raise Exception('')
         
         if gdat.typepriocomp == 'exar' and gdat.dictexartarg is None:
             raise Exception('Prior was forced to be NAE but the target is not in the NEA.')
@@ -9797,6 +9805,15 @@ def init( \
             gdat.nomipara.depttrancomp = gdat.dictexartarg['depttrancomp'][0]
             gdat.nomipara.cosicomp = gdat.dictexartarg['cosicomp'][0]
             gdat.nomipara.epocmtracomp = gdat.dictexartarg['epocmtracomp'][0]
+            
+            if gdat.booldiag:
+                if not np.isfinite(gdat.nomipara.epocmtracomp).all():
+                    print('gdat.dictexartarg[epocmtracomp]')
+                    print(gdat.dictexartarg['epocmtracomp'])
+                    print('gdat.dictexartarg[epocmtracomp][0]')
+                    summgene(gdat.dictexartarg['epocmtracomp'][0])
+                    raise Exception('')
+
             gdat.nomipara.duratrantotlcomp = gdat.dictexartarg['duratrantotl'][0]
             indxcompbadd = np.where(~np.isfinite(gdat.nomipara.duratrantotlcomp))[0]
             if indxcompbadd.size > 0:
@@ -10457,8 +10474,6 @@ def init( \
                     print(gdat.true.listnameparafull)
                     raise Exception('pericom0 not in dictparainpt')
         
-        print('dictparainpt')
-        print(dictparainpt)
         gdat.true.dictmodl = retr_dictmodl_mile(gdat, gdat.true.time, dictparainpt, 'true')[0]
         
 
@@ -10604,7 +10619,7 @@ def init( \
     # generate the time axis
     setp_time(gdat, 'Raw')
     
-    if gdat.boolmodl and gdat.fitt.boolmodlpsys and not (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
+    if gdat.boolmodl and gdat.fitt.boolmodlpsys and (gdat.typepriocomp == 'inpt' or gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof'):
         retr_timetran(gdat, 'Raw')
     
     if gdat.liststrgcomp is None:
@@ -11618,23 +11633,11 @@ def init( \
 
     if gdat.fitt.boolvarirratband:
         gdat.fitt.prio.radicomp = [[] for pk in gdat.indxband]
-        print('gdat.indxband')
-        print(gdat.indxband)
-        print('gdat.liststrgband')
-        print(gdat.liststrgband)
-        print('gdat.fitt.prio.meanpara.rratcomp')
-        print(gdat.fitt.prio.meanpara.rratcomp)
         for pk in gdat.indxband:
             gdat.fitt.prio.radicomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk] * gdat.radistar
     else:
-        print('gdat.fitt.prio.meanpara.rratcomp')
-        print(gdat.fitt.prio.meanpara.rratcomp)
         gdat.fitt.prio.radicomp = [[] for pk in gdat.indxband]
         for pk in gdat.indxband:
-            print('pk')
-            print(pk)
-            print('gdat.indxband')
-            print(gdat.indxband)
             gdat.fitt.prio.radicomp[pk] = gdat.fitt.prio.meanpara.rratcomp[pk] * gdat.radistar
     
     if gdat.typeverb > 0:
@@ -11934,14 +11937,19 @@ def init( \
                             'DetrendedPrimaryCenteredZoom', \
                             'DetrendedSecondaryCenteredZoom', \
                             'DetrendedQuadratureCentered', \
-                            'DetrendedQuadratureCenteredMasked', \
                            ]
+        if gdat.typepriocomp != 'outlperi':
+            gdat.liststrgarrypcur += ['DetrendedQuadratureCenteredMasked']
         
-        for strgmodl in gdat.liststrgmodl:
+        if gdat.typeverb > 0:
+            print('Phase folding and binning the light curve...')
+        
+        #for strgmodl in gdat.liststrgmodl:
+        for strgmodl in ['fitt']:
             
             if strgmodl == 'true':
                 gmod = gdat.true
-                objtpara = gdat.true.para
+                objtpara = gdat.true
             else:
                 gmod = gdat.fitt.prio
                 objtpara = gdat.fitt.prio.meanpara
@@ -11964,28 +11972,31 @@ def init( \
                     print('gmod.numbbinspcurzoom')
                     print(gmod.numbbinspcurzoom)
                     raise Exception('Bad gmod.numbbinspcurzoom.')
-
-            for strgarrypcur in gdat.liststrgarrypcur:
-                gmod.arrypcur[strgarrypcur] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        
-        if gdat.typeverb > 0:
-            print('Phase folding and binning the light curve...')
-        
-        for strgmodl in gdat.liststrgmodl:
             
-            if strgmodl == 'true':
-                gmod = gdat.true
-                objtpara = gdat.true.para
-            else:
-                gmod = gdat.fitt.prio
-                objtpara = gdat.fitt.prio.meanpara
-        
             objtpara.dcyctrantotlcomp = objtpara.duratrantotlcomp / objtpara.pericomp / 24.
-            
+
+            gdat.dictbinsphas = dict()
+            for strgarrypcur in gdat.liststrgarrypcur:
+                
+                numbbins = 100
+                if strgarrypcur == 'DetrendedPrimaryCentered':
+                    limt = [-0.5, 0.5]
+                if strgarrypcur == 'DetrendedPrimaryCenteredZoom':
+                    limt = [-0.5 * objtpara.dcyctrantotlcomp, 0.5 * objtpara.dcyctrantotlcomp]
+                if strgarrypcur == 'DetrendedSecondaryCenteredZoom':
+                    limt = [0.5 - 0.5 * objtpara.dcyctrantotlcomp, 0.5 + 0.5 * objtpara.dcyctrantotlcomp]
+                if strgarrypcur == 'DetrendedQuadratureCentered':
+                    limt = [-0.25, 0.75]
+                if strgarrypcur == 'DetrendedQuadratureCenteredMasked':
+                    limt = [-0.25, 0.75]
+                gdat.dictbinsphas[strgarrypcur], _, _, _, _ = tdpy.retr_axis(limt=limt, numbpntsgrid=numbbins)
+                gmod.arrypcur[strgarrypcur] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+                gmod.arrypcur[strgarrypcur+'Binned'] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        
             for b in gdat.indxdatatser:
                 for p in gdat.indxinst[b]:
                     for j in gmod.indxcomp:
-
+                        
                         gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                                      objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
                         
@@ -12004,17 +12015,23 @@ def init( \
                         gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                       objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.25)
                         
-                        gmod.arrypcur['DetrendedQuadratureCenteredMasked'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
+                        if gdat.typepriocomp != 'outlperi':
+                            gmod.arrypcur['DetrendedQuadratureCenteredMasked'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \
                                                                                       objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.25)
                         
                         for strgarrypcur in gdat.liststrgarrypcur:
+                            
+                            if len(gmod.arrypcur[strgarrypcur][b][p][j]) == 0:
+                                print('Skipping binning %s because no data point exists...' % strgarrypcur)
+                                continue
+
                             gmod.arrypcur[strgarrypcur + 'Binned'][b][p][j] = rebn_tser(gmod.arrypcur[strgarrypcur][b][p][j], blimxdat=gdat.dictbinsphas[strgarrypcur])
                         
                         for e in gdat.indxener[p]:
                             path = gdat.pathdatatarg + 'arrypcur_Primary_Detrended_Binned_%s%s%s_%s.csv' % (gdat.liststrginst[b][p], \
                                                                                     gdat.strgextncade[b][p], gdat.liststrgener[p][e], gdat.liststrgcomp[j])
                             if not os.path.exists(path):
-                                temp = np.copy(gmod.arrypcur['DetrendedPrimaryCenteredBinnedFull'][b][p][j][:, e, :])
+                                temp = np.copy(gmod.arrypcur['DetrendedPrimaryCenteredBinned'][b][p][j][:, e, :])
                                 temp[:, 0] *= objtpara.pericomp[j]
                                 if gdat.typeverb > 0:
                                     print('Writing to %s...' % path)
