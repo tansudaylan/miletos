@@ -5752,7 +5752,7 @@ def srch_boxsperi(arry, \
                 
                 s2nr = lists2nr[indxperimpow]
                 
-                if not np.isfinite(s2nr) or listampl[indxperimpow] < 0:
+                if not np.isfinite(s2nr):
                     print('')
                     print('')
                     print('')
@@ -5780,6 +5780,9 @@ def srch_boxsperi(arry, \
                     print('s2nr')
                     print(s2nr)
                     raise Exception('SNR is infinite or listampl[indxperimpow] < 0')
+                
+                if listampl[indxperimpow] < 0:
+                    print('Warning! Amplitude at maximum SNR period is negative! Double check what is going on!')
 
                 dictboxsperioutp['s2nr'].append(s2nr)
                 dictboxsperioutp['peri'].append(listperi[indxperimpow])
