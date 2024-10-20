@@ -467,19 +467,18 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
         
         if gmod.boolmodlpsys:
             
-            if strgmodl == 'true':
-                boolmakeanim = gdat.boolmakeanimefestrue
-            else:
-                boolmakeanim = False
-            
-            boolmakeimaglfov = False
             pathvisu = None
-            if strgmodl == 'true':
-                if gdat.boolplotefestrue:
-                    pathvisu = gdat.pathvisutarg + 'EphesosOutputForSimulatedData/'
-                    boolmakeimaglfov = True
-                    os.system('mkdir -p %s' % pathvisu)
-
+            if gdat.boolmakeplotefestrue or gdat.boolmakeanimefestrue:
+                pathvisu = gdat.pathvisutarg + 'EphesosOutputForSimulatedData/'
+                os.system('mkdir -p %s' % pathvisu)
+                
+                if strgmodl == 'true':
+                    boolmakeanimsbrt = gdat.boolmakeanimefestrue
+                    boolmakeanimorbt = gdat.boolmakeanimefestrue
+                else:
+                    boolmakeanimsbrt = False
+                    boolmakeanimorbt = False
+            
             if gdat.booldiag:
                 if len(rratcomp) == 0 and gmod.typemodl.startswith('PlanetarySystem') and gmod.numbcomp > 1:
                     print('')
@@ -505,9 +504,9 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                                                  radistar=radistar, \
                                                  masscomp=masscomp, \
                                                  
-                                                 boolmakeanim=boolmakeanim, \
+                                                 boolmakeanimorbt=boolmakeanimorbt, \
+                                                 boolmakeanimsbrt=boolmakeanimsbrt, \
                                                  pathvisu=pathvisu, \
-                                                 boolmakeimaglfov=boolmakeimaglfov, \
 
                                                  typelmdk='quadkipp', \
                                                  
@@ -7738,7 +7737,7 @@ def init( \
          liststrgexpr=None, \
          
          # Boolean flag to plot the true ephesos model
-         boolplotefestrue=True, \
+         boolmakeplotefestrue=True, \
 
          # Boolean flag to animate the true ephesos model
          boolmakeanimefestrue=False, \
