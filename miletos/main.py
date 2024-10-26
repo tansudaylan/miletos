@@ -5265,10 +5265,12 @@ def srch_outlperi( \
     dictoutp = dict()
     
     # populate the output dictionary
+    dictoutp['peri'] = []
+    dictoutp['epoc'] = []
     if minmfrddtimeoutlsort < 0.1:
         dictoutp['boolposi'] = True
-        dictoutp['peri'] = [pericomp]
-        dictoutp['epoc'] = [epoccomp]
+        dictoutp['peri'].append(pericomp)
+        dictoutp['epoc'].append(epoccomp)
     else:
         dictoutp['boolposi'] = False
     dictoutp['minmfrddtimeoutlsort'] = [minmfrddtimeoutlsort]
