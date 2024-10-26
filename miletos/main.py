@@ -11202,6 +11202,8 @@ def init( \
         gdat.dictmileoutp['dictoutlperi'] = gdat.dictoutlperi
             
     if gdat.typepriocomp == 'outlperi':
+        print('gdat.dictoutlperi')
+        print(gdat.dictoutlperi)
         gdat.fitt.prio.numbcomp = len(gdat.dictoutlperi['epoc'])
         
     if gdat.booldiag:
