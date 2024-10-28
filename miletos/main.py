@@ -11200,7 +11200,7 @@ def init( \
             gdat.fitt.prio.meanpara.booltrancomp = np.ones_like(gdat.fitt.prio.meanpara.depttrancomp, dtype=bool)
             
             gdat.fitt.prio.meanpara.cosicomp = np.array([0.])
-            
+        
         gdat.dictmileoutp['dictoutlperi'] = gdat.dictoutlperi
             
     if gdat.typepriocomp == 'outlperi':
@@ -11305,7 +11305,7 @@ def init( \
                 gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
                 gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duratrantotlcomp
     
-    if gdat.boolsrchoutlperi or gdat.boolsrchboxsperi:
+    if (gdat.boolsrchoutlperi or gdat.boolsrchboxsperi) and gdat.fitt.prio.numbcomp > 0:
        gdat.fitt.prio.meanpara.rratcomp = [[] for pk in gdat.indxband]
        if gdat.boolanlsbandmerg:
            for pk in gdat.indxband:
