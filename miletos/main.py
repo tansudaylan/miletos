@@ -11310,12 +11310,14 @@ def init( \
        if gdat.boolanlsbandmerg:
            for pk in gdat.indxband:
                 gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.fitt.prio.meanpara.depttrancomp)
-
-    print('gdat.fitt.prio.meanpara.rratcomp')
-    print(gdat.fitt.prio.meanpara.rratcomp)
+    
+    print('gdat.fitt.prio.numbcomp')
+    print(gdat.fitt.prio.numbcomp)
+    print('gdat.boolsrchoutlperi')
+    print(gdat.boolsrchoutlperi)
 
     if gdat.booldiag:
-        if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
+        if gdat.dictoutlperi['boolposi'] and gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
             print('')
             print('')
             print('')
