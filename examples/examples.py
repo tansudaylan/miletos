@@ -1036,10 +1036,11 @@ def cnfg_WD1856():
     
     typepriocomp = 'exar'
     
+    listlablinst = [['AXIS', 'TESS'], []]
     for k in range(2):
         
         if k == 0:
-            liststrgtypedata = [['simutargpartinje'], []]
+            liststrgtypedata = [['simutargpartsynt'], []]
             strgcnfg = 'Simulated'
         if k == 1:
             liststrgtypedata = [['obsd'], []]
