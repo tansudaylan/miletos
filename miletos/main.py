@@ -36,6 +36,7 @@ from .cache import read_cached_output
 from .output import write_cluster_output_csv, write_target_output_csv
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
+from .visualization import plot_binned_rms, plot_work_tser
 import nicomedia
 import lygos
 import ephesos
@@ -4218,18 +4219,16 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
             summgene(tser)
             raise Exception('tser.ndim != 1')
     
-    pathplot = plot_tser( \
-                         gdat.pathvisutarg, \
-                         timedata=time, \
-                         tserdata=tser, \
-                         timeoffs=gdat.timeoffs, \
-                         strgextn=strgextn, \
-                         strgtitl=strgtitl, \
-                         boolwritover=gdat.boolwritover, \
-                         boolbrekmodl=gdat.boolbrekmodl, \
-                         dictmodl=dictmodl, \
-                         booldiag=gdat.booldiag, \
-                        )
+    pathplot = plot_work_tser(
+        plot_tser,
+        gdat,
+        timedata=time,
+        tserdata=tser,
+        strgextn=strgextn,
+        strgtitl=strgtitl,
+        dictmodl=dictmodl,
+        booldiag=gdat.booldiag,
+    )
     
     # plot the posterior median residual
     strgextn = 'ResidualPosteriorMedian%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
@@ -4253,16 +4252,15 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
             summgene(tserdatatemp)
             raise Exception('tserdatatemp.ndim != 1')
     
-    pathplot = plot_tser(gdat.pathvisutarg, \
-                                 timedata=time, \
-                                 tserdata=tserdatatemp, \
-                                 timeoffs=gdat.timeoffs, \
-                                 strgextn=strgextn, \
-                                 strgtitl=strgtitl, \
-                                 lablyaxi='Residual relative flux', \
-                                 boolwritover=gdat.boolwritover, \
-                                 boolbrekmodl=gdat.boolbrekmodl, \
-                                )
+    pathplot = plot_work_tser(
+        plot_tser,
+        gdat,
+        timedata=time,
+        tserdata=tserdatatemp,
+        strgextn=strgextn,
+        strgtitl=strgtitl,
+        lablyaxi='Residual relative flux',
+    )
     
     # plot the data with a number of total model samples
     if gdat.typeinfe == 'samp':
@@ -4294,15 +4292,15 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
                 dictmodl[namevarbsamp]['labl'] = None
             dictmodl[namevarbsamp]['colr'] = 'b'
             dictmodl[namevarbsamp]['alph'] = 0.2
-        pathplot = plot_tser(gdat.pathvisutarg, \
-                                     timedata=gdat.timethisfitt[b][p], \
-                                     tserdata=gdat.rflxthisfitt[b][p][:, e], \
-                                     timeoffs=gdat.timeoffs, \
-                                     strgextn=strgextn, \
-                                     boolwritover=gdat.boolwritover, \
-                                     strgtitl=strgtitl, \
-                                     boolbrekmodl=gdat.boolbrekmodl, \
-                                     dictmodl=dictmodl)
+        pathplot = plot_work_tser(
+            plot_tser,
+            gdat,
+            timedata=gdat.timethisfitt[b][p],
+            tserdata=gdat.rflxthisfitt[b][p][:, e],
+            strgextn=strgextn,
+            strgtitl=strgtitl,
+            dictmodl=dictmodl,
+        )
 
         # plot the data with a number of model component samples
         strgextn = 'PosteriorSamplesComponent%s' % gdat.strgcnfg
@@ -4347,15 +4345,15 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
                     dictmodl[namevarbsamp]['labl'] = None
                 dictmodl[namevarbsamp]['colr'] = colr
                 dictmodl[namevarbsamp]['alph'] = 0.6
-        pathplot = plot_tser(gdat.pathvisutarg, \
-                                     timedata=gdat.timethisfitt[b][p], \
-                                     timeoffs=gdat.timeoffs, \
-                                     tserdata=gdat.rflxthisfitt[b][p][:, e], \
-                                     strgextn=strgextn, \
-                                     boolwritover=gdat.boolwritover, \
-                                     strgtitl=strgtitl, \
-                                     boolbrekmodl=gdat.boolbrekmodl, \
-                                     dictmodl=dictmodl)
+        pathplot = plot_work_tser(
+            plot_tser,
+            gdat,
+            timedata=gdat.timethisfitt[b][p],
+            tserdata=gdat.rflxthisfitt[b][p][:, e],
+            strgextn=strgextn,
+            strgtitl=strgtitl,
+            dictmodl=dictmodl,
+        )
 
     # plot the binned RMS
     path = gdat.pathvisutarg + 'stdvrebn%s%s.%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h], gdat.typefileplot)
@@ -4370,18 +4368,9 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
                 stdvresi = gdat.dictmlik['stdvresi%s' % strg][:, e]
             else:
                 stdvresi = gmod.listdictmlik[e]['stdvresi' % strg][:, 0]
-    
-        figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
-        axis.loglog(gdat.listdeltrebn[b][p] * 24., stdvresi * 1e6, ls='', marker='o', ms=1, label='Binned Std. Dev')
-        axis.axvline(gdat.cadetime[b][p] * 24., ls='--', label='Sampling rate')
-        axis.set_ylabel('RMS [ppm]')
-        axis.set_xlabel('Bin width [hour]')
-        axis.legend()
-        plt.tight_layout()
-        if gdat.typeverb > 0:
-            print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
+
+        gdat.cadetimeplot = gdat.cadetime[b][p]
+        plot_binned_rms(gdat, path, gdat.listdeltrebn[b][p], stdvresi)
         
 
 def setp_modlinit(gdat, strgmodl):
