@@ -33,10 +33,10 @@ import matplotlib.pyplot as plt
 import tdpy
 from tdpy.util import summgene
 from .cache import read_cached_output
-from .output import write_cluster_output_csv, write_target_output_csv
+from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
-from .visualization import plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_resi_series, retr_stdvresi_series, setp_dictmodl_sample
+from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, setp_dictmodl_sample
 import nicomedia
 import lygos
 import ephesos
@@ -949,54 +949,6 @@ def retr_llik_spec(para, gdat):
     
     return llik
 
-
-def writ_filealle(gdat, namefile, pathalle, dictalle, dictalledefa, \
-                  # type of verbosity
-                  ## -1: absolutely no text
-                  ##  0: no text output except critical warnings
-                  ##  1: minimal description of the execution
-                  ##  2: detailed description of the execution
-                  typeverb=1):
-    
-    listline = []
-    # add the lines
-    if namefile == 'params.csv':
-        listline.append('#name,value,fit,bounds,label,unit\n')
-    
-    if dictalle is not None:
-        for strg, varb in dictalle.items():
-            if namefile == 'params.csv':
-                line = strg
-                for k, varbtemp in enumerate(varb):
-                    if varbtemp is not None:
-                        line += ',' + varbtemp
-                    else:
-                        line += ',' + dictalledefa[strg][k]
-                line += '\n'
-            else:
-                line = strg + ',' + varb + '\n'
-            listline.append(line)
-    for strg, varb in dictalledefa.items():
-        if dictalle is None or strg not in dictalle:
-            if namefile == 'params.csv':
-                line = strg
-                for varbtemp in varb:
-                    line += ',' + varbtemp
-                line += '\n'
-            else:
-                line = strg + ',' + varb + '\n'
-            listline.append(line)
-    
-    # write
-    pathfile = pathalle + namefile
-    objtfile = open(pathfile, 'w')
-    for line in listline:
-        objtfile.write('%s' % line)
-    if typeverb > 0:
-        print('Writing to %s...' % pathfile)
-    objtfile.close()
-
-
 def get_color(color):
 
     if isinstance(color, tuple) and len(color) == 3: # already a tuple of RGB values
@@ -1548,224 +1500,37 @@ def proc_alle(gdat, typemodl):
     setp_alle_path(gdat, typemodl)
     
     # write the input data file
-    for b in gdat.indxdatatser:
-        for p in gdat.indxinst[b]:
-            path = gdat.pathalle[typemodl] + gdat.liststrginst[b][p] + '.csv'
-            if not os.path.exists(path):
-            
-                if gdat.boolinfefoldbind:
-                    listarrytserbdtrtemp = np.copy(gmod.arrypcur['DetrendedPrimaryCenteredBinned'][b][p][0])
-                    listarrytserbdtrtemp[:, 0] *= gdat.fitt.prio.meanpara.pericomp[0]
-                    listarrytserbdtrtemp[:, 0] += gdat.fitt.prio.meanpara.epocmtracomp[0]
-                else:
-                    listarrytserbdtrtemp = gdat.arrytser['Detrended'][b][p]
-                
-                # make sure the data are time-sorted
-                #indx = np.argsort(listarrytserbdtrtemp[:, 0])
-                #listarrytserbdtrtemp = listarrytserbdtrtemp[indx, :]
-                    
-                if gdat.typeverb > 0:
-                    print('Writing to %s...' % path)
-                np.savetxt(path, listarrytserbdtrtemp, delimiter=',', header=gdat.strgheadtser[b])
+    write_alle_data_csvs(gdat, gmod, typemodl, typeverb=gdat.typeverb)
     
     ## params_star
-    pathparastar = gdat.pathalle[typemodl] + 'params_star.csv'
-    if not os.path.exists(pathparastar):
-        objtfile = open(pathparastar, 'w')
-        objtfile.write('#R_star,R_star_lerr,R_star_uerr,M_star,M_star_lerr,M_star_uerr,Teff_star,Teff_star_lerr,Teff_star_uerr\n')
-        objtfile.write('#R_sun,R_sun,R_sun,M_sun,M_sun,M_sun,K,K,K\n')
-        objtfile.write('%g,%g,%g,%g,%g,%g,%g,%g,%g' % (gdat.radistar, gdat.stdvradistar, gdat.stdvradistar, \
-                                                       gdat.massstar, gdat.stdvmassstar, gdat.stdvmassstar, \
-                                                                                                      gdat.tmptstar, gdat.stdvtmptstar, gdat.stdvtmptstar))
-        if gdat.typeverb > 0:
-            print('Writing to %s...' % pathparastar)
-        objtfile.close()
+    write_alle_params_star(gdat, typemodl, typeverb=gdat.typeverb)
 
     ## params
-    dictalleparadefa = dict()
     pathpara = gdat.pathalle[typemodl] + 'params.csv'
     if not os.path.exists(pathpara):
-        cmnd = 'touch %s' % (pathpara)
-        print(cmnd)
-        os.system(cmnd)
-    
-        for j in gmod.indxcomp:
-            strgrrat = '%s_rr' % gdat.liststrgcomp[j]
-            strgrsma = '%s_rsuma' % gdat.liststrgcomp[j]
-            strgcosi = '%s_cosi' % gdat.liststrgcomp[j]
-            strgepoc = '%s_epoch' % gdat.liststrgcomp[j]
-            strgperi = '%s_period' % gdat.liststrgcomp[j]
-            strgecos = '%s_f_c' % gdat.liststrgcomp[j]
-            strgesin = '%s_f_s' % gdat.liststrgcomp[j]
-            strgrvelsema = '%s_K' % gdat.liststrgcomp[j]
-            dictalleparadefa[strgrrat] = ['%f' % gdat.fitt.prio.meanpara.rratcomp[j], '1', 'uniform 0 %f' % (4 * gdat.fitt.prio.meanpara.rratcomp[j]), \
-                                                                            '$R_{%s} / R_\star$' % gdat.liststrgcomp[j], '']
-            
-            dictalleparadefa[strgrsma] = ['%f' % gdat.fitt.prio.meanpara.rsmacomp[j], '1', 'uniform 0 %f' % (4 * gdat.fitt.prio.meanpara.rsmacomp[j]), \
-                                                                      '$(R_\star + R_{%s}) / a_{%s}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
-            dictalleparadefa[strgcosi] = ['%f' % gdat.fitt.prio.meanpara.cosicomp[j], '1', 'uniform 0 %f' % max(0.1, 4 * gdat.fitt.prio.meanpara.cosicomp[j]), \
-                                                                                        '$\cos{i_{%s}}$' % gdat.liststrgcomp[j], '']
-            dictalleparadefa[strgepoc] = ['%f' % gdat.fitt.prio.meanpara.epocmtracomp[j], '1', \
-                             'uniform %f %f' % (gdat.fitt.prio.meanpara.epocmtracomp[j] - gdat.stdvepocmtracompprio[j], gdat.fitt.prio.meanpara.epocmtracomp[j] + gdat.stdvepocmtracompprio[j]), \
-                                                                    '$T_{0;%s}$' % gdat.liststrgcomp[j], '$\mathrm{BJD}$']
-            dictalleparadefa[strgperi] = ['%f' % gdat.fitt.prio.meanpara.pericomp[j], '1', \
-                                     'uniform %f %f' % (gdat.fitt.prio.meanpara.pericomp[j] - 3. * gdat.stdvpericompprio[j], gdat.fitt.prio.meanpara.pericomp[j] + 3. * gdat.stdvpericompprio[j]), \
-                                                                    '$P_{%s}$' % gdat.liststrgcomp[j], 'days']
-            dictalleparadefa[strgecos] = ['%f' % gdat.ecoscompprio[j], '0', 'uniform -0.9 0.9', \
-                                                                '$\sqrt{e_{%s}} \cos{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
-            dictalleparadefa[strgesin] = ['%f' % gdat.esincompprio[j], '0', 'uniform -0.9 0.9', \
-                                                                '$\sqrt{e_{%s}} \sin{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]), '']
-            dictalleparadefa[strgrvelsema] = ['%f' % gdat.rvelsemaprio[j], '0', \
-                               'uniform %f %f' % (max(0, gdat.rvelsemaprio[j] - 5 * gdat.stdvrvelsemaprio[j]), gdat.rvelsemaprio[j] + 5 * gdat.stdvrvelsemaprio[j]), \
-                                                                '$K_{%s}$' % gdat.liststrgcomp[j], '']
-            if typemodl == '0003' or typemodl == '0004':
-                for b in gdat.indxdatatser:
-                    if b != 0:
-                        continue
-                    for p in gdat.indxinst[b]:
-                        strgsbrt = '%s_sbratio_' % gdat.liststrgcomp[j] + gdat.liststrginst[b][p]
-                        dictalleparadefa[strgsbrt] = ['1e-3', '1', 'uniform 0 1', '$J_{%s; \mathrm{%s}}$' % \
-                                                                            (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
-                        
-                        dictalleparadefa['%s_phase_curve_beaming_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
-                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{beam; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
-                        dictalleparadefa['%s_phase_curve_atmospheric_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
-                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{atmo; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
-                        dictalleparadefa['%s_phase_curve_ellipsoidal_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
-                                             ['0', '1', 'uniform 0 10', '$A_\mathrm{elli; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
-
-            if typemodl == '0003':
-                for b in gdat.indxdatatser:
-                    if b != 0:
-                        continue
-                    for p in gdat.indxinst[b]:
-                        maxmshft = 0.25 * gdat.fitt.prio.meanpara.pericomp[j]
-                        minmshft = -maxmshft
-
-                        dictalleparadefa['%s_phase_curve_atmospheric_shift_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = \
-                                         ['0', '1', 'uniform %.3g %.3g' % (minmshft, maxmshft), \
-                                            '$\Delta_\mathrm{%s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), '']
+        write_alle_params(gdat, gmod, typemodl, writ_filealle, typeverb=gdat.typeverb)
         if typemodl == 'pfss':
             for p in gdat.indxinst[1]:
                                 ['', 'host_vsini,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.vsiistar, 0, \
                                                                                                                             10 * gdat.vsiistar)], \
                                 ['', 'host_lambda_%s,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.liststrginst[1][p], gdat.lambstarprio, 0, \
                                                                                                                             10 * gdat.lambstarprio)], \
-        
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                strgldc1 = 'host_ldc_q1_%s' % gdat.liststrginst[b][p]
-                strgldc2 = 'host_ldc_q2_%s' % gdat.liststrginst[b][p]
-                strgscal = 'ln_err_flux_%s' % gdat.liststrginst[b][p]
-                strgbaseoffs = 'baseline_offset_flux_%s' % gdat.liststrginst[b][p]
-                strggprosigm = 'baseline_gp_matern32_lnsigma_flux_%s' % gdat.liststrginst[b][p]
-                strggprorhoo = 'baseline_gp_matern32_lnrho_flux_%s' % gdat.liststrginst[b][p]
-                dictalleparadefa[strgldc1] = ['0.5', '1', 'uniform 0 1', '$q_{1; \mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-                dictalleparadefa[strgldc2] = ['0.5', '1', 'uniform 0 1', '$q_{2; \mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-                dictalleparadefa[strgscal] = ['-7', '1', 'uniform -10 -4', '$\ln{\sigma_\mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-                dictalleparadefa[strgbaseoffs] = ['0', '1', 'uniform -1 1', '$O_{\mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-                if b == 1:
-                    dictalleparadefa['ln_jitter_rv_%s' % gdat.liststrginst[b][p]] = ['-10', '1', 'uniform -20 20', \
-                                                                            '$\ln{\sigma_{\mathrm{RV;%s}}}$' % gdat.listlablinst[b][p], '']
-                #lineadde.extend([ \
-                #            ['', '%s,%f,1,uniform %f %f,$\ln{\sigma_{GP;\mathrm{TESS}}}$,\n' % \
-                #                 (strggprosigm, -6, -12, 12)], \
-                #            ['', '%s,%f,1,uniform %f %f,$\ln{\\rho_{GP;\mathrm{TESS}}}$,\n' % \
-                #                 (strggprorhoo, -2, -12, 12)], \
-                #           ])
-                
-        writ_filealle(gdat, 'params.csv', gdat.pathalle[typemodl], gdat.dictdictallepara[typemodl], dictalleparadefa)
     
     ## settings
-    dictallesettdefa = dict()
-    if typemodl == 'pfss':
-        for j in gmod.indxcomp:
-            dictallesettdefa['%s_flux_weighted_PFS' % gdat.liststrgcomp[j]] = 'True'
-    
-    pathsett = gdat.pathalle[typemodl] + 'settings.csv'
-    if not os.path.exists(pathsett):
-        cmnd = 'touch %s' % (pathsett)
-        print(cmnd)
-        os.system(cmnd)
-        
-        dictallesettdefa['fast_fit_width'] = '%.3g' % np.amax(gdat.fitt.duramask) / 24.
-        dictallesettdefa['multiprocess'] = 'True'
-        dictallesettdefa['multiprocess_cores'] = 'all'
-
-        dictallesettdefa['mcmc_nwalkers'] = '100'
-        dictallesettdefa['mcmc_total_steps'] = '100'
-        dictallesettdefa['mcmc_burn_steps'] = '10'
-        dictallesettdefa['mcmc_thin_by'] = '5'
-        
-        for p in gdat.indxinst[0]:
-            dictallesettdefa['inst_phot'] = '%s' % gdat.liststrginst[0][p]
-        
-        for b in gdat.indxdatatser:
-            if b == 0:
-                strg = 'phot'
-            if b == 1:
-                strg = 'rv'
-            for p in gdat.indxinst[b]:
-                dictallesettdefa['inst_%s' % strg] = '%s' % gdat.liststrginst[b][p]
-                dictallesettdefa['host_ld_law_%s' % gdat.liststrginst[b][p]] = 'quad'
-                dictallesettdefa['host_grid_%s' % gdat.liststrginst[b][p]] = 'very_sparse'
-                dictallesettdefa['baseline_flux_%s' % gdat.liststrginst[b][p]] = 'sample_offset'
-        
-        #dictallesettdefa['use_host_density_prior'] = 'False'
-        
-        if typemodl == '0003' or typemodl == '0004':
-            dictallesettdefa['phase_curve'] = 'True'
-            dictallesettdefa['phase_curve_style'] = 'sine_physical'
-        
-        for b in gdat.indxdatatser:
-            for p in gdat.indxinst[b]:
-                for j in gmod.indxcomp:
-                    dictallesettdefa['%s_grid_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = 'very_sparse'
-            
-            if gdat.numbinst[b] > 0:
-                if b == 0:
-                    strg = 'companions_phot'
-                if b == 1:
-                    strg = 'companions_rv'
-                varb = ''
-                cntr = 0
-                for j in gmod.indxcomp:
-                    if cntr != 0:
-                        varb += ' '
-                    varb += '%s' % gdat.liststrgcomp[j]
-                    cntr += 1
-                dictallesettdefa[strg] = varb
-        
-        dictallesettdefa['fast_fit'] = 'True'
-
-        writ_filealle(gdat, 'settings.csv', gdat.pathalle[typemodl], gdat.dictdictallesett[typemodl], dictallesettdefa)
+    write_alle_settings(gdat, gmod, typemodl, writ_filealle, typeverb=gdat.typeverb)
     
     ## initial plot
-    path = gdat.pathalle[typemodl] + 'results/initial_guess_b.pdf'
-    if not os.path.exists(path):
-        allesfitter.show_initial_guess(gdat.pathalle[typemodl])
+    path = ensure_alle_initial_plot(gdat.pathalle[typemodl], allesfitter.show_initial_guess)
     
     ## do the run
-    path = gdat.pathalle[typemodl] + 'results/mcmc_save.h5'
-    if not os.path.exists(path):
-        allesfitter.mcmc_fit(gdat.pathalle[typemodl])
-    else:
-        print('%s exists... Skipping the orbit run.' % path)
+    path = ensure_alle_mcmc_run(gdat.pathalle[typemodl], allesfitter.mcmc_fit, typeverb=gdat.typeverb)
 
     ## make the final plots
-    path = gdat.pathalle[typemodl] + 'results/mcmc_corner.pdf'
-    if not os.path.exists(path):
-        allesfitter.mcmc_output(gdat.pathalle[typemodl])
+    path = ensure_alle_final_plots(gdat.pathalle[typemodl], allesfitter.mcmc_output)
         
     # read the allesfitter posterior
-    if gdat.typeverb > 0:
-        print('Reading from %s...' % gdat.pathalle[typemodl])
-    gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
-    
-    gdat.numbsampalle = allesfitter.config.BASEMENT.settings['mcmc_total_steps']
-    gdat.numbwalkalle = allesfitter.config.BASEMENT.settings['mcmc_nwalkers']
-    gdat.numbsampalleburn = allesfitter.config.BASEMENT.settings['mcmc_burn_steps']
-    gdat.numbsampallethin = allesfitter.config.BASEMENT.settings['mcmc_thin_by']
+    load_alle_object(gdat, typemodl, allesfitter.allesclass, typeverb=gdat.typeverb)
+    setp_alle_sampling_meta(gdat, typemodl, allesfitter.config.BASEMENT.settings)
 
     print('gdat.numbwalkalle')
     print(gdat.numbwalkalle)
@@ -1776,18 +1541,6 @@ def proc_alle(gdat, typemodl):
     print('gdat.numbsampallethin')
     print(gdat.numbsampallethin)
 
-    gdat.numbsamp = gdat.objtalle[typemodl].posterior_params[list(gdat.objtalle[typemodl].posterior_params.keys())[0]].size
-    
-    print('gdat.numbsamp')
-    print(gdat.numbsamp)
-
-    # temp 
-    if gdat.numbsamp > 10000:
-        gdat.indxsamp = np.random.choice(np.arange(gdat.numbsamp), size=10000, replace=False)
-        gdat.numbsamp = 10000
-    else:
-        gdat.indxsamp = np.arange(gdat.numbsamp)
-    
     print('gdat.numbsamp')
     print(gdat.numbsamp)
     
@@ -1902,40 +1655,18 @@ def proc_alle(gdat, typemodl):
                                                                                                                                 'flux', xx=gdat.time[b][p])
                 
                 ### stellar baseline
-                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
-                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
-                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-                if typemodl == '0003':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                if typemodl == '0004':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
-                gdat.objtalle[typemodl].posterior_params_median['b_sbratio_TESS'] = 0
+                load_alle_variant(gdat, typemodl, allesfitter.allesclass, zero_sbratio=True, zero_beaming=True, zero_ellipsoidal=True)
                 gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                                 'flux', xx=gdat.time[b][p])
                 
                 ### EV
-                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
-                gdat.objtalle[typemodl].posterior_params_median['b_sbratio_TESS'] = 0
-                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
-                if typemodl == '0003':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                if typemodl == '0004':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                load_alle_variant(gdat, typemodl, allesfitter.allesclass, zero_sbratio=True, zero_beaming=True)
                 gdat.arrytser['modlelli'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                             'flux', xx=gdat.time[b][p])
                 gdat.arrytser['modlelli'+typemodl][b][p][j][:, 1] -= gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1]
                 
                 ### beaming
-                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
-                gdat.objtalle[typemodl].posterior_params_median['b_sbratio_TESS'] = 0
-                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-                if typemodl == '0003':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                if typemodl == '0004':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                load_alle_variant(gdat, typemodl, allesfitter.allesclass, zero_sbratio=True, zero_ellipsoidal=True)
                 gdat.arrytser['modlbeam'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                             'flux', xx=gdat.time[b][p])
                 gdat.arrytser['modlbeam'+typemodl][b][p][j][:, 1] -= gdat.arrytser['modlstel'+typemodl][b][p][j][:, 1]
@@ -1950,14 +1681,7 @@ def proc_alle(gdat, typemodl):
                 gdat.arrytser['modlplan'+typemodl][b][p][j][:, 1] -= offsdays
 
                 # planetary nightside
-                gdat.objtalle[typemodl] = allesfitter.allesclass(gdat.pathalle[typemodl])
-                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_beaming_TESS'] = 0
-                gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_ellipsoidal_TESS'] = 0
-                if typemodl == '0003':
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_TESS'] = 0
-                else:
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_thermal_TESS'] = 0
-                    gdat.objtalle[typemodl].posterior_params_median['b_phase_curve_atmospheric_reflected_TESS'] = 0
+                load_alle_variant(gdat, typemodl, allesfitter.allesclass, zero_beaming=True, zero_ellipsoidal=True)
                 gdat.arrytser['modlnigh'+typemodl][b][p][j][:, 1] = gdat.objtalle[typemodl].get_posterior_median_model(gdat.liststrginst[b][p], \
                                                                                                                             'flux', xx=gdat.time[b][p])
                 gdat.arrytser['modlnigh'+typemodl][b][p][j][:, 1] += gdat.dicterrr['amplnigh'][0, 0]
@@ -1975,21 +1699,7 @@ def proc_alle(gdat, typemodl):
                 gdat.arrytser['bdtrplan'+typemodl][b][p][j][:, 1] -= offsdays
                     
             # get allesfitter baseline model
-            gdat.arrytser['modlbase'+typemodl][b][p] = np.copy(gdat.arrytser['Detrended'][b][p])
-            gdat.arrytser['modlbase'+typemodl][b][p][:, 1] = gdat.objtalle[typemodl].get_posterior_median_baseline(gdat.liststrginst[b][p], 'flux', \
-                                                                                                                                xx=gdat.time[b][p])
-            # get allesfitter-detrended data
-            gdat.arrytser['Detrended'+typemodl][b][p] = np.copy(gdat.arrytser['Detrended'][b][p])
-            gdat.arrytser['Detrended'+typemodl][b][p][:, 1] = gdat.arrytser['Detrended'][b][p][:, 1] - gdat.arrytser['modlbase'+typemodl][b][p][:, 1]
-            for y in gdat.indxchun[b][p]:
-                # get allesfitter baseline model
-                gdat.listarrytser['modlbase'+typemodl][b][p][y] = np.copy(gdat.listarrytser['Detrended'][b][p][y])
-                gdat.listarrytser['modlbase'+typemodl][b][p][y][:, 1] = gdat.objtalle[typemodl].get_posterior_median_baseline(gdat.liststrginst[b][p], \
-                                                                                           'flux', xx=gdat.listarrytser['modlbase'+typemodl][b][p][y][:, 0])
-                # get allesfitter-detrended data
-                gdat.listarrytser['Detrended'+typemodl][b][p][y] = np.copy(gdat.listarrytser['Detrended'][b][p][y])
-                gdat.listarrytser['Detrended'+typemodl][b][p][y][:, 1] = gdat.listarrytser['Detrended'+typemodl][b][p][y][:, 1] - \
-                                                                                gdat.listarrytser['modlbase'+typemodl][b][p][y][:, 1]
+            setp_alle_base_detrended(gdat, typemodl, b, p)
            
             print('Phase folding and binning the light curve for inference named %s...' % typemodl)
             for j in gmod.indxcomp:
@@ -2021,11 +1731,7 @@ def proc_alle(gdat, typemodl):
                                                                                                                 blimxdat=gdat.binsphasquadtotl)
                     
                     # write
-                    path = gdat.pathdatatarg + 'arrypcur_quad_%sbindtotl_%s_%s.csv' % (strgpcurcomp, gdat.liststrgcomp[j], gdat.liststrginst[b][p])
-                    if not os.path.exists(path):
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        np.savetxt(path, gmod.arrypcur['quad%s%sbindtotl' % (strgpcurcomp, typemodl)][b][p][j], delimiter=',', header=gdat.strgheadpser[b])
+                    write_quad_bindtotl_csv(gdat, gmod, typemodl, strgpcurcomp, b, p, j, typeverb=gdat.typeverb)
                     
                     if gdat.boolplot:
                         plot_pser_mile(gdat, strgmodl, 'quad'+strgpcurcomp+typemodl, boolpost=boolpost)
@@ -2056,34 +1762,12 @@ def proc_alle(gdat, typemodl):
 
 
     if typemodl == '0003' or typemodl == '0004':
-            
-        if typemodl == '0003':
-            gmod.listlablpara = [['Nightside', 'ppm'], ['Secondary', 'ppm'], ['Planetary Modulation', 'ppm'], ['Thermal', 'ppm'], \
-                                                        ['Reflected', 'ppm'], ['Phase shift', 'deg'], ['Geometric Albedo', '']]
-        else:
-            gmod.listlablpara = [['Nightside', 'ppm'], ['Secondary', 'ppm'], ['Thermal', 'ppm'], \
-                                  ['Reflected', 'ppm'], ['Thermal Phase shift', 'deg'], ['Reflected Phase shift', 'deg'], ['Geometric Albedo', '']]
-        numbpara = len(gmod.listlablpara)
-        indxpara = np.arange(numbpara)
-        listpost = np.empty((gdat.numbsamp, numbpara))
+        gmod.listlablpara = retr_pcur_lablpara(typemodl)
         
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
                 for j in gmod.indxcomp:
-                    listpost[:, 0] = gdat.dictlist['amplnigh'][:, j] * 1e6 # [ppm]
-                    listpost[:, 1] = gdat.dictlist['amplseco'][:, j] * 1e6 # [ppm]
-                    if typemodl == '0003':
-                        listpost[:, 2] = gdat.dictlist['amplplan'][:, j] * 1e6 # [ppm]
-                        listpost[:, 3] = gdat.dictlist['amplplanther'][:, j] * 1e6 # [ppm]
-                        listpost[:, 4] = gdat.dictlist['amplplanrefl'][:, j] * 1e6 # [ppm]
-                        listpost[:, 5] = gdat.dictlist['phasshftplan'][:, j]
-                        listpost[:, 6] = gdat.dictlist['albg'][:, j]
-                    else:
-                        listpost[:, 2] = gdat.dictlist['amplplanther'][:, j] * 1e6 # [ppm]
-                        listpost[:, 3] = gdat.dictlist['amplplanrefl'][:, j] * 1e6 # [ppm]
-                        listpost[:, 4] = gdat.dictlist['phasshftplanther'][:, j]
-                        listpost[:, 5] = gdat.dictlist['phasshftplanrefl'][:, j]
-                        listpost[:, 6] = gdat.dictlist['albg'][:, j]
+                    listpost, _ = build_pcur_post(gdat, typemodl, j)
                     tdpy.plot_grid(gdat.pathalle[typemodl], 'pcur_%s' % typemodl, listpost, gmod.listlablpara, plotsize=2.5)
 
         # plot phase curve
@@ -2107,38 +1791,16 @@ def proc_alle(gdat, typemodl):
                             
                             ## unbinned data
                             if k < 2:
-                                if k == 0:
-                                    xdat = gdat.time[b][p] - gdat.timeoffs
-                                    ydat = gdat.arrytser['Detrended'+typemodl][b][p][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
-                                if k == 1:
-                                    xdat = gmod.arrypcur['DetrendedQuadratureCentered'+typemodl][b][p][j][:, 0]
-                                    ydat = gmod.arrypcur['DetrendedQuadratureCentered'+typemodl][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
+                                xdat, ydat = retr_pcur_raw_series(gdat, gmod, typemodl, b, p, j, k)
                                 axis[k].plot(xdat, ydat, '.', color='grey', alpha=0.3, label='Raw data')
                             
                             ## binned data
-                            if k > 0:
-                                xdat = gmod.arrypcur['DetrendedQuadratureCentered'+typemodl+'bindtotl'][b][p][j][:, 0]
-                                ydat = gmod.arrypcur['DetrendedQuadratureCentered'+typemodl+'bindtotl'][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
-                                yerr = np.copy(gmod.arrypcur['DetrendedQuadratureCentered'+typemodl+'bindtotl'][b][p][j][:, 2])
-                            else:
-                                xdat = None
-                                ydat = None
-                                yerr = None
-                            if k == 2:
-                                ydat = (ydat - 1) * 1e6
-                                yerr *= 1e6
+                            xdat, ydat, yerr = retr_pcur_binned_series(gdat, gmod, typemodl, b, p, j, k)
                             # temp - add offset to bring the base of secondary to 0 
                             axis[k].errorbar(xdat, ydat, marker='o', yerr=yerr, capsize=0, ls='', color='k', label='Binned data')
                             
                             ## model
-                            if k > 0:
-                                xdat = gmod.arrypcur['quadmodl'+typemodl][b][p][j][:, 0]
-                                ydat = gmod.arrypcur['quadmodl'+typemodl][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
-                            else:
-                                xdat = gdat.arrytser['modltotl'+typemodl][b][p][j][:, 0] - gdat.timeoffs
-                                ydat = gdat.arrytser['modltotl'+typemodl][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0]
-                            if k == 2:
-                                ydat = (ydat - 1) * 1e6
+                            xdat, ydat = retr_pcur_model_series(gdat, gmod, typemodl, b, p, j, k)
                             if k == 0:
                                 axis[k].plot(xdat[:gdat.indxtimegapp], ydat[:gdat.indxtimegapp], color='b', lw=2, label='Total Model', zorder=10)
                                 axis[k].plot(xdat[gdat.indxtimegapp:], ydat[gdat.indxtimegapp:], color='b', lw=2, zorder=10)
@@ -2155,29 +1817,9 @@ def proc_alle(gdat, typemodl):
                         
                         axis[2].set_ylim(ylimpcur)
                         
-                        xdat = gmod.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 0]
-                        ydat = (gmod.arrypcur['quadmodlstel'+typemodl][b][p][j][:, 1] - 1.) * 1e6
-                        axis[2].plot(xdat, ydat, lw=2, color='orange', label='Stellar baseline', ls='--', zorder=11)
-                        
-                        xdat = gmod.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 0]
-                        ydat = (gmod.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 1] - 1.) * 1e6
-                        axis[2].plot(xdat, ydat, lw=2, color='r', ls='--', label='Ellipsoidal variation')
-                        
-                        xdat = gmod.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 0]
-                        ydat = (gmod.arrypcur['quadmodlelli'+typemodl][b][p][j][:, 1] - 1.) * 1e6
-                        axis[2].plot(xdat, ydat, lw=2, color='r', ls='--', label='Ellipsoidal variation')
-                        
-                        xdat = gmod.arrypcur['quadmodlplan'+typemodl][b][p][j][:, 0]
-                        ydat = (gmod.arrypcur['quadmodlplan'+typemodl][b][p][j][:, 1] - 1.) * 1e6
-                        axis[2].plot(xdat, ydat, lw=2, color='g', label='Planetary', ls='--')
-    
-                        xdat = gmod.arrypcur['quadmodlnigh'+typemodl][b][p][j][:, 0]
-                        ydat = (gmod.arrypcur['quadmodlnigh'+typemodl][b][p][j][:, 1] - 1.) * 1e6
-                        axis[2].plot(xdat, ydat, lw=2, color='olive', label='Planetary baseline', ls='--', zorder=11)
-    
-                        xdat = gmod.arrypcur['quadmodlpmod'+typemodl][b][p][j][:, 0]
-                        ydat = (gmod.arrypcur['quadmodlpmod'+typemodl][b][p][j][:, 1] - 1.) * 1e6
-                        axis[2].plot(xdat, ydat, lw=2, color='m', label='Planetary modulation', ls='--', zorder=11)
+                        dictline = retr_pcur_component_overlay(gmod, typemodl, b, p, j)
+                        for labl, valu in dictline.items():
+                            axis[2].plot(valu['xdat'], valu['ydat'], lw=2, color=valu['color'], label=labl, ls=valu['ls'], zorder=11)
                          
                         ## legend
                         axis[2].legend(ncol=3)
@@ -2251,13 +1893,10 @@ def proc_alle(gdat, typemodl):
                     if not os.path.exists(path):
                         # plot the phase curve with samples
                         figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
-                        axis.errorbar(gmod.arrypcur['DetrendedQuadratureCenteredBinned'][b][p][j][:, 0], \
-                                    (gmod.arrypcur['DetrendedQuadratureCenteredBinned'][b][p][j][:, 1] + gdat.dicterrr['amplnigh'][0, 0] - 1) * 1e6, \
-                                                     yerr=1e6*gmod.arrypcur['DetrendedQuadratureCenteredBinned'][b][p][j][:, 2], color='k', marker='o', ls='', markersize=2, lw=1)
-                        for ii, i in enumerate(gdat.indxsampplot):
-                            axis.plot(gmod.arrypcur['quadmodl'+typemodl][b][p][j][:, 0], \
-                                                        1e6 * (gdat.listarrypcur['quadmodl'+typemodl][b][p][j][ii, :] + gdat.dicterrr['amplnigh'][0, 0] - 1.), \
-                                                                                                                                          alpha=0.1, color='b')
+                        dictbinned, listsamp = retr_pcur_sample_plot_data(gdat, gmod, typemodl, b, p, j)
+                        axis.errorbar(dictbinned['xdat'], dictbinned['ydat'], yerr=dictbinned['yerr'], color='k', marker='o', ls='', markersize=2, lw=1)
+                        for dictsamp in listsamp:
+                            axis.plot(dictsamp['xdat'], dictsamp['ydat'], alpha=0.1, color='b')
                         axis.set_ylabel('Relative flux [ppm]')
                         axis.set_xlabel('Phase')
                         axis.set_ylim(ylimpcur)
@@ -2288,44 +1927,21 @@ def proc_alle(gdat, typemodl):
 
                     # write to text file
                     path = gdat.pathalle[typemodl] + 'post_pcur_%s_tabl.csv' % (typemodl)
-                    if not os.path.exists(path):
-                        fileoutp = open(gdat.pathalle[typemodl] + 'post_pcur_%s_tabl.csv' % (typemodl), 'w')
-                        for strgfeat in gdat.dictlist:
-                            if gdat.dictlist[strgfeat].ndim == 2:
-                                for j in gmod.indxcomp:
-                                    fileoutp.write('%s,%s,%g,%g,%g,%g,%g\\\\\n' % (strgfeat, gdat.liststrgcomp[j], gdat.dictlist[strgfeat][0, j], gdat.dictlist[strgfeat][1, j], \
-                                                                                gdat.dictlist[strgfeat][2, j], gdat.dicterrr[strgfeat][1, j], gdat.dicterrr[strgfeat][2, j]))
-                            else:
-                                fileoutp.write('%s,,%g,%g,%g,%g,%g\\\\\n' % (strgfeat, gdat.dictlist[strgfeat][0], gdat.dictlist[strgfeat][1], \
-                                                                                gdat.dictlist[strgfeat][2], gdat.dicterrr[strgfeat][1], gdat.dicterrr[strgfeat][2]))
-                            #fileoutp.write('\\\\\n')
-                        fileoutp.close()
+                    write_post_pcur_table_csv(gdat, gmod, typemodl, typeverb=gdat.typeverb)
                     
                     path = gdat.pathalle[typemodl] + 'post_pcur_%s_cmnd.csv' % (typemodl)
-                    if not os.path.exists(path):
-                        fileoutp = open(gdat.pathalle[typemodl] + 'post_pcur_%s_cmnd.csv' % (typemodl), 'w')
-                        for strgfeat in gdat.dictlist:
-                            if gdat.dictlist[strgfeat].ndim == 2:
-                                for j in gmod.indxcomp:
-                                    fileoutp.write('%s,%s,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (strgfeat, gdat.liststrgcomp[j], gdat.dicterrr[strgfeat][0, j], \
-                                                                                                gdat.dicterrr[strgfeat][1, j], gdat.dicterrr[strgfeat][2, j]))
-                            else:
-                                fileoutp.write('%s,,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (strgfeat, gdat.dicterrr[strgfeat][0], \
-                                                                                                            gdat.dicterrr[strgfeat][1], gdat.dicterrr[strgfeat][2]))
-                            #fileoutp.write('\\\\\n')
-                        fileoutp.close()
+                    write_post_pcur_command_csv(gdat, gmod, typemodl, typeverb=gdat.typeverb)
 
                 if typemodl == '0003':
                     
                     # wavelength axis
                     gdat.conswlentmpt = 0.0143877735e6 # [um K]
 
-                    minmalbg = min(np.amin(gdat.dictlist['albginfo']), np.amin(gdat.dictlist['albg']))
-                    maxmalbg = max(np.amax(gdat.dictlist['albginfo']), np.amax(gdat.dictlist['albg']))
-                    binsalbg = np.linspace(minmalbg, maxmalbg, 100)
-                    meanalbg = (binsalbg[1:] + binsalbg[:-1]) / 2.
-                    pdfnalbg = tdpy.retr_kdegpdfn(gdat.dictlist['albg'][:, 0], binsalbg, 0.02)
-                    pdfnalbginfo = tdpy.retr_kdegpdfn(gdat.dictlist['albginfo'][:, 0], binsalbg, 0.02)
+                    dictalbg = build_albg_comparison_data(gdat, tdpy.retr_kdegpdfn)
+                    binsalbg = dictalbg['binsalbg']
+                    meanalbg = dictalbg['meanalbg']
+                    pdfnalbg = dictalbg['pdfnalbg']
+                    pdfnalbginfo = dictalbg['pdfnalbginfo']
                     
                     path = gdat.pathalle[typemodl] + 'pdfn_albg_%s_%s.%s' % (gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
@@ -2380,24 +1996,26 @@ def proc_alle(gdat, typemodl):
                     indxsampatmo = np.random.choice(np.arange(listsampatmo.shape[0]), size=gdat.numbsamp, replace=False)
                     gdat.listpsii = listsampatmo[indxsampatmo, 2]
                     
-                    gdat.gmeatmptequi = np.percentile(gdat.dictlist['tmptequi'][:, 0], 50.)
-                    gdat.gstdtmptequi = (np.percentile(gdat.dictlist['tmptequi'][:, 0], 84.) - np.percentile(gdat.dictlist['tmptequi'][:, 0], 16.)) / 2.
-                    gdat.gmeatmptdayy = np.percentile(gdat.dictlist['tmptdayy'][:, 0], 50.)
-                    gdat.gstdtmptdayy = (np.percentile(gdat.dictlist['tmptdayy'][:, 0], 84.) - np.percentile(gdat.dictlist['tmptdayy'][:, 0], 16.)) / 2.
-                    gdat.gmeatmptnigh = np.percentile(gdat.dictlist['tmptnigh'][:, 0], 50.)
-                    gdat.gstdtmptnigh = (np.percentile(gdat.dictlist['tmptnigh'][:, 0], 84.) - np.percentile(gdat.dictlist['tmptnigh'][:, 0], 16.)) / 2.
-                    gdat.gmeapsii = np.percentile(gdat.listpsii, 50.)
-                    gdat.gstdpsii = (np.percentile(gdat.listpsii, 84.) - np.percentile(gdat.listpsii, 16.)) / 2.
-                
-                    histpsii, gdat.binspsii = np.histogram(gdat.listpsii, 1001)
-                    gdat.meanpsii = (gdat.binspsii[1:] + gdat.binspsii[:-1]) / 2.
+                    dictpsii = build_psii_summary_data(gdat, gdat.listpsii)
+                    gdat.gmeatmptequi = dictpsii['gmeatmptequi']
+                    gdat.gstdtmptequi = dictpsii['gstdtmptequi']
+                    gdat.gmeatmptdayy = dictpsii['gmeatmptdayy']
+                    gdat.gstdtmptdayy = dictpsii['gstdtmptdayy']
+                    gdat.gmeatmptnigh = dictpsii['gmeatmptnigh']
+                    gdat.gstdtmptnigh = dictpsii['gstdtmptnigh']
+                    gdat.gmeapsii = dictpsii['gmeapsii']
+                    gdat.gstdpsii = dictpsii['gstdpsii']
+                    histpsii = dictpsii['histpsii']
+                    gdat.binspsii = dictpsii['binspsii']
+                    gdat.meanpsii = dictpsii['meanpsii']
                     
-                    gdat.kdegstdvpsii = 0.01
+                    dictkdegpsii = build_psii_kdeg_data(gdat.listpsii, gdat.meanpsii, tdpy.retr_kdeg)
+                    gdat.kdegstdvpsii = dictkdegpsii['kdegstdvpsii']
                     path = gdat.pathalle[typemodl] + 'kdeg_psii_%s_%s.%s' % (gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
                     if not os.path.exists(path):
                         figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
-                        gdat.kdegpsii = tdpy.retr_kdeg(gdat.listpsii, gdat.meanpsii, gdat.kdegstdvpsii)
+                        gdat.kdegpsii = dictkdegpsii['kdegpsii']
                         axis.plot(gdat.meanpsii, gdat.kdegpsii)
                         axis.set_xlabel('$\psi$')
                         axis.set_ylabel('$K_\psi$')
@@ -2423,73 +2041,56 @@ def proc_alle(gdat, typemodl):
                                             )
 
                     # plot emission spectra, secondary eclipse depth, and brightness temperature
-                    #listcolr = ['k', 'm', 'purple', 'olive', 'olive', 'r', 'g']
-                    listcolr = ['k', 'm', 'purple', 'olive', 'olive', 'r', 'g']
-                    for i in range(15):
-                        listcolr.append('r')
-                    for i in range(28):
-                        listcolr.append('g')
+                    listindvspec, listgroupspec = build_spec_data_groups(arrydata)
+                    dictspecmodl = build_spec_model_data(gdat, arrydata, arrymodl)
                     figr, axis = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
                     ## stellar emission spectrum and TESS throughput
-                    axis[0].plot(arrymodl[:, 0], 1e-9 * arrymodl[:, 9], label='Host star', color='grey')
+                    axis[0].plot(dictspecmodl['host']['xdat'], dictspecmodl['host']['ydat'], label='Host star', color='grey')
                     axis[0].plot(0., 0., ls='--', label='TESS Throughput', color='grey')
                     axis[0].set_ylabel(r'$\nu F_{\nu}$ [10$^9$ erg/s/cm$^2$]')
                     axis[0].legend(fancybox=True, bbox_to_anchor=[0.7, 0.22, 0.2, 0.2])
                     axistwin = axis[0].twinx()
-                    axistwin.plot(gdat.cntrwlenband, gdat.thptband, color='grey', ls='--', label='TESS')
+                    axistwin.plot(dictspecmodl['host']['xthpt'], dictspecmodl['host']['ythpt'], color='grey', ls='--', label='TESS')
                     axistwin.set_ylabel(r'Throughput')
                     
                     ## secondary eclipse depths
                     ### model
-                    objtplotmodllavgd, = axis[1].plot(arrydata[0, 0], 1e6*gdat.amplplantheratmo, color='b', marker='D')
-                    axis[1].plot(arrymodl[:, 0], arrymodl[:, 1], label='1D Retrieval (This work)', color='b')
-                    axis[1].plot(arrymodl[:, 0], arrymodl[:, 2], label='Blackbody (This work)', alpha=0.3, color='deepskyblue')
-                    axis[1].fill_between(arrymodl[:, 0], arrymodl[:, 3], arrymodl[:, 4], alpha=0.3, color='deepskyblue')
-                    objtplotvivi, = axis[1].plot(gdat.wlenvivi, gdat.specvivi * 1e6, color='orange', alpha=0.6, lw=2)
+                    objtplotmodllavgd, = axis[1].plot(dictspecmodl['depth']['xavg'], dictspecmodl['depth']['yavg'], color='b', marker='D')
+                    axis[1].plot(dictspecmodl['depth']['xdat'], dictspecmodl['depth']['yretr'], label='1D Retrieval (This work)', color='b')
+                    axis[1].plot(dictspecmodl['depth']['xdat'], dictspecmodl['depth']['ybbod'], label='Blackbody (This work)', alpha=0.3, color='deepskyblue')
+                    axis[1].fill_between(dictspecmodl['depth']['xdat'], dictspecmodl['depth']['ybbodlowr'], dictspecmodl['depth']['ybboduppr'], alpha=0.3, color='deepskyblue')
+                    objtplotvivi, = axis[1].plot(dictspecmodl['depth']['xgcm'], dictspecmodl['depth']['ygcm'], color='orange', alpha=0.6, lw=2)
                     ### data
-                    for k in range(5):
-                        axis[1].errorbar(arrydata[k, 0], arrydata[k, 2], xerr=arrydata[k, 1], yerr=arrydata[k, 3], ls='', marker='o', color=listcolr[k])
-                    axis[1].errorbar(arrydata[5:22, 0], arrydata[5:22, 2], xerr=arrydata[5:22, 1], yerr=arrydata[5:22, 3], ls='', marker='o', color='r')
-                    axis[1].errorbar(arrydata[22:-1, 0], arrydata[22:-1, 2], xerr=arrydata[22:-1, 1], yerr=arrydata[22:-1, 3], ls='', marker='o', color='g')
+                    for valu in listindvspec:
+                        axis[1].errorbar(valu['xdat'], valu['ydept'], xerr=valu['xerr'], yerr=valu['ydeer'], ls='', marker='o', color=valu['color'])
+                    for valu in listgroupspec:
+                        axis[1].errorbar(valu['xdat'], valu['ydept'], xerr=valu['xerr'], yerr=valu['ydeer'], ls='', marker='o', color=valu['color'])
                     axis[1].set_ylabel(r'Depth [ppm]')
                     axis[1].set_xticklabels([])
                     
                     ## planetary emission spectra
                     ### model
-                    objtplotretr, = axis[2].plot(arrymodl[:, 0], 1e-9 * arrymodl[:, 5], label='1D Retrieval (This work)', color='b')
-                    objtplotmblc, = axis[2].plot(arrymodl[:, 0], 1e-9 * arrymodl[:, 6], label='Blackbody (This work)', color='deepskyblue', alpha=0.3)
-                    objtploteblc = axis[2].fill_between(arrymodl[:, 0], 1e-9 * arrymodl[:, 7], 1e-9 * arrymodl[:, 8], color='deepskyblue', alpha=0.3)
+                    objtplotretr, = axis[2].plot(dictspecmodl['flux']['xdat'], dictspecmodl['flux']['yretr'], label='1D Retrieval (This work)', color='b')
+                    objtplotmblc, = axis[2].plot(dictspecmodl['flux']['xdat'], dictspecmodl['flux']['ybbod'], label='Blackbody (This work)', color='deepskyblue', alpha=0.3)
+                    objtploteblc = axis[2].fill_between(dictspecmodl['flux']['xdat'], dictspecmodl['flux']['ybbodlowr'], dictspecmodl['flux']['ybboduppr'], color='deepskyblue', alpha=0.3)
                     axis[2].legend([objtplotretr, objtplotmodllavgd, (objtplotmblc, objtploteblc), objtplotvivi], \
                                                ['1D Retrieval (This work)', '1D Retrieval (This work), Avg', 'Blackbody (This work)', 'GCM (Parmentier+2018)'], \
                                                                                             bbox_to_anchor=[0.8, 1.4, 0.2, 0.2])
                     ### data
-                    for k in range(5):
-                        axis[2].errorbar(arrydata[k, 0],  1e-9 * arrydata[k, 6], xerr=arrydata[k, 1], yerr=1e-9*arrydata[k, 7], ls='', marker='o', color=listcolr[k])
-                    axis[2].errorbar(arrydata[5:22, 0], 1e-9 * arrydata[5:22, 6], xerr=arrydata[5:22, 1], yerr=1e-9*arrydata[5:22, 7], ls='', marker='o', color='r')
-                    axis[2].errorbar(arrydata[22:-1, 0], 1e-9 * arrydata[22:-1, 6], xerr=arrydata[22:-1, 1], \
-                                                                    yerr=1e-9*arrydata[22:-1, 7], ls='', marker='o', color='g')
+                    for valu in listindvspec:
+                        axis[2].errorbar(valu['xdat'], valu['yflux'], xerr=valu['xerr'], yerr=valu['yfler'], ls='', marker='o', color=valu['color'])
+                    for valu in listgroupspec:
+                        axis[2].errorbar(valu['xdat'], valu['yflux'], xerr=valu['xerr'], yerr=valu['yfler'], ls='', marker='o', color=valu['color'])
                     
                     axis[2].set_ylabel(r'$\nu F_{\nu}$ [10$^9$ erg/s/cm$^2$]')
                     axis[2].set_xticklabels([])
                     
                     ## brightness temperature
                     ### data
-                    for k in range(5):
-                        if k == 0:
-                            labl = 'TESS (This work)'
-                        if k == 1:
-                            labl = 'Z$^\prime$ (Delrez+2016)'
-                        if k == 2:
-                            labl = '$K_s$ (Kovacs\&Kovacs2019)'
-                        if k == 3:
-                            labl = 'IRAC $\mu$m (Garhart+2019)'
-                        #if k == 4:
-                        #    labl = 'IRAC 4.5 $\mu$m (Garhart+2019)'
-                        axis[3].errorbar(arrydata[k, 0], arrydata[k, 4], xerr=arrydata[k, 1], yerr=arrydata[k, 5], label=labl, ls='', marker='o', color=listcolr[k])
-                    axis[3].errorbar(arrydata[5:22, 0], arrydata[5:22, 4], xerr=arrydata[5:22, 1], \
-                                                         yerr=arrydata[5:22, 5], label='HST G102 (Evans+2019)', ls='', marker='o', color='r')
-                    axis[3].errorbar(arrydata[22:-1, 0], arrydata[22:-1, 4], xerr=arrydata[22:-1, 1], \
-                                                        yerr=arrydata[22:-1, 5], label='HST G141 (Evans+2017)', ls='', marker='o', color='g')
+                    for valu in listindvspec:
+                        axis[3].errorbar(valu['xdat'], valu['ytemp'], xerr=valu['xerr'], yerr=valu['yteer'], label=valu['labltemp'], ls='', marker='o', color=valu['color'])
+                    for valu in listgroupspec:
+                        axis[3].errorbar(valu['xdat'], valu['ytemp'], xerr=valu['xerr'], yerr=valu['yteer'], label=valu['labltemp'], ls='', marker='o', color=valu['color'])
                     #axis[3].errorbar(arrydata[:, 0], np.median(tmpt, 0), xerr=arrydata[:, 1], yerr=np.std(tmpt, 0), label='My calc', ls='', marker='o', color='c')
                     axis[3].set_ylabel(r'$T_B$ [K]')
                     axis[3].set_xlabel(r'$\lambda$ [$\mu$m]')
@@ -2527,24 +2128,20 @@ def proc_alle(gdat, typemodl):
                     ## get ATMO posterior
                     path = gdat.pathdatatarg + 'ascii_output/RetrievalPTSamples.txt'
                     dataptem = np.loadtxt(path)
-                    liststrgcomp = ['CH4.txt', 'CO.txt', 'FeH.txt', 'H+.txt', 'H.txt', 'H2.txt', 'H2O.txt', 'H_.txt', 'He.txt', 'K+.txt', \
-                                                                        'K.txt', 'NH3.txt', 'Na+.txt', 'Na.txt', 'TiO.txt', 'VO.txt', 'e_.txt']
-                    listlablcomp = ['CH$_4$', 'CO', 'FeH', 'H$^+$', 'H', 'H$_2$', 'H$_2$O', 'H$^-$', 'He', 'K$^+$', \
-                                                                        'K', 'NH$_3$', 'Na$^+$', 'Na', 'TiO', 'VO', 'e$^-$']
+                    listspecabnd = build_abundance_component_specs()
                     listdatacomp = []
-                    for strg in liststrgcomp:
-                        path = gdat.pathdatatarg + 'ascii_output/pdependent_abundances/' + strg
+                    for valu in listspecabnd:
+                        path = gdat.pathdatatarg + 'ascii_output/pdependent_abundances/' + valu['file']
                         listdatacomp.append(np.loadtxt(path))
                     ## plot
                     figr, axis = plt.subplots(nrows=1, ncols=2, sharey=True, gridspec_kw={'width_ratios': [1, 2]}, figsize=gdat.figrsizeydob)
                     ### pressure temperature
-                    numbsamp = dataptem.shape[0] - 1
-                    indxsamp = np.arange(numbsamp)
-                    for i in indxsamp[::100]:
-                        axis[0].plot(dataptem[i, :], dataptem[0, :], color='b', alpha=0.1)
-                    axis[0].plot(np.percentile(dataptem, 10, axis=0), dataptem[0, :], color='g')
-                    axis[0].plot(np.percentile(dataptem, 50, axis=0), dataptem[0, :], color='r')
-                    axis[0].plot(np.percentile(dataptem, 90, axis=0), dataptem[0, :], color='g')
+                    dictptem = build_ptem_plot_data(dataptem, ctrb, gdat.thptbandctrb)
+                    for i in dictptem['listindxsampplot']:
+                        axis[0].plot(dataptem[i, :], dictptem['presaxis'], color='b', alpha=0.1)
+                    axis[0].plot(dictptem['profslowr'], dictptem['presaxis'], color='g')
+                    axis[0].plot(dictptem['profsmedi'], dictptem['presaxis'], color='r')
+                    axis[0].plot(dictptem['profsuppr'], dictptem['presaxis'], color='g')
                     axis[0].set_xlim([1500, 3700])
                     axis[0].set_xlabel('$T$ [K]')
                     axis[0].set_yscale('log')
@@ -2553,11 +2150,7 @@ def proc_alle(gdat, typemodl):
                     axis[0].set_ylim([10., 1e-5])
                     ### contribution function
                     axistwin = axis[0].twiny()
-                    ctrbtess = np.empty(numbpresctrb)
-                    for k in indxpresctrb:
-                        ctrbtess[k] = np.sum(ctrb[1:, k] * gdat.thptbandctrb)
-                    ctrbtess *= 1e-12 / np.amax(ctrbtess)
-                    axistwin.fill(ctrbtess, presctrb, alpha=0.5, color='grey')
+                    axistwin.fill(dictptem['ctrbtess'], presctrb, alpha=0.5, color='grey')
                     axistwin.set_xticklabels([])
                     ## abundances
                     numbcomp = len(listdatacomp)
@@ -2580,44 +2173,7 @@ def proc_alle(gdat, typemodl):
                     listobjtcolr = sns.color_palette('hls', numbcomp)
                     axis[1].set_prop_cycle('color', listobjtcolr)
                     for k in indxcomp:
-                        if k == 0: # CH4
-                            xpos, ypos = 10**-12.8, 10**-2.3
-                        elif k == 1: # CO
-                            xpos, ypos = 10**-2.8, 10**-3.5
-                        elif k == 2: # FeH
-                            xpos, ypos = 10**-10.8, 10**-3.5
-                        elif k == 3: # H+
-                            xpos, ypos = 10**-12.8, 10**-4.1
-                        elif k == 4: # H
-                            xpos, ypos = 10**-1.6, 10**-2
-                        elif k == 5: # H2
-                            xpos, ypos = 10**-1.6, 10**-2.6
-                        elif k == 6: # H20
-                            xpos, ypos = 10**-8.8, 10**-4.1
-                        elif k == 7: # H_
-                            xpos, ypos = 10**-10., 10**0.4
-                        elif k == 8: # He
-                            xpos, ypos = 10**-1.6, 10**-4.1
-                        elif k == 9: # K+
-                            xpos, ypos = 10**-4.4, 10**-4.8
-                        elif k == 10: # K
-                            xpos, ypos = 10**-8.4, 10**-4.8
-                        elif k == 11: # Nh3
-                            xpos, ypos = 10**-13.6, 10**-4.1
-                        elif k == 12: # Na+
-                            xpos, ypos = 10**-4.4, 10**-3.8
-                        elif k == 13: # Na
-                            xpos, ypos = 10**-6, 10**-3.8
-                        elif k == 14: # TiO
-                            xpos, ypos = 10**-7.6, 10**-2
-                        elif k == 15: # VO
-                            xpos, ypos = 10**-6, 10**-2
-                        elif k == 16: # e-
-                            xpos, ypos = 10**-5.6, 10**-0.8
-                        else:
-                            xpos = 10**(np.random.rand() * 16. - 16.)
-                            ypos = 10**(np.random.rand() * 6. - 5.)
-                        axis[1].text(xpos, ypos, '%s' % listlablcomp[k], color=listcolr[k], size=10, va='center', ha='center')
+                        axis[1].text(listspecabnd[k]['xpos'], listspecabnd[k]['ypos'], '%s' % listspecabnd[k]['label'], color=listcolr[k], size=10, va='center', ha='center')
                     axis[1].set_xscale('log')
                     axis[1].set_xlabel('Volume Mixing Ratio')
                     axis[1].set_yscale('log')
@@ -2643,36 +2199,22 @@ def plot_popl(gdat, strgpdfn):
     ### get the CKS occurence rate as a function of planet radius
     path = gdat.pathbasemile + 'data/Fulton+2017/Means.csv'
     data = np.loadtxt(path, delimiter=',')
-    timeoccu = data[:, 0]
-    occumean = data[:, 1]
     path = gdat.pathbasemile + 'data/Fulton+2017/Lower.csv'
     occulowr = np.loadtxt(path, delimiter=',')
     occulowr = occulowr[:, 1]
     path = gdat.pathbasemile + 'data/Fulton+2017/Upper.csv'
     occuuppr = np.loadtxt(path, delimiter=',')
     occuuppr = occuuppr[:, 1]
-    occuyerr = np.empty((2, occumean.size))
-    occuyerr[0, :] = occuuppr - occumean
-    occuyerr[1, :] = occumean - occulowr
+    dictoccu = build_occurrence_rate_data(data, occulowr, occuuppr)
     
     figr, axis = plt.subplots(figsize=gdat.figrsize)
     
     # this system
-    for jj, j in enumerate(gmod.indxcomp):
-        if strgpdfn == 'post':
-            xposlowr = gdat.dictpost['radicomp'][0, j]
-            xposmedi = gdat.dictpost['radicomp'][1, j]
-            xposuppr = gdat.dictpost['radicomp'][2, j]
-        else:
-            xposmedi = gdat.fitt.prio.meanpara.rratcomp[j] * gdat.radistar
-            xposlowr = xposmedi - gdat.stdvrratcompprio[j] * gdat.radistar
-            xposuppr = xposmedi + gdat.stdvrratcompprio[j] * gdat.radistar
-        xposlowr *= gdat.dictfact['rjre']
-        xposuppr *= gdat.dictfact['rjre']
-        axis.axvspan(xposlowr, xposuppr, alpha=0.5, color=gdat.listcolrcomp[j])
-        axis.axvline(xposmedi, color=gdat.listcolrcomp[j], ls='--', label=gdat.liststrgcomp[j])
-        axis.text(0.7, 0.9 - jj * 0.07, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], \
-                                                                                    va='center', ha='center', transform=axis.transAxes)
+    listhighlight = build_occurrence_highlights(gdat, gmod, strgpdfn)
+    for valu in listhighlight:
+        axis.axvspan(valu['xposlowr'], valu['xposuppr'], alpha=0.5, color=valu['colr'])
+        axis.axvline(valu['xposmedi'], color=valu['colr'], ls='--', label=valu['labl'])
+        axis.text(valu['textx'], valu['texty'], r'\textbf{%s}' % valu['labl'], color=valu['colr'], va='center', ha='center', transform=axis.transAxes)
     
     if typeplotback == 'white':
         colrbkgd = 'white'
@@ -2682,9 +2224,7 @@ def plot_popl(gdat, strgpdfn):
         colrdraw = 'white'
     
     # plot the occurrence rate
-    xerr = (timeoccu[1:] - timeoccu[:-1]) / 2.
-    xerr = np.concatenate([xerr[0, None], xerr])
-    axis.errorbar(timeoccu, occumean, yerr=occuyerr, xerr=xerr, color=colrdraw, ls='', marker='o', lw=1, zorder=10)
+    axis.errorbar(dictoccu['timeoccu'], dictoccu['occumean'], yerr=dictoccu['occuyerr'], xerr=dictoccu['xerr'], color=colrdraw, ls='', marker='o', lw=1, zorder=10)
     axis.set_xlabel('Radius [$R_E$]')
     axis.set_ylabel('Occurrence rate of planets per star')
     
@@ -2818,22 +2358,14 @@ def plot_popl(gdat, strgpdfn):
         figr, axis = plt.subplots(figsize=gdat.figrsize)
         bins = np.linspace(1., 10., 400)
         axis.hist(gdat.listratiperi, bins=bins, rwidth=1)
-        if gmod.numbcomp > 1:
-            ## this system
-            for j in gmod.indxcomp:
-                for jj in gmod.indxcomp:
-                    if gdat.dicterrr['pericomp'][0, j] > gdat.dicterrr['pericomp'][0, jj]:
-                        ratiperi = gdat.dicterrr['pericomp'][0, j] / gdat.dicterrr['pericomp'][0, jj]
-                        axis.axvline(ratiperi, color=gdat.listcolrcomp[jj])
-                        axis.axvline(ratiperi, color=gdat.listcolrcomp[j], ls='--')
+        for valu in build_period_ratio_highlights(gdat, gmod):
+            axis.axvline(valu['ratiperi'], color=valu['colrprim'])
+            axis.axvline(valu['ratiperi'], color=valu['colrseco'], ls='--')
         
         ylim = axis.get_ylim()
-        ydatlabl = 0.9 * ylim[1] + ylim[0]
-        ## resonances
-        for perifrst, periseco in [[2., 1.], [3., 2.], [4., 3.], [5., 4.], [5., 3.], [5., 2.]]:
-            rati = perifrst / periseco
-            axis.text(rati + 0.05, ydatlabl, '%d:%d' % (perifrst, periseco), size=8, color='grey', va='center', ha='center')
-            axis.axvline(perifrst / periseco, color='grey', ls='--', alpha=0.5)
+        for valu in build_period_ratio_resonances(ylim):
+            axis.text(valu['textx'], valu['texty'], valu['labl'], size=8, color='grey', va='center', ha='center')
+            axis.axvline(valu['rati'], color='grey', ls='--', alpha=0.5)
         #axis.set_xscale('log')
         axis.set_xlim([0.9, 2.7])
         axis.set_ylabel('N')
@@ -2855,80 +2387,57 @@ def plot_popl(gdat, strgpdfn):
         deptwasp0107 = arry[:, 1]
         deptstdvwasp0107 = arry[:, 2]
         
-        stdvnirs = 0.24e-2
-        for a in range(2):
-            duratranplanwasp0107 = 2.74
-            jmagsystwasp0107 = 9.4
-            if a == 1:
-                radicomp = gdat.dicterrr['radicomp'][0, :]
-                masscomp = gdat.dicterrr['masscompused'][0, :]
-                tmptplan = gdat.dicterrr['tmptplan'][0, :]
-                duratranplan = gdat.dicterrr['duratrantotl'][0, :]
-                radistar = gdat.radistar
-                jmagsyst = gdat.jmagsyst
-            else:
+        dictheli = build_helium_comparison_data(gdat, nicomedia.retr_scalheig)
+        for valscen in dictheli['listscenario']:
+            if valscen['name'] == 'wasp107':
                 print('WASP-107')
-                radicomp = 0.924 * gdat.dictfact['rjre']
-                masscomp = 0.119
-                tmptplan = 736
-                radistar = 0.66 # [R_S]
-                jmagsyst = jmagsystwasp0107
-                duratranplan = duratranplanwasp0107
-            scalheig = nicomedia.retr_scalheig(tmptplan, masscomp, radicomp)
-            deptscal = 1e3 * 2. * radicomp * scalheig / radistar**2 # [ppt]
-            dept = 80. * deptscal
-            factstdv = np.sqrt(10**((-jmagsystwasp0107 + jmagsyst) / 2.5) * duratranplanwasp0107 / duratranplan)
-            stdvnirsthis = factstdv * stdvnirs
-            for b in np.arange(1, 6):
-                stdvnirsscal = stdvnirsthis / np.sqrt(float(b))
-                sigm = dept / stdvnirsscal
-        
+
             print('radicomp')
-            print(radicomp)
+            print(valscen['radicomp'])
             print('masscomp')
-            print(masscomp)
+            print(valscen['masscomp'])
             print('duratranplan')
-            print(duratranplan)
+            print(valscen['duratranplan'])
             print('tmptplan')
-            print(tmptplan)
+            print(valscen['tmptplan'])
             print('jmagsyst')
-            print(jmagsyst)
+            print(valscen['jmagsyst'])
             print('jmagsystwasp0107')
-            print(jmagsystwasp0107)
+            print(valscen['jmagsystwasp0107'])
             print('scalheig [R_E]')
-            print(scalheig)
+            print(valscen['scalheig'])
             print('scalheig [km]')
-            print(scalheig * 71398)
+            print(valscen['scalheig'] * 71398)
             print('deptscal')
-            print(deptscal)
+            print(valscen['deptscal'])
             print('depttrancomp')
-            print(dept)
+            print(valscen['dept'])
             print('duratranplanwasp0107')
-            print(duratranplanwasp0107)
+            print(2.74)
             print('duratranplan')
-            print(duratranplan)
+            print(valscen['duratranplan'])
             print('factstdv')
-            print(factstdv)
+            print(valscen['factstdv'])
             print('stdvnirsthis')
-            print(stdvnirsthis)
-            for b in np.arange(1, 6):
-                print('With %d transits:' % b)
+            print(valscen['stdvnirsthis'])
+            for valtran in valscen['listtran']:
+                print('With %d transits:' % valtran['numbtran'])
                 print('stdvnirsscal')
-                print(stdvnirsscal)
+                print(valtran['stdvnirsscal'])
                 print('sigm')
-                print(sigm)
+                print(valtran['sigm'])
         print('James WASP107b scale height: 855 km')
         print('James WASP107b scale height: %g [R_E]' % (855. / 71398))
         print('James WASP107b depth per scale height: 5e-4')
         print('ampltide ratio fact: deptthis / 500e-6')
-        fact = deptscal / 500e-6
+        fact = dictheli['fact']
         print('fact')
         print(fact)
         # 2 A * Rp * H / Rs**2
             
         figr, axis = plt.subplots(figsize=gdat.figrsize)
         #axis.errorbar(wlenwasp0107, deptwasp0107, yerr=deptstdvwasp0107, ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
-        axis.errorbar(wlenwasp0107-10833, deptwasp0107*fact[0], yerr=deptstdvwasp0107*factstdv[0], ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
+        axis.errorbar(wlenwasp0107-10833, deptwasp0107*fact[0], yerr=deptstdvwasp0107*dictheli['factstdv'][0], ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
         axis.set_xlabel(r'Wavelength - 10,833 [$\AA$]')
         axis.set_ylabel('Depth [\%]')
         plt.subplots_adjust(bottom=0.2, left=0.2)
@@ -2940,58 +2449,17 @@ def plot_popl(gdat, strgpdfn):
 
         # optical magnitude vs number of planets
         for b in range(4):
-            if b == 0:
-                strgvarbmagt = 'vmag'
-                lablxaxi = 'V Magnitude'
-                varbtarg = gdat.vmagsyst
-                varb = dictpopl['vmagsyst']
-            if b == 1:
-                strgvarbmagt = 'jmag'
-                lablxaxi = 'J Magnitude'
-                varbtarg = gdat.jmagsyst
-                varb = dictpopl['jmagsyst']
-            if b == 2:
-                strgvarbmagt = 'rvelsemascal_vmag'
-                lablxaxi = '$K^{\prime}_{V}$'
-                varbtarg = np.sqrt(10**(-gdat.vmagsyst / 2.5)) / gdat.massstar**(2. / 3.)
-                varb = np.sqrt(10**(-dictpopl['vmagsyst'] / 2.5)) / dictpopl['massstar']**(2. / 3.)
-            if b == 3:
-                strgvarbmagt = 'rvelsemascal_jmag'
-                lablxaxi = '$K^{\prime}_{J}$'
-                varbtarg = np.sqrt(10**(-gdat.vmagsyst / 2.5)) / gdat.massstar**(2. / 3.)
-                varb = np.sqrt(10**(-dictpopl['jmagsyst'] / 2.5)) / dictpopl['massstar']**(2. / 3.)
             for a in range(2):
+                dictmagt = build_magnitude_population_plot_data(gdat, gmod, dictpopl, b, a)
+                strgvarbmagt = dictmagt['strgvarbmagt']
+                lablxaxi = dictmagt['lablxaxi']
+                indx = dictmagt['indx']
+                varbtargnorm = dictmagt['varbtargnorm']
+                varbnorm = dictmagt['varbnorm']
                 figr, axis = plt.subplots(figsize=gdat.figrsize)
-                if a == 0:
-                    indx = np.where((dictpopl['numbplanstar'] > 3))[0]
-                if a == 1:
-                    indx = np.where((dictpopl['numbplantranstar'] > 3))[0]
-                
-                if (b == 2 or b == 3):
-                    normfact = max(varbtarg, np.nanmax(varb[indx]))
-                else:
-                    normfact = 1.
-                varbtargnorm = varbtarg / normfact
-                varbnorm = varb[indx] / normfact
                 axis.scatter(varbnorm, dictpopl['numbplanstar'][indx], s=1, color=colrdraw)
-                
-                indxsort = np.argsort(varbnorm)
-                if b == 2 or b == 3:
-                    indxsort = indxsort[::-1]
-
-                listnameaddd = []
-                cntr = 0
-                maxmnumbname = min(5, varbnorm.size)
-                while True:
-                    k = indxsort[cntr]
-                    nameadd = dictpopl['namestar'][indx][k]
-                    if not nameadd in listnameaddd:
-                        axis.text(varbnorm[k], dictpopl['numbplanstar'][indx][k] + 0.5, nameadd, size=6, \
-                                                                                                va='center', ha='right', rotation=45)
-                        listnameaddd.append(nameadd)
-                    cntr += 1
-                    if len(listnameaddd) == maxmnumbname: 
-                        break
+                for valu in dictmagt['listlabel']:
+                    axis.text(valu['xdat'], valu['ydat'], valu['name'], size=6, va='center', ha='right', rotation=45)
                 axis.scatter(varbtargnorm, gmod.numbcomp, s=5, color=colrdraw, marker='x')
                 axis.text(varbtargnorm, gmod.numbcomp + 0.5, gdat.labltarg, size=8, color=colrdraw, \
                                                                                             va='center', ha='center', rotation=45)
@@ -3022,38 +2490,12 @@ def plot_popl(gdat, strgpdfn):
         # planet feature distribution plots
         print('Will make the relevant distribution plots...')
         numbcomptext = min(10, numbcomppopl)
-        liststrgtext = ['notx', 'text']
-        
-        # first is x-axis, second is y-axis
-        liststrgfeatpairplot = [ \
-                            #['smax', 'massstar'], \
-                            #['rascstar', 'declstar'], \
-                            #['lgalstar', 'bgalstar'], \
-                            #['loecstar', 'laecstar'], \
-                            #['distsyst', 'vmagsyst'], \
-                            #['inso', 'radicomp'], \
-                            ['radicomp', 'tmptplan'], \
-                            ['radicomp', 'tsmm'], \
-                            #['radicomp', 'esmm'], \
-                            ['tmptplan', 'tsmm'], \
-                            #['tagestar', 'vesc'], \
-                            ['tmptplan', 'vesc0060'], \
-                            #['radicomp', 'tsmm'], \
-                            #['tmptplan', 'vesc'], \
-                            #['pericomp', 'inso'], \
-                            #['radistar', 'radicomp'], \
-                            #['tmptplan', 'radistar'], \
-                            #['projoblq', 'vsiistar'], \
-                           ]
-        
+        dictplotcnfg = build_population_feature_plot_config()
+        liststrgtext = dictplotcnfg['liststrgtext']
+        liststrgfeatpairplot = dictplotcnfg['liststrgfeatpairplot']
         numbpairfeatplot = len(liststrgfeatpairplot)
-
         indxpairfeatplot = np.arange(numbpairfeatplot)
-        liststrgsort = ['none', \
-                        #'esmm', \
-                        'tsmm', \
-                        #'metrhzon', 'metrhabi', 'metrplan', 'metrseti', \
-                       ]
+        liststrgsort = dictplotcnfg['liststrgsort']
         numbstrgsort = len(liststrgsort)
         indxstrgsort = np.arange(numbstrgsort)
 
@@ -3095,24 +2537,7 @@ def plot_popl(gdat, strgpdfn):
         
         liststrgcutt = indxcompfilt.keys()
         
-        liststrgvarb = [ \
-                        'pericomp', 'inso', 'vesc0060', 'masscomp', \
-                        'metrhzon', 'metrterr', 'metrplan', 'metrunlo', 'metrseti', \
-                        'smax', \
-                        'tmptstar', \
-                        'rascstar', 'declstar', \
-                        'loecstar', 'laecstar', \
-                        'radistar', \
-                        'massstar', \
-                        'metastar', \
-                        'radicomp', 'tmptplan', \
-                        'metrhabi', 'metrplan', \
-                        'lgalstar', 'bgalstar', 'distsyst', 'vmagsyst', \
-                        'tsmm', 'esmm', \
-                        'vsiistar', 'projoblq', \
-                        'jmagsyst', \
-                        'tagestar', \
-                       ]
+        liststrgvarb = dictplotcnfg['liststrgvarb']
 
         listlablvarb, listscalpara = tdpy.retr_listlablscalpara(liststrgvarb)
         listlablvarbtotl = tdpy.retr_labltotl(listlablvarb)
@@ -3138,11 +2563,7 @@ def plot_popl(gdat, strgpdfn):
         numbvarb = len(liststrgvarb)
         indxvarb = np.arange(numbvarb)
             
-        # merge the target with the population
-        for k, strgxaxi in enumerate(liststrgvarb + ['nameplan']):
-            if not strgxaxi in dictpopl or not strgxaxi in gdat.dicterrr:
-                continue
-            dicttempmerg[strgxaxi] = np.concatenate([dictpopl[strgxaxi][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgxaxi][0, :]])
+        dicttempmerg = build_population_merge_data(dictpopl, gdat.dicterrr, liststrgvarb, indxcompfilt, strgcuttmain)
         
         if not 'nameplan' in dictpopl:
             raise Exception('')
@@ -3175,11 +2596,7 @@ def plot_popl(gdat, strgpdfn):
 
             for m, strgyaxi in enumerate(liststrgvarb):
                 
-                booltemp = False
-                for l in indxpairfeatplot:
-                    if strgxaxi == liststrgfeatpairplot[l][0] and strgyaxi == liststrgfeatpairplot[l][1]:
-                        booltemp = True
-                if not booltemp:
+                if not check_feature_pair_selected(strgxaxi, strgyaxi, liststrgfeatpairplot):
                     continue
                  
                 # to be deleted
@@ -3192,130 +2609,77 @@ def plot_popl(gdat, strgpdfn):
                     #for strgfeat, valu in dictpopl.items():
                     #    dicttemp[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcutt]], gdat.dicterrr[strgfeat][0, :]])
                     
-                    liststrgfeatcsvv = [ \
-                                        #'inso', 'metrhzon', 'radicomp', 'metrterr', 'massstar', 'smax', 'metrunlo', 'distsyst', 'metrplan', 'metrseti', \
-                                        'rascstar', 'declstar', 'radicomp', 'masscomp', 'tmptplan', 'jmagsyst', 'radistar', 'tsmm', \
-                                       ]
+                    liststrgfeatcsvv = dictplotcnfg['liststrgfeatcsvv']
                     for y in indxstrgsort:
+                        dictsortplot = build_population_sort_plot_data(
+                            dicttempmerg,
+                            liststrgsort[y],
+                            'text',
+                            strgxaxi,
+                            strgyaxi,
+                            numbcomptext,
+                        )
                         
                         if liststrgsort[y] != 'none':
-                        
-                            indxgood = np.where(np.isfinite(dicttempmerg[liststrgsort[y]]))[0]
-                            indxsort = np.argsort(dicttempmerg[liststrgsort[y]][indxgood])[::-1]
-                            indxcompsort = indxgood[indxsort]
+                            indxcompsort = dictsortplot['indxcompsort']
                             
                             path = gdat.pathdatatarg + '%s_%s_%s.csv' % (strgpopl, strgcutt, liststrgsort[y])
-                            objtfile = open(path, 'w')
-                            
-                            strghead = '%4s, %20s' % ('Rank', 'Name')
-                            for strgfeatcsvv in liststrgfeatcsvv:
-                                strghead += ', %12s' % listlablvarbtotl[liststrgvarb.index(strgfeatcsvv)]
-                            strghead += '\n'
-                            
-                            objtfile.write(strghead)
-                            cntr = 1
-                            for l in indxcompsort:
-                                
-                                strgline = '%4d, %20s' % (cntr, dicttempmerg['nameplan'][l])
-                                for strgfeatcsvv in liststrgfeatcsvv:
-                                    strgline += ', %12.4g' % dicttempmerg[strgfeatcsvv][l]
-                                strgline += '\n'
-                                
-                                objtfile.write(strgline)
-                                cntr += 1 
-                            print('Writing to %s...' % path)
-                            objtfile.close()
+                            write_population_rank_csv(
+                                path,
+                                dicttempmerg,
+                                indxcompsort,
+                                liststrgfeatcsvv,
+                                liststrgvarb,
+                                listlablvarbtotl,
+                                typeverb=gdat.typeverb,
+                            )
                     
                         if gdat.boolplotpopl:
                             # repeat, one without text, one with text
                             for b, strgtext in enumerate(liststrgtext):
                                 figr, axis = plt.subplots(figsize=gdat.figrsize)
-                                
-                                if liststrgsort[y] != 'none' and strgtext != 'text' or liststrgsort[y] == 'none' and strgtext == 'text':
+                                dictsortplot = build_population_sort_plot_data(
+                                    dicttempmerg,
+                                    liststrgsort[y],
+                                    strgtext,
+                                    strgxaxi,
+                                    strgyaxi,
+                                    numbcomptext,
+                                )
+                                if not dictsortplot['boolmakeplot']:
                                     continue
                         
                                 ## population
-                                if strgcutt == strgcuttmain:
-                                    axis.errorbar(dicttempmerg[strgxaxi], dicttempmerg[strgyaxi], ls='', ms=1, marker='o', color='k')
-                                else:
-                                    axis.errorbar(dicttempmerg[strgxaxi], dicttempmerg[strgyaxi], ls='', ms=1, marker='o', color='k')
-                                    #axis.errorbar(dicttemp[strgxaxi], dicttemp[strgyaxi], ls='', ms=2, marker='o', color='r')
+                                dictpoplplan = build_feature_pair_population_render_plan(dicttempmerg, strgxaxi, strgyaxi)
+                                axis.errorbar(dictpoplplan['xdat'], dictpoplplan['ydat'], ls=dictpoplplan['ls'], ms=dictpoplplan['ms'], marker=dictpoplplan['marker'], color=dictpoplplan['color'])
                                 
                                 ## this system
-                                for j in gmod.indxcomp:
-                                    if strgxaxi in gdat.dicterrr:
-                                        xdat = gdat.dicterrr[strgxaxi][0, j, None]
-                                        xerr = gdat.dicterrr[strgxaxi][1:3, j, None]
-                                    if strgyaxi in gdat.dicterrr:
-                                        ydat = gdat.dicterrr[strgyaxi][0, j, None]
-                                        yerr = gdat.dicterrr[strgyaxi][1:3, j, None]
-                                    
-                                    # temp apply cut on this system
-                                    
-                                    if strgxaxi in gdat.listfeatstar and strgyaxi in gdat.listfeatstar:
-                                        axis.errorbar(xdat, ydat, color='k', lw=1, xerr=xerr, yerr=yerr, ls='', marker='o', ms=6, zorder=2)
-                                        axis.text(0.85, 0.9 - j * 0.08, gdat.labltarg, color='k', \
-                                                                                              va='center', ha='center', transform=axis.transAxes)
-                                        break
-                                    else:
-                                        
-                                        if not strgxaxi in gdat.dicterrr and strgyaxi in gdat.dicterrr:
-                                            if strgyaxi in gdat.listfeatstar:
-                                                axis.axhline(ydat, color='k', lw=1, ls='--', zorder=2)
-                                                axis.text(0.85, 0.9 - j * 0.08, gdat.labltarg, color='k', \
-                                                                                              va='center', ha='center', transform=axis.transAxes)
-                                                break
-                                            else:
-                                                axis.axhline(ydat, color=gdat.listcolrcomp[j], lw=1, ls='--', zorder=2)
-                                        if not strgyaxi in gdat.dicterrr and strgxaxi in gdat.dicterrr:
-                                            if strgxaxi in gdat.listfeatstar:
-                                                axis.axvline(xdat, color='k', lw=1, ls='--', zorder=2)
-                                                axis.text(0.85, 0.9 - j * 0.08, gdat.labltarg, color='k', \
-                                                                                              va='center', ha='center', transform=axis.transAxes)
-                                                break
-                                            else:
-                                                axis.axvline(xdat, color=gdat.listcolrcomp[j], lw=1, ls='--')
-                                        if strgxaxi in gdat.dicterrr and strgyaxi in gdat.dicterrr:
-                                            axis.errorbar(xdat, ydat, color=gdat.listcolrcomp[j], lw=1, xerr=xerr, yerr=yerr, ls='', marker='o', \
-                                                                                                                                zorder=2, ms=6)
-                                        
-                                        if strgxaxi in gdat.dicterrr or strgyaxi in gdat.dicterrr:
-                                            axis.text(0.85, 0.9 - j * 0.08, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], \
-                                                                                            va='center', ha='center', transform=axis.transAxes)
+                                dicttrgt = build_feature_pair_target_render_plan(gdat, gmod, strgxaxi, strgyaxi)
+                                for valu in dicttrgt['draw']:
+                                    if valu['kind'] == 'errorbar':
+                                        axis.errorbar(valu['xdat'], valu['ydat'], color=valu['color'], lw=valu['lw'], xerr=valu['xerr'], yerr=valu['yerr'], ls=valu['ls'], marker=valu['marker'], ms=valu['ms'], zorder=valu['zorder'])
+                                    elif valu['kind'] == 'axhline':
+                                        axis.axhline(valu['ydat'], color=valu['color'], lw=valu['lw'], ls=valu['ls'], zorder=valu['zorder'])
+                                    elif valu['kind'] == 'axvline':
+                                        if valu['zorder'] is None:
+                                            axis.axvline(valu['xdat'], color=valu['color'], lw=valu['lw'], ls=valu['ls'])
+                                        else:
+                                            axis.axvline(valu['xdat'], color=valu['color'], lw=valu['lw'], ls=valu['ls'], zorder=valu['zorder'])
+                                for valu in dicttrgt['text']:
+                                    axis.text(valu['xdat'], valu['ydat'], valu['text'], color=valu['color'], va='center', ha='center', transform=axis.transAxes)
                                 
                                 # include text
-                                if liststrgsort[y] != 'none' and strgtext == 'text':
-                                    for ll, l in enumerate(indxcompsort):
-                                        if ll < numbcomptext:
-                                            text = '%s' % dicttemp['nameplan'][l]
-                                            xdat = dicttemp[strgxaxi][l]
-                                            ydat = dicttemp[strgyaxi][l]
-                                            if np.isfinite(xdat) and np.isfinite(ydat):
-                                                objttext = axis.text(xdat, ydat, text, size=1, ha='center', va='center')
+                                if strgtext == 'text':
+                                    for valu in dictsortplot['listtext']:
+                                        axis.text(valu['xdat'], valu['ydat'], valu['text'], size=1, ha='center', va='center')
                                 
-                                if strgxaxi == 'tmptplan' and strgyaxi == 'vesc0060':
-                                    xlim = [0, 0]
-                                    xlim[0] = 0.5 * np.nanmin(dictpopl['tmptplan'])
-                                    xlim[1] = 2. * np.nanmax(dictpopl['tmptplan'])
-                                    arrytmptplan = np.linspace(xlim[0], xlim[1], 1000)
-                                    cons = [1., 4., 16., 18., 28., 44.] # H, He, CH4, H20, CO, CO2
-                                    for i in range(len(cons)):
-                                        arryyaxi = (arrytmptplan / 40. / cons[i])**0.5
-                                        axis.plot(arrytmptplan, arryyaxi, color='grey', alpha=0.5)
-                                    axis.set_xlim(xlim)
-
-                                if strgxaxi == 'radicomp' and strgyaxi == 'masscomp':
-                                    gdat.listlabldenscomp = ['Earth-like', 'Pure Water', 'Pure Iron']
-                                    listdenscomp = [1., 0.1813, 1.428]
-                                    listposicomp = [[13., 2.6], [4.7, 3.5], [13., 1.9]]
-                                    gdat.numbdenscomp = len(gdat.listlabldenscomp)
-                                    gdat.indxdenscomp = np.arange(gdat.numbdenscomp)
-                                    masscompdens = np.linspace(0.5, 16.) # M_E
-                                    for i in gdat.indxdenscomp:
-                                        radicompdens = (masscompdens / listdenscomp[i])**(1. / 3.)
-                                        axis.plot(masscompdens, radicompdens, color='grey')
-                                    for i in gdat.indxdenscomp:
-                                        axis.text(listposicomp[i][0], listposicomp[i][1], gdat.listlabldenscomp[i])
+                                dictguide = build_feature_pair_guides(dictpopl, strgxaxi, strgyaxi)
+                                for valu in dictguide['curves']:
+                                    axis.plot(valu['xdat'], valu['ydat'], color='grey', alpha=0.5)
+                                for valu in dictguide['labels']:
+                                    axis.text(valu['xdat'], valu['ydat'], valu['text'])
+                                if dictguide['xlim'] is not None:
+                                    axis.set_xlim(dictguide['xlim'])
                                 
                                 #if strgxaxi == 'tmptplan':
                                 #    axis.axvline(273., ls='--', alpha=0.3, color='k')
@@ -3324,19 +2688,32 @@ def plot_popl(gdat, strgpdfn):
                                 #    axis.axhline(273., ls='--', alpha=0.3, color='k')
                                 #    axis.axhline(373., ls='--', alpha=0.3, color='k')
         
-                                axis.set_xlabel(listlablvarbtotl[k])
-                                axis.set_ylabel(listlablvarbtotl[m])
-                                if listscalpara[k] == 'logt':
+                                pathvisufeatplan = getattr(gdat, 'pathvisufeatplan' + strgpdfn)
+                                dictpanel = build_feature_pair_panel_meta(
+                                    pathvisufeatplan,
+                                    strgxaxi,
+                                    strgyaxi,
+                                    listlablvarbtotl[k],
+                                    listlablvarbtotl[m],
+                                    listscalpara[k],
+                                    listscalpara[m],
+                                    gdat,
+                                    strgpopl,
+                                    strgcutt,
+                                    strgtext,
+                                    liststrgsort[y],
+                                    strgpdfn,
+                                )
+                                axis.set_xlabel(dictpanel['lablxaxi'])
+                                axis.set_ylabel(dictpanel['lablyaxi'])
+                                if dictpanel['boolxlog']:
                                     axis.set_xscale('log')
-                                if listscalpara[m] == 'logt':
+                                if dictpanel['boolylog']:
                                     axis.set_yscale('log')
                                 
                                 plt.subplots_adjust(left=0.2)
                                 plt.subplots_adjust(bottom=0.2)
-                                pathvisufeatplan = getattr(gdat, 'pathvisufeatplan' + strgpdfn)
-                                path = pathvisufeatplan + 'feat_%s_%s_%s_%s_%s_%s_%s_%s.%s' % \
-                                             (strgxaxi, strgyaxi, gdat.strgtarg, strgpopl, strgcutt, \
-                                                                                   strgtext, liststrgsort[y], strgpdfn, gdat.typefileplot)
+                                path = dictpanel['path']
                                 #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
                                 print('Writing to %s...' % path)
                                 plt.savefig(path)
@@ -4172,22 +3549,7 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
         labl, colr = retr_compmodl_style(namecompmodl)
         dictmodl['pmed' + namecompmodlextn] = {'tser': lcurtemp, 'time': timefine, 'labl': labl, 'colr': colr}
     
-    if p is not None and gdat.listlablinst[b][p] != '':
-        strglablinst = ', %s' % gdat.listlablinst[b][p]
-    else:
-        strglablinst = ''
-    
-    if gdat.lablcnfg != '':
-        lablcnfgtemp = ', %s' % gdat.lablcnfg
-    else:
-        lablcnfgtemp = ''
-
-    if e == 0 and gdat.numbener[p] == 1:
-        strgtitl = '%s%s%s' % (gdat.labltarg, strglablinst, lablcnfgtemp)
-    elif e == 0 and gdat.numbener[p] > 1:
-        strgtitl = '%s%s%s, white' % (gdat.labltarg, strglablinst, lablcnfgtemp)
-    else:
-        strgtitl = '%s%s%s, %g micron' % (gdat.labltarg, strglablinst, lablcnfgtemp, gdat.listener[p][e-1])
+    strgtitl = retr_summary_title(gdat, b, p, e)
     
     if gdat.booldiag:
         if tser.ndim != 1:
@@ -4212,7 +3574,7 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
     )
     
     # plot the posterior median residual
-    strgextn = 'ResidualPosteriorMedian%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
+    strgextn = retr_summary_extn('ResidualPosteriorMedian', gdat, h, p)
     tserdatatemp = retr_resi_series(gdat, gmod, strg, e)
     
     if gdat.booldiag:
@@ -4236,42 +3598,8 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
     
     # plot the data with a number of total model samples
     if gdat.typeinfe == 'samp':
-        strgextn = 'PosteriorSamples%s' % gdat.strgcnfg
-        if gdat.numbener[p] > 1:
-            strgextn += gdat.liststrgdatafittiter[h]
-        dictmodl = dict()
-        for w in range(gdat.numbsampplot):
-            namevarbsamp = 'PosteriorSamplesmodl%04d' % w
-            if gdat.fitt.typemodlenerfitt == 'full':
-                dictmodl[namevarbsamp] = {'tser': gdat.dictsamp['Model_Fine_Total_%s' % strg][w, :, e], 'time': timefine}
-            else:
-                dictmodl[namevarbsamp] = {'tser': gmod.listdictsamp[e]['Model_Fine_Total_%s' % strg][w, :, 0], 'time': timefine}
-            
-            if gdat.booldiag:
-                if dictmodl[namevarbsamp]['tser'].size != dictmodl[namevarbsamp]['time'].size:
-                    print('')
-                    print('strg')
-                    print(strg)
-                    print('dictmodl[namevarbsamp][tser]')
-                    summgene(dictmodl[namevarbsamp]['tser'])
-                    print('dictmodl[namevarbsamp][time]')
-                    summgene(dictmodl[namevarbsamp]['time'])
-                    raise Exception('')
-
-            if w == 0:
-                labl = 'Model'
-            else:
-                labl = None
-            setp_dictmodl_sample(
-                dictmodl,
-                namevarbsamp,
-                dictmodl[namevarbsamp]['tser'],
-                dictmodl[namevarbsamp]['time'],
-                labl,
-                'b',
-                0.2,
-                booldiag=gdat.booldiag,
-            )
+        strgextn = retr_summary_extn('PosteriorSamples', gdat, h, p)
+        dictmodl = build_total_sample_dict(gdat, gmod, strg, e, timefine)
         pathplot = plot_work_tser(
             plot_tser,
             gdat,
@@ -4283,36 +3611,8 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
         )
 
         # plot the data with a number of model component samples
-        strgextn = 'PosteriorSamplesComponent%s' % gdat.strgcnfg
-        if gdat.numbener[p] > 1:
-            strgextn += gdat.liststrgdatafittiter[h]
-        dictmodl = dict()
-        for namecompmodl in gdat.fitt.listnamecompmodl:
-            if namecompmodl == 'Total':
-                continue
-
-            labl, colr = retr_compmodl_style(namecompmodl)
-
-            for w in range(gdat.numbsampplot):
-                namevarbsamp = 'PosteriorSamples%s%04d' % (namecompmodl, w)
-                if gdat.fitt.typemodlenerfitt == 'full':
-                    tsermodl = gdat.dictsamp['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, e]
-                else:
-                    tsermodl = gmod.listdictsamp[e]['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, 0]
-                if w == 0:
-                    lablsamp = labl
-                else:
-                    lablsamp = None
-                setp_dictmodl_sample(
-                    dictmodl,
-                    namevarbsamp,
-                    tsermodl,
-                    gdat.timethisfittfine[b][p],
-                    lablsamp,
-                    colr,
-                    0.6,
-                    booldiag=gdat.booldiag,
-                )
+        strgextn = retr_summary_extn('PosteriorSamplesComponent', gdat, h, p)
+        dictmodl = build_component_sample_dict(gdat, gmod, strg, e, gdat.timethisfittfine[b][p])
         pathplot = plot_work_tser(
             plot_tser,
             gdat,
