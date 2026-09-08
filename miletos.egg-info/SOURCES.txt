@@ -1,0 +1,14 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+miletos/__init__.py
+miletos/main.py
+miletos.egg-info/PKG-INFO
+miletos.egg-info/SOURCES.txt
+miletos.egg-info/dependency_links.txt
+miletos.egg-info/not-zip-safe
+miletos.egg-info/requires.txt
+miletos.egg-info/top_level.txt
+tests/test_Detrend.py
+tests/test_paths.py

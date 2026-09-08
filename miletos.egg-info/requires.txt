@@ -1,0 +1,14 @@
+astroquery
+astropy
+celerite
+ephesos
+gputil
+h5py
+lygos
+nicomedia
+numba
+numpy
+pandas
+scipy
+tdpy
+tqdm

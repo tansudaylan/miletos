@@ -32,6 +32,10 @@ import matplotlib.pyplot as plt
 
 import tdpy
 from tdpy.util import summgene
+from .cache import read_cached_output
+from .output import write_cluster_output_csv, write_target_output_csv
+from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
+from .report import setp_dvrp_output
 import nicomedia
 import lygos
 import ephesos
@@ -206,57 +210,6 @@ def retr_gradlliknegagpro(listparagpro, lcur, objtgpro):
     objtgpro.set_parameter_vector(listparagpro)
     
     return -objtgpro.grad_log_likelihood(lcur)[1]
-
-
-def retr_tsecpathlocl( \
-                      tici, \
-                      
-                      # type of verbosity
-                      ## -1: absolutely no text
-                      ##  0: no text output except critical warnings
-                      ##  1: minimal description of the execution
-                      ##  2: detailed description of the execution
-                      typeverb=1, \
-                     ):
-    '''
-    Retrieve the list of TESS sectors for which SPOC light curves are available for target in the local database of predownloaded light curves
-    '''
-    
-    pathbase = os.environ['TESS_DATA_PATH'] + '/data/lcur/'
-    path = pathbase + 'tsec/tsec_spoc_%016d.csv' % tici
-    if not os.path.exists(path):
-        listtsecsele = np.arange(1, 60)
-        listpath = []
-        listtsec = []
-        strgtagg = '*-%016d-*.fits' % tici
-        for tsec in listtsecsele:
-            pathtemp = pathbase + 'sector-%02d/' % tsec
-            listpathtemp = fnmatch.filter(os.listdir(pathtemp), strgtagg)
-            
-            if len(listpathtemp) > 0:
-                listpath.append(pathtemp + listpathtemp[0])
-                listtsec.append(tsec)
-        
-        listtsec = np.array(listtsec).astype(int)
-        print('Writing to %s...' % path)
-        objtfile = open(path, 'w')
-        for k in range(len(listpath)):
-            objtfile.write('%d,%s\n' % (listtsec[k], listpath[k]))
-        objtfile.close()
-    else:
-        if typeverb > 0:
-            print('Reading from %s...' % path)
-        objtfile = open(path, 'r')
-        listtsec = []
-        listpath = []
-        for line in objtfile:
-            linesplt = line.split(',')
-            listtsec.append(linesplt[0])
-            listpath.append(linesplt[1][:-1])
-        listtsec = np.array(listtsec).astype(int)
-        objtfile.close()
-    
-    return listtsec, listpath
 
 
 def retr_listtsectcut(strgtcut):
@@ -1591,11 +1544,7 @@ def proc_alle(gdat, typemodl):
         print('Processing allesfitter model %s...' % typemodl)
     
     # allesfit run folder
-    gdat.pathalle[typemodl] = gdat.pathallebase + 'allesfit_%s/' % typemodl
-    
-    # make sure the folder exists
-    cmnd = 'mkdir -p %s' % gdat.pathalle[typemodl]
-    os.system(cmnd)
+    setp_alle_path(gdat, typemodl)
     
     # write the input data file
     for b in gdat.indxdatatser:
@@ -8068,11 +8017,7 @@ def init( \
             setattr(gdat, attr, valu)
 
     # paths
-    ## path of the miletos data folder
-    gdat.pathbasemile = os.environ['MILETOS_DATA_PATH'] + '/'
-    ## base path of the run
-    if gdat.pathbase is None:
-        gdat.pathbase = gdat.pathbasemile
+    setp_base_paths(gdat)
     
     # measure initial time
     gdat.timeinit = modutime.time()
@@ -8096,13 +8041,8 @@ def init( \
     if gdat.typeplotback == 'black':
         plt.style.use('dark_background')
         
-    # paths
-    gdat.pathbaselygo = os.environ['LYGOS_DATA_PATH'] + '/'
-    
     # check input arguments
-    if not (gdat.pathtarg is not None and gdat.pathbase is None and gdat.pathdatatarg is None and gdat.pathvisutarg is None or \
-            gdat.pathtarg is None and gdat.pathbase is not None and gdat.pathdatatarg is None and gdat.pathvisutarg is None or \
-            gdat.pathtarg is None and gdat.pathbase is None and gdat.pathdatatarg is not None and gdat.pathvisutarg is not None):
+    if not chec_path_input(gdat):
         print('gdat.pathtarg')
         print(gdat.pathtarg)
         print('gdat.pathbase')
@@ -8673,26 +8613,7 @@ def init( \
         
         gdat.pathtarg = gdat.pathclus + '%s/' % (gdat.strgtarg)
         
-        if gdat.strgcnfg is None or gdat.strgcnfg == '':
-            strgcnfgtemp = ''
-        else:
-            strgcnfgtemp = gdat.strgcnfg + '/'
-        
-        gdat.pathtargcnfg = gdat.pathtarg + strgcnfgtemp
-        
-        if gdat.booldiag:
-            if gdat.pathtargcnfg.endswith('//'):
-                print('')
-                print('')
-                print('')
-                print('gdat.pathtargcnfg')
-                print(gdat.pathtargcnfg)
-                print('strgcnfgtemp')
-                print(strgcnfgtemp)
-                raise Exception('')
-        
-        gdat.pathdatatarg = gdat.pathtargcnfg + 'data/'
-        gdat.pathvisutarg = gdat.pathtargcnfg + 'visuals/'
+        setp_target_paths(gdat)
 
         if gdat.typeverb > 0:
             print('Path for this run configuration on the target:')
@@ -8703,20 +8624,12 @@ def init( \
         print(gdat.strgtarg)
     
     # check if the run has been completed before
-    path = gdat.pathdatatarg + 'dict_miletos_output.pickle'
-    if not gdat.boolwritover and os.path.exists(path):
-        
-        if gdat.typeverb > 0:
-            print('Reading from %s...' % path)
-        with open(path, 'rb') as objthand:
-            gdat.dictmileoutp = pickle.load(objthand)
-        
-        return gdat.dictmileoutp
+    dictmileoutp = read_cached_output(gdat)
+    if dictmileoutp is not None:
+        return dictmileoutp
 
     ## make folders
-    for attr, valu in gdat.__dict__.items():
-        if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
-            os.system('mkdir -p %s' % valu)
+    ensr_gdat_paths(gdat)
             
     if gdat.booltargsynt:
         
@@ -8833,8 +8746,8 @@ def init( \
         #if gdat.liststrginst is None:
         #    gdat.liststrginst = ['TESS', 'Kepler', 'K2', 'JWST_NIRSpec']
         
-        gdat.pathdatamast = os.environ['MAST_DATA_PATH'] + '/'
-        os.system('mkdir -p %s' % gdat.pathdatamast)
+        setp_mast_path(gdat)
+        ensr_gdat_paths(gdat)
         
         if gdat.boolutiltesslocl:
             # determine the TIC ID to be used for the MAST search
@@ -9779,13 +9692,7 @@ def init( \
         
     if gdat.boolplotpopl:
         ## define folders
-        gdat.pathvisufeat = gdat.pathvisutarg + 'feat/'
-    
-        for strgpdfn in ['prio']:
-            pathvisupdfn = gdat.pathvisufeat + strgpdfn + '/'
-            setattr(gdat, 'pathvisufeatplan' + strgpdfn, pathvisupdfn + 'featplan/')
-            setattr(gdat, 'pathvisufeatsyst' + strgpdfn, pathvisupdfn + 'featsyst/')
-            setattr(gdat, 'pathvisudataplan' + strgpdfn, pathvisupdfn + 'dataplan/')
+        setp_feature_paths(gdat)
     
     ## make folders again (needed because of path definitions since the last mkdir)
     for attr, valu in gdat.__dict__.items():
@@ -12401,7 +12308,6 @@ def init( \
             #    plt.close()
 
     if gdat.boolplot and gdat.boolplotdvrp:
-        listpathdvrp = []
         # make data-validation report
         print('gdat.numbpage')
         print(gdat.numbpage)
@@ -12412,131 +12318,15 @@ def init( \
             print('Page %d' % w)
             for temp in gdat.listdictdvrp[w]:
                 print(temp)
-            
-        for w in gdat.indxpage:
-            # path of DV report
-            pathplot = gdat.pathvisutarg + 'Summary_Page%d_%s.png' % (w + 1, gdat.strgtarg)
-            listpathdvrp.append(pathplot)
-            
-            if not os.path.exists(pathplot):
-                # create page with A4 size
-                figr = plt.figure(figsize=(8.25, 11.75))
-                
-                numbplot = len(gdat.listdictdvrp[w])
-                indxplot = np.arange(numbplot)
-                for dictdvrp in gdat.listdictdvrp[w]:
-                    axis = figr.add_axes(dictdvrp['limt'])
-                    print('Reading from %s...' % dictdvrp['path'])
-                    axis.imshow(plt.imread(dictdvrp['path']))
-                    axis.axis('off')
-                if gdat.typeverb > 0:
-                    print('Writing to %s...' % pathplot)
-                plt.savefig(pathplot, dpi=600)
-                #plt.subplots_adjust(top=1., bottom=0, left=0, right=1)
-                plt.close()
-        
-        gdat.dictmileoutp['listpathdvrp'] = listpathdvrp
+
+        setp_dvrp_output(gdat)
 
     # write the output dictionary to target file
-    path = gdat.pathdatatarg + 'miletos_output.csv'
-    objtfile = open(path, 'w')
-    k = 0
-    for name, valu in gdat.dictmileoutp.items():
-        if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
-            objtfile.write('%s, ' % name)
-        if isinstance(valu, str):
-            objtfile.write('%s' % valu)
-        elif isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
-            objtfile.write('%g' % valu)
-        if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
-            objtfile.write('\n')
-    if typeverb > 0:
-        print('Writing to %s...' % path)
-    objtfile.close()
+    write_target_output_csv(gdat, typeverb=typeverb)
     
     # write the output dictionary to the cluster file
     if gdat.strgclus is not None:
-        path = gdat.pathdataclus + 'miletos_cluster_output.csv'
-        boolappe = True
-        if os.path.exists(path):
-            print('Reading from %s...' % path)
-            dicttemp = pd.read_csv(path).to_dict(orient='list')
-            if gdat.strgtarg in dicttemp['strgtarg']:
-                boolappe = False
-            boolmakehead = False
-        else:
-            print('Opening %s...' % path)
-            objtfile = open(path, 'w')
-            boolmakehead = True
-        
-        if boolmakehead:
-            print('Will construct a header...')
-        else:
-            print('Will not construct a header...')
-        
-        if boolappe:
-            
-            print('gdat.dictmileoutp')
-            for name in gdat.dictmileoutp:
-                if 'path' in name:
-                    print(name)
-
-            if boolmakehead:
-                print('Constructing the header...')
-                # if the header doesn't exist, make it
-                k = 0
-                listnamecols = []
-                for name, valu in gdat.dictmileoutp.items():
-                    
-                    if name.startswith('lygo_pathsaverflx'): 
-                        continue
-                    
-                    if name.startswith('lygo_strgtitlcntpplot'):
-                        continue
-                    
-                    listnamecols.append(name)
-                    if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
-                        if k > 0:
-                            objtfile.write(',')
-                        objtfile.write('%s' % name)
-                        k += 1
-                
-            else:
-                print('Reading from %s...' % path)
-                objtfile = open(path, 'r')
-                for line in objtfile:
-                    listnamecols = line.split(',')
-                    break
-                listnamecols[-1] = listnamecols[-1][:-1]
-
-                if not gdat.strgtarg in dicttemp['strgtarg']:
-                    print('Opening %s to append...' % path)
-                    objtfile = open(path, 'a')
-            
-            objtfile.write('\n')
-            k = 0
-            
-            print('listnamecols')
-            for name in listnamecols:
-                if 'path' in name:
-                    print(name)
-            
-            print('gdat.dictmileoutp.keys()')
-            print(sorted(list(gdat.dictmileoutp.keys())))
-            for name in listnamecols:
-                valu = gdat.dictmileoutp[name]
-                if isinstance(valu, str) or isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
-                    if k > 0:
-                        objtfile.write(',')
-                    if isinstance(valu, str):
-                        objtfile.write('%s' % valu)
-                    elif isinstance(valu, float) or isinstance(valu, int) or isinstance(valu, bool):
-                        objtfile.write('%g' % valu)
-                    k += 1
-            #objtfile.write('\n')
-            if typeverb > 0:
-                print('Writing to %s...' % path)
-            objtfile.close()
+        write_cluster_output_csv(gdat, typeverb=typeverb)
 
     # measure final time
     gdat.timefinl = modutime.time()
