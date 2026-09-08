@@ -36,7 +36,7 @@ from .cache import read_cached_output
 from .output import write_cluster_output_csv, write_target_output_csv
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
-from .visualization import plot_binned_rms, plot_work_tser
+from .visualization import plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_resi_series, retr_stdvresi_series, setp_dictmodl_sample
 import nicomedia
 import lygos
 import ephesos
@@ -4169,26 +4169,7 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
                 summgene(timefine)
                 raise Exception('timefine.size != lcurtemp.size')
 
-        if namecompmodl == 'Total':
-            colr = 'b'
-            labl = 'Total Model'
-        elif namecompmodl == 'Baseline':
-            colr = 'orange'
-            labl = 'Baseline'
-        elif namecompmodl == 'Transit':
-            colr = 'r'
-            labl = 'Transit'
-        elif namecompmodl == 'StarFlaring':
-            colr = 'g'
-            labl = 'Flares'
-        elif namecompmodl == 'excs':
-            colr = 'olive'
-            labl = 'Excess'
-        else:
-            print('')
-            print('namecompmodl')
-            print(namecompmodl)
-            raise Exception('')
+        labl, colr = retr_compmodl_style(namecompmodl)
         dictmodl['pmed' + namecompmodlextn] = {'tser': lcurtemp, 'time': timefine, 'labl': labl, 'colr': colr}
     
     if p is not None and gdat.listlablinst[b][p] != '':
@@ -4232,16 +4213,7 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
     
     # plot the posterior median residual
     strgextn = 'ResidualPosteriorMedian%s%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h])
-    if gdat.typeinfe == 'samp':
-        if gdat.fitt.typemodlenerfitt == 'full':
-            tserdatatemp = np.median(gdat.dictsamp['resi%s' % strg][:, :, e], 0)
-        else:
-            tserdatatemp = np.median(gmod.listdictsamp[e]['resi%s' % strg][:, :, 0], 0)
-    else:
-        if gdat.fitt.typemodlenerfitt == 'full':
-            tserdatatemp = gdat.dictmlik['resi%s' % strg][:, e]
-        else:
-            tserdatatemp = gmod.listdictmlik[e]['resi%s' % strg][:, 0]
+    tserdatatemp = retr_resi_series(gdat, gmod, strg, e)
     
     if gdat.booldiag:
         if tserdatatemp.ndim != 1:
@@ -4287,11 +4259,19 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
                     raise Exception('')
 
             if w == 0:
-                dictmodl[namevarbsamp]['labl'] = 'Model'
+                labl = 'Model'
             else:
-                dictmodl[namevarbsamp]['labl'] = None
-            dictmodl[namevarbsamp]['colr'] = 'b'
-            dictmodl[namevarbsamp]['alph'] = 0.2
+                labl = None
+            setp_dictmodl_sample(
+                dictmodl,
+                namevarbsamp,
+                dictmodl[namevarbsamp]['tser'],
+                dictmodl[namevarbsamp]['time'],
+                labl,
+                'b',
+                0.2,
+                booldiag=gdat.booldiag,
+            )
         pathplot = plot_work_tser(
             plot_tser,
             gdat,
@@ -4311,40 +4291,28 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
             if namecompmodl == 'Total':
                 continue
 
-            if namecompmodl == 'Total':
-                colr = 'b'
-                labl = 'Total Model'
-            elif namecompmodl == 'Baseline':
-                colr = 'orange'
-                labl = 'Baseline'
-            elif namecompmodl == 'Transit':
-                colr = 'r'
-                labl = 'Transit'
-            elif namecompmodl == 'StarFlaring':
-                colr = 'g'
-                labl = 'Flares'
-            elif namecompmodl == 'excs':
-                colr = 'olive'
-                labl = 'Excess'
-            else:
-                print('')
-                print('namecompmodl')
-                print(namecompmodl)
-                raise Exception('')
+            labl, colr = retr_compmodl_style(namecompmodl)
 
             for w in range(gdat.numbsampplot):
                 namevarbsamp = 'PosteriorSamples%s%04d' % (namecompmodl, w)
                 if gdat.fitt.typemodlenerfitt == 'full':
-                    dictmodl[namevarbsamp] = {'tser': gdat.dictsamp['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, e], 'time': gdat.timethisfittfine[b][p]}
+                    tsermodl = gdat.dictsamp['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, e]
                 else:
-                    dictmodl[namevarbsamp] = \
-                                {'tser': gmod.listdictsamp[e]['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, 0], 'time': gdat.timethisfittfine[b][p]}
+                    tsermodl = gmod.listdictsamp[e]['Model_Fine_%s_%s' % (namecompmodl, strg)][w, :, 0]
                 if w == 0:
-                    dictmodl[namevarbsamp]['labl'] = labl
+                    lablsamp = labl
                 else:
-                    dictmodl[namevarbsamp]['labl'] = None
-                dictmodl[namevarbsamp]['colr'] = colr
-                dictmodl[namevarbsamp]['alph'] = 0.6
+                    lablsamp = None
+                setp_dictmodl_sample(
+                    dictmodl,
+                    namevarbsamp,
+                    tsermodl,
+                    gdat.timethisfittfine[b][p],
+                    lablsamp,
+                    colr,
+                    0.6,
+                    booldiag=gdat.booldiag,
+                )
         pathplot = plot_work_tser(
             plot_tser,
             gdat,
@@ -4358,16 +4326,7 @@ def plot_tsermodlpost(gdat, strgmodl, b, p, y, e, h):
     # plot the binned RMS
     path = gdat.pathvisutarg + 'stdvrebn%s%s.%s' % (gdat.strgcnfg, gdat.liststrgdatafittiter[h], gdat.typefileplot)
     if not os.path.exists(path):
-        if gdat.typeinfe == 'samp':
-            if gdat.fitt.typemodlenerfitt == 'full':
-                stdvresi = np.median(gdat.dictsamp['stdvresi%s' % strg][:, :, e], 0)
-            else:
-                stdvresi = np.median(gmod.listdictsamp[e]['stdvresi%s' % strg][:, :, 0], 0)
-        else:
-            if gdat.fitt.typemodlenerfitt == 'full':
-                stdvresi = gdat.dictmlik['stdvresi%s' % strg][:, e]
-            else:
-                stdvresi = gmod.listdictmlik[e]['stdvresi' % strg][:, 0]
+        stdvresi = retr_stdvresi_series(gdat, gmod, strg, e)
 
         gdat.cadetimeplot = gdat.cadetime[b][p]
         plot_binned_rms(gdat, path, gdat.listdeltrebn[b][p], stdvresi)
