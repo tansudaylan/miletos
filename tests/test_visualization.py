@@ -1,5 +1,7 @@
+import importlib
 import os
 import types
+import warnings
 
 import pytest
 
@@ -7,10 +9,20 @@ import numpy as np
 
 from miletos.visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_modl_fine_series, setp_dictmodl_sample
 from miletos.visualization import retr_lablinst_part, retr_lablcnfg_part, retr_summary_extn, retr_summary_title
+import miletos.visualization as vismod
 
 
 class DummyGdat:
     pass
+
+
+def test_visualization_module_reloads_without_invalid_escape_warnings():
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter('always')
+        importlib.reload(vismod)
+
+    deprecations = [item for item in captured if issubclass(item.category, DeprecationWarning)]
+    assert not deprecations
 
 
 def test_plot_work_tser_forwards_standard_arguments():
@@ -441,8 +453,8 @@ def test_build_spec_data_groups():
     assert len(listindv) == 5
     assert len(listgroup) == 2
     assert listindv[0]['color'] == 'k'
-    assert listindv[2]['labltemp'] == '$K_s$ (Kovacs\&Kovacs2019)'
-    assert listindv[4]['labltemp'] == 'IRAC $\mu$m (Garhart+2019)'
+    assert listindv[2]['labltemp'] == r'$K_s$ (Kovacs\&Kovacs2019)'
+    assert listindv[4]['labltemp'] == r'IRAC $\mu$m (Garhart+2019)'
     assert listindv[1]['xdat'] == arrydata[1, 0]
     assert listindv[1]['ydept'] == arrydata[1, 2]
     assert np.isclose(listindv[1]['yflux'], 1e-9 * arrydata[1, 6])
@@ -645,7 +657,7 @@ def test_build_magnitude_population_plot_data():
 
     dictmagt3 = build_magnitude_population_plot_data(gdat, gmod, dictpopl, 3, 1)
     assert dictmagt3['strgvarbmagt'] == 'rvelsemascal_jmag'
-    assert dictmagt3['lablxaxi'] == '$K^{\prime}_{J}$'
+    assert dictmagt3['lablxaxi'] == r'$K^{\prime}_{J}$'
     assert np.array_equal(dictmagt3['indx'], np.array([1, 3]))
     assert np.isclose(dictmagt3['varbtargnorm'], 0.6309573444801932)
     assert dictmagt3['listlabel'][0]['name'] == 'B'

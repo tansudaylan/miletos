@@ -242,7 +242,7 @@ def build_alle_settings_defaults(gdat, gmod, typemodl):
                     '-10',
                     '1',
                     'uniform -20 20',
-                    '$\ln{\sigma_{\mathrm{RV;%s}}}$' % gdat.listlablinst[b][p],
+                    r'$\ln{\sigma_{\mathrm{RV;%s}}}$' % gdat.listlablinst[b][p],
                     '',
                 ]
 
@@ -312,21 +312,21 @@ def build_alle_params_defaults(gdat, gmod, typemodl):
             '%f' % gdat.fitt.prio.meanpara.rratcomp[j],
             '1',
             'uniform 0 %f' % (4 * gdat.fitt.prio.meanpara.rratcomp[j]),
-            '$R_{%s} / R_\star$' % gdat.liststrgcomp[j],
+            r'$R_{%s} / R_\star$' % gdat.liststrgcomp[j],
             '',
         ]
         dictalleparadefa[strgrsma] = [
             '%f' % gdat.fitt.prio.meanpara.rsmacomp[j],
             '1',
             'uniform 0 %f' % (4 * gdat.fitt.prio.meanpara.rsmacomp[j]),
-            '$(R_\star + R_{%s}) / a_{%s}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]),
+            r'$(R_\star + R_{%s}) / a_{%s}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]),
             '',
         ]
         dictalleparadefa[strgcosi] = [
             '%f' % gdat.fitt.prio.meanpara.cosicomp[j],
             '1',
             'uniform 0 %f' % max(0.1, 4 * gdat.fitt.prio.meanpara.cosicomp[j]),
-            '$\cos{i_{%s}}$' % gdat.liststrgcomp[j],
+            r'$\cos{i_{%s}}$' % gdat.liststrgcomp[j],
             '',
         ]
         dictalleparadefa[strgepoc] = [
@@ -336,8 +336,8 @@ def build_alle_params_defaults(gdat, gmod, typemodl):
                 gdat.fitt.prio.meanpara.epocmtracomp[j] - gdat.stdvepocmtracompprio[j],
                 gdat.fitt.prio.meanpara.epocmtracomp[j] + gdat.stdvepocmtracompprio[j],
             ),
-            '$T_{0;%s}$' % gdat.liststrgcomp[j],
-            '$\mathrm{BJD}$',
+            r'$T_{0;%s}$' % gdat.liststrgcomp[j],
+            r'$\mathrm{BJD}$',
         ]
         dictalleparadefa[strgperi] = [
             '%f' % gdat.fitt.prio.meanpara.pericomp[j],
@@ -353,14 +353,14 @@ def build_alle_params_defaults(gdat, gmod, typemodl):
             '%f' % gdat.ecoscompprio[j],
             '0',
             'uniform -0.9 0.9',
-            '$\sqrt{e_{%s}} \cos{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]),
+            r'$\sqrt{e_{%s}} \cos{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]),
             '',
         ]
         dictalleparadefa[strgesin] = [
             '%f' % gdat.esincompprio[j],
             '0',
             'uniform -0.9 0.9',
-            '$\sqrt{e_{%s}} \sin{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]),
+            r'$\sqrt{e_{%s}} \sin{\omega_{%s}}$' % (gdat.liststrgcomp[j], gdat.liststrgcomp[j]),
             '',
         ]
         dictalleparadefa[strgrvelsema] = [
@@ -384,17 +384,17 @@ def build_alle_params_defaults(gdat, gmod, typemodl):
                         '1e-3',
                         '1',
                         'uniform 0 1',
-                        '$J_{%s; \mathrm{%s}}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]),
+                        r'$J_{%s; \mathrm{%s}}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]),
                         '',
                     ]
                     dictalleparadefa['%s_phase_curve_beaming_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = [
-                        '0', '1', 'uniform 0 10', '$A_\mathrm{beam; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), ''
+                        '0', '1', 'uniform 0 10', r'$A_\mathrm{beam; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), ''
                     ]
                     dictalleparadefa['%s_phase_curve_atmospheric_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = [
-                        '0', '1', 'uniform 0 10', '$A_\mathrm{atmo; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), ''
+                        '0', '1', 'uniform 0 10', r'$A_\mathrm{atmo; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), ''
                     ]
                     dictalleparadefa['%s_phase_curve_ellipsoidal_%s' % (gdat.liststrgcomp[j], gdat.liststrginst[b][p])] = [
-                        '0', '1', 'uniform 0 10', '$A_\mathrm{elli; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), ''
+                        '0', '1', 'uniform 0 10', r'$A_\mathrm{elli; %s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]), ''
                     ]
 
         if typemodl == '0003':
@@ -408,7 +408,7 @@ def build_alle_params_defaults(gdat, gmod, typemodl):
                         '0',
                         '1',
                         'uniform %.3g %.3g' % (minmshft, maxmshft),
-                        '$\Delta_\mathrm{%s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]),
+                        r'$\Delta_\mathrm{%s; %s}$' % (gdat.liststrgcomp[j], gdat.listlablinst[b][p]),
                         '',
                     ]
 
@@ -418,13 +418,13 @@ def build_alle_params_defaults(gdat, gmod, typemodl):
             strgldc2 = 'host_ldc_q2_%s' % gdat.liststrginst[b][p]
             strgscal = 'ln_err_flux_%s' % gdat.liststrginst[b][p]
             strgbaseoffs = 'baseline_offset_flux_%s' % gdat.liststrginst[b][p]
-            dictalleparadefa[strgldc1] = ['0.5', '1', 'uniform 0 1', '$q_{1; \mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-            dictalleparadefa[strgldc2] = ['0.5', '1', 'uniform 0 1', '$q_{2; \mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-            dictalleparadefa[strgscal] = ['-7', '1', 'uniform -10 -4', '$\ln{\sigma_\mathrm{%s}}$' % gdat.listlablinst[b][p], '']
-            dictalleparadefa[strgbaseoffs] = ['0', '1', 'uniform -1 1', '$O_{\mathrm{%s}}$' % gdat.listlablinst[b][p], '']
+            dictalleparadefa[strgldc1] = ['0.5', '1', 'uniform 0 1', r'$q_{1; \mathrm{%s}}$' % gdat.listlablinst[b][p], '']
+            dictalleparadefa[strgldc2] = ['0.5', '1', 'uniform 0 1', r'$q_{2; \mathrm{%s}}$' % gdat.listlablinst[b][p], '']
+            dictalleparadefa[strgscal] = ['-7', '1', 'uniform -10 -4', r'$\ln{\sigma_\mathrm{%s}}$' % gdat.listlablinst[b][p], '']
+            dictalleparadefa[strgbaseoffs] = ['0', '1', 'uniform -1 1', r'$O_{\mathrm{%s}}$' % gdat.listlablinst[b][p], '']
             if b == 1:
                 dictalleparadefa['ln_jitter_rv_%s' % gdat.liststrginst[b][p]] = [
-                    '-10', '1', 'uniform -20 20', '$\ln{\sigma_{\mathrm{RV;%s}}}$' % gdat.listlablinst[b][p], ''
+                    '-10', '1', 'uniform -20 20', r'$\ln{\sigma_{\mathrm{RV;%s}}}$' % gdat.listlablinst[b][p], ''
                 ]
 
     return dictalleparadefa
@@ -650,7 +650,7 @@ def write_post_pcur_command_csv(gdat, gmod, typemodl, typeverb=1):
             if gdat.dictlist[strgfeat].ndim == 2:
                 for j in gmod.indxcomp:
                     fileoutp.write(
-                        '%s,%s,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (
+                        r'%s,%s,$%.3g \substack{+%.3g \\ -%.3g}$\\\n' % (
                             strgfeat,
                             gdat.liststrgcomp[j],
                             gdat.dicterrr[strgfeat][0, j],
@@ -660,7 +660,7 @@ def write_post_pcur_command_csv(gdat, gmod, typemodl, typeverb=1):
                     )
             else:
                 fileoutp.write(
-                    '%s,,$%.3g \substack{+%.3g \\\\ -%.3g}$\\\\\n' % (
+                    r'%s,,$%.3g \substack{+%.3g \\ -%.3g}$\\\n' % (
                         strgfeat,
                         gdat.dicterrr[strgfeat][0],
                         gdat.dicterrr[strgfeat][1],

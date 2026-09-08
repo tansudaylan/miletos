@@ -1511,10 +1511,10 @@ def proc_alle(gdat, typemodl):
         write_alle_params(gdat, gmod, typemodl, writ_filealle, typeverb=gdat.typeverb)
         if typemodl == 'pfss':
             for p in gdat.indxinst[1]:
-                                ['', 'host_vsini,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.vsiistar, 0, \
-                                                                                                                            10 * gdat.vsiistar)], \
-                                ['', 'host_lambda_%s,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.liststrginst[1][p], gdat.lambstarprio, 0, \
-                                                                                                                            10 * gdat.lambstarprio)], \
+                                [r'', r'host_vsini,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.vsiistar, 0, \
+                                                                                                                             10 * gdat.vsiistar)], \
+                                [r'', r'host_lambda_%s,%g,1,uniform %g %g,$v \sin i$$,\n' % (gdat.liststrginst[1][p], gdat.lambstarprio, 0, \
+                                                                                                                             10 * gdat.lambstarprio)], \
     
     ## settings
     write_alle_settings(gdat, gmod, typemodl, writ_filealle, typeverb=gdat.typeverb)
@@ -1988,7 +1988,7 @@ def proc_alle(gdat, typemodl):
                     listsampatmo = np.loadtxt(path)
                     
                     # plot ATMO posterior
-                    gmod.listlablpara = [['$\kappa_{IR}$', ''], ['$\gamma$', ''], ['$\psi$', ''], ['[M/H]', ''], \
+                    gmod.listlablpara = [[r'$\kappa_{IR}$', ''], [r'$\gamma$', ''], [r'$\psi$', ''], ['[M/H]', ''], \
                                                                                                     ['[C/H]', ''], ['[O/H]', '']]
                     tdpy.plot_grid(gdat.pathalle[typemodl], 'post_atmo', listsampatmo, gmod.listlablpara, plotsize=2.5)
    
@@ -2017,8 +2017,8 @@ def proc_alle(gdat, typemodl):
                         figr, axis = plt.subplots(figsize=gdat.figrsizeydob)
                         gdat.kdegpsii = dictkdegpsii['kdegpsii']
                         axis.plot(gdat.meanpsii, gdat.kdegpsii)
-                        axis.set_xlabel('$\psi$')
-                        axis.set_ylabel('$K_\psi$')
+                        axis.set_xlabel(r'$\psi$')
+                        axis.set_ylabel(r'$K_\psi$')
                         plt.subplots_adjust()
                         if gdat.typeverb > 0:
                             print('Writing to %s...' % path)
@@ -2439,7 +2439,7 @@ def plot_popl(gdat, strgpdfn):
         #axis.errorbar(wlenwasp0107, deptwasp0107, yerr=deptstdvwasp0107, ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
         axis.errorbar(wlenwasp0107-10833, deptwasp0107*fact[0], yerr=deptstdvwasp0107*dictheli['factstdv'][0], ls='', ms=1, lw=1, marker='o', color='k', alpha=1)
         axis.set_xlabel(r'Wavelength - 10,833 [$\AA$]')
-        axis.set_ylabel('Depth [\%]')
+        axis.set_ylabel(r'Depth [\%]')
         plt.subplots_adjust(bottom=0.2, left=0.2)
         path = pathvisudataplan + 'dept_%s_%s.%s' % (gdat.strgtarg, strgpdfn, gdat.typefileplot)
         #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
@@ -3791,7 +3791,7 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 if nameparablinshap.startswith('sigmgprobase'):
                     minmpara = 0.01 # [ppt]
                     maxmpara = 4. # [ppt]
-                    lablpara = ['$\sigma_{GP}$', '']
+                    lablpara = [r'$\sigma_{GP}$', '']
                 if nameparablinshap.startswith('rhoogprobase'):
                     minmpara = 1e-3
                     maxmpara = 0.3
@@ -6318,9 +6318,12 @@ def plot_tser( \
             listarrytimeconc.append(timedatabind)
         if dictmodl is not None:
             for attr in dictmodl:
+                if 'time' not in dictmodl[attr]:
+                    continue
                 listarrytimeconc.append(dictmodl[attr]['time'])
         # determine the time offset
-        timeoffs = tdpy.retr_offstime(np.concatenate(listarrytimeconc))
+        if len(listarrytimeconc) > 0:
+            timeoffs = tdpy.retr_offstime(np.concatenate(listarrytimeconc))
 
     if typexdat == 'phas':
         xdatoffs = phasoffs
@@ -6380,16 +6383,28 @@ def plot_tser( \
             else:
                 alpha = None
             
-            if dictmodl[attr]['tser'].ndim != 1:
+            if 'tser' in dictmodl[attr]:
+                tser = dictmodl[attr]['tser']
+            elif 'lcur' in dictmodl[attr]:
+                tser = dictmodl[attr]['lcur']
+            else:
+                print('')
+                print('')
+                print('')
+                print('dictmodl[attr] keys')
+                print(dictmodl[attr].keys())
+                raise Exception('dictmodl entry does not contain tser or lcur.')
+
+            tser = np.asarray(tser).reshape(-1)
+            if tser.ndim != 1:
                 print('')
                 print('')
                 print('')
                 print('dictmodl[attr][tser]')
-                summgene(dictmodl[attr]['tser'])
+                summgene(tser)
                 raise Exception('dictmodl[attr][tser].ndim != 1')
-            
-            
-            diftimemodl = dictmodl[attr]['time'][1:] - dictmodl[attr]['time'][:-1]
+
+            diftimemodl = np.asarray(dictmodl[attr]['time'])[1:] - np.asarray(dictmodl[attr]['time'])[:-1]
             if boolbrekmodl and np.std(diftimemodl) < 0.1 * np.mean(diftimemodl):
 
                 minmdiftimemodl = np.amin(diftimemodl)
@@ -6413,11 +6428,11 @@ def plot_tser( \
                 ydat = []
                 for n in range(numbtimechun):
                     xdat.append(dictmodl[attr]['time'][indxtimebrekregi[n]:indxtimebrekregi[n+1]])
-                    ydat.append(dictmodl[attr]['tser'][indxtimebrekregi[n]:indxtimebrekregi[n+1]])
+                    ydat.append(tser[indxtimebrekregi[n]:indxtimebrekregi[n+1]])
                     
             else:
                 xdat = [dictmodl[attr]['time']]
-                ydat = [dictmodl[attr]['tser']]
+                ydat = [tser]
             numbchun = len(xdat)
             
             if boolbrekmodl and numbchun > 0.5 * dictmodl[attr]['time'].size:
@@ -11371,13 +11386,13 @@ def init( \
                     gmod.listmaxmpara = [ 3.,  3., 0.4, 89.9, 0.6, 1e-1]
                     
                     for numbspottemp in range(gdat.numbspot):
-                        gmod.listlablpara += [['$\\theta_{%d}$' % numbspottemp, 'deg'], \
-                                                    ['$\\phi_{%d}$' % numbspottemp, 'deg'], ['$R_{%d}$' % numbspottemp, '']]
+                        gmod.listlablpara += [[r'$\theta_{%d}$' % numbspottemp, 'deg'], \
+                                                    [r'$\phi_{%d}$' % numbspottemp, 'deg'], [r'$R_{%d}$' % numbspottemp, '']]
                         listscalpara += ['self', 'self', 'self']
                         gmod.listminmpara += [-90.,   0.,  0.]
                         gmod.listmaxmpara += [ 90., 360., 0.4]
                         if gdat.boolevol:
-                            gmod.listlablpara += [['$T_{s;%d}$' % numbspottemp, 'day'], ['$\\sigma_{s;%d}$' % numbspottemp, '']]
+                            gmod.listlablpara += [[r'$T_{s;%d}$' % numbspottemp, 'day'], [r'$\sigma_{s;%d}$' % numbspottemp, '']]
                             listscalpara += ['self', 'self']
                             gmod.listminmpara += [gdat.minmtime, 0.1]
                             gmod.listmaxmpara += [gdat.maxmtime, 20.]
@@ -11524,7 +11539,7 @@ def init( \
             #    stdvrflxresi = np.nanstd(rebn_tser(arry, delt=gdat.listdeltrebn[b][p])[:, 1])
             axis.plot(gdat.listener[p], pmedrratcompspec, ls='', marker='o')
             axis.set_ylabel('$R_p/R_*$')
-            axis.set_xlabel('Wavelength [$\mu$m]')
+            axis.set_xlabel(r'Wavelength [$\mu$m]')
             plt.tight_layout()
             if gdat.typeverb > 0:
                 print('Writing to %s...' % path)

@@ -453,10 +453,10 @@ def build_spec_data_groups(arrydata):
 
     listindv = [
         {'indx': 0, 'color': 'k', 'labltemp': 'TESS (This work)'},
-        {'indx': 1, 'color': 'm', 'labltemp': 'Z$^\prime$ (Delrez+2016)'},
-        {'indx': 2, 'color': 'purple', 'labltemp': '$K_s$ (Kovacs\&Kovacs2019)'},
-        {'indx': 3, 'color': 'olive', 'labltemp': 'IRAC $\mu$m (Garhart+2019)'},
-        {'indx': 4, 'color': 'olive', 'labltemp': 'IRAC $\mu$m (Garhart+2019)'},
+        {'indx': 1, 'color': 'm', 'labltemp': r'Z$^\prime$ (Delrez+2016)'},
+        {'indx': 2, 'color': 'purple', 'labltemp': r'$K_s$ (Kovacs\&Kovacs2019)'},
+        {'indx': 3, 'color': 'olive', 'labltemp': r'IRAC $\mu$m (Garhart+2019)'},
+        {'indx': 4, 'color': 'olive', 'labltemp': r'IRAC $\mu$m (Garhart+2019)'},
     ]
     listgroup = [
         {'slce': slice(5, 22), 'color': 'r', 'labltemp': 'HST G102 (Evans+2019)'},
@@ -741,12 +741,12 @@ def build_magnitude_population_plot_data(gdat, gmod, dictpopl, b, a):
         varb = dictpopl['jmagsyst']
     elif b == 2:
         strgvarbmagt = 'rvelsemascal_vmag'
-        lablxaxi = '$K^{\prime}_{V}$'
+        lablxaxi = r'$K^{\prime}_{V}$'
         varbtarg = np.sqrt(10 ** (-gdat.vmagsyst / 2.5)) / gdat.massstar ** (2.0 / 3.0)
         varb = np.sqrt(10 ** (-dictpopl['vmagsyst'] / 2.5)) / dictpopl['massstar'] ** (2.0 / 3.0)
     elif b == 3:
         strgvarbmagt = 'rvelsemascal_jmag'
-        lablxaxi = '$K^{\prime}_{J}$'
+        lablxaxi = r'$K^{\prime}_{J}$'
         varbtarg = np.sqrt(10 ** (-gdat.vmagsyst / 2.5)) / gdat.massstar ** (2.0 / 3.0)
         varb = np.sqrt(10 ** (-dictpopl['jmagsyst'] / 2.5)) / dictpopl['massstar'] ** (2.0 / 3.0)
     else:

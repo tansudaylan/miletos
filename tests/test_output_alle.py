@@ -128,7 +128,7 @@ def test_build_alle_params_defaults_builds_expected_keys():
 
     assert dictpara['b_rr'][0] == '0.100000'
     assert dictpara['b_rsuma'][2] == 'uniform 0 20.000000'
-    assert dictpara['b_epoch'][4] == '$\mathrm{BJD}$'
+    assert dictpara['b_epoch'][4] == r'$\mathrm{BJD}$'
     assert dictpara['b_K'][0] == '10.000000'
     assert dictpara['b_sbratio_TESS'][0] == '1e-3'
     assert dictpara['b_phase_curve_atmospheric_shift_TESS'][2] == 'uniform -0.5 0.5'
