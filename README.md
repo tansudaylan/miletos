@@ -1,15 +1,37 @@
 # Miletos
 
-## Introduction
-Miletos is a pipeline to analyze and forward-model time-series data in astrophysics. Using time-series data, it can be used to partially characterize (i.e., to the extent allowed by the information content in the provided time-series data)
-- systems of planets, stars, and compact objects including their
-    - orbits (e.g., periods, semi-major axes, inclinations, spin-orbit alignments), bulk structural features (e.g., radii, masses, densities), and surface brightness distributions of the bodies and
-    - properties of spots and flares on the stars (e.g., sizes and evolution time scales);
-- explosive astrophysical phenomena such as supernovae including
-    - brightnening profile and the size of any companions.
+## Scientific purpose
+Miletos is a time-series analysis and forward-modeling pipeline for astrophysical systems. It is designed to interpret time-domain photometry and related observations by combining detrending, period searches, diagnostics, and Bayesian forward modeling.
 
+## Scope
+Miletos sits in the time-domain exoplanet and stellar-variability layer of the broader scientific ecosystem. It consumes observational time-series data, performs relevant preliminary analyses, and produces scientifically interpretable plots and summary outputs for subsequent inference.
 
-Miletos is an end-to-end pipeline that takes its inputs and configuration parameters from the user in a single function call, fetches the data, performs the relevant analyses and modeling, plots and saves the results to the disk, and returns a dictionary that contains all of the relevant intermediate and output variables. Versatile function arguments make it possible to extensively customize the behavior of the pipeline.
+## Installation
+
+```bash
+cd /path/to/miletos
+python -m pip install -e .
+```
+
+## Minimal usage
+The package is intended to be used through the active workflow entry points and model initialization functions rather than through ad hoc scripts.
+
+```python
+import miletos
+# Call the supported workflow entry point with configuration arguments.
+```
+
+## What the workflow does
+Miletos can be used to:
+
+- detrend and diagnose time-series measurements;
+- perform period searches and candidate identification;
+- inspect intermediate model-building diagnostics;
+- compare forward models against observed data;
+- produce final plots and stored summary products that make the modeling chain inspectable.
+
+## Development status
+Miletos remains a maintained research-grade pipeline rather than a broad generic library. The supported interface is the importable workflow and the documented model entry points; legacy or exploratory fragments should be treated as historical unless explicitly migrated into the active API.
 
 
 ## Input Data

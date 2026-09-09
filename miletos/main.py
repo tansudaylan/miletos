@@ -6284,11 +6284,13 @@ def plot_tser( \
     if pathvisu is not None:
         dicttdpy = tdpy.retr_dictstrg()
 
+        os.makedirs(pathvisu, exist_ok=True)
+
         if strgextn[0] == '_':
             strgextn = strgextn[1:]
 
-        path = pathvisu + '%s_%s.%s' % (dicttdpy['tser'], strgextn, typefileplot)
-    
+        path = os.path.join(pathvisu, '%s_%s.%s' % (dicttdpy['tser'], strgextn, typefileplot))
+
         # skip plotting
         if not boolwritover and os.path.exists(path):
             print('Plot already exists at %s. Skipping...' % path)
