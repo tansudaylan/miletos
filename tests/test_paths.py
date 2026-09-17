@@ -1,5 +1,5 @@
 import miletos
-from miletos.paths import chec_path_input, setp_alle_path, setp_feature_paths, setp_mast_path, setp_target_paths
+from miletos.paths import chec_path_input, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 
 
 class DummyGdat:
@@ -36,6 +36,28 @@ def test_setp_target_paths_and_input_check():
     assert gdat.pathtargcnfg == '/tmp/run/Demo/'
     assert gdat.pathdatatarg == '/tmp/run/Demo/data/'
     assert gdat.pathvisutarg == '/tmp/run/Demo/visuals/'
+
+
+def test_path_input_check_precedes_default_base_path(monkeypatch, tmp_path):
+    monkeypatch.setenv('MILETOS_DATA_PATH', str(tmp_path / 'miletos'))
+    monkeypatch.setenv('LYGOS_DATA_PATH', str(tmp_path / 'lygos'))
+
+    for values in (
+        (None, None, None, None),
+        ('/tmp/run/', None, None, None),
+        (None, None, '/tmp/data/', '/tmp/visuals/'),
+    ):
+        gdat = DummyGdat()
+        gdat.pathtarg, gdat.pathbase, gdat.pathdatatarg, gdat.pathvisutarg = values
+        assert chec_path_input(gdat)
+
+    gdat = DummyGdat()
+    gdat.pathtarg = '/tmp/run/'
+    gdat.pathbase = None
+    gdat.pathdatatarg = None
+    gdat.pathvisutarg = None
+    setp_base_paths(gdat)
+    assert not chec_path_input(gdat)
 
 
 def test_setp_mast_path(monkeypatch, tmp_path):

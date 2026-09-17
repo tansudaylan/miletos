@@ -1317,8 +1317,8 @@ def calc_feat_alle(gdat, strgpdfn):
     gdat.dictlist['imfa'] = nicomedia.retr_imfa(gdat.dictlist['cosicomp'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
    
     # RV semi-amplitude
-    gdat.dictlist['rvelsemapred'] = nicomedia.retr_rvelsema(gdat.dictlist['pericomp'], gdat.dictlist['masscomppred'], \
-                                                                        gdat.dictlist['massstar'], gdat.dictlist['incl'], gdat.dictlist['ecce'])
+    gdat.dictlist['rvelsemapred'] = nicomedia.retr_rvelsema(gdat.dictlist['pericomp'], gdat.dictlist['massstar'], \
+                                                                        gdat.dictlist['masscomppred'], gdat.dictlist['incl'], gdat.dictlist['ecce'])
     
     ## expected Doppler beaming (DB)
     deptbeam = 1e3 * 4. * gdat.dictlist['rvelsemapred'] / 3e8 * gdat.consbeam # [ppt]
@@ -3114,7 +3114,8 @@ def rebn_tser(arry, numbbins=None, delt=None, blimxdat=None):
     
     if numbbins is not None:
         arryrebn = np.full(shaparryrebn, fill_value=np.nan)
-        blimxdat = np.linspace(np.amin(xdat), np.amax(xdat), numbbins + 1)
+        if blimxdat is None:
+            blimxdat = np.linspace(np.amin(xdat), np.amax(xdat), numbbins + 1)
     
     if delt is not None or blimxdat is not None:
         numbbins = blimxdat.size - 1
@@ -3129,12 +3130,15 @@ def rebn_tser(arry, numbbins=None, delt=None, blimxdat=None):
 
     indxbins = np.arange(numbbins)
     for k in indxbins:
-        indxxdat = np.where((xdat < blimxdat[k+1]) & (xdat > blimxdat[k]))[0]
+        if k == numbbins - 1:
+            indxxdat = np.where((xdat >= blimxdat[k]) & (xdat <= blimxdat[k+1]))[0]
+        else:
+            indxxdat = np.where((xdat >= blimxdat[k]) & (xdat < blimxdat[k+1]))[0]
         if indxxdat.size > 0:
             #if arry.ndim == 3:
             arryrebn[k, ..., 1] = np.mean(arry[indxxdat, ..., 1], axis=0)
             stdvfrst  = np.sqrt(np.nansum(arry[indxxdat, ..., 2]**2, axis=0)) / indxxdat.size
-            stdvseco = np.std(arry[indxxdat, ..., 1], axis=0)
+            stdvseco = np.std(arry[indxxdat, ..., 1], axis=0) / np.sqrt(indxxdat.size)
             arryrebn[k, ..., 2] = np.sqrt(stdvfrst**2 + stdvseco**2)
             #else:
             #    arryrebn[k, 1] = np.mean(arry[indxxdat, 1], axis=0)
@@ -7281,9 +7285,6 @@ def init( \
         if '__' not in attr and attr != 'gdat':
             setattr(gdat, attr, valu)
 
-    # paths
-    setp_base_paths(gdat)
-    
     # measure initial time
     gdat.timeinit = modutime.time()
 
@@ -7317,6 +7318,9 @@ def init( \
         print('gdat.pathvisutarg')
         print(gdat.pathvisutarg)
         raise Exception('')
+
+    # paths
+    setp_base_paths(gdat)
     
     ## ensure that target and star coordinates are not provided separately
     if gdat.rasctarg is not None and gdat.rascstar is not None:

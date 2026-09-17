@@ -57,6 +57,11 @@ def chec_path_input(gdat):
     """Return whether the supplied path inputs are mutually consistent."""
 
     boolvalid = (
+        gdat.pathtarg is None
+        and gdat.pathbase is None
+        and gdat.pathdatatarg is None
+        and gdat.pathvisutarg is None
+    ) or (
         gdat.pathtarg is not None
         and gdat.pathbase is None
         and gdat.pathdatatarg is None
