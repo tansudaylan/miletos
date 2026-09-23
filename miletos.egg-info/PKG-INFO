@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: miletos
 Version: 0.1
 Summary: Time-domain astrophysics analysis and forward-modelling workflows.
-Home-page: http://github.com/tdaylan/miletos
+Home-page: https://github.com/tansudaylan/miletos
 Author: Tansu Daylan
 Author-email: Tansu Daylan <tansu.daylan@gmail.com>
 License: MIT
@@ -55,11 +55,11 @@ Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Ke
 
 
 ## Analyses
-Miletos performs prelimiary analyses such as detrending, phase-folding, producing  Lomb-Scargle periodograms (via astropy) and performing Box Least Squares (BLS) searches via [Knidos](https://github.com/tdaylan/knidos). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
+Miletos performs prelimiary analyses such as detrending, phase-folding, producing  Lomb-Scargle periodograms (via astropy) and performing Box Least Squares (BLS) searches via [Knidos](https://github.com/tansudaylan/knidos). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
 
 ## Model
-Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tdaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
+Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tansudaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
 
 Miletos allows the user to marginalize over the model parameters, including those that characterize limb darkening using an parametrization that is efficient to sample from (Kipping 2013).
 

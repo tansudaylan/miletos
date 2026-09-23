@@ -1,9 +1,29 @@
 import miletos
-from miletos.paths import chec_path_input, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
+import pytest
+from miletos.paths import chec_path_input, get_data_path, get_repository_path, get_visuals_path, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 
 
 class DummyGdat:
     pass
+
+
+def test_repository_runtime_paths(monkeypatch, tmp_path):
+    """MILETOS_PATH owns repository-local data and visualization directories."""
+
+    monkeypatch.setenv('MILETOS_PATH', str(tmp_path))
+
+    assert get_repository_path() == tmp_path
+    assert get_data_path() == tmp_path / 'data'
+    assert get_visuals_path() == tmp_path / 'visuals'
+
+
+def test_repository_path_is_required(monkeypatch):
+    """Missing repository configuration fails with an actionable message."""
+
+    monkeypatch.delenv('MILETOS_PATH', raising=False)
+
+    with pytest.raises(EnvironmentError, match='MILETOS_PATH'):
+        get_repository_path()
 
 
 def test_retr_tsecpathlocl_reads_cached_sector_table(monkeypatch, tmp_path):

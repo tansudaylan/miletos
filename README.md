@@ -11,7 +11,10 @@ Miletos sits in the time-domain exoplanet and stellar-variability layer of the b
 ```bash
 cd /path/to/miletos
 python -m pip install -e .
+export MILETOS_PATH=/path/to/miletos
 ```
+
+`MILETOS_PATH` identifies the repository root. Runtime inputs belong under `data/` and generated pipeline outputs belong under `visuals/`. Both directories are ignored by Git. Existing deployments may continue to use `MILETOS_DATA_PATH` for an external data root while migrating.
 
 ## Minimal usage
 The package is intended to be used through the active workflow entry points and model initialization functions rather than through ad hoc scripts.
@@ -43,11 +46,11 @@ Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Ke
 
 
 ## Analyses
-Miletos performs prelimiary analyses such as detrending, phase-folding, producing  Lomb-Scargle periodograms (via astropy) and performing Box Least Squares (BLS) searches via [Knidos](https://github.com/tdaylan/knidos). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
+Miletos performs prelimiary analyses such as detrending, phase-folding, producing  Lomb-Scargle periodograms (via astropy) and performing Box Least Squares (BLS) searches via [Knidos](https://github.com/tansudaylan/knidos). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
 
 ## Model
-Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tdaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
+Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tansudaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
 
 Miletos allows the user to marginalize over the model parameters, including those that characterize limb darkening using an parametrization that is efficient to sample from (Kipping 2013).
 
