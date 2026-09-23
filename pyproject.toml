@@ -26,7 +26,6 @@ dependencies = [
   "ephesos",
   "gputil",
   "h5py",
-  "lygos",
   "nicomedia",
   "numba",
   "numpy",
@@ -35,6 +34,9 @@ dependencies = [
   "tdpy",
   "tqdm"
 ]
+
+[project.optional-dependencies]
+photometry = ["lygos"]
 
 [tool.setuptools.packages.find]
 include = ["miletos*"]
