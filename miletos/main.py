@@ -6704,7 +6704,7 @@ def read_tesskplr_file(path, typeinst='TESS', strgtypelcur='PDCSAP_FLUX', boolma
                 arry[:, 1] /= factnorm
                 arry[:, 2] /= factnorm
         
-        if strgtypelcurtemp == strgtypelcur:
+        if boollcur and strgtypelcurtemp == strgtypelcur:
             arryretr = arry
 
         # save
