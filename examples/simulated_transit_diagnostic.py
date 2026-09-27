@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """Run the deterministic Miletos simulated-transit diagnostic."""
 
-import argparse
 import os
 from pathlib import Path
 
 from miletos.diagnostics import run_simulated_transit_diagnostic
+from tdpy.cli import parse_plot_arguments
 
 
-def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+def parse_arguments():
+    return parse_plot_arguments(
         description="Run a deterministic Miletos simulated-transit diagnostic."
     )
-    parser.add_argument("--typefileplot", choices=("png", "pdf"), default="png")
-    return parser.parse_args()
 
 
 def main() -> int:
