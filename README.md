@@ -17,11 +17,24 @@ export MILETOS_PATH=/path/to/miletos
 `MILETOS_PATH` identifies the repository root. Runtime inputs belong under `data/` and generated pipeline outputs belong under `visuals/`. Both directories are ignored by Git. Existing deployments may continue to use `MILETOS_DATA_PATH` for an external data root while migrating.
 
 ## Minimal usage
-The package is intended to be used through the active workflow entry points and model initialization functions rather than through ad hoc scripts.
+Set `MILETOS_PATH` to the repository root and run the deterministic diagnostic:
+
+```bash
+python examples/simulated_transit_diagnostic.py --typefileplot png
+```
+
+The example injects an Ephesos transit into a deterministic simulated light curve, then uses Miletos to mask the transits during spline detrending, phase-fold the result, and calculate uncertainty-aware phase bins. It writes `visuals/simulated_transit_diagnostic.png`; use `--typefileplot pdf` for a vector figure.
+
+![Miletos simulated transit diagnostic showing the input light curve, spline detrending, and phase-folded output](docs/simulated_transit_diagnostic.png)
+
+The figure is generated from an explicitly simulated benchmark, not observational data. The reusable API is also available directly:
 
 ```python
-import miletos
-# Call the supported workflow entry point with configuration arguments.
+from pathlib import Path
+
+from miletos.diagnostics import run_simulated_transit_diagnostic
+
+result = run_simulated_transit_diagnostic(Path("visuals/transit_diagnostic.png"))
 ```
 
 ## What the workflow does
@@ -46,7 +59,7 @@ Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Ke
 
 
 ## Analyses
-Miletos performs prelimiary analyses such as detrending, phase-folding, producing  Lomb-Scargle periodograms (via astropy) and performing Box Least Squares (BLS) searches via [Knidos](https://github.com/tansudaylan/knidos). The outcome of the analyses are plotted, written on the disc, and eventually returned to the user. They are also used as priors for subsequent generative modeling of the data.
+Miletos performs preliminary analyses such as detrending, phase-folding, producing Lomb-Scargle periodograms (via Astropy), and performing Box Least Squares (BLS) searches. The outcomes are plotted, written to disk, and returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
 
 ## Model
@@ -66,7 +79,7 @@ When modeling exoplanetary systems (e.g., known exoplanets or TESS Objects of In
 
 
 ## Implementation and performance
-As a high-level pipeline, Miletos is conveniently written in python3. However, models evaluations, which are the bottle-neck of forward-modeling, are accelerated with just-in-time compiling or GPUs when necessary.
+As a high-level pipeline, Miletos is written in Python 3. Model evaluations, which are the bottleneck of forward modeling, can be accelerated with just-in-time compilation or GPUs when necessary.
 
 
 ## Usage
