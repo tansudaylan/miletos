@@ -1,11 +1,32 @@
 import numpy as np
 import types
 
-from miletos.output import build_alle_params_defaults, build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, writ_filealle
+from miletos.output import build_alle_params_defaults, build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, initialize_tser_containers, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, writ_filealle
 
 
 class DummyGdat:
     pass
+
+
+def test_initialize_tser_containers_preserves_nested_shapes_and_independence():
+    gdat = DummyGdat()
+    gdat.indxdatatser = [0, 1]
+    gdat.indxinst = [[0, 1], [0]]
+    gdat.indxchun = [[[0, 1], [0]], [[0, 1, 2]]]
+    gdat.arrytser = {}
+    gdat.listarrytser = {}
+
+    initialize_tser_containers(gdat, ['model', 'residual'], suffix='fit')
+
+    assert set(gdat.arrytser) == {'modelfit', 'residualfit'}
+    assert [len(instruments) for instruments in gdat.arrytser['modelfit']] == [2, 1]
+    assert [
+        [len(chunks) for chunks in instruments]
+        for instruments in gdat.listarrytser['modelfit']
+    ] == [[2, 1], [3]]
+    gdat.arrytser['modelfit'][0][0].append('sample')
+    assert gdat.arrytser['modelfit'][0][1] == []
+    assert gdat.arrytser['residualfit'][0][0] == []
 
 
 def test_write_alle_data_csvs_writes_detrended_files(tmp_path):

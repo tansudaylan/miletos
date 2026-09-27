@@ -4,6 +4,23 @@ import numpy as np
 import pandas as pd
 
 
+def initialize_tser_containers(gdat, names, suffix=''):
+    """Initialize full-series and per-chunk containers for named products."""
+
+    for name in names:
+        key = name + suffix
+        gdat.arrytser[key] = [
+            [[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser
+        ]
+        gdat.listarrytser[key] = [
+            [
+                [[] for y in gdat.indxchun[b][p]]
+                for p in gdat.indxinst[b]
+            ]
+            for b in gdat.indxdatatser
+        ]
+
+
 def _is_scalar_output(valu):
     """Return whether a value should be serialized into summary CSV outputs."""
 

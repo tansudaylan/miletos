@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import tdpy
 from tdpy.util import summgene
 from .cache import read_cached_output
-from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
+from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, initialize_tser_containers, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
 from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, setp_dictmodl_sample
@@ -1545,19 +1545,10 @@ def proc_alle(gdat, typemodl):
     
     calc_feat_alle(gdat, typemodl)
 
+    listnametser = ['Detrended', 'modl', 'resi']
     if gdat.boolsrchflar:
-        gdat.arrytser['bdtrlowr'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['bdtrlowr'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['bdtrmedi'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['bdtrmedi'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['bdtruppr'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['bdtruppr'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['Detrended'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['modl'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.arrytser['resi'+typemodl] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['Detrended'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['modl'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-    gdat.listarrytser['resi'+typemodl] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        listnametser += ['bdtrlowr', 'bdtrmedi', 'bdtruppr']
+    initialize_tser_containers(gdat, listnametser, suffix=typemodl)
     
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
@@ -9231,12 +9222,9 @@ def init( \
         gdat.listarrytser['Raw'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     
     if gdat.boolsrchflar:
-        gdat.arrytser['bdtrlowr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['bdtrlowr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['bdtrmedi'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['bdtrmedi'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.arrytser['bdtruppr'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
-        gdat.listarrytser['bdtruppr'] = [[[[] for y in gdat.indxchun[b][p]] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+        initialize_tser_containers(
+            gdat, ['bdtrlowr', 'bdtrmedi', 'bdtruppr']
+        )
     
     gdat.arrytser['Raw'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.arrytser['maskcust'] = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]

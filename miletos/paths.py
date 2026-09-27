@@ -1,34 +1,18 @@
 import fnmatch
 import os
-from pathlib import Path
 
 import numpy as np
 
 import tdpy
+from tdpy.paths import RepositoryPaths
 
 
 PATH_ENV_VAR = "MILETOS_PATH"
+_REPOSITORY_PATHS = RepositoryPaths(PATH_ENV_VAR)
 
-
-def get_repository_path() -> Path:
-    """Return the repository path configured by MILETOS_PATH."""
-
-    path_value = os.environ.get(PATH_ENV_VAR)
-    if not path_value or not path_value.strip():
-        raise EnvironmentError(f"{PATH_ENV_VAR} is required and cannot be empty.")
-    return Path(path_value).expanduser().resolve()
-
-
-def get_data_path() -> Path:
-    """Return the ignored repository-local data directory."""
-
-    return get_repository_path() / "data"
-
-
-def get_visuals_path() -> Path:
-    """Return the ignored repository-local visualization directory."""
-
-    return get_repository_path() / "visuals"
+get_repository_path = _REPOSITORY_PATHS.get_repository_path
+get_data_path = _REPOSITORY_PATHS.get_data_path
+get_visuals_path = _REPOSITORY_PATHS.get_visuals_path
 
 
 def retr_tsecpathlocl(tici, typeverb=1):
