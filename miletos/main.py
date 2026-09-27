@@ -31,6 +31,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import tdpy
+from tdpy.paths import make_directory
 from tdpy.util import summgene
 from .cache import read_cached_output
 from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, initialize_tser_containers, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
@@ -6278,7 +6279,7 @@ def plot_tser( \
     if pathvisu is not None:
         dicttdpy = tdpy.retr_dictstrg()
 
-        os.makedirs(pathvisu, exist_ok=True)
+        make_directory(pathvisu)
 
         if strgextn[0] == '_':
             strgextn = strgextn[1:]
