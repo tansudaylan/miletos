@@ -4,7 +4,7 @@
 Miletos is a time-series analysis and forward-modeling pipeline for astrophysical systems. It is designed to interpret time-domain photometry and related observations by combining detrending, period searches, diagnostics, and Bayesian forward modeling.
 
 ## Scope
-Miletos sits in the time-domain exoplanet and stellar-variability layer of the broader scientific ecosystem. It consumes observational time-series data, performs relevant preliminary analyses, and produces scientifically interpretable plots and summary outputs for subsequent inference.
+Use Miletos to detrend observational time series, search for periodic signals, phase-fold and bin measurements with uncertainty propagation, fit forward models, and generate interpretable diagnostic plots and summary products.
 
 ## Installation
 
