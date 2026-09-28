@@ -1,22 +1,26 @@
-import sys
-from tqdm import tqdm
+import argparse
 import inspect
 import os
 import numpy as np
-import wget
-import pandas as pd
 
 import matplotlib as mpl
 mpl.use('agg')
-import matplotlib.pyplot as plt
-
-import astropy
 
 import miletos
-import tdpy
+from miletos.diagnostics import run_simulated_transit_diagnostic
+from miletos.paths import get_visuals_path
 from tdpy.util import summgene
 import ephesos
 import nicomedia
+
+
+def cnfg_simulated_transit_diagnostic(typefileplot='png'):
+    """Run the supported deterministic example from the legacy catalog entry point."""
+
+    if typefileplot not in {'png', 'pdf'}:
+        raise ValueError("typefileplot must be 'png' or 'pdf'")
+    output_path = get_visuals_path() / f'example_catalog_transit.{typefileplot}'
+    run_simulated_transit_diagnostic(output_path)
 
 
 def cnfg_TOI1233():
@@ -1193,4 +1197,33 @@ def cnfg_TESS_EB_Catalog():
             )
 
 
-globals().get(sys.argv[1])(*sys.argv[2:])
+def parse_arguments():
+    configurations = sorted(
+        name for name, value in globals().items()
+        if name.startswith('cnfg_') and callable(value)
+    )
+    parser = argparse.ArgumentParser(
+        description='Run a named Miletos target-analysis configuration.',
+    )
+    parser.add_argument(
+        'configuration',
+        nargs='?',
+        choices=configurations,
+        default='cnfg_simulated_transit_diagnostic',
+    )
+    parser.add_argument(
+        'configuration_arguments',
+        nargs='*',
+        help='Optional positional arguments accepted by the selected configuration.',
+    )
+    return parser.parse_args()
+
+
+def main():
+    arguments = parse_arguments()
+    globals()[arguments.configuration](*arguments.configuration_arguments)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

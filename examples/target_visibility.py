@@ -1,6 +1,7 @@
-import numpy as np
+import argparse
 
-import miletos
+from miletos.diagnostics import run_target_visibility_diagnostic
+from miletos.paths import get_visuals_path
 
 '''
 Estimate the visibility of a target on the sky from a given observatory, for a given night and across a given year.
@@ -8,60 +9,68 @@ Estimate the visibility of a target on the sky from a given observatory, for a g
 The script uses miletos.
 '''
 
-# inputs
-liststrgmast = ['TOI-1233']
-typeobvt = 'TUG'
-strgtimeobvtnigh = '2022-07-13 00:00:00'
-strgtimeobvtyear = '2022-01-01 00:00:00'
+OBSERVATORIES = {
+    'LCO': {
+        'latiobvt': -29.01418,  # [deg]
+        'longobvt': -70.69239,  # [deg]
+        'heigobvt': 2515.819,  # [m]
+        'offstimeobvt': 0.0,  # [hour]
+    },
+    'TUG': {
+        'latiobvt': 36.824166,  # [deg]
+        'longobvt': 30.335555,  # [deg]
+        'heigobvt': 2500.0,  # [m]
+        'offstimeobvt': 3.0,  # [hour]
+    },
+}
 
-numbtarg = len(liststrgmast)
-indxtarg = np.arange(numbtarg)
+TARGETS = {
+    'TOI-1233': {
+        'right_ascension_degrees': 186.574,  # [deg]
+        'declination_degrees': -51.363,  # [deg]
+    },
+    'TOI-700': {
+        'right_ascension_degrees': 97.446,  # [deg]
+        'declination_degrees': -65.579,  # [deg]
+    },
+}
 
-if typeobvt == 'LCO':
-    # Las Campanas Observatory (LCO), Chile
-    latiobvt = -29.01418
-    longobvt = -70.69239
-    heigobvt = 2515.819
-    offstimeobvt = 0. # give the times in UT
 
-if typeobvt == 'TUG':
-    # TUBITAK National Observatory (TUG), Turkey
-    longobvt = 30.335555
-    latiobvt = 36.824166
-    heigobvt = 2500.
-    offstimeobvt = 3.
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description='Plot nightly and annual target visibility.',
+    )
+    parser.add_argument('--target', choices=TARGETS, default='TOI-1233')
+    parser.add_argument('--observatory', choices=OBSERVATORIES, default='TUG')
+    parser.add_argument('--night', default='2022-07-13 00:00:00')
+    parser.add_argument('--year-start', default='2022-01-01 00:00:00')
+    parser.add_argument('--typefileplot', choices=('png', 'pdf'), default='png')
+    return parser.parse_args()
 
-for n in indxtarg:
-   
-    miletos.main.init( \
-                      # provide the keyword for the target
-                      strgmast=liststrgmast[n], \
-                      
-                      # local time offset with respect to UTC
-                      offstimeobvt=offstimeobvt, \
 
-                      # latitude of the observatory
-                      latiobvt=latiobvt, \
-                      
-                      # longtiude of the observatory
-                      longobvt=longobvt, \
-                      
-                      # altitude of the observatory
-                      heigobvt=heigobvt, \
-                      
-                      # a string indicating the midnight during the observation night
-                      strgtimeobvtnigh=strgtimeobvtnigh, \
-                      
-                      # a string indicating the midnight in the beginning of the observation year
-                      strgtimeobvtyear=strgtimeobvtyear, \
-                      
-                      # turn off time-domain data processing
-                      booltserdata=False, \
-                      
-                      # turn on visibity estimation
-                      boolcalcvisi=True, \
-                      
-                      # turn on visibity plotting
-                      boolplotvisi=True, \
-                     )
+def main():
+    arguments = parse_arguments()
+    observatory = OBSERVATORIES[arguments.observatory]
+    target = TARGETS[arguments.target]
+    output_path = get_visuals_path() / (
+        f'target_visibility_{arguments.target.lower()}.{arguments.typefileplot}'
+    )
+    run_target_visibility_diagnostic(
+        output_path=output_path,
+        target_label=arguments.target,
+        observatory_label=arguments.observatory,
+        right_ascension_degrees=target['right_ascension_degrees'],
+        declination_degrees=target['declination_degrees'],
+        latitude_degrees=observatory['latiobvt'],
+        longitude_degrees=observatory['longobvt'],
+        height_meters=observatory['heigobvt'],
+        utc_offset_hours=observatory['offstimeobvt'],
+        night=arguments.night,
+        year_start=arguments.year_start,
+    )
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
 

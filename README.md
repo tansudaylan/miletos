@@ -37,6 +37,31 @@ from miletos.diagnostics import run_simulated_transit_diagnostic
 result = run_simulated_transit_diagnostic(Path("visuals/transit_diagnostic.png"))
 ```
 
+## Examples
+
+Run every supported example and verify that each plot was created:
+
+```bash
+python examples/run_all.py
+```
+
+Use `--typefileplot pdf` to generate vector figures. The runner removes cached versions before each run, executes every example in an isolated interpreter, and fails if an expected plot is missing or empty.
+
+Each script can also be run separately:
+
+```bash
+python examples/simulated_transit_diagnostic.py
+python examples/target_visibility.py
+python examples/WASP-39_JWST_ERS.py
+python examples/examples.py
+```
+
+All default examples are deterministic and run without network access. The WASP-39b workflow is an explicitly simulated JWST benchmark rather than an analysis of observational data. The legacy example catalog defaults to the supported simulated transit diagnostic and continues to accept a named archival configuration followed by any required arguments:
+
+```bash
+python examples/examples.py cnfg_WASP 121
+```
+
 ## What the workflow does
 Miletos can be used to:
 
