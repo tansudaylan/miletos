@@ -38,3 +38,19 @@ def test_setp_dvrp_output_builds_summary_pages(tmp_path):
     assert listpathdvrp == [retr_pathpage(gdat, 0)]
     assert os.path.exists(listpathdvrp[0])
     assert gdat.dictmileoutp['listpathdvrp'] == listpathdvrp
+    image = plt.imread(listpathdvrp[0])
+    assert image.shape[1] < 2000
+
+
+def test_setp_dvrp_output_handles_empty_page(tmp_path):
+    gdat = DummyGdat()
+    gdat.pathvisutarg = str(tmp_path) + '/'
+    gdat.strgtarg = 'DemoTarget'
+    gdat.indxpage = np.array([0])
+    gdat.listdictdvrp = [[]]
+    gdat.typeverb = 0
+    gdat.dictmileoutp = {}
+
+    listpathdvrp = setp_dvrp_output(gdat)
+
+    assert os.path.exists(listpathdvrp[0])

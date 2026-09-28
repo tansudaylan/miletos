@@ -17,7 +17,7 @@ def parse_arguments():
 def main() -> int:
     arguments = parse_arguments()
     repository_path = Path(os.environ["MILETOS_PATH"])
-    output_path = repository_path / "visuals" / (
+    output_path = repository_path / "examples" / "simulated_transit" / "visuals" / (
         f"simulated_transit_diagnostic.{arguments.typefileplot}"
     )
     run_simulated_transit_diagnostic(output_path)

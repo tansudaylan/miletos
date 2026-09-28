@@ -56,9 +56,9 @@ def retr_tsecpathlocl(tici, typeverb=1):
 def setp_base_paths(gdat):
     """Populate shared base paths on the runtime state."""
 
-    gdat.pathbasemile = tdpy.retr_pathbase('miletos')
+    gdat.pathbasemile = os.path.join(str(get_repository_path()), '')
     if gdat.pathbase is None:
-        gdat.pathbase = gdat.pathbasemile
+        gdat.pathbase = os.path.join(str(get_data_path()), '')
     gdat.pathbaselygo = tdpy.retr_pathbase('lygos')
 
 

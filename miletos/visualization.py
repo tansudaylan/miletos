@@ -1,7 +1,374 @@
 import os
+from contextlib import contextmanager
+from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import tdpy
+
+
+@contextmanager
+def miletos_plot_context():
+    """Apply the common Miletos figure style without leaking global state."""
+
+    style = {
+        'axes.prop_cycle': mpl.cycler(
+            color=['#176B87', '#C23B22', '#E09F3E', '#4F772D', '#5D6D6F']
+        ),
+        'axes.edgecolor': 'black',
+        'axes.facecolor': 'white',
+        'axes.grid': False,
+        'axes.labelcolor': 'black',
+        'axes.labelsize': 10.0,
+        'axes.spines.right': False,
+        'axes.spines.top': False,
+        'axes.titlesize': 11.0,
+        'figure.facecolor': 'white',
+        'font.family': 'DejaVu Sans',
+        'font.size': 10.0,
+        'legend.framealpha': 1.0,
+        'legend.fancybox': True,
+        'lines.linewidth': 1.2,
+        'savefig.dpi': 300,
+        'savefig.facecolor': 'white',
+        'text.color': 'black',
+        'xtick.color': 'black',
+        'ytick.color': 'black',
+    }
+    with plt.style.context('default'), mpl.rc_context(style):
+        yield
+
+
+def plot_wasp39_ers_white_light_curves(result, output_path: Path) -> Path:
+    """Plot the detector-level white-light curves in Alderson et al. Figure 1a."""
+
+    figure, axis = plt.subplots(figsize=(8.0, 4.4), constrained_layout=True)
+    time_reference_bjd = 59791.0  # [BJD TDB]
+    for detector, time_bjd, flux, uncertainty, color in (
+        ('NRS1', result.nrs1_time_bjd, result.nrs1_flux, result.nrs1_flux_uncertainty, '#176B87'),
+        ('NRS2', result.nrs2_time_bjd, result.nrs2_flux, result.nrs2_flux_uncertainty, '#C23B22'),
+    ):
+        axis.errorbar(
+            24.0 * (time_bjd - time_reference_bjd),
+            flux,
+            yerr=uncertainty,
+            fmt='.',
+            markersize=2.5,
+            linewidth=0.5,
+            alpha=0.72,
+            color=color,
+            label=detector,
+        )
+    axis.set_xlabel(f'Time from BJD {time_reference_bjd:.1f} [hour]')
+    axis.set_ylabel('Normalized stellar flux')
+    axis.set_title('WASP-39b transit observed with JWST NIRSpec G395H')
+    axis.grid(False)
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.legend(title='Alderson et al. (2023)', fancybox=True, framealpha=1.0)
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
+def plot_wasp39_ers_detector_motion(result, output_path: Path) -> Path:
+    """Plot the detector shifts tracked during the spectroscopic reduction."""
+
+    figure, axis = plt.subplots(figsize=(8.0, 4.4), constrained_layout=True)
+    time_reference_bjd = 59791.0  # [BJD TDB]
+    time_hours = 24.0 * (result.spectroscopic_time_bjd - time_reference_bjd)
+    axis.plot(
+        time_hours,
+        result.detector_shift_x_pixels,
+        color='#176B87',
+        linewidth=1.2,
+        label='Dispersion direction',
+    )
+    axis.plot(
+        time_hours,
+        result.detector_shift_y_pixels,
+        color='#C23B22',
+        linewidth=1.2,
+        linestyle='--',
+        label='Cross-dispersion direction',
+    )
+    axis.axhline(0.0, color='black', linewidth=0.8)
+    axis.set_xlabel(f'Time from BJD {time_reference_bjd:.1f} [hour]')
+    axis.set_ylabel('Detector shift [pixel]')
+    axis.set_title('Measured detector motion used in the spectroscopic reduction')
+    axis.grid(False)
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.legend(fancybox=True, framealpha=1.0)
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
+def plot_wasp39_ers_spectroscopic_detrending(result, output_path: Path) -> Path:
+    """Plot the published model decomposition for representative channels."""
+
+    target_wavelengths_microns = np.array([2.9, 3.7, 4.3, 5.0])  # [micron]
+    channel_indices = [
+        int(np.argmin(np.abs(result.spectroscopic_wavelength_microns - wavelength)))
+        for wavelength in target_wavelengths_microns
+    ]
+    time_reference_bjd = 59791.0  # [BJD TDB]
+    time_hours = 24.0 * (result.spectroscopic_time_bjd - time_reference_bjd)
+    figure, axes = plt.subplots(
+        len(channel_indices),
+        3,
+        figsize=(11.0, 9.2),
+        sharex=True,
+        constrained_layout=True,
+    )
+    for row, channel_index in enumerate(channel_indices):
+        wavelength = result.spectroscopic_wavelength_microns[channel_index]
+        total_model = (
+            result.systematic_model[channel_index]
+            + result.transit_model[channel_index]
+            - 1.0
+        )
+        axes[row, 0].errorbar(
+            time_hours,
+            result.raw_spectroscopic_flux[channel_index],
+            yerr=result.raw_spectroscopic_flux_uncertainty[channel_index],
+            fmt='.',
+            markersize=2.0,
+            linewidth=0.35,
+            errorevery=4,
+            alpha=0.55,
+            color='#5D6D6F',
+        )
+        axes[row, 0].plot(
+            time_hours,
+            total_model,
+            color='#C23B22',
+            linewidth=1.2,
+            label='Total fitted model',
+        )
+        axes[row, 0].plot(
+            time_hours,
+            result.systematic_model[channel_index],
+            color='#E09F3E',
+            linewidth=1.0,
+            linestyle='--',
+            label='Systematics component',
+        )
+        axes[row, 1].errorbar(
+            time_hours,
+            result.corrected_spectroscopic_flux[channel_index],
+            yerr=result.corrected_spectroscopic_flux_uncertainty[channel_index],
+            fmt='.',
+            markersize=2.0,
+            linewidth=0.35,
+            errorevery=4,
+            alpha=0.55,
+            color='#176B87',
+        )
+        axes[row, 1].plot(
+            time_hours,
+            result.transit_model[channel_index],
+            color='#C23B22',
+            linewidth=1.2,
+            label='Transit model',
+        )
+        axes[row, 2].scatter(
+            time_hours,
+            1e6 * result.spectroscopic_residual_flux[channel_index],
+            s=3.5,
+            alpha=0.65,
+            color='#5D6D6F',
+            linewidths=0.0,
+        )
+        axes[row, 2].axhline(0.0, color='black', linewidth=0.8)
+        axes[row, 0].set_ylabel(f'{wavelength:.2f} micron\nNormalized flux')
+        axes[row, 1].set_ylabel('Normalized flux')
+        axes[row, 2].set_ylabel('Residual [ppm]')
+        for axis in axes[row]:
+            axis.grid(False)
+            axis.spines['top'].set_visible(False)
+            axis.spines['right'].set_visible(False)
+    axes[0, 0].set_title('Raw flux and systematics model')
+    axes[0, 1].set_title('Corrected flux and transit model')
+    axes[0, 2].set_title('Fit residuals')
+    axes[0, 0].legend(loc='lower right', fancybox=True, framealpha=1.0)
+    axes[0, 1].legend(loc='lower right', fancybox=True, framealpha=1.0)
+    for axis in axes[-1]:
+        axis.set_xlabel(f'Time from BJD {time_reference_bjd:.1f} [hour]')
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
+def plot_wasp39_ers_corrected_light_curve_map(result, output_path: Path) -> Path:
+    """Plot all published systematics-corrected spectroscopic light curves."""
+
+    figure, axis = plt.subplots(figsize=(8.0, 5.0), constrained_layout=True)
+    time_reference_bjd = 59791.0  # [BJD TDB]
+    time_hours = 24.0 * (result.spectroscopic_time_bjd - time_reference_bjd)
+    wavelength = result.spectroscopic_wavelength_microns
+    detector_gap_index = int(np.argmax(np.diff(wavelength)))
+    for channel_slice in (
+        slice(0, detector_gap_index + 1),
+        slice(detector_gap_index + 1, None),
+    ):
+        image = axis.pcolormesh(
+            wavelength[channel_slice],
+            time_hours,
+            result.corrected_spectroscopic_flux[channel_slice].T,
+            shading='nearest',
+            cmap='inferno_r',
+            vmin=0.976,
+            vmax=1.005,
+            rasterized=True,
+        )
+    colorbar = figure.colorbar(image, ax=axis, pad=0.02)
+    colorbar.set_label('Normalized systematics-corrected flux')
+    axis.set_xlabel('Wavelength [micron]')
+    axis.set_ylabel(f'Time from BJD {time_reference_bjd:.1f} [hour]')
+    axis.set_title('The transit is resolved across all 349 G395H wavelength channels')
+    axis.grid(False)
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
+def plot_wasp39_ers_light_curve_precision(result, output_path: Path) -> Path:
+    """Compare the published fit residual scatter with the photon-noise limit."""
+
+    figure, axis = plt.subplots(figsize=(8.0, 4.5), constrained_layout=True)
+    channel_slice = slice(5, None)
+    wavelength = result.spectroscopic_wavelength_microns[channel_slice]
+    photon_precision = result.photon_precision_ppm[channel_slice]
+    axis.scatter(
+        wavelength,
+        result.data_precision_ppm[channel_slice],
+        s=8.0,
+        color='#176B87',
+        linewidths=0.0,
+        label='Standard deviation of fit residuals',
+    )
+    axis.plot(
+        wavelength,
+        photon_precision,
+        color='#C23B22',
+        linewidth=1.3,
+        label='Smoothed photon-noise limit',
+    )
+    axis.plot(
+        wavelength,
+        2.0 * photon_precision,
+        color='#C23B22',
+        linewidth=1.0,
+        linestyle='--',
+        label='Twice photon-noise limit',
+    )
+    axis.set_xlabel('Wavelength [micron]')
+    axis.set_ylabel('Light-curve precision [ppm]')
+    axis.set_ylim(0.0, 4000.0)
+    axis.set_title('Spectroscopic residual precision approaches the photon-noise limit')
+    axis.grid(False)
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.legend(fancybox=True, framealpha=1.0)
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
+def plot_wasp39_ers_transmission_spectrum(result, output_path: Path) -> Path:
+    """Plot the weighted transmission spectrum and best-fit ATMO comparison."""
+
+    figure, axes = plt.subplots(
+        2,
+        1,
+        figsize=(8.0, 6.2),
+        sharex=True,
+        gridspec_kw={'height_ratios': (3.0, 1.0)},
+        constrained_layout=True,
+    )
+    axes[0].errorbar(
+        result.wavelength_microns,
+        result.transit_depth_ppm,
+        xerr=result.bin_half_width_microns,
+        yerr=result.transit_depth_uncertainty_ppm,
+        fmt='o',
+        color='#176B87',
+        markeredgecolor='white',
+        markeredgewidth=0.35,
+        markersize=3.0,
+        linewidth=0.55,
+        capsize=0.0,
+        label='Weighted G395H spectrum, Alderson et al. (2023)',
+    )
+    axes[0].plot(
+        result.wavelength_microns,
+        result.model_transit_depth_ppm,
+        color='#C23B22',
+        linewidth=1.7,
+        label='Published equilibrium ATMO model',
+    )
+    axes[0].axvspan(4.20, 4.45, color='#E8C547', alpha=0.28, linewidth=0.0)
+    axes[0].text(4.325, 22650.0, 'CO$_2$', ha='center', va='top')
+    axes[0].set_ylabel('Transit depth [ppm]')
+    axes[0].set_title('The published model resolves the 4.3 micron carbon-dioxide band')
+    axes[0].legend(loc='lower right', fancybox=True, framealpha=1.0)
+
+    axes[1].errorbar(
+        result.wavelength_microns,
+        result.model_residual_ppm,
+        yerr=result.transit_depth_uncertainty_ppm,
+        fmt='o',
+        color='#5D6D6F',
+        markersize=2.7,
+        linewidth=0.5,
+        capsize=0.0,
+        label=rf'Residuals, $\chi^2_\nu={result.reduced_chi_squared:.2f}$',
+    )
+    axes[1].axhline(0.0, color='black', linewidth=1.0)
+    axes[1].set_xlabel('Wavelength [micron]')
+    axes[1].set_ylabel('Residual [ppm]')
+    axes[1].legend(loc='lower right', fancybox=True, framealpha=1.0)
+
+    for axis in axes:
+        axis.grid(False)
+        axis.spines['top'].set_visible(False)
+        axis.spines['right'].set_visible(False)
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
 
 
 def retr_lablinst_part(gdat, b, p):

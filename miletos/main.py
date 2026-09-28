@@ -7886,9 +7886,12 @@ def init( \
         
         setp_target_paths(gdat)
 
-        if gdat.typeverb > 0:
-            print('Path for this run configuration on the target:')
-            print(gdat.pathtargcnfg)
+    elif gdat.pathdatatarg is None:
+        setp_target_paths(gdat)
+
+    if gdat.typeverb > 0:
+        print('Path for this run configuration on the target:')
+        print(gdat.pathtargcnfg)
 
     if gdat.typeverb > 0:
         print('gdat.strgtarg')
@@ -8838,7 +8841,7 @@ def init( \
             
         gdat.dictexartarg = nicomedia.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp', typeverb=gdat.typeverb)
         
-        if gdat.dictexartarg['pericomp'][0].size > 20:
+        if gdat.dictexartarg is not None and gdat.dictexartarg['pericomp'][0].size > 20:
             print('gdat.strgmast')
             print(gdat.strgmast)
             print('gdat.strgexar')
@@ -10354,7 +10357,7 @@ def init( \
             gdat.listdeltrebn[b][p] = np.linspace(gdat.minmdeltrebn, gdat.maxmdeltrebn, gdat.numbrebn)
     
     if gdat.booldiag:
-        if not (gdat.boolsrchoutlperi or gdat.boolsrchboxsperi):
+        if gdat.fitt.boolmodlcomp and not (gdat.boolsrchoutlperi or gdat.boolsrchboxsperi):
             if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
                 print('')
                 print('')
@@ -10642,7 +10645,7 @@ def init( \
                     for j in range(len(gdat.dictboxsperioutp['epoc'])):
                         gdat.listdictdvrp[j+1].append({'path': gdat.dictboxsperioutp['listpathplot%s' % name][j], 'limt':[0., 0.9 - g * 0.1, 0.5, 0.1]})
     
-    if gdat.booldiag:
+    if gdat.booldiag and gdat.fitt.boolmodlcomp:
         if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
             print('')
             print('')
@@ -10687,6 +10690,13 @@ def init( \
                     if gdat.boolplot:
                         gdat.listdictdvrp[0].append({'path': gdat.dictlspeoutp['pathplot'], 'limt':[0., 0.8, 0.5, 0.1]})
         
+    if not gdat.fitt.boolmodlcomp:
+        gdat.fitt.prio.numbcomp = 0
+        gdat.fitt.prio.indxcomp = np.array([], dtype=int)
+        for namepara in ['pericomp', 'rsmacomp', 'cosicomp', 'duratrantotlcomp', 'depttrancomp']:
+            setattr(gdat.fitt.prio.meanpara, namepara, np.array([]))
+        gdat.fitt.prio.meanpara.rratcomp = [np.array([]) for pk in gdat.indxband]
+
     if gdat.typeverb > 0:
         print('Planet letters: ')
         print(gdat.liststrgcomp)

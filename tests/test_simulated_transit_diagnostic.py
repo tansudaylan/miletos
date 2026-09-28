@@ -1,7 +1,10 @@
 import matplotlib.image as mpimg
 import numpy as np
 
-from miletos.diagnostics import run_simulated_transit_diagnostic
+from miletos.diagnostics import (
+    run_simulated_jwst_transit_diagnostic,
+    run_simulated_transit_diagnostic,
+)
 
 
 def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys):
@@ -21,3 +24,18 @@ def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys):
     assert image.shape[1] > 100
     assert image[..., :3].min() < 0.8
     assert f"Writing to {output_path}..." in capsys.readouterr().out
+
+
+def test_simulated_jwst_diagnostic_remains_supported(tmp_path, capsys):
+    output_path = tmp_path / 'simulated_jwst_transit.pdf'
+
+    result = run_simulated_jwst_transit_diagnostic(output_path)
+
+    assert output_path.is_file()
+    assert output_path.stat().st_size > 1_000
+    assert result.observed_flux.shape == (
+        result.time_days.size,
+        result.wavelength_microns.size,
+    )
+    assert np.ptp(result.true_depth_ppm) > 500.0
+    assert f'Writing to {output_path}...' in capsys.readouterr().out

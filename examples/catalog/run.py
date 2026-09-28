@@ -8,7 +8,8 @@ mpl.use('agg')
 
 import miletos
 from miletos.diagnostics import run_simulated_transit_diagnostic
-from miletos.paths import get_visuals_path
+from miletos.paths import get_data_path, get_repository_path
+from miletos.toi1233 import run_toi1233_observation
 from tdpy.util import summgene
 import ephesos
 import nicomedia
@@ -19,70 +20,21 @@ def cnfg_simulated_transit_diagnostic(typefileplot='png'):
 
     if typefileplot not in {'png', 'pdf'}:
         raise ValueError("typefileplot must be 'png' or 'pdf'")
-    output_path = get_visuals_path() / f'example_catalog_transit.{typefileplot}'
+    output_path = (
+        get_repository_path()
+        / 'examples'
+        / 'catalog'
+        / 'visuals'
+        / f'example_catalog_transit.{typefileplot}'
+    )
     run_simulated_transit_diagnostic(output_path)
 
 
-def cnfg_TOI1233():
-    
-    path = os.environ['DATA'] + '/general/TOI1233/HD108236_PFS_20220627.vels'
-    print('Reading from %s...' % path)
-    listtime = []
-    listrvel = []
-    liststdvrvel = []
-    for line in open(path, 'r'):
-        listlinesplt = line.split(' ')
-        k = 0
-        for line in listlinesplt:
-            if line == ' ':
-                continue
-            if line == '':
-                continue
-            
-            valu = float(line)
-            if k == 0:
-                listtime.append(valu)
-            if k == 1:
-                listrvel.append(valu)
-            if k == 2:
-                liststdvrvel.append(valu)
-            k += 1
-    listtime = np.array(listtime)
-
-    pathphot = os.environ['MILETOS_DATA_PATH'] + '/TOI-1233/data/TESS_PDCSAP_FLUX_Sector10.csv'
-    print('Reading from %s...' % pathphot)
-    arryphot = np.loadtxt(pathphot, delimiter=',')[:, None, :]
-    
-    listarrytser = dict()
-    listarrytser['Raw'] = [[[arryphot]], [[[]]]]
-    listarrytser['Raw'][1][0][0] = np.empty((listtime.size, 1, 3))
-    listarrytser['Raw'][1][0][0][:, 0, 0] = listtime
-    listarrytser['Raw'][1][0][0][:, 0, 1] = np.array(listrvel)
-    listarrytser['Raw'][1][0][0][:, 0, 2] = np.array(liststdvrvel)
-
-    listtypemodl = ['PlanetarySystem', 'PlanetarySystemWithTTVs']
-    
-    for typemodl in listtypemodl:
-        dictfitt = dict()
-        dictfitt['typemodl'] = typemodl
-        
-        miletos.main.init( \
-                          rasctarg=186.574548, \
-                          decltarg=-51.362837, \
-                          labltarg='TOI-1233', \
-                          strgtarg='TOI-1233', \
-                          dictfitt=dictfitt, \
-                          strgexar='HD 108236', \
-                          strgcnfg=typemodl, \
-                          listarrytser=listarrytser, \
-                          liststrgtypedata=[['inpt'], ['inpt']], \
-                          listlablinst=[['TESS'], ['PFS']], \
-                          boolbdtr=[[False], [False]], \
-                          boolforcoffl=True, \
-                          boolfitt=False, \
-                          typepriocomp='exar', \
-                          boolplotpopl=False, \
-                         )
+def cnfg_TOI1233(typemodl='PlanetarySystemWithTTVs', typefileplot='png'):
+    return run_toi1233_observation(
+        typemodl=typemodl,
+        typefileplot=typefileplot,
+    )
 
 
 def cnfg_WASP121():
@@ -268,7 +220,7 @@ def cnfg_FermiLAT():
     liststrgmast = []
 
     ## Blazars for ADAP 2022
-    #path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/interesting_blazars_CVZ.txt'
+    #path = get_data_path() / 'FermiLAT_TESS_AGN' / 'interesting_blazars_CVZ.txt'
     #print('Reading from %s...' % path)
     #dictagns = pd.read_csv(path, skiprows=2, delimiter='|').to_dict(orient='list')
     #for strg in dictagns['_Search_Offset               ']:
@@ -290,7 +242,7 @@ def cnfg_FermiLAT():
     #           'CGCG 050-083', '1RXS J234354.4+054713', \
     #           ])
     #
-    #path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/.txt'
+    #path = get_data_path() / 'FermiLAT_TESS_AGN' / '.txt'
     #k = 0
     #print('Reading from %s...' % path)
     #for line in open(path, 'r'):
@@ -300,7 +252,7 @@ def cnfg_FermiLAT():
     #    liststrgmast.append(line[1:18])
     #    k += 1
 
-    #path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/BLLac.txt'
+    #path = get_data_path() / 'FermiLAT_TESS_AGN' / 'BLLac.txt'
     #k = 0
     #print('Reading from %s...' % path)
     #for line in open(path, 'r'):
@@ -311,7 +263,7 @@ def cnfg_FermiLAT():
     #    k += 1
 
 
-    path = os.environ['MILETOS_DATA_PATH'] + '/data/FermiLAT_TESS_AGN/AllNameListInfo_last.txt'
+    path = get_data_path() / 'FermiLAT_TESS_AGN' / 'AllNameListInfo_last.txt'
     k = 0
     print('Reading from %s...' % path)
     objtfile = open(path, 'r')
@@ -1153,6 +1105,7 @@ def cnfg_ASASSN20qc():
                       ticitarg=219229145, \
 
                       dictfitt=dictfitt, \
+                      boolfitt=False, \
                       listtsecsele=listtsecsele, \
                       typelcurtpxftess='lygos', \
 

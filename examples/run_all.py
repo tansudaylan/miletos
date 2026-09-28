@@ -12,10 +12,19 @@ import sys
 
 REPOSITORY_PATH = Path(__file__).parents[1]
 QUICK_EXAMPLES = (
-    ('simulated_transit_diagnostic.py', 'simulated_transit_diagnostic'),
-    ('target_visibility.py', 'target_visibility_toi-1233'),
-    ('WASP-39_JWST_ERS.py', 'simulated_wasp39_jwst_diagnostic'),
-    ('examples.py', 'example_catalog_transit'),
+    (
+        'simulated_transit/run.py',
+        'examples/simulated_transit/visuals/simulated_transit_diagnostic',
+    ),
+    (
+        'target_visibility/run.py',
+        'examples/target_visibility/visuals/target_visibility_toi-1233',
+    ),
+    (
+        'WASP-39b/run.py',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum',
+    ),
+    ('catalog/run.py', 'examples/catalog/visuals/example_catalog_transit'),
 )
 CATALOG_ARGUMENTS = {
     'cnfg_WASP': (('18',), ('46',)),
@@ -25,7 +34,7 @@ PLOT_PATH_PATTERN = re.compile(r'(?:Writing|Reading) to (.+\.(?:png|pdf))\.\.\.$
 
 
 def get_catalog_invocations():
-    tree = ast.parse((REPOSITORY_PATH / 'examples' / 'examples.py').read_text())
+    tree = ast.parse((REPOSITORY_PATH / 'examples' / 'catalog' / 'run.py').read_text())
     names = sorted(
         node.name for node in tree.body
         if isinstance(node, ast.FunctionDef) and node.name.startswith('cnfg_')
@@ -71,7 +80,7 @@ def main():
 
     environment = os.environ.copy()
     environment.setdefault('MILETOS_PATH', str(REPOSITORY_PATH))
-    output_root = Path(environment['MILETOS_PATH']) / 'visuals'
+    output_root = Path(environment['MILETOS_PATH'])
 
     for script_name, output_stem in QUICK_EXAMPLES:
         output_path = output_root / f'{output_stem}.{arguments.typefileplot}'
@@ -79,7 +88,7 @@ def main():
             print(f'Removing cached example output {output_path}...')
             output_path.unlink()
         command = [sys.executable, str(REPOSITORY_PATH / 'examples' / script_name)]
-        if script_name == 'examples.py':
+        if script_name == 'catalog/run.py':
             command.extend(['cnfg_simulated_transit_diagnostic', arguments.typefileplot])
         else:
             command.extend(['--typefileplot', arguments.typefileplot])
@@ -90,7 +99,12 @@ def main():
 
     if not arguments.quick:
         for name, values in catalog_invocations:
-            command = [sys.executable, str(REPOSITORY_PATH / 'examples' / 'examples.py'), name, *values]
+            command = [
+                sys.executable,
+                str(REPOSITORY_PATH / 'examples' / 'catalog' / 'run.py'),
+                name,
+                *values,
+            ]
             print(f"Running {' '.join((name, *values))}...")
             output = run_command(command, environment)
             plot_paths = [Path(match.group(1)) for line in output.splitlines() if (match := PLOT_PATH_PATTERN.search(line))]

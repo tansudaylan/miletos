@@ -1,6 +1,6 @@
 # Miletos
 
-## Scientific purpose
+## Purpose
 Miletos is a time-series analysis and forward-modeling pipeline for astrophysical systems. It is designed to interpret time-domain photometry and related observations by combining detrending, period searches, diagnostics, and Bayesian forward modeling.
 
 ## Scope
@@ -14,18 +14,18 @@ python -m pip install -e .
 export MILETOS_PATH=/path/to/miletos
 ```
 
-`MILETOS_PATH` identifies the repository root. Runtime inputs belong under `data/` and generated pipeline outputs belong under `visuals/`. Both directories are ignored by Git. Existing deployments may continue to use `MILETOS_DATA_PATH` for an external data root while migrating.
+`MILETOS_PATH` identifies the repository root. Runtime inputs belong under `$MILETOS_PATH/data/` and generated pipeline outputs belong under `$MILETOS_PATH/visuals/`. Both directories are ignored by Git. Miletos does not use a separate data-path environment variable.
 
 ## Minimal usage
 Set `MILETOS_PATH` to the repository root and run the deterministic diagnostic:
 
 ```bash
-python examples/simulated_transit_diagnostic.py --typefileplot png
+python examples/simulated_transit/run.py --typefileplot png
 ```
 
-The example injects an Ephesos transit into a deterministic simulated light curve, then uses Miletos to mask the transits during spline detrending, phase-fold the result, and calculate uncertainty-aware phase bins. It writes `visuals/simulated_transit_diagnostic.png`; use `--typefileplot pdf` for a vector figure.
+The example injects an Ephesos transit into a deterministic simulated light curve, then uses Miletos to mask the transits during spline detrending, phase-fold the result, and calculate uncertainty-aware phase bins. It writes `examples/simulated_transit/visuals/simulated_transit_diagnostic.png`; use `--typefileplot pdf` for a vector figure.
 
-![Miletos simulated transit diagnostic showing the input light curve, spline detrending, and phase-folded output](docs/simulated_transit_diagnostic.png)
+![Miletos simulated transit diagnostic showing the input light curve, spline detrending, and phase-folded output](examples/simulated_transit/simulated_transit_diagnostic.png)
 
 The figure is generated from an explicitly simulated benchmark, not observational data. The reusable API is also available directly:
 
@@ -50,17 +50,28 @@ Use `--typefileplot pdf` to generate vector figures. The runner removes cached v
 Each script can also be run separately:
 
 ```bash
-python examples/simulated_transit_diagnostic.py
-python examples/target_visibility.py
-python examples/WASP-39_JWST_ERS.py
-python examples/examples.py
+python examples/simulated_transit/run.py
+python examples/target_visibility/run.py
+python examples/TOI-1233/run.py
+python examples/WASP-39b/run.py
+python examples/catalog/run.py
 ```
 
-All default examples are deterministic and run without network access. The WASP-39b workflow is an explicitly simulated JWST benchmark rather than an analysis of observational data. The legacy example catalog defaults to the supported simulated transit diagnostic and continues to accept a named archival configuration followed by any required arguments:
+Each runnable example owns a subfolder containing its `run.py` entry point and ignored `visuals/` products. The simulated transit and target-visibility examples are deterministic and run without network access. TOI-1233 and WASP-39b both run through `miletos.pipeline.run_observational_pipeline`, which applies the same output-format validation and isolated Miletos figure style to both analyses. The WASP-39b workflow downloads the public Alderson et al. (2023) NIRSpec G395H products from Zenodo and visualizes the complete published light-curve reduction sequence. The six figures show the detector-level white-light curves, measured detector motion, raw spectroscopic flux with its systematics model, corrected flux with its transit model and residuals, all 349 corrected wavelength channels, residual and photon-noise precision, and the final 344-bin weighted transmission spectrum with its best-fit ATMO model. Data are cached under `$MILETOS_PATH/data/WASP-39/ERS_G395H_Alderson2023/`, while figures are written under `examples/WASP-39b/visuals/`. The source dataset is DOI 10.5281/zenodo.7185300 and the associated Nature article is DOI 10.1038/s41586-022-05591-3.
+
+The legacy example catalog defaults to the supported simulated transit diagnostic and continues to accept a named archival configuration followed by any required arguments:
 
 ```bash
-python examples/examples.py cnfg_WASP 121
+python examples/catalog/run.py cnfg_WASP 121
 ```
+
+Run the joint Transiting Exoplanet Survey Satellite (TESS) and Planet Finder Spectrograph (PFS) analysis of TOI-1233 with:
+
+```bash
+python examples/TOI-1233/run.py
+```
+
+The default run writes the transit-timing-variation figures to `examples/TOI-1233/PlanetarySystemWithTTVs/visuals/`. Run `python examples/TOI-1233/run.py --model PlanetarySystem` to produce the standard planetary-system alternative. Observational inputs remain under `$MILETOS_PATH/data/TOI-1233/`. The archival catalog command remains available and delegates to the same pipeline.
 
 ## What the workflow does
 Miletos can be used to:
@@ -115,7 +126,13 @@ When fitting spectral light curves over a wavelength interval, an important cons
 
 ### JWST ERS Observations of WASP-39b
 
-Will be public soon...
+Run the observational reproduction with:
+
+```bash
+python examples/WASP-39b/run.py --typefileplot png
+```
+
+The example uses the public products accompanying Alderson et al. (2023), including the raw NRS1 and NRS2 white-light curves, the fitted 349-channel spectroscopic light curves, the weighted transmission spectrum, and the published equilibrium ATMO model. Miletos validates the archived systematics correction and residual identities before plotting. Representative 2.9, 3.7, 4.3, and 5.0 micron channels expose the raw flux, systematics component, corrected flux, transit model, and fit residuals without replacing the observations or generating hundreds of repetitive panels. The example also reports the directly recomputed atmospheric-model goodness of fit. All six figures are generated by the central `miletos.visualization` pipeline. The example entry point and ERS analysis module contain no independent plotting path.
 
 
 ### TESS Observations of WASP-121b

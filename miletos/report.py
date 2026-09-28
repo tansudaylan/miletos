@@ -1,4 +1,5 @@
 import os
+import math
 
 import matplotlib.pyplot as plt
 
@@ -22,16 +23,37 @@ def make_dvrp_pages(gdat):
         if os.path.exists(pathplot):
             continue
 
-        figr = plt.figure(figsize=(8.25, 11.75))
-        for dictdvrp in gdat.listdictdvrp[w]:
-            axis = figr.add_axes(dictdvrp['limt'])
-            print('Reading from %s...' % dictdvrp['path'])
-            axis.imshow(plt.imread(dictdvrp['path']))
+        listdictdvrp = gdat.listdictdvrp[w]
+        numbplot = len(listdictdvrp)
+        if numbplot == 0:
+            figr, axis = plt.subplots(figsize=(8.25, 3.5), constrained_layout=True)
+            axis.text(0.5, 0.5, 'No diagnostics available', ha='center', va='center')
             axis.axis('off')
+            if gdat.typeverb > 0:
+                print('Writing to %s...' % pathplot)
+            figr.savefig(pathplot, dpi=150, facecolor='white')
+            plt.close(figr)
+            continue
+        numbcolr = min(2, numbplot)
+        numbrows = math.ceil(numbplot / numbcolr)
+        figr, axis = plt.subplots(
+            numbrows,
+            numbcolr,
+            figsize=(8.25, 3.5 * numbrows),
+            constrained_layout=True,
+            squeeze=False,
+        )
+        listaxis = axis.ravel()
+        for axisthis, dictdvrp in zip(listaxis, listdictdvrp):
+            print('Reading from %s...' % dictdvrp['path'])
+            axisthis.imshow(plt.imread(dictdvrp['path']))
+            axisthis.axis('off')
+        for axisthis in listaxis[numbplot:]:
+            axisthis.axis('off')
         if gdat.typeverb > 0:
             print('Writing to %s...' % pathplot)
-        plt.savefig(pathplot, dpi=600)
-        plt.close()
+        figr.savefig(pathplot, dpi=150, facecolor='white')
+        plt.close(figr)
 
     return listpathdvrp
 

@@ -59,7 +59,7 @@ def test_setp_target_paths_and_input_check():
 
 
 def test_path_input_check_precedes_default_base_path(monkeypatch, tmp_path):
-    monkeypatch.setenv('MILETOS_DATA_PATH', str(tmp_path / 'miletos'))
+    monkeypatch.setenv('MILETOS_PATH', str(tmp_path / 'miletos'))
     monkeypatch.setenv('LYGOS_DATA_PATH', str(tmp_path / 'lygos'))
 
     for values in (
@@ -77,6 +77,8 @@ def test_path_input_check_precedes_default_base_path(monkeypatch, tmp_path):
     gdat.pathdatatarg = None
     gdat.pathvisutarg = None
     setp_base_paths(gdat)
+    assert gdat.pathbasemile == str(tmp_path / 'miletos') + '/'
+    assert gdat.pathbase == str(tmp_path / 'miletos' / 'data') + '/'
     assert not chec_path_input(gdat)
 
 

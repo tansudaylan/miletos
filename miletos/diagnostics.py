@@ -9,6 +9,7 @@ matplotlib.use("agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
+import tdpy
 
 import ephesos
 import astropy.units as u
@@ -222,15 +223,14 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
     for axis in axes:
         axis.legend(loc="lower right", frameon=True, fancybox=True, framealpha=1.0)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {output_path}...")
-    figure.savefig(
-        output_path,
-        dpi=300 if output_path.suffix == ".png" else None,
-        facecolor="white",
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
     )
-    plt.close(figure)
-    return output_path
 
 
 def run_simulated_transit_diagnostic(output_path: Path) -> TransitDiagnostic:
@@ -342,11 +342,14 @@ def plot_target_visibility(
         axis.spines["right"].set_visible(False)
         axis.legend(frameon=True, fancybox=True, framealpha=1.0)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {output_path}...")
-    figure.savefig(output_path, dpi=300 if output_path.suffix == ".png" else None)
-    plt.close(figure)
-    return output_path
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
 
 
 def run_target_visibility_diagnostic(
@@ -494,11 +497,14 @@ def plot_simulated_jwst_transit(
         axis.spines["right"].set_visible(False)
         axis.legend(frameon=True, fancybox=True, framealpha=1.0)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"Writing to {output_path}...")
-    figure.savefig(output_path, dpi=300 if output_path.suffix == ".png" else None)
-    plt.close(figure)
-    return output_path
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
 
 
 def run_simulated_jwst_transit_diagnostic(

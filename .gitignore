@@ -5,3 +5,6 @@ build/
 dist/
 /data/
 /visuals/
+/examples/**/archive/
+/examples/**/data/
+/examples/**/visuals/

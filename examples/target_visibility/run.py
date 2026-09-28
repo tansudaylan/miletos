@@ -1,7 +1,7 @@
 import argparse
 
 from miletos.diagnostics import run_target_visibility_diagnostic
-from miletos.paths import get_visuals_path
+from miletos.paths import get_repository_path
 
 '''
 Estimate the visibility of a target on the sky from a given observatory, for a given night and across a given year.
@@ -52,7 +52,7 @@ def main():
     arguments = parse_arguments()
     observatory = OBSERVATORIES[arguments.observatory]
     target = TARGETS[arguments.target]
-    output_path = get_visuals_path() / (
+    output_path = get_repository_path() / 'examples' / 'target_visibility' / 'visuals' / (
         f'target_visibility_{arguments.target.lower()}.{arguments.typefileplot}'
     )
     run_target_visibility_diagnostic(
