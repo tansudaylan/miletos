@@ -572,13 +572,14 @@ def build_occurrence_highlights(gdat, gmod, strgpdfn):
     """Return target highlight spans and labels for the occurrence-rate panel."""
 
     listhighlight = []
+    rratcomp = np.asarray(gdat.fitt.prio.meanpara.rratcomp)
     for jj, j in enumerate(gmod.indxcomp):
         if strgpdfn == 'post':
             xposlowr = gdat.dictpost['radicomp'][0, j]
             xposmedi = gdat.dictpost['radicomp'][1, j]
             xposuppr = gdat.dictpost['radicomp'][2, j]
         else:
-            xposmedi = gdat.fitt.prio.meanpara.rratcomp[j] * gdat.radistar
+            xposmedi = rratcomp[0, j] * gdat.radistar if rratcomp.ndim > 1 else rratcomp[j] * gdat.radistar
             xposlowr = xposmedi - gdat.stdvrratcompprio[j] * gdat.radistar
             xposuppr = xposmedi + gdat.stdvrratcompprio[j] * gdat.radistar
 

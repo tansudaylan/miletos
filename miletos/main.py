@@ -15,6 +15,7 @@ import pandas as pd
 import h5py
 
 import astroquery
+from astroquery.exceptions import InvalidQueryError
 
 import astropy
 import astropy.coordinates
@@ -424,7 +425,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             pathvisu = None
             if gdat.boolmakeplotefestrue or gdat.boolmakeanimefestrue:
                 pathvisu = gdat.pathvisutarg + 'EphesosOutputForSimulatedData/'
-                os.system('mkdir -p %s' % pathvisu)
+                os.makedirs(pathvisu, exist_ok=True)
                 
                 if strgmodl == 'true':
                     boolmakeanimsbrt = gdat.boolmakeanimefestrue
@@ -1022,7 +1023,7 @@ def plot_pser_mile( \
                                                                 yerr=yerr, elinewidth=1, capsize=2, zorder=1, \
                                                                 color='grey', alpha=gdat.alphdata, marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
                     # binned
-                    if len(arrypcur[b][p][j]) > 0:
+                    if len(arrypcurbind[b][p][j]) > 0:
                         if b == 0:
                             yerr = None
                         if b == 1:
@@ -1078,7 +1079,7 @@ def plot_pser_mile( \
                         if b == 1:
                             yerr = arrypcurbind[b][p][j][:, gdat.indxenerclip, 2]
                         
-                        if np.isfinite(gdat.fitt.prio.meanpara.duratrantotlcomp[j]):
+                        if np.isfinite(gdat.fitt.prio.meanpara.duratrantotlcomp[j]) and len(arrypcurbind[b][p][j]) > 0:
                             axis.errorbar(gdat.fitt.prio.meanpara.pericomp[j] * arrypcurbind[b][p][j][:, gdat.indxenerclip, 0] * facttime, \
                                                                  arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], zorder=2, \
                                                                                                         yerr=yerr, elinewidth=1, capsize=2, \
@@ -1116,8 +1117,9 @@ def plot_pser_mile( \
                     for jj, j in enumerate(gdat.fitt.prio.indxcomp):
                         axis[jj].plot(arrypcur[b][p][j][:, gdat.indxenerclip, 0], arrypcur[b][p][j][:, gdat.indxenerclip, 1], color='grey', alpha=gdat.alphdata, \
                                                                                             marker='o', ls='', ms=1, rasterized=gdat.boolrastraww)
-                        axis[jj].plot(arrypcurbind[b][p][j][:, gdat.indxenerclip, 0], \
-                                            arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], color=gdat.listcolrcomp[j], marker='o', ls='', ms=1)
+                        if len(arrypcurbind[b][p][j]) > 0:
+                            axis[jj].plot(arrypcurbind[b][p][j][:, gdat.indxenerclip, 0], \
+                                                arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], color=gdat.listcolrcomp[j], marker='o', ls='', ms=1)
                         if gdat.boolwritplan:
                             axis[jj].text(0.97, 0.8, r'\textbf{%s}' % gdat.liststrgcomp[j], transform=axis[jj].transAxes, \
                                                                                                 color=gdat.listcolrcomp[j], va='center', ha='center')
@@ -2181,6 +2183,7 @@ def proc_alle(gdat, typemodl):
 def plot_popl(gdat, strgpdfn):
     
     print('Plotting target features along with population features for strgpdfn: %s' % strgpdfn)
+    gmod = gdat.fitt.prio
         
     pathvisufeatplan = getattr(gdat, 'pathvisufeatplan' + strgpdfn)
     pathvisudataplan = getattr(gdat, 'pathvisudataplan' + strgpdfn)
@@ -2207,10 +2210,10 @@ def plot_popl(gdat, strgpdfn):
         axis.axvline(valu['xposmedi'], color=valu['colr'], ls='--', label=valu['labl'])
         axis.text(valu['textx'], valu['texty'], r'\textbf{%s}' % valu['labl'], color=valu['colr'], va='center', ha='center', transform=axis.transAxes)
     
-    if typeplotback == 'white':
+    if gdat.typeplotback == 'white':
         colrbkgd = 'white'
         colrdraw = 'black'
-    elif typeplotback == 'black':
+    elif gdat.typeplotback == 'black':
         colrbkgd = 'black'
         colrdraw = 'white'
     
@@ -2230,9 +2233,13 @@ def plot_popl(gdat, strgpdfn):
     for strgpopl in gdat.liststrgpopl:
         
         if strgpopl == 'exar':
-            dictpopl = gdat.dictexar
+            dictpoplraw = gdat.dictexar
         else:
-            dictpopl = gdat.dicttoii
+            dictpoplraw = gdat.dicttoii
+        dictpopl = {
+            name: valu[0] if isinstance(valu, list) and len(valu) == 2 and isinstance(valu[1], str) else valu
+            for name, valu in dictpoplraw.items()
+        }
         
         numbcomppopl = dictpopl['radicomp'].size
         indxtargpopl = np.arange(numbcomppopl)
@@ -6819,14 +6826,14 @@ def setup1_miletos(gdat):
     gdat.boolsimusome = False
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] != 'obsd':
+            if gdat.liststrgtypedata[b][p].startswith('simu'):
                 gdat.boolsimusome = True
 
     # Boolean flag indicating if all data are observed
     gdat.booldataobsv = True
     for b in gdat.indxdatatser:
         for p in gdat.indxinst[b]:
-            if gdat.liststrgtypedata[b][p] != 'obsd':
+            if gdat.liststrgtypedata[b][p] not in {'obsd', 'inpt'}:
                 gdat.booldataobsv = False
 
 
@@ -7314,9 +7321,9 @@ def init( \
     setp_base_paths(gdat)
     
     ## ensure that target and star coordinates are not provided separately
-    if gdat.rasctarg is not None and gdat.rascstar is not None:
+    if gdat.rasctarg is not None and getattr(gdat, 'rascstar', None) is not None:
         raise Exception('')
-    if gdat.decltarg is not None and gdat.declstar is not None:
+    if gdat.decltarg is not None and getattr(gdat, 'declstar', None) is not None:
         raise Exception('')
 
     # human-readable labels of the instruments
@@ -7373,7 +7380,7 @@ def init( \
     if gdat.booldiag:
         for b in gdat.indxdatatser:
             for p in gdat.indxinst[b]:
-                if not gdat.liststrgtypedata[b][p] in ['simutargsynt', 'simutargpartsynt', 'simutargpartfprt', 'simutargpartinje', 'obsd']:
+                if not gdat.liststrgtypedata[b][p] in ['simutargsynt', 'simutargpartsynt', 'simutargpartfprt', 'simutargpartinje', 'obsd', 'inpt']:
                     print('')
                     print('')
                     print('')
@@ -7428,7 +7435,8 @@ def init( \
                 gdat.indxinsttess = p
 
     # number of energy bins for each photometric data set
-    gdat.numbener = [[] for p in gdat.indxinst[0]]
+    numbinstrumentsmax = max((len(indices) for indices in gdat.indxinst), default=0)
+    gdat.numbener = [1 for p in range(numbinstrumentsmax)]
     
     if gdat.booldiag:
         for b in gdat.indxdatatser:
@@ -7749,13 +7757,16 @@ def init( \
         # temp -- check that the closest TIC to a given TIC is itself
         if gdat.typeverb > 0:
             print('Querying the TIC on MAST with keyword %s within %s as to get the RA, DEC, Tmag, and TIC ID of the closest source...' % (gdat.strgmast, gdat.strgradi))
-        listdictticinear = astroquery.mast.Catalogs.query_region(gdat.strgmast, radius=gdat.strgradi, catalog="TIC")
+        if gdat.typetarg == 'TICID':
+            listdictticinear = astroquery.mast.Catalogs.query_criteria(catalog='TIC', ID=gdat.ticitarg)
+        else:
+            listdictticinear = astroquery.mast.Catalogs.query_region(gdat.strgmast, radius=gdat.strgradi, catalog="TIC")
         gdat.boolsrchmastdone = True
         if gdat.typeverb > 0:
             print('Found %d TIC sources.' % len(listdictticinear))
         if len(listdictticinear) > 0:
             maxmanglmtch = 0.2 # [arcsecond]
-            if listdictticinear[0]['dstArcSec'] < maxmanglmtch:
+            if gdat.typetarg == 'TICID' or listdictticinear[0]['dstArcSec'] < maxmanglmtch:
                 print('The closest match via the MAST query was within %.g arcseconds. Will associate the TIC ID of the closest match to the target.' % maxmanglmtch)
                 gdat.ticitarg = int(listdictticinear[0]['ID'])
                 gdat.rasctarg = listdictticinear[0]['ra']
@@ -7969,10 +7980,10 @@ def init( \
     
     # determine the MAST keyword to be used for the target
     if not gdat.booltargsynt:
-        if gdat.strgmast is not None:
-            strgmasttemp = gdat.strgmast
-        elif gdat.rasctarg is not None:
+        if gdat.rasctarg is not None:
             strgmasttemp = '%g %g' % (gdat.rasctarg, gdat.decltarg)
+        elif gdat.strgmast is not None:
+            strgmasttemp = gdat.strgmast
         elif gdat.ticitarg is not None:
             strgmasttemp = 'TIC %d' % gdat.ticitarg
         else:
@@ -7985,18 +7996,21 @@ def init( \
             raise Exception('')
         
         if gdat.booltess:
-            strgtcut = strgmasttemp
-            # get the list of sectors for which TESS FFI data are available via TESSCut
-            gdat.listtsectcut, temp, temp = retr_listtsectcut(strgtcut)
+            if gdat.boolexecoffl and not gdat.boolretrlcurmastanyy:
+                gdat.listtsectcut = np.array([] if listtsecsele is None else listtsecsele, dtype=int)
+            else:
+                strgtcut = strgmasttemp
+                # get the list of sectors for which TESS FFI data are available via TESSCut
+                gdat.listtsectcut, temp, temp = retr_listtsectcut(strgtcut)
         
             print('List of TESS sectors for which FFI data are available via TESSCut:')
             print(gdat.listtsectcut)
         
-    if (gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None or gdat.toiitarg is not None) and gdat.boolexecoffl and not gdat.boolsimutotl:
+    if gdat.boolretrlcurmastanyy and gdat.boolexecoffl and not gdat.boolsimutotl:
         print('')
         print('')
         print('')
-        raise Exception('(gdat.strgmast is not None or gdat.ticitarg is not None or rasctarg is not None) AND boolexecoffl is True AND not gdat.boolsimutotl.')
+        raise Exception('MAST retrieval was requested while offline.')
     
     print('gdat.booltesskepl')
     print(gdat.booltesskepl)
@@ -8169,7 +8183,11 @@ def init( \
                 
                 print('Table %d...' % k)
                 print('Getting the product list for table %d...' % k)
-                listprod = astroquery.mast.Observations.get_product_list(tablobsv)
+                try:
+                    listprod = astroquery.mast.Observations.get_product_list(tablobsv)
+                except InvalidQueryError:
+                    print('No downloadable products for table number %d. Skipping the table...' % k)
+                    continue
                 numbprod = len(listprod)
                 print('numbprod')
                 print(numbprod)
@@ -8441,6 +8459,7 @@ def init( \
         print('gdat.fitt.typemodlenerfitt')
         print(gdat.fitt.typemodlenerfitt)
                     
+    gdat.listtseclygo = []
     if gdat.booltesskepl and gdat.booltargpartanyy:
         numbtsec = len(gdat.listtsectcut)
 
@@ -8459,6 +8478,9 @@ def init( \
                 raise Exception('')
         else:
             raise Exception('')
+
+        if listtsecsele is not None:
+            gdat.listtseclygo = np.intersect1d(gdat.listtseclygo, listtsecsele)
         
         print('boollygo')
         print(boollygo)
@@ -8763,19 +8785,21 @@ def init( \
         setp_modlmedi(gdat, 'true')
 
     else:
-        gdat.numbener[p] = 1
+        for p in gdat.indxinst[0]:
+            gdat.numbener[p] = 1
     
     if gdat.booldiag:
-        for p in gdat.indxinst[b]:
-            if gdat.liststrginst[0][p] == 'JWST':
-                print('')
-                print('')
-                print('')
-                print('gdat.liststrginst')
-                print(gdat.liststrginst)
-                print('gdat.listarrylcurmast')
-                print(gdat.listarrylcurmast)
-                raise Exception('')
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if gdat.liststrginst[b][p] == 'JWST':
+                    print('')
+                    print('')
+                    print('')
+                    print('gdat.liststrginst')
+                    print(gdat.liststrginst)
+                    print('gdat.listarrylcurmast')
+                    print(gdat.listarrylcurmast)
+                    raise Exception('')
 
     # generate a vector of random system parameters
     print('gdat.booltargsynt')
@@ -8800,7 +8824,7 @@ def init( \
     
     # determine whether the NASA Exoplanet Archive Composite PS catalog will be read for the target
     gdat.boolexar = False
-    if gdat.typepriocomp is None and gdat.typetarg != 'synt' and gdat.typetarg != 'inptdata':
+    if gdat.typepriocomp in {None, 'exar'} and gdat.typetarg != 'synt' and gdat.typetarg != 'inptdata':
         gdat.boolexar = True
 
     # read NASA Excoplanet Archive
@@ -8958,7 +8982,7 @@ def init( \
     ## make folders again (needed because of path definitions since the last mkdir)
     for attr, valu in gdat.__dict__.items():
         if attr.startswith('path') and valu is not None and not isinstance(valu, dict) and valu.endswith('/'):
-            os.system('mkdir -p %s' % valu)
+            os.makedirs(valu, exist_ok=True)
             
     if gdat.boolmodl:
         gdat.fitt.prio.meanpara.duratrantotlcomp = None
@@ -9204,18 +9228,19 @@ def init( \
                             if not gdat.nameanlslygo in gdat.dictlygooutp['arryrflx']:
                                 print('Warning: lygos data were not incorporated into miletos!')
             
-    if gdat.numbener[p] == 1:
+    numbener = max(gdat.numbener, default=1)
+    if numbener == 1:
         gdat.numbenermodl = 1
         gdat.numbeneriter = 1
         gdat.numbenerefes = 1
     elif gdat.fitt.typemodlenerfitt == 'full':
-        gdat.numbenermodl = gdat.numbener[p]
+        gdat.numbenermodl = numbener
         gdat.numbeneriter = 2
         gdat.numbenerefes = 2
     else:
         gdat.numbenermodl = 1
-        gdat.numbeneriter = gdat.numbener[p] + 1
-        gdat.numbenerefes = gdat.numbener[p] + 1
+        gdat.numbeneriter = numbener + 1
+        gdat.numbenerefes = numbener + 1
     gdat.indxfittiter = np.arange(gdat.numbeneriter)
     gdat.indxenermodl = np.arange(gdat.numbenermodl)
 
@@ -9431,7 +9456,7 @@ def init( \
     gdat.liststrgdatafittiter = [[] for r in gdat.indxfittiter]
     for h in gdat.indxfittiter:
         if h == 0:
-            if gdat.numbener[p] > 1:
+            if numbener > 1:
                 gdat.liststrgdatafittiter[0] = 'whit'
             else:
                 gdat.liststrgdatafittiter[0] = ''
@@ -9772,11 +9797,11 @@ def init( \
         print('gdat.numbener[p]')
         print(gdat.numbener[p])
         
-    gdat.indxener = [[] for p in gdat.indxinst[0]]
-    for p in gdat.indxinst[0]:
+    gdat.indxener = [[] for p in range(numbinstrumentsmax)]
+    for p in range(numbinstrumentsmax):
         gdat.indxener[p] = np.arange(gdat.numbener[p])
         
-    if gdat.numbener[p] > 1 and gdat.typeverb > 0:
+    if numbener > 1 and gdat.typeverb > 0:
         print('gdat.fitt.typemodlenerfitt')
         print(gdat.fitt.typemodlenerfitt)
 
@@ -10481,7 +10506,7 @@ def init( \
     print('gdat.boolsrchoutlperi')
     print(gdat.boolsrchoutlperi)
 
-    if gdat.booldiag:
+    if gdat.booldiag and gdat.boolsrchoutlperi:
         if gdat.dictoutlperi['boolposi'] and gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
             print('')
             print('')
@@ -11152,19 +11177,21 @@ def init( \
 
             gdat.dictbinsphas = dict()
             for strgarrypcur in gdat.liststrgarrypcur:
-                
+                gdat.dictbinsphas[strgarrypcur] = []
                 numbbins = 100
-                if strgarrypcur == 'DetrendedPrimaryCentered':
-                    limt = [-0.5, 0.5]
-                if strgarrypcur == 'DetrendedPrimaryCenteredZoom':
-                    limt = [-0.5 * objtpara.dcyctrantotlcomp, 0.5 * objtpara.dcyctrantotlcomp]
-                if strgarrypcur == 'DetrendedSecondaryCenteredZoom':
-                    limt = [0.5 - 0.5 * objtpara.dcyctrantotlcomp, 0.5 + 0.5 * objtpara.dcyctrantotlcomp]
-                if strgarrypcur == 'DetrendedQuadratureCentered':
-                    limt = [-0.25, 0.75]
-                if strgarrypcur == 'DetrendedQuadratureCenteredMasked':
-                    limt = [-0.25, 0.75]
-                gdat.dictbinsphas[strgarrypcur], _, _, _, _ = tdpy.retr_axis(limt=limt, numbpntsgrid=numbbins)
+                for j in gmod.indxcomp:
+                    if strgarrypcur == 'DetrendedPrimaryCentered':
+                        limt = [-0.5, 0.5]
+                    if strgarrypcur == 'DetrendedPrimaryCenteredZoom':
+                        limt = [-0.5 * objtpara.dcyctrantotlcomp[j], 0.5 * objtpara.dcyctrantotlcomp[j]]
+                    if strgarrypcur == 'DetrendedSecondaryCenteredZoom':
+                        limt = [0.5 - 0.5 * objtpara.dcyctrantotlcomp[j], 0.5 + 0.5 * objtpara.dcyctrantotlcomp[j]]
+                    if strgarrypcur == 'DetrendedQuadratureCentered':
+                        limt = [-0.25, 0.75]
+                    if strgarrypcur == 'DetrendedQuadratureCenteredMasked':
+                        limt = [-0.25, 0.75]
+                    binsphas, _, _, _, _ = tdpy.retr_axis(limt=limt, numbpntsgrid=numbbins)
+                    gdat.dictbinsphas[strgarrypcur].append(binsphas)
                 gmod.arrypcur[strgarrypcur] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
                 gmod.arrypcur[strgarrypcur+'Binned'] = [[[[] for j in gdat.fitt.prio.indxcomp] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
         
@@ -11200,7 +11227,7 @@ def init( \
                                 print('Skipping binning %s because no data point exists...' % strgarrypcur)
                                 continue
 
-                            gmod.arrypcur[strgarrypcur + 'Binned'][b][p][j] = rebn_tser(gmod.arrypcur[strgarrypcur][b][p][j], blimxdat=gdat.dictbinsphas[strgarrypcur])
+                            gmod.arrypcur[strgarrypcur + 'Binned'][b][p][j] = rebn_tser(gmod.arrypcur[strgarrypcur][b][p][j], blimxdat=gdat.dictbinsphas[strgarrypcur][j])
                         
                         for e in gdat.indxener[p]:
                             path = gdat.pathdatatarg + 'arrypcur_Primary_Detrended_Binned_%s%s%s_%s.csv' % (gdat.liststrginst[b][p], \
@@ -11220,8 +11247,8 @@ def init( \
 
     if gdat.boolplotpopl:
         if gdat.typeverb > 0:
-            print('Making plots highlighting the %s features of the target within its population...' % (strgpdfn))
-        plot_popl(gdat, 'nomi')
+            print('Making plots highlighting the prior features of the target within its population...')
+        plot_popl(gdat, 'prio')
     
     if gdat.boolsrchboxsperi and not gdat.dictmileoutp['boolposianls'].any():
         print('BLS was performed, but no super-threshold BLS signal was found.')

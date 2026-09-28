@@ -71,9 +71,6 @@ Miletos can be used to:
 - compare forward models against observed data;
 - produce final plots and stored summary products that make the modeling chain inspectable.
 
-## Development status
-Miletos remains a maintained research-grade pipeline rather than a broad generic library. The supported interface is the importable workflow and the documented model entry points; legacy or exploratory fragments should be treated as historical unless explicitly migrated into the active API.
-
 
 ## Input Data
 The input time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.

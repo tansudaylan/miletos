@@ -60,7 +60,7 @@ def test_all_examples_run_and_produce_plots(tmp_path):
     environment['MILETOS_PATH'] = str(tmp_path)
 
     completed = subprocess.run(
-        [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py')],
+        [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py'), '--quick'],
         cwd=REPOSITORY_PATH,
         env=environment,
         capture_output=True,
@@ -83,3 +83,24 @@ def test_all_examples_run_and_produce_plots(tmp_path):
         assert image.shape[0] > 100
         assert image.shape[1] > 100
         assert image[..., :3].min() < 0.8
+
+
+def test_run_all_lists_every_catalog_configuration():
+    completed = subprocess.run(
+        [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py'), '--list'],
+        cwd=REPOSITORY_PATH,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    tree = __import__('ast').parse((REPOSITORY_PATH / 'examples' / 'examples.py').read_text())
+    expected = {
+        node.name for node in tree.body
+        if isinstance(node, __import__('ast').FunctionDef) and node.name.startswith('cnfg_')
+    }
+    listed = {line.split()[0] for line in completed.stdout.splitlines()}
+    assert completed.returncode == 0, completed.stderr
+    assert listed == expected
+    assert len(completed.stdout.splitlines()) == 45

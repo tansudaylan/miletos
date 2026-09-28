@@ -48,13 +48,17 @@ def cnfg_TOI1233():
                 liststdvrvel.append(valu)
             k += 1
     listtime = np.array(listtime)
+
+    pathphot = os.environ['MILETOS_DATA_PATH'] + '/TOI-1233/data/TESS_PDCSAP_FLUX_Sector10.csv'
+    print('Reading from %s...' % pathphot)
+    arryphot = np.loadtxt(pathphot, delimiter=',')[:, None, :]
     
     listarrytser = dict()
-    listarrytser['raww'] = [None ,[[[]]]]
-    listarrytser['raww'][1][0][0] = np.empty((listtime.size, 1, 3))
-    listarrytser['raww'][1][0][0][:, 0, 0] = listtime
-    listarrytser['raww'][1][0][0][:, 0, 1] = np.array(listrvel)
-    listarrytser['raww'][1][0][0][:, 0, 2] = np.array(liststdvrvel)
+    listarrytser['Raw'] = [[[arryphot]], [[[]]]]
+    listarrytser['Raw'][1][0][0] = np.empty((listtime.size, 1, 3))
+    listarrytser['Raw'][1][0][0][:, 0, 0] = listtime
+    listarrytser['Raw'][1][0][0][:, 0, 1] = np.array(listrvel)
+    listarrytser['Raw'][1][0][0][:, 0, 2] = np.array(liststdvrvel)
 
     listtypemodl = ['PlanetarySystem', 'PlanetarySystemWithTTVs']
     
@@ -62,15 +66,22 @@ def cnfg_TOI1233():
         dictfitt = dict()
         dictfitt['typemodl'] = typemodl
         
-        toiitarg = 1233
         miletos.main.init( \
-                          toiitarg=toiitarg, \
+                          rasctarg=186.574548, \
+                          decltarg=-51.362837, \
+                          labltarg='TOI-1233', \
+                          strgtarg='TOI-1233', \
                           dictfitt=dictfitt, \
                           strgexar='HD 108236', \
+                          strgcnfg=typemodl, \
                           listarrytser=listarrytser, \
+                          liststrgtypedata=[['inpt'], ['inpt']], \
+                          listlablinst=[['TESS'], ['PFS']], \
+                          boolbdtr=[[False], [False]], \
+                          boolforcoffl=True, \
                           boolfitt=False, \
                           typepriocomp='exar', \
-                          boolplotpopl=True, \
+                          boolplotpopl=False, \
                          )
 
 
@@ -85,6 +96,8 @@ def cnfg_WASP121():
     for typelcurtpxftess in listtypelcurtpxftess:
         miletos.main.init( \
                        strgmast='WASP-121', \
+                       listtsecsele=[7], \
+                       boolforcoffl=True, \
                        #liststrgtypedata=liststrgtypedata, \
                        boolbdtr=boolbdtr, \
                        boolfitt=False, \
@@ -1130,17 +1143,18 @@ def cnfg_ASASSN20qc():
 
     listnumbside = [7, 11, 15]
     for numbside in listnumbside:
+        dictlygoinpt['numbside'] = np.array([numbside])
         if numbside == 11:
             listtimescalbdtr = [0., 0.1, 0.5]
         else:
             listtimescalbdtr = [0.]
         miletos.main.init( \
                       labltarg=labltarg, \
-                      rasctarg=rasctarg, \
-                      decltarg=decltarg, \
+                      ticitarg=219229145, \
 
                       dictfitt=dictfitt, \
                       listtsecsele=listtsecsele, \
+                      typelcurtpxftess='lygos', \
 
                       #refrlistlabltser=refrlistlabltser, \
                       #refrarrytser=refrarrytser, \

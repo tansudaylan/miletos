@@ -554,6 +554,10 @@ def test_build_occurrence_highlights_for_post_and_prior():
     assert np.isclose(listhighlightprio[0]['xposuppr'], 2.2)
     assert listhighlightprio[0]['colr'] == 'r'
 
+    gdat.fitt.prio.meanpara.rratcomp = np.array([[0.1, 0.2]])
+    listhighlightprio = build_occurrence_highlights(gdat, gmod, 'prio')
+    assert np.isclose(listhighlightprio[1]['xposmedi'], 2.0)
+
 
 def test_build_occurrence_rate_data():
     data = np.array([
