@@ -32,6 +32,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import tdpy
+from pcat.fixed import sample_allesfitter_pcat
 from tdpy.paths import make_directory
 from tdpy.util import summgene
 from .cache import read_cached_output
@@ -919,7 +920,7 @@ def retr_dictderi_mile(para, gdat):
 
 
 def retr_llik_albbepsi(para, gdat):
-    
+    """Use Cowan-Agol redistribution with T_eq = T_irr / sqrt(2)."""
     # Bond albedo
     albb = para[0]
     
@@ -928,9 +929,9 @@ def retr_llik_albbepsi(para, gdat):
 
     psiimodl = (1 - albb)**.25
     #tmptirre = gdat.dictlist['tmptequi'][:, 0] * psiimodl
-    tmptirre = gdat.gmeatmptequi * psiimodl
-    
-    tmptplandayy, tmptplannigh = retr_tmptplandayynigh(tmptirre)
+    tmptirre = np.sqrt(2.) * gdat.gmeatmptequi * psiimodl
+    tmptplandayy = tmptirre * (2. / 3. - 5. * epsi / 12.)**.25
+    tmptplannigh = tmptirre * (epsi / 4.)**.25
     
     #llik = np.zeros(gdat.numbsamp)
     #llik += -0.5 * (tmptdayy - gdat.dictlist['tmptdayy'][:, 0])**2
@@ -939,8 +940,8 @@ def retr_llik_albbepsi(para, gdat):
     #llik = np.sum(llik)
     
     llik = 0.
-    llik += -0.5 * (tmptdayy - gdat.gmeatmptdayy)**2 / gdat.gstdtmptdayy**2
-    llik += -0.5 * (tmptnigh - gdat.gmeatmptnigh)**2 / gdat.gstdtmptnigh**2
+    llik += -0.5 * (tmptplandayy - gdat.gmeatmptdayy)**2 / gdat.gstdtmptdayy**2
+    llik += -0.5 * (tmptplannigh - gdat.gmeatmptnigh)**2 / gdat.gstdtmptnigh**2
     llik += -0.5 * (psiimodl - gdat.gmeapsii)**2 / gdat.gstdpsii**2 * 1e3
     
     return llik
@@ -1541,7 +1542,7 @@ def proc_alle(gdat, typemodl):
     path = ensure_alle_initial_plot(gdat.pathalle[typemodl], allesfitter.show_initial_guess)
     
     ## do the run
-    path = ensure_alle_mcmc_run(gdat.pathalle[typemodl], tdpy.sample_allesfitter_pcat, typeverb=gdat.typeverb)
+    path = ensure_alle_mcmc_run(gdat.pathalle[typemodl], sample_allesfitter_pcat, typeverb=gdat.typeverb)
 
     ## make the final plots
     path = ensure_alle_final_plots(gdat.pathalle[typemodl], allesfitter.mcmc_output)

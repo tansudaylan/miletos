@@ -1,11 +1,25 @@
 import numpy as np
 import pytest
 
-from miletos.main import setp_input_companion_priors
+from miletos.main import retr_llik_albbepsi, setp_input_companion_priors
 
 
 class DummyData:
     pass
+
+
+def test_albedo_likelihood_has_equal_hemispheres_at_full_redistribution():
+    state = DummyData()
+    state.gmeatmptequi = 1000.  # [K]
+    state.gmeatmptdayy = 1000. * 0.8**0.25  # [K]
+    state.gmeatmptnigh = state.gmeatmptdayy  # [K]
+    state.gstdtmptdayy = 20.  # [K]
+    state.gstdtmptnigh = 20.  # [K]
+    state.gmeapsii = 0.8**0.25
+    state.gstdpsii = 0.1
+
+    assert np.isclose(retr_llik_albbepsi(np.array([0.2, 0.5, 1.]), state), 0.)
+    assert retr_llik_albbepsi(np.array([0.2, 0.5, 0.5]), state) < 0.
 
 
 def make_input():
