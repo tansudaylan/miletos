@@ -38,7 +38,7 @@ from .cache import read_cached_output
 from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, initialize_tser_containers, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
-from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, setp_dictmodl_sample
+from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, save_miletos_figure, setp_dictmodl_sample
 import nicomedia
 import ephesos
 
@@ -1051,10 +1051,7 @@ def plot_pser_mile( \
                     if gdat.listdeptdraw is not None:
                         for k in range(len(gdat.listdeptdraw)):  
                             axis.axhline(1. - 1e-3 * gdat.listdeptdraw[k], ls='-', color='grey')
-                    if typeverb > 0:
-                        print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
+                    save_miletos_figure(gdat, figr, path)
             
                 # same plot, with time on the horizontal axis
                 if strgarry.startswith('Primary'):
@@ -1100,10 +1097,7 @@ def plot_pser_mile( \
                             for k in range(len(gdat.listdeptdraw)):  
                                 axis.axhline(1. - 1e-3 * gdat.listdeptdraw[k], ls='--', color='grey')
                         plt.subplots_adjust(hspace=0., bottom=0.25, left=0.25)
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
             
             # plot phase curves of all companions together
             if gmod.numbcomp > 1:
@@ -1130,10 +1124,7 @@ def plot_pser_mile( \
                     axis[0].set_title(titl)
                     
                     plt.subplots_adjust(hspace=0., bottom=0.2)
-                    if gdat.typeverb > 0:
-                        print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
+                    save_miletos_figure(gdat, figr, path)
     
 
 def calc_feat_alle(gdat, strgpdfn):
@@ -2210,12 +2201,7 @@ def plot_popl(gdat, strgpdfn):
         axis.axvline(valu['xposmedi'], color=valu['colr'], ls='--', label=valu['labl'])
         axis.text(valu['textx'], valu['texty'], r'\textbf{%s}' % valu['labl'], color=valu['colr'], va='center', ha='center', transform=axis.transAxes)
     
-    if gdat.typeplotback == 'white':
-        colrbkgd = 'white'
-        colrdraw = 'black'
-    elif gdat.typeplotback == 'black':
-        colrbkgd = 'black'
-        colrdraw = 'white'
+    _, colrdraw = tdpy.plot_background_colors(gdat.typeplotback)
     
     # plot the occurrence rate
     axis.errorbar(dictoccu['timeoccu'], dictoccu['occumean'], yerr=dictoccu['occuyerr'], xerr=dictoccu['xerr'], color=colrdraw, ls='', marker='o', lw=1, zorder=10)
@@ -2868,10 +2854,7 @@ def plot_tser_mile_core(gdat, strgarry, b, p, y=None, boolcolrtran=True, boolfla
         axis.set_title(titl)
         plt.subplots_adjust(bottom=0.2)
         
-        if gdat.typeverb > 0:
-            print('Writing to %s...' % path)
-        plt.savefig(path, dpi=200)
-        plt.close()
+        save_miletos_figure(gdat, figr, path)
     
 
     if gdat.numbener[p] > 1:
@@ -2944,10 +2927,7 @@ def plot_tser_mile_core(gdat, strgarry, b, p, y=None, boolcolrtran=True, boolfla
             axis.set_title(gdat.labltarg)
             plt.subplots_adjust(bottom=0.2)
             
-            if gdat.typeverb > 0:
-                print('Writing to %s...' % path)
-            plt.savefig(path, dpi=200)
-            plt.close()
+            save_miletos_figure(gdat, figr, path)
 
 
 def retr_tsertitl(gdat, b, p, y=None):
@@ -3006,9 +2986,7 @@ def plot_tser_mile(gdat, b, p, y, strgarry, boolcolrtran=False, booltoge=True, b
                 
                 #plt.subplots_adjust(bottom=0.2)
                 #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.8, 0.8]})
-                print('Writing to %s...' % path)
-                plt.savefig(path)
-                plt.close()
+                save_miletos_figure(gdat, figr, path)
         
 
 def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
@@ -3061,9 +3039,7 @@ def plot_tser_bdtr(gdat, b, p, y, z, r, strgarryinpt, strgarryoutp):
         axis[0].set_title(titl)
         
         plt.subplots_adjust(hspace=0.)
-        print('Writing to %s...' % path)
-        plt.savefig(path, dpi=200)
-        plt.close()
+        save_miletos_figure(gdat, figr, path)
                             
 
 def retr_namebdtrclip(e, r):
@@ -4603,12 +4579,7 @@ def srch_boxsperi(arry, \
                         if not os.path.exists(dictpathplot[strg][j]):
                             boolproc = True
             
-    if typeplotback == 'white':
-        colrbkgd = 'white'
-        colrdraw = 'black'
-    elif typeplotback == 'black':
-        colrbkgd = 'black'
-        colrdraw = 'white'
+    _, colrdraw = tdpy.plot_background_colors(typeplotback)
     
     if boolproc:
         dictboxsperioutp = dict()
@@ -6276,13 +6247,6 @@ def plot_tser( \
     else:
         typexdat = 'time'
     
-    if typeplotback == 'white':
-        colrbkgd = 'white'
-        colrdraw = 'black'
-    elif typeplotback == 'black':
-        colrbkgd = 'black'
-        colrdraw = 'white'
-    
     if pathvisu is not None:
         dicttdpy = tdpy.retr_dictstrg()
 
@@ -6549,10 +6513,14 @@ def plot_tser( \
     plt.subplots_adjust(bottom=0.2, top=0.8)
     
     if pathvisu is not None:
-        print('Writing to %s...' % path)
-        plt.savefig(path, dpi=300)
-        plt.close()
-        return path
+        return tdpy.save_figure(
+            figr,
+            path,
+            typefileplot=typefileplot,
+            typeplotback=typeplotback,
+            close_figure=True,
+            dpi=300,
+        )
     else:
         plt.show()
         return None
@@ -7511,12 +7479,7 @@ def init( \
                 if gdat.liststrginst[b][p] == 'ZTF':
                     gdat.boolretrlcurzwtf = True
     
-    if typeplotback == 'white':
-        colrbkgd = 'white'
-        colrdraw = 'black'
-    elif typeplotback == 'black':
-        colrbkgd = 'black'
-        colrdraw = 'white'
+    _, colrdraw = tdpy.plot_background_colors(typeplotback)
     
     # decide whether to run in offline mode
     if gdat.boolforcoffl:

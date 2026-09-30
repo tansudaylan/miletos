@@ -8,12 +8,38 @@ import pytest
 import numpy as np
 
 from miletos.visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_modl_fine_series, setp_dictmodl_sample
-from miletos.visualization import retr_lablinst_part, retr_lablcnfg_part, retr_summary_extn, retr_summary_title
+from miletos.visualization import retr_lablinst_part, retr_lablcnfg_part, retr_summary_extn, retr_summary_title, save_miletos_figure
 import miletos.visualization as vismod
 
 
 class DummyGdat:
     pass
+
+
+def test_save_miletos_figure_forwards_output_settings(monkeypatch):
+    gdat = DummyGdat()
+    gdat.typefileplot = 'pdf'
+    gdat.typeplotback = 'dark'
+    figure = object()
+    calls = {}
+
+    def fake_save_figure(*args, **kwargs):
+        calls['args'] = args
+        calls['kwargs'] = kwargs
+        return 'figure.pdf'
+
+    monkeypatch.setattr(vismod.tdpy, 'save_figure', fake_save_figure)
+
+    path = save_miletos_figure(gdat, figure, 'figure.old', dpi=150)
+
+    assert path == 'figure.pdf'
+    assert calls['args'] == (figure, 'figure.old')
+    assert calls['kwargs'] == {
+        'typefileplot': 'pdf',
+        'typeplotback': 'dark',
+        'close_figure': True,
+        'dpi': 150,
+    }
 
 
 def test_visualization_module_reloads_without_invalid_escape_warnings():

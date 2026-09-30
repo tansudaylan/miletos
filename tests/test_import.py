@@ -3,6 +3,16 @@ import importlib
 import sys
 
 
+def test_import_miletos_does_not_eagerly_import_main():
+    sys.modules.pop('miletos.main', None)
+    sys.modules.pop('miletos', None)
+
+    package = importlib.import_module('miletos')
+
+    assert 'miletos.main' not in sys.modules
+    assert package.__name__ == 'miletos'
+
+
 def test_import_miletos_without_optional_lygos(monkeypatch):
     """Core time-series workflows import without the optional photometry backend."""
 

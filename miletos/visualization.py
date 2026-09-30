@@ -8,6 +8,20 @@ import numpy as np
 import tdpy
 
 
+def save_miletos_figure(gdat, figure, path, **kwargs):
+    """Write and close a figure using the active Miletos output settings."""
+    typefileplot = getattr(gdat, 'typefileplot', Path(path).suffix.removeprefix('.') or 'png')
+    typeplotback = getattr(gdat, 'typeplotback', 'norm')
+    return tdpy.save_figure(
+        figure,
+        path,
+        typefileplot=typefileplot,
+        typeplotback=typeplotback,
+        close_figure=True,
+        **kwargs,
+    )
+
+
 @contextmanager
 def miletos_plot_context():
     """Apply the common Miletos figure style without leaking global state."""
@@ -1498,9 +1512,6 @@ def plot_binned_rms(gdat, path, delt, stdvresi):
     axis.set_xlabel('Bin width [hour]')
     axis.legend()
     plt.tight_layout()
-    if gdat.typeverb > 0:
-        print('Writing to %s...' % path)
-    plt.savefig(path)
-    plt.close(figr)
+    save_miletos_figure(gdat, figr, path)
 
     return path

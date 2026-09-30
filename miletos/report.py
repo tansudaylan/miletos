@@ -2,6 +2,7 @@ import os
 import math
 
 import matplotlib.pyplot as plt
+import tdpy
 
 
 def retr_pathpage(gdat, numbpage):
@@ -29,10 +30,7 @@ def make_dvrp_pages(gdat):
             figr, axis = plt.subplots(figsize=(8.25, 3.5), constrained_layout=True)
             axis.text(0.5, 0.5, 'No diagnostics available', ha='center', va='center')
             axis.axis('off')
-            if gdat.typeverb > 0:
-                print('Writing to %s...' % pathplot)
-            figr.savefig(pathplot, dpi=150, facecolor='white')
-            plt.close(figr)
+            tdpy.save_figure(figr, pathplot, dpi=150, close_figure=True)
             continue
         numbcolr = min(2, numbplot)
         numbrows = math.ceil(numbplot / numbcolr)
@@ -50,10 +48,7 @@ def make_dvrp_pages(gdat):
             axisthis.axis('off')
         for axisthis in listaxis[numbplot:]:
             axisthis.axis('off')
-        if gdat.typeverb > 0:
-            print('Writing to %s...' % pathplot)
-        figr.savefig(pathplot, dpi=150, facecolor='white')
-        plt.close(figr)
+        tdpy.save_figure(figr, pathplot, dpi=150, close_figure=True)
 
     return listpathdvrp
 
