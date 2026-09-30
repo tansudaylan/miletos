@@ -1,3 +1,4 @@
+from tdpy.verbosity import print
 import time as modutime
 
 import os, fnmatch
@@ -6,7 +7,7 @@ import numpy as np
 import scipy.interpolate
 import scipy.stats
 
-from tqdm import tqdm
+from tdpy.verbosity import tqdm
 
 from numba import jit, prange
 

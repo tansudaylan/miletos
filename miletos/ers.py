@@ -1,5 +1,7 @@
 """Reproduce published JWST Early Release Science analyses."""
 
+from tdpy.verbosity import print
+
 from dataclasses import dataclass
 from pathlib import Path
 import shutil

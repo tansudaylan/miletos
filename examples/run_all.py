@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Run every supported Miletos example and verify its plot."""
 
+from tdpy.verbosity import print
+
 import argparse
 import ast
 import os

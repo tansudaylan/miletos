@@ -1,3 +1,4 @@
+from tdpy.verbosity import print
 import argparse
 import inspect
 import os

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Analyze the observed TOI-1233 TESS photometry and PFS velocities."""
 
+from tdpy.verbosity import print
+
 import argparse
 
 from miletos.toi1233 import run_toi1233_observation

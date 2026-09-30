@@ -1,5 +1,7 @@
 """Observational TESS and PFS analysis of TOI-1233."""
 
+from tdpy.verbosity import print
+
 import os
 
 import numpy as np

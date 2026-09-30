@@ -1,3 +1,4 @@
+from tdpy.verbosity import print
 import fnmatch
 import os
 
