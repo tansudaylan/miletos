@@ -18,6 +18,8 @@ EXPECTED_NOTEBOOKS = {
         'run_toi1233_observation(',
     Path('examples/WASP-39b/WASP39ERS.ipynb'):
         'run_wasp39_ers_g395h_reproduction(',
+    Path('examples/WASP-121b/Daylan2021b.ipynb'):
+        'run_daylan2021b_reproduction(',
     Path('examples/catalog/ConfigurationCatalog.ipynb'):
         'configurations[configuration_name](',
     Path('examples/simulated_transit/SimulatedTransit.ipynb'):
@@ -34,7 +36,7 @@ def example_id(path):
 def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
-    assert len(EXAMPLE_PATHS) == 6
+    assert len(EXAMPLE_PATHS) == 7
 
 
 def test_example_notebooks_use_miletos_apis():
