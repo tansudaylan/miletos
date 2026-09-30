@@ -54,6 +54,147 @@ def miletos_plot_context():
         yield
 
 
+def plot_daylan2021_light_curve(result, output_path: Path) -> Path:
+    """Reproduce the publication view of the Sector 10 and 11 PDC light curve."""
+
+    from .daylan2021 import phase_time
+
+    colors = ('#C23B8E', '#E09F3E', '#C23B22', '#4F772D')
+    largest_gap = np.argmax(np.diff(result.time_bjd))
+    sector_slices = (slice(None, largest_gap + 1), slice(largest_gap + 1, None))
+    figure, axes = plt.subplots(
+        2,
+        1,
+        figsize=(9.0, 5.8),
+        sharey=True,
+        constrained_layout=True,
+    )
+    for sector, (axis, sector_slice) in enumerate(zip(axes, sector_slices), start=10):
+        time = result.time_bjd[sector_slice]
+        flux_ppt = 1e3 * (result.detrended_flux[sector_slice] - 1.0)
+        axis.scatter(
+            time - 2457000.0,
+            flux_ppt,
+            s=2.0,
+            color='#9AA0A6',
+            alpha=0.48,
+            linewidths=0.0,
+            rasterized=True,
+        )
+        for transit, color in zip(result.recovered, colors):
+            in_transit = (
+                np.abs(phase_time(time, transit.epoch_bjd, transit.period_days))
+                < 0.5 * transit.duration_days
+            )
+            axis.scatter(
+                time[in_transit] - 2457000.0,
+                flux_ppt[in_transit],
+                s=5.0,
+                color=color,
+                linewidths=0.0,
+                label=f'HD 108236{transit.planet}',
+                rasterized=True,
+            )
+        axis.set_ylabel('Relative flux [ppt]')
+        axis.set_title(f'TESS Sector {sector}', loc='left')
+        axis.set_ylim(-4.0, 3.0)
+    axes[0].legend(ncol=4, loc='lower center', fontsize=8, framealpha=1.0)
+    axes[-1].set_xlabel('BJD - 2,457,000 [day]')
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
+def plot_daylan2021_phase_curves(result, output_path: Path) -> Path:
+    """Plot the independently recovered phase curves corresponding to paper Figure 9."""
+
+    from .daylan2021 import phase_time, trapezoid_transit
+
+    colors = ('#C23B8E', '#E09F3E', '#C23B22', '#4F772D')
+    figure, axes = plt.subplots(
+        2,
+        2,
+        figsize=(9.0, 6.4),
+        constrained_layout=True,
+    )
+    for axis, transit, color in zip(axes.flat, result.recovered, colors):
+        phase_hours = 24.0 * phase_time(
+            result.time_bjd,
+            transit.epoch_bjd,
+            transit.period_days,
+        )
+        selected = np.abs(phase_hours) < 36.0 * transit.duration_days
+        phase_limit = 36.0 * transit.duration_days
+        bin_edges = np.arange(-phase_limit, phase_limit + 0.2, 0.2)
+        bin_index = np.digitize(phase_hours[selected], bin_edges) - 1
+        binned_phase = []
+        binned_flux = []
+        binned_uncertainty = []
+        for index in range(bin_edges.size - 1):
+            in_bin = bin_index == index
+            if np.any(in_bin):
+                weights = result.flux_uncertainty[selected][in_bin] ** -2
+                binned_phase.append(np.average(phase_hours[selected][in_bin], weights=weights))
+                binned_flux.append(
+                    np.average(result.detrended_flux[selected][in_bin], weights=weights)
+                )
+                binned_uncertainty.append(np.sqrt(1.0 / np.sum(weights)))
+        axis.scatter(
+            phase_hours[selected],
+            1e3 * (result.detrended_flux[selected] - 1.0),
+            s=2.0,
+            color='#A8ADB2',
+            alpha=0.25,
+            linewidths=0.0,
+            rasterized=True,
+        )
+        axis.errorbar(
+            binned_phase,
+            1e3 * (np.asarray(binned_flux) - 1.0),
+            yerr=1e3 * np.asarray(binned_uncertainty),
+            fmt='o',
+            markersize=3.0,
+            linewidth=0.7,
+            color=color,
+            label='12 minute bins',
+        )
+        model_phase_hours = np.linspace(-phase_limit, phase_limit, 500)
+        model = trapezoid_transit(
+            transit.epoch_bjd + model_phase_hours / 24.0,
+            transit.epoch_bjd,
+            transit.period_days,
+            transit.depth,
+            transit.duration_days,
+            transit.ingress_fraction,
+        )
+        axis.plot(
+            model_phase_hours,
+            1e3 * (model - 1.0),
+            color='black',
+            linewidth=1.4,
+            label='Recovered model',
+        )
+        axis.set_title(
+            f'HD 108236{transit.planet}: P = {transit.period_days:.5f} day'
+        )
+        axis.set_xlabel('Time from mid-transit [hour]')
+        axis.set_ylabel('Relative flux [ppt]')
+        axis.legend(fontsize=8, framealpha=1.0)
+    return Path(
+        tdpy.save_figure(
+            figure,
+            output_path,
+            output_path.suffix.lstrip('.'),
+            close_figure=True,
+        )
+    )
+
+
 def plot_wasp39_ers_white_light_curves(result, output_path: Path) -> Path:
     """Plot the detector-level white-light curves in Alderson et al. Figure 1a."""
 

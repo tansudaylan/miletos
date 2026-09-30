@@ -67,6 +67,14 @@ python examples/TOI-1233/run.py
 
 The default run writes the transit-timing-variation figures to `examples/TOI-1233/PlanetarySystemWithTTVs/visuals/`. Run `python examples/TOI-1233/run.py --model PlanetarySystem` to produce the standard planetary-system alternative. Observational inputs remain under `$MILETOS_PATH/data/TOI-1233/`.
 
+Reproduce the four-planet photometric results reported by Daylan et al. (2021), AJ 161, 85 (DOI `10.3847/1538-3881/abd73e`) with:
+
+```bash
+python examples/TOI-1233/run.py --reproduce-daylan2021
+```
+
+This offline workflow uses only the publication-era Sector 10 and 11 SPOC PDC light curves. It transit-masks and smooths the baseline, performs independent weighted fits for the epochs, periods, depths, and durations of HD 108236 b--e, and checks every recovered quantity against Tables 11--14 using the combined reported and fitted uncertainty. It writes the full light curve, four phase-folded transits, and `parameter_comparison.csv` under `examples/TOI-1233/Daylan2021/`. The deterministic trapezoid fits test recovery of the published summaries; they do not replace the paper's full allesfitter eccentric-orbit and Gaussian-process posterior analysis. The PFS velocities are excluded because the paper used its 12 publication-era velocities only for validation, not planetary mass inference.
+
 
 ## Input Data
 The input time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
