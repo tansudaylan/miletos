@@ -1807,11 +1807,7 @@ def proc_alle(gdat, typemodl):
                          
                         ## legend
                         axis[2].legend(ncol=3)
-                        
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
                    
 
         for b in gdat.indxdatatser:
@@ -1867,10 +1863,7 @@ def proc_alle(gdat, typemodl):
                         axis.set_xlabel('Phase')
                         axis.legend(ncol=3)
                         plt.tight_layout()
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
 
                     path = gdat.pathalle[typemodl] + 'pcur_samp_%s_%s_%s.%s' % (typemodl, gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+2].append({'path': path, 'limt':[0., 0.05, 0.5, 0.1]})
@@ -1885,10 +1878,7 @@ def proc_alle(gdat, typemodl):
                         axis.set_xlabel('Phase')
                         axis.set_ylim(ylimpcur)
                         plt.tight_layout()
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
 
                     # plot all along with residuals
                     #path = gdat.pathalle[typemodl] + 'pcur_resi_%s_%s_%s.%s' % (typemodl, gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
@@ -1938,10 +1928,7 @@ def proc_alle(gdat, typemodl):
                         axis.legend()
                         axis.set_xlim([0, None])
                         plt.subplots_adjust()
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
                 
                     path = gdat.pathalle[typemodl] + 'hist_albg_%s_%s.%s' % (gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
@@ -1953,10 +1940,7 @@ def proc_alle(gdat, typemodl):
                         axis.set_ylabel('$N(A_g)$')
                         axis.legend()
                         plt.subplots_adjust()
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
                 
                     #liststrgfile = ['ContribFuncArr.txt', \
                     #                'EmissionDataArray.txt', \
@@ -2004,10 +1988,7 @@ def proc_alle(gdat, typemodl):
                         axis.set_xlabel(r'$\psi$')
                         axis.set_ylabel(r'$K_\psi$')
                         plt.subplots_adjust()
-                        if gdat.typeverb > 0:
-                            print('Writing to %s...' % path)
-                        plt.savefig(path)
-                        plt.close()
+                        save_miletos_figure(gdat, figr, path)
                 
                     # use psi posterior to infer Bond albedo and heat circulation efficiency
                     numbsampwalk = 10000
@@ -2090,10 +2071,7 @@ def proc_alle(gdat, typemodl):
                     plt.subplots_adjust(hspace=0., wspace=0.)
                     path = gdat.pathalle[typemodl] + 'spec_%s_%s.%s' % (gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-                    if gdat.typeverb > 0:
-                        print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
+                    save_miletos_figure(gdat, figr, path)
                     
                     # get contribution function
                     path = gdat.pathdatatarg + 'ascii_output/ContribFuncArr.txt'
@@ -2165,10 +2143,7 @@ def proc_alle(gdat, typemodl):
                     plt.subplots_adjust(hspace=0., wspace=0., bottom=0.15)
                     path = gdat.pathalle[typemodl] + 'ptem_%s_%s.%s' % (gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-                    if gdat.typeverb > 0:
-                        print('Writing to %s...' % path)
-                    plt.savefig(path)
-                    plt.close()
+                    save_miletos_figure(gdat, figr, path)
   
 
 def plot_popl(gdat, strgpdfn):
@@ -2212,9 +2187,7 @@ def plot_popl(gdat, strgpdfn):
     plt.subplots_adjust(left=0.2)
     path = pathvisufeatplan + 'occuradi_%s_%s.%s' % (gdat.strgtarg, strgpdfn, gdat.typefileplot)
     #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-    print('Writing to %s...' % path)
-    plt.savefig(path)
-    plt.close()
+    save_miletos_figure(gdat, figr, path)
   
     for strgpopl in gdat.liststrgpopl:
         
@@ -2358,9 +2331,7 @@ def plot_popl(gdat, strgpdfn):
         plt.subplots_adjust(left=0.2)
         path = pathvisufeatplan + 'histratiperi_%s_%s_%s.%s' % (gdat.strgtarg, strgpdfn, strgpopl, gdat.typefileplot)
         #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
+        save_miletos_figure(gdat, figr, path)
         
         # metastable helium absorption
         path = gdat.pathbasemile + '/data/wasp107b_transmission_spectrum.dat'
@@ -2427,9 +2398,7 @@ def plot_popl(gdat, strgpdfn):
         plt.subplots_adjust(bottom=0.2, left=0.2)
         path = pathvisudataplan + 'dept_%s_%s.%s' % (gdat.strgtarg, strgpdfn, gdat.typefileplot)
         #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        plt.close()
+        save_miletos_figure(gdat, figr, path)
 
         # optical magnitude vs number of planets
         for b in range(4):
@@ -2453,9 +2422,7 @@ def plot_popl(gdat, strgpdfn):
                 plt.subplots_adjust(left=0.2)
                 path = pathvisufeatsyst + '%snumb_%s_%s_%s_%d.%s' % (strgvarbmagt, gdat.strgtarg, strgpdfn, strgpopl, a, gdat.typefileplot)
                 #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-                print('Writing to %s...' % path)
-                plt.savefig(path)
-                plt.close()
+                save_miletos_figure(gdat, figr, path)
 
                 figr, axis = plt.subplots(figsize=gdat.figrsize)
                 axis.hist(varbnorm, 50)
@@ -2467,9 +2434,7 @@ def plot_popl(gdat, strgpdfn):
                 plt.subplots_adjust(left=0.2)
                 path = pathvisufeatsyst + 'hist_%s_%s_%s_%s_%d.%s' % (strgvarbmagt, gdat.strgtarg, strgpdfn, strgpopl, a, gdat.typefileplot)
                 #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-                print('Writing to %s...' % path)
-                plt.savefig(path)
-                plt.close()
+                save_miletos_figure(gdat, figr, path)
             
         # planet feature distribution plots
         print('Will make the relevant distribution plots...')
@@ -2699,9 +2664,7 @@ def plot_popl(gdat, strgpdfn):
                                 plt.subplots_adjust(bottom=0.2)
                                 path = dictpanel['path']
                                 #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-                                print('Writing to %s...' % path)
-                                plt.savefig(path)
-                                plt.close()
+                                save_miletos_figure(gdat, figr, path)
 
    
 def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, strgtren, timescalbdtr):
