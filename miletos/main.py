@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 import tdpy
 from pcat import plot_grid, plot_population_grid
-from pcat.fixed import sample_allesfitter_pcat
+from pcat.fixed import sample_allesfitter_pcat, sample_posterior
 from tdpy.paths import make_directory
 from tdpy.util import summgene
 from .cache import read_cached_output
@@ -1455,7 +1455,7 @@ def calc_feat_alle(gdat, strgpdfn):
             gdat.deptobsd = arrydata[k, 2]
             gdat.stdvdeptobsd = arrydata[k, 3]
             gdat.varideptobsd = gdat.stdvdeptobsd**2
-            dictsamptemp = tdpy.samp(gdat, numbsampwalk, retr_llik_spec, \
+            dictsamptemp = sample_posterior(gdat, numbsampwalk, retr_llik_spec, \
                                      ['tmpt'], gmod.listlablpara, listscalpara,
                                      gmod.listminmpara, gmod.listmaxmpara,
                                      meangauspara=meangauspara, stdvgauspara=stdvgauspara, strgextn=strgextn, \
@@ -2027,7 +2027,7 @@ def proc_alle(gdat, typemodl):
                     gmod.listminmpara = np.array([0., 0., 0.])
                     gmod.listmaxmpara = np.array([1., 1., 1.])
                     strgextn = 'albbepsi'
-                    listpostheat = tdpy.samp(gdat, numbsampwalk, retr_llik_albbepsi, \
+                    listpostheat = sample_posterior(gdat, numbsampwalk, retr_llik_albbepsi, \
                                              ['albb', 'ener', 'epsi'], gmod.listlablpara, listscalpara,
                                              gmod.listminmpara, gmod.listmaxmpara, boolplot=gdat.boolplot, \
                                              pathbase=gdat.pathtargcnfg, \
@@ -3302,8 +3302,8 @@ def proc_modl(gdat, strgmodl, strgextn, h):
     gdat.thisstrgmodl = 'fitt'
     # run the sampler
     if gdat.typeinfe == 'samp':
-        print('Will call tdpy.samp()...')
-        gdat.dictsamp = tdpy.samp(gdat, \
+        print('Will call sample_posterior()...')
+        gdat.dictsamp = sample_posterior(gdat, \
                                   gdat.numbsampwalk, \
                                   retr_llik_mile, \
                                   gdat.fitt.listnameparafullvari, gmod.listlablpara, listscalpara, gmod.listminmpara, gmod.listmaxmpara, \
