@@ -21,6 +21,7 @@ classifiers = [
 dependencies = [
   "astroquery",
   "astropy",
+  "batman-package",
   "celerite",
   "ephesos",
   "gputil",

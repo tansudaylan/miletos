@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run the Miletos TESS phase-curve analysis of WASP-121 b."""
+"""Reproduce the TESS phase-curve analysis of WASP-121 b by Daylan et al. (2021b)."""
 
 import argparse
 
-from miletos.daylan2021b import run_daylan2021b_reproduction
+from miletos import daylan2021b
 
 
 def main() -> int:
@@ -14,11 +14,13 @@ def main() -> int:
         action='store_true',
         help='Retrieve, reduce, and phase-fold the observations without fitting.',
     )
+    parser.add_argument('--reuse', action='store_true', help='Replot a saved PCAT posterior instead of sampling.')
     arguments = parser.parse_args()
-    run_daylan2021b_reproduction(
-        typefileplot=arguments.typefileplot,
-        fit=not arguments.prepare_only,
-    )
+    daylan2021b.run_daylan2021b_reproduction(typefileplot=arguments.typefileplot, fit=False)
+    if not arguments.prepare_only:
+        samples, tmpt, state = daylan2021b.fit_daylan2021b_phase_curve(
+            numbchan=4, numbsamp=100000, numbburn=100000, boolreus=arguments.reuse)
+        daylan2021b.plot_daylan2021b_phase_curve(samples, tmpt, state, typefileplot=arguments.typefileplot)
     return 0
 
 

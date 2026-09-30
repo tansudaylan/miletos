@@ -7,4 +7,13 @@ dist/
 /visuals/
 /examples/**/archive/
 /examples/**/data/
-/examples/**/visuals/
+/examples/**/visuals/# reproduction figures of the published analyses, shown in the README
+!/examples/TOI-1233/visuals/
+/examples/TOI-1233/visuals/*
+!/examples/TOI-1233/visuals/daylan2021a_*.png
+!/examples/WASP-121b/visuals/
+/examples/WASP-121b/visuals/*
+!/examples/WASP-121b/visuals/daylan2021b_*.png
+!/examples/WASP-39b/visuals/
+/examples/WASP-39b/visuals/*
+!/examples/WASP-39b/visuals/wasp39_ers_g395h_*.png

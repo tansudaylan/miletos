@@ -1,0 +1,1 @@
+/Users/tdaylan/Documents/work/git/miletos/examples/WASP-121b/pcat_runs/fixed_5728016277d641b8/data/outp/fixed_5728016277d641b8/stat.txt

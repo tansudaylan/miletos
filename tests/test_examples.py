@@ -13,7 +13,7 @@ REPOSITORY_PATH = Path(__file__).parents[1]
 EXAMPLE_PATHS = [REPOSITORY_PATH / 'examples' / 'run_all.py']
 EXAMPLE_PATHS.extend(sorted((REPOSITORY_PATH / 'examples').glob('*/run.py')))
 EXPECTED_NOTEBOOKS = {
-    Path('examples/TOI-1233/Daylan2021.ipynb'): 'main.init(',
+    Path('examples/TOI-1233/Daylan2021.ipynb'): 'fit_daylan2021a_transits(',
     Path('examples/TOI-1233/JointPhotometryRadialVelocity.ipynb'):
         'run_toi1233_observation(',
     Path('examples/WASP-39b/WASP39ERS.ipynb'):
