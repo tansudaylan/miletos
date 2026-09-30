@@ -32,6 +32,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import tdpy
+from pcat import plot_grid, plot_population_grid
 from pcat.fixed import sample_allesfitter_pcat
 from tdpy.paths import make_directory
 from tdpy.util import summgene
@@ -1460,6 +1461,7 @@ def calc_feat_alle(gdat, strgpdfn):
                                      pathbase=gdat.pathtargcnfg, \
                                      typeverb=gdat.typeverb, \
                                      numbsampburnwalk=numbsampburnwalk, boolplot=gdat.boolplot, \
+                                     plot_posterior=plot_population_grid, \
                                     )
             listtmpt.append(dictsamptemp['tmpt'])
         listtmpt = np.vstack(listtmpt).T
@@ -1778,7 +1780,7 @@ def proc_alle(gdat, typemodl):
             for p in gdat.indxinst[b]:
                 for j in gmod.indxcomp:
                     listpost, _ = build_pcur_post(gdat, typemodl, j)
-                    tdpy.plot_grid(gdat.pathalle[typemodl], 'pcur_%s' % typemodl, listpost, gmod.listlablpara, plotsize=2.5)
+                    plot_grid(gdat.pathalle[typemodl], 'pcur_%s' % typemodl, listpost, gmod.listlablpara, plotsize=2.5)
 
         # plot phase curve
         for b in gdat.indxdatatser:
@@ -1984,7 +1986,7 @@ def proc_alle(gdat, typemodl):
                     # plot ATMO posterior
                     gmod.listlablpara = [[r'$\kappa_{IR}$', ''], [r'$\gamma$', ''], [r'$\psi$', ''], ['[M/H]', ''], \
                                                                                                     ['[C/H]', ''], ['[O/H]', '']]
-                    tdpy.plot_grid(gdat.pathalle[typemodl], 'post_atmo', listsampatmo, gmod.listlablpara, plotsize=2.5)
+                    plot_grid(gdat.pathalle[typemodl], 'post_atmo', listsampatmo, gmod.listlablpara, plotsize=2.5)
    
                     # get the ATMO posterior on irradiation efficiency, psi
                     indxsampatmo = np.random.choice(np.arange(listsampatmo.shape[0]), size=gdat.numbsamp, replace=False)
@@ -2030,6 +2032,7 @@ def proc_alle(gdat, typemodl):
                                              pathbase=gdat.pathtargcnfg, \
                                              typeverb=gdat.typeverb, \
                                              numbsampburnwalk=numbsampburnwalk, strgextn=strgextn, \
+                                             plot_posterior=plot_population_grid, \
                                             )
 
                     # plot emission spectra, secondary eclipse depth, and brightness temperature
@@ -3309,6 +3312,7 @@ def proc_modl(gdat, strgmodl, strgextn, h):
                                   strgextn=strgextn, \
                                   typeverb=gdat.typeverb, \
                                   boolplot=gdat.boolplot, \
+                                  plot_posterior=plot_population_grid, \
                                  )
         
         gdat.numbsamp = gdat.dictsamp['lpos'].size
