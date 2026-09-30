@@ -57,6 +57,20 @@ python examples/WASP-39b/run.py
 python examples/catalog/run.py
 ```
 
+The equivalent Jupyter notebooks provide interactive access to every maintained
+example workflow:
+
+- [Simulated transit](examples/simulated_transit/SimulatedTransit.ipynb)
+- [Target visibility](examples/target_visibility/TargetVisibility.ipynb)
+- [Joint TESS and PFS analysis of TOI-1233](examples/TOI-1233/JointPhotometryRadialVelocity.ipynb)
+- [Daylan et al. (2021) analysis of TOI-1233](examples/TOI-1233/Daylan2021.ipynb)
+- [JWST ERS analysis of WASP-39b](examples/WASP-39b/WASP39ERS.ipynb)
+- [Miletos configuration catalog](examples/catalog/ConfigurationCatalog.ipynb)
+
+Each notebook delegates data access, analysis, and plotting to a reusable Miletos
+entry point. The notebooks configure workflows, report returned quantities, and
+display Miletos-generated figures without duplicating pipeline calculations.
+
 The simulated transit and target-visibility calculations are deterministic and run without network access. The WASP-39b analysis downloads the public Alderson et al. (2023) NIRSpec G395H products from Zenodo and visualizes the published light-curve reduction sequence. The six figures show detector-level white-light curves, measured detector motion, raw spectroscopic flux with its systematics model, corrected flux with its transit model and residuals, all 349 corrected wavelength channels, residual and photon-noise precision, and the final 344-bin weighted transmission spectrum with its best-fit ATMO model. Data are cached under `$MILETOS_PATH/data/WASP-39/ERS_G395H_Alderson2023/`, while figures are written under `examples/WASP-39b/visuals/`. The source dataset is DOI 10.5281/zenodo.7185300 and the associated Nature article is DOI 10.1038/s41586-022-05591-3.
 
 Run the joint Transiting Exoplanet Survey Satellite (TESS) and Planet Finder Spectrograph (PFS) analysis of TOI-1233 with:
@@ -67,13 +81,7 @@ python examples/TOI-1233/run.py
 
 The default run writes the transit-timing-variation figures to `examples/TOI-1233/PlanetarySystemWithTTVs/visuals/`. Run `python examples/TOI-1233/run.py --model PlanetarySystem` to produce the standard planetary-system alternative. Observational inputs remain under `$MILETOS_PATH/data/TOI-1233/`.
 
-Reproduce the four-planet photometric results reported by Daylan et al. (2021), AJ 161, 85 (DOI `10.3847/1538-3881/abd73e`) with:
-
-```bash
-python examples/TOI-1233/run.py --reproduce-daylan2021
-```
-
-This offline workflow uses only the publication-era Sector 10 and 11 SPOC PDC light curves. It transit-masks and smooths the baseline, performs independent weighted fits for the epochs, periods, depths, and durations of HD 108236 b--e, and checks every recovered quantity against Tables 11--14 using the combined reported and fitted uncertainty. It writes the full light curve, four phase-folded transits, and `parameter_comparison.csv` under `examples/TOI-1233/Daylan2021/`. The deterministic trapezoid fits test recovery of the published summaries; they do not replace the paper's full allesfitter eccentric-orbit and Gaussian-process posterior analysis. The PFS velocities are excluded because the paper used its 12 publication-era velocities only for validation, not planetary mass inference.
+The notebook `examples/TOI-1233/Daylan2021.ipynb` reproduces the four-planet photometric analysis reported by Daylan et al. (2021), AJ 161, 85 (DOI `10.3847/1538-3881/abd73e`). It configures the publication-era Sectors 10 and 11 and the published four-planet priors, then delegates data discovery, retrieval, quality masking, normalization, Gaussian-process detrending, transit fitting, plotting, and machine-readable output to the Miletos pipeline. The notebook contains no manual observational data wrangling.
 
 
 ## Input Data

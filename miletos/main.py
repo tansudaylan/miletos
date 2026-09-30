@@ -50,6 +50,31 @@ Given a target, miletos is an time-domain astronomy tool that allows
 4) Make characterization plots of the target after the analysis
 """
 
+
+def setp_input_companion_priors(gdat):
+    """Transfer user-provided companion priors into the nominal Miletos model."""
+
+    names = ('rrat', 'rsma', 'epocmtra', 'peri', 'cosi')
+    values = {}
+    for name in names:
+        value = getattr(gdat, name + 'compprio')
+        if value is None:
+            raise ValueError("typepriocomp='inpt' requires %scompprio." % name)
+        values[name] = np.asarray(value, dtype=float)
+
+    if len({value.size for value in values.values()}) != 1:
+        raise ValueError('Input companion-prior arrays must have equal lengths.')
+
+    for name in ('rsma', 'epocmtra', 'peri', 'cosi'):
+        setattr(gdat.nomipara, name + 'comp', values[name])
+    gdat.nomipara.depttrancomp = 1e3 * values['rrat']**2
+    gdat.nomipara.rratcomp = [values['rrat'].copy() for _ in gdat.indxband]
+    gdat.nomipara.duratrantotlcomp = nicomedia.retr_duratrantotl(
+        gdat.nomipara.pericomp,
+        gdat.nomipara.rsmacomp,
+        gdat.nomipara.cosicomp,
+    )
+
 def retr_timetran(gdat, nametser):
     '''
     Determine times during transits
@@ -1427,15 +1452,15 @@ def calc_feat_alle(gdat, strgpdfn):
             gdat.deptobsd = arrydata[k, 2]
             gdat.stdvdeptobsd = arrydata[k, 3]
             gdat.varideptobsd = gdat.stdvdeptobsd**2
-            listtmpttemp = tdpy.samp(gdat, gdat.pathalle[strgpdfn], numbsampwalk, \
-                                     retr_llik_spec, \
-                                     gmod.listlablpara, listscalpara, gmod.listminmpara, gmod.listmaxmpara, \
-                                     meangauspara, stdvgauspara, numbdata, strgextn=strgextn, \
+            dictsamptemp = tdpy.samp(gdat, numbsampwalk, retr_llik_spec, \
+                                     ['tmpt'], gmod.listlablpara, listscalpara,
+                                     gmod.listminmpara, gmod.listmaxmpara,
+                                     meangauspara=meangauspara, stdvgauspara=stdvgauspara, strgextn=strgextn, \
                                      pathbase=gdat.pathtargcnfg, \
                                      typeverb=gdat.typeverb, \
                                      numbsampburnwalk=numbsampburnwalk, boolplot=gdat.boolplot, \
                                     )
-            listtmpt.append(listtmpttemp)
+            listtmpt.append(dictsamptemp['tmpt'])
         listtmpt = np.vstack(listtmpt).T
         indxsamp = np.random.choice(np.arange(listtmpt.shape[0]), size=gdat.numbsamp, replace=False)
         # dayside and nightside temperatures to be used for albedo and circulation efficiency calculation
@@ -1516,7 +1541,7 @@ def proc_alle(gdat, typemodl):
     path = ensure_alle_initial_plot(gdat.pathalle[typemodl], allesfitter.show_initial_guess)
     
     ## do the run
-    path = ensure_alle_mcmc_run(gdat.pathalle[typemodl], allesfitter.mcmc_fit, typeverb=gdat.typeverb)
+    path = ensure_alle_mcmc_run(gdat.pathalle[typemodl], tdpy.sample_allesfitter_pcat, typeverb=gdat.typeverb)
 
     ## make the final plots
     path = ensure_alle_final_plots(gdat.pathalle[typemodl], allesfitter.mcmc_output)
@@ -1999,7 +2024,8 @@ def proc_alle(gdat, typemodl):
                     gmod.listmaxmpara = np.array([1., 1., 1.])
                     strgextn = 'albbepsi'
                     listpostheat = tdpy.samp(gdat, numbsampwalk, retr_llik_albbepsi, \
-                                             gmod.listlablpara, listscalpara, gmod.listminmpara, gmod.listmaxmpara, boolplot=gdat.boolplot, \
+                                             ['albb', 'ener', 'epsi'], gmod.listlablpara, listscalpara,
+                                             gmod.listminmpara, gmod.listmaxmpara, boolplot=gdat.boolplot, \
                                              pathbase=gdat.pathtargcnfg, \
                                              typeverb=gdat.typeverb, \
                                              numbsampburnwalk=numbsampburnwalk, strgextn=strgextn, \
@@ -8965,7 +8991,7 @@ def init( \
             gdat.nomipara.cosicomp = np.zeros_like(gdat.nomipara.epocmtracomp)
         
         if gdat.typepriocomp == 'inpt':
-            gdat.nomipara.duratrantotlcomp = nicomedia.retr_duratrantotl(gdat.nomipara.pericomp, gdat.nomipara.rsmacomp, gdat.nomipara.cosicomp)
+            setp_input_companion_priors(gdat)
 
         if gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof' or gdat.typepriocomp == 'inpt':
             gdat.nomipara.numbcomp = gdat.nomipara.pericomp.size
@@ -8985,6 +9011,8 @@ def init( \
                     gdat.nomipara.rratcomp[pk] = gdat.dictexartarg['rratcomp'][0]
                 if gdat.typepriocomp == 'exof':
                     gdat.nomipara.rratcomp[pk] = np.sqrt(gdat.nomipara.depttrancomp)
+                if gdat.typepriocomp == 'inpt':
+                    gdat.nomipara.rratcomp[pk] = np.asarray(gdat.rratcompprio, dtype=float)
         
         # transfer nominal component parameters to prior means for the fitting model
         if gdat.boolmodl:

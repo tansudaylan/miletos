@@ -1,3 +1,5 @@
+import ast
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -10,6 +12,19 @@ import pytest
 REPOSITORY_PATH = Path(__file__).parents[1]
 EXAMPLE_PATHS = [REPOSITORY_PATH / 'examples' / 'run_all.py']
 EXAMPLE_PATHS.extend(sorted((REPOSITORY_PATH / 'examples').glob('*/run.py')))
+EXPECTED_NOTEBOOKS = {
+    Path('examples/TOI-1233/Daylan2021.ipynb'): 'main.init(',
+    Path('examples/TOI-1233/JointPhotometryRadialVelocity.ipynb'):
+        'run_toi1233_observation(',
+    Path('examples/WASP-39b/WASP39ERS.ipynb'):
+        'run_wasp39_ers_g395h_reproduction(',
+    Path('examples/catalog/ConfigurationCatalog.ipynb'):
+        'configurations[configuration_name](',
+    Path('examples/simulated_transit/SimulatedTransit.ipynb'):
+        'run_simulated_transit_diagnostic(',
+    Path('examples/target_visibility/TargetVisibility.ipynb'):
+        'run_target_visibility_diagnostic(',
+}
 
 
 def example_id(path):
@@ -20,6 +35,35 @@ def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
     assert len(EXAMPLE_PATHS) == 6
+
+
+def test_example_notebooks_use_miletos_apis():
+    notebook_paths = {
+        path.relative_to(REPOSITORY_PATH)
+        for path in (REPOSITORY_PATH / 'examples').glob('**/*.ipynb')
+    }
+    assert notebook_paths == set(EXPECTED_NOTEBOOKS)
+
+    for relative_path, entry_point in EXPECTED_NOTEBOOKS.items():
+        path = REPOSITORY_PATH / relative_path
+        print(f'Reading from {path}...')
+        notebook = json.loads(path.read_text())
+        code_cells = [cell for cell in notebook['cells'] if cell['cell_type'] == 'code']
+
+        assert notebook['nbformat'] == 4
+        assert all(cell['metadata']['id'] == cell['id'] for cell in notebook['cells'])
+        assert all('language' in cell['metadata'] for cell in notebook['cells'])
+
+        source = '\n'.join('\n'.join(cell['source']) for cell in code_cells)
+        tree = ast.parse(source)
+        imported_modules = {
+            node.names[0].name.split('.')[0]
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Import, ast.ImportFrom)) and node.names
+        }
+
+        assert entry_point in source
+        assert imported_modules.isdisjoint({'matplotlib', 'numpy', 'pandas', 'scipy'})
 
 
 @pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)
