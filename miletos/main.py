@@ -3149,7 +3149,7 @@ def setp_para(gdat, strgmodl, nameparabase, minmpara, maxmpara, lablpara, strgen
                     raise Exception('gmod.nameparabasefinl is empty.')
 
             if gdat.typeverb > 0:
-                print('%s has been fixed for %s to %g...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
+                    print('%s has been fixed for %s to %s...' % (nameparabasefinl, strgmodl, getattr(gmod, nameparabasefinl)))
     
     if gdat.booldiag:
         if minmpara is not None and (not isinstance(minmpara, float) or not isinstance(maxmpara, float)):
@@ -4850,13 +4850,65 @@ def srch_boxsperi(arry, \
                     dictboxsperiinte['rflxpserdata'] = objtresu.folded_y
 
             elif typecalc == 'astropy':
+                from .box_least_squares import search_box_least_squares
 
-                model = astropy.timeseries.BoxLeastSquares(arrysrch[:, 0] * astropy.units.day, lcurboxsperimeta)#, dy=)
-                periodogram = model.autopower(0.2)
-                plt.plot(periodogram.period, periodogram.power)
-                model = BoxLeastSquares(t * u.day, y, dy=0.01)
-                periodogram = model.autopower(0.2, objective="snr")
+                result = search_box_least_squares(
+                    arrysrch[:, 0],
+                    arrysrch[:, 1],
+                    arrysrch[:, 2],
+                    duration_days=listduratrantotl,
+                    minimum_period_days=minmperi,
+                    maximum_period_days=maxmperi,
+                    frequency_factor=1.0 / factosam,
+                )
+                periodogram = result['periodogram']
+                dictboxsperiinte['listperi'] = np.asarray(periodogram.period)
+                dictboxsperiinte['listampl'] = np.asarray(periodogram.depth) * 1e3
+                dictboxsperiinte['listsgnl'] = np.asarray(periodogram.depth_snr)
+                dictboxsperiinte['liststdvsgnl'] = np.ones_like(dictboxsperiinte['listsgnl'])
+                dictboxsperiinte['lists2nr'] = np.asarray(periodogram.power)
 
+                lists2nr = dictboxsperiinte['lists2nr']
+                indxperimpow = int(np.nanargmax(periodogram.power))
+                s2nr = result['depth_snr']
+                dictboxsperioutp['peri'].append(result['period_days'])
+                dictboxsperioutp['epoc'].append(result['transit_time_days'])
+                dictboxsperioutp['dura'].append(result['duration_days'] * 24.) # [hours]
+                dictboxsperioutp['ampl'].append(result['depth'] * 1e3) # [ppt]
+                dictboxsperioutp['s2nr'].append(s2nr)
+
+                if pathvisu is not None:
+                    period_days = result['period_days']
+                    duration_days = result['duration_days']
+                    transit_time_days = result['transit_time_days']
+                    model_flux = result['model'].model(
+                        timemodlplot,
+                        period_days,
+                        duration_days,
+                        transit_time_days,
+                    )
+                    if boolsrchposi:
+                        model_flux = 2. - model_flux
+                    dictboxsperiinte['rflxtsermodl'] = model_flux
+                    arrymetamodl = np.zeros((numbtimeplot, 3))
+                    arrymetamodl[:, 0] = timemodlplot
+                    arrymetamodl[:, 1] = model_flux
+                    arrypsermodl = fold_tser(
+                        arrymetamodl, transit_time_days, period_days, phascntr=0.5
+                    )
+                    arrypserdata = fold_tser(
+                        listarrysrch[0], transit_time_days, period_days, phascntr=0.5
+                    )
+                    dictboxsperiinte['timedata'] = listarrysrch[0][:, 0]
+                    dictboxsperiinte['rflxtserdata'] = listarrysrch[0][:, 1]
+                    dictboxsperiinte['phasdata'] = arrypserdata[:, 0]
+                    dictboxsperiinte['rflxpserdata'] = arrypserdata[:, 1]
+                    dictboxsperiinte['timemodl'] = arrymetamodl[:, 0]
+                    dictboxsperiinte['phasmodl'] = arrypsermodl[:, 0]
+                    dictboxsperiinte['rflxpsermodl'] = arrypsermodl[:, 1]
+                    if boolsrchposi:
+                        dictboxsperiinte['rflxpserdata'] = 2. - dictboxsperiinte['rflxpserdata']
+                        dictboxsperiinte['rflxpsermodl'] = 2. - dictboxsperiinte['rflxpsermodl']
 
             elif typecalc == 'native':
                 

@@ -112,6 +112,8 @@ Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Ke
 ## Analyses
 Miletos performs preliminary analyses such as detrending, phase-folding, producing Lomb-Scargle periodograms (via Astropy), and performing Box Least Squares (BLS) searches. The outcomes are plotted, written to disk, and returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
+For direct BLS searches, `miletos.search_box_least_squares(...)` accepts strictly increasing `time_days`, `flux`, matching positive `flux_uncertainty`, a grid of trial `duration_days`, and minimum and maximum periods. It returns the highest-SNR period, transit time, duration, depth, depth uncertainty, and the full Astropy periodogram.
+
 
 ## Model
 Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tansudaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
