@@ -3,6 +3,8 @@
 ## Purpose
 Miletos is a time-series analysis and forward-modeling pipeline for astrophysical systems. It is designed to interpret time-domain photometry and related observations by combining detrending, period searches, diagnostics, and Bayesian forward modeling.
 
+Miletos was used in Daylan et al. (2021a) to analyze the transits of HD 108236 (TOI-1233) and in Daylan et al. (2021b) to analyze the TESS phase curve of WASP-121 b. The corresponding observational workflows and figures are available below.
+
 ## Scope
 Miletos detrends observational time series, searches for periodic signals, phase-folds and bins measurements with uncertainty propagation, fits forward models, and generates diagnostic plots and summary products.
 
@@ -63,7 +65,7 @@ example workflow:
 - [Simulated transit](examples/simulated_transit/SimulatedTransit.ipynb)
 - [Target visibility](examples/target_visibility/TargetVisibility.ipynb)
 - [Joint TESS and PFS analysis of TOI-1233](examples/TOI-1233/JointPhotometryRadialVelocity.ipynb)
-- [Daylan et al. (2021) analysis of TOI-1233](examples/TOI-1233/Daylan2021.ipynb)
+- [Daylan et al. (2021a) analysis of TOI-1233](examples/TOI-1233/Daylan2021.ipynb)
 - [Daylan et al. (2021b) TESS phase curve of WASP-121 b](examples/WASP-121b/Daylan2021b.ipynb)
 - [JWST ERS analysis of WASP-39b](examples/WASP-39b/WASP39ERS.ipynb)
 - [Miletos configuration catalog](examples/catalog/ConfigurationCatalog.ipynb)
@@ -94,7 +96,7 @@ python examples/TOI-1233/run.py
 
 The default run writes the transit-timing-variation figures to `examples/TOI-1233/PlanetarySystemWithTTVs/visuals/`. Run `python examples/TOI-1233/run.py --model PlanetarySystem` to produce the standard planetary-system alternative. Observational inputs remain under `$MILETOS_PATH/data/TOI-1233/`.
 
-The notebook `examples/TOI-1233/Daylan2021.ipynb` reproduces the four-planet photometric analysis reported by Daylan et al. (2021), AJ 161, 85 (DOI `10.3847/1538-3881/abd73e`). It configures the publication-era Sectors 10 and 11 and the published four-planet priors, then delegates data discovery, retrieval, quality masking, normalization, Gaussian-process detrending, transit fitting, plotting, and machine-readable output to the Miletos pipeline. The notebook contains no manual observational data wrangling.
+The notebook `examples/TOI-1233/Daylan2021.ipynb` reproduces the four-planet photometric analysis reported by Daylan et al. (2021a), AJ 161, 85 (DOI `10.3847/1538-3881/abd73e`). It configures the publication-era Sectors 10 and 11 and the published four-planet priors, then delegates data discovery, retrieval, quality masking, normalization, Gaussian-process detrending, transit fitting, plotting, and machine-readable output to the Miletos pipeline. The notebook contains no manual observational data wrangling.
 
 The WASP-121 b notebook analyzes the real SPOC PDC-SAP light curve from TESS Sector 7 with Miletos' emitting-companion model. It displays pipeline-generated raw and phase-folded products and, in its default full mode, fit products. Its scope is the observed TESS phase curve reported by Daylan et al. (2021b), DOI `10.3847/1538-3881/abd8d2`; it does not repeat the paper's external atmospheric retrieval. Use `python examples/WASP-121b/run.py --prepare-only` to retrieve and plot the observations without fitting.
 
