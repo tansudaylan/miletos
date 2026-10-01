@@ -41,6 +41,35 @@ and vetting demonstration, not a survey-level completeness or occurrence
 measurement. Its illustrative injection grid tests a 0.1 day box duration over
 periods and depths; it is not a planet-population prior.
 
+For a retrospective comparison with the archived TOI process, run:
+
+.. code-block:: console
+
+   python examples/tess_transit_search/run_toi_validation.py
+
+The example selects 50 Sector 10 TOI entries in the 10.5--13.5 TESS-magnitude
+range from the local 2020-09-16 ExoFOP snapshot, collapses duplicate TICs, and
+searches the 49 unique targets with cached QLP products. Add ``--download`` to
+retrieve missing curves from MAST. The current run retrieves 48 curves, passes
+17 through initial triage, and retains 31 for review. Because the sample is
+selected from previously identified TOIs, these counts compare workflows and
+do not measure precision, recall, completeness, or occurrence.
+
+.. figure:: ../examples/tess_transit_search/visuals/toi1338_sector10_candidate.png
+   :alt: Observed Sector 10 QLP light curve and folded BLS review signal
+   :width: 100%
+
+   The strongest positive-flux BLS event is weaker than the inverted-light-curve
+   control and is retained for review.
+
+.. figure:: ../examples/tess_transit_search/visuals/tess_transit_completeness.png
+   :alt: Injection recovery versus transit depth for the observed pilot target
+   :width: 100%
+
+   Eight injections per depth cell demonstrate the recovery calculation for one
+   target. Population completeness requires a larger parent sample and injection
+   grid.
+
 Search and vetting
 ------------------
 

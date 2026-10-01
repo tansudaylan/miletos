@@ -17,3 +17,5 @@ dist/
 !/examples/WASP-39b/visuals/
 /examples/WASP-39b/visuals/*
 !/examples/WASP-39b/visuals/wasp39_ers_g395h_*.png
+!/examples/tess_transit_search/visuals/
+!/examples/tess_transit_search/visuals/*.png

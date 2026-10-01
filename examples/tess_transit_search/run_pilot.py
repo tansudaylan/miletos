@@ -8,6 +8,7 @@ from tdpy.verbosity import print
 from miletos.paths import get_data_path, get_repository_path
 from miletos.tess_transit_search import (
     analyze_tess_target_catalog,
+    prepare_toi_target_list,
     plot_survey_products,
     plot_target_search,
 )
@@ -50,6 +51,28 @@ def run_pilot(injection_trials: int = 8) -> dict[str, Path]:
     products["results"] = result_path
     products["injections"] = injection_path
     return products
+
+
+def run_sector_validation(*, download: bool = False) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Path]]:
+    """Search all archived Sector 10 TOIs in the published QLP magnitude range."""
+
+    catalog_path = get_data_path() / "data" / "exofop_toilists_20200916.csv"
+    targets_path = get_data_path() / "tess_transit_survey" / "sector10_faintstar_validation_targets.csv"
+    targets_path.parent.mkdir(parents=True, exist_ok=True)
+    targets = prepare_toi_target_list(catalog_path, minimum_tmag=10.5,
+                                      maximum_tmag=13.5, sector=10)  # [mag]
+    print(f"Writing to {targets_path}...")
+    targets.to_csv(targets_path, index=False)
+    visual_path = get_repository_path() / "examples" / "tess_transit_search" / "visuals"
+    results, injections = analyze_tess_target_catalog(
+        targets, visual_path, download=download, injection_trials=0,
+        data_directory=get_data_path() / "tess_transit_survey",
+    )
+    results_path = visual_path / "sector10_faintstar_validation.csv"
+    print(f"Writing to {results_path}...")
+    results.to_csv(results_path, index=False)
+    products = plot_survey_products(results, injections, visual_path)
+    return targets, results, products
 
 
 if __name__ == "__main__":

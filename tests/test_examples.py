@@ -26,6 +26,11 @@ EXPECTED_NOTEBOOKS = {
         'run_simulated_transit_diagnostic(',
     Path('examples/target_visibility/TargetVisibility.ipynb'):
         'run_target_visibility_diagnostic(',
+    Path('examples/tess_transit_search/TESS_Transit_Search.ipynb'):
+        'search_tess_target(',
+}
+NOTEBOOK_IMPORT_ALLOWLIST = {
+    Path('examples/tess_transit_search/TESS_Transit_Search.ipynb'): {'numpy', 'pandas'},
 }
 
 
@@ -65,7 +70,10 @@ def test_example_notebooks_use_miletos_apis():
         }
 
         assert entry_point in source
-        assert imported_modules.isdisjoint({'matplotlib', 'numpy', 'pandas', 'scipy'})
+        allowed_imports = NOTEBOOK_IMPORT_ALLOWLIST.get(relative_path, set())
+        assert (imported_modules - allowed_imports).isdisjoint(
+            {'matplotlib', 'numpy', 'pandas', 'scipy'}
+        )
 
 
 @pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)

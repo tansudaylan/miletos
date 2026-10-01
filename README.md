@@ -57,6 +57,7 @@ python examples/target_visibility/run.py
 python examples/TOI-1233/run.py
 python examples/WASP-39b/run.py
 python examples/catalog/run.py
+python examples/tess_transit_search/run_pilot.py
 ```
 
 The equivalent Jupyter notebooks provide interactive access to every maintained
@@ -69,6 +70,8 @@ example workflow:
 - [Daylan et al. (2021b) TESS phase curve of WASP-121 b](examples/WASP-121b/Daylan2021b.ipynb)
 - [JWST ERS analysis of WASP-39b](examples/WASP-39b/WASP39ERS.ipynb)
 - [Miletos configuration catalog](examples/catalog/ConfigurationCatalog.ipynb)
+- [TESS QLP transit-search pilot](examples/tess_transit_search/TESS_Transit_Search.ipynb)
+- [TESS QLP transit-search pilot](examples/tess_transit_search/TESS_Transit_Search.ipynb)
 
 Each notebook delegates data access, analysis, and plotting to a reusable Miletos
 entry point. The notebooks configure workflows, report returned quantities, and
@@ -113,6 +116,26 @@ Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Ke
 Miletos performs preliminary analyses such as detrending, phase-folding, producing Lomb-Scargle periodograms (via Astropy), and performing Box Least Squares (BLS) searches. The outcomes are plotted, written to disk, and returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
 For direct BLS searches, `miletos.search_box_least_squares(...)` accepts strictly increasing `time_days`, `flux`, matching positive `flux_uncertainty`, a grid of trial `duration_days`, and minimum and maximum periods. It returns the highest-SNR period, transit time, duration, depth, depth uncertainty, and the full Astropy periodogram.
+
+### TESS QLP transit search and vetting
+
+Miletos includes a batch TESS transit search built on its Astropy BLS interface. It queries exact TIC identifiers and sectors for public Quick-Look Pipeline (QLP) products at MAST, quality-filters and normalizes FITS light curves, searches for periodic transit-like signals, and records odd-even, secondary-phase, and inverted-light-curve control statistics. Signals failing a metric remain in a review disposition. These tests do not replace pixel-level validation, centroid analysis, dilution checks, or human follow-up.
+
+Prepare a CSV with `tic_id` and `sector` columns, plus optional `tmag`, `toi`, `reference_disposition`, and `sample_is_parent_population` columns, then run:
+
+```bash
+python -m miletos.tess_transit_search --catalog path/to/targets.csv
+```
+
+The pipeline writes target results, injection recoveries, and separate search-yield, completeness, inverted-signal-control, TESS-magnitude, and TOI-disposition figures. Downloaded FITS products are cached under `$MILETOS_PATH/data/tess_transit_survey/`. Use `--offline --data-directory PATH` to rerun from a retained cache. `--maximum-targets` limits a development run, and `--injection-trials` controls the randomized epochs per injected period-depth cell.
+
+The observed pilot analyzes TOI 1338.01 (TIC 260128333), Sector 10, with archived TESS magnitude 11.4881. The QLP curve contains 950 quality-screened cadences over 24.916 days. The strongest BLS box is at 7.3549 days, with depth 1.428 ppt and SNR 6.77. The inverted light curve has a stronger 8.34-SNR box, so this signal is retained for review rather than classified as a planet candidate. For 3-day, 0.1-day-duration injections, recovery above 7 SNR is 0/8 at 0.3 and 0.5 ppt, 7/8 at 1 ppt, and 8/8 at 2 ppt or deeper. These single-target results validate the workflow and do not measure a survey detection rate or population completeness.
+
+| Observed search and phase fold | Pilot injection completeness |
+|---|---|
+| ![QLP light curve and BLS candidate phase fold for TOI 1338.01, flagged for review by its stronger inverted-light-curve control](examples/tess_transit_search/visuals/toi1338_sector10_candidate.png) | ![Single-target injection recovery for 3-day box transits in TIC 260128333](examples/tess_transit_search/visuals/tess_transit_completeness.png) |
+
+The TESS Faint-star Search reported 1,617 TOIs from Primary Mission QLP search results (Kunimoto et al. 2022). Miletos's `prepare_toi_target_list` helper selects sector- and magnitude-limited TOI validation subsets from an ExoFOP table. The Sector 10 validation uses the archived 2020-09-16 ExoFOP snapshot and selects 50 TOI entries on 49 unique TICs with TESS magnitudes 10.5--13.5. The cached QLP run retrieves light curves for 48 targets, passes 17 through initial triage, and retains 31 for manual review. These are retrospective workflow-comparison counts, not precision, recall, false-discovery, or completeness estimates because the sample is conditioned on prior TOI identification. Run `python examples/tess_transit_search/run_toi_validation.py` to reproduce from cached products, or add `--download` to retrieve missing products. This TOI-only subset cannot serve as an occurrence-rate denominator. The batch occurrence interface calls Pergamon only when every row explicitly identifies a complete parent target population and injection efficiencies are available. By default, efficiencies are averaged uniformly over the discrete injected period-depth grid; provide `injection_grid_weights` when another population distribution is appropriate. See the [TESS search and vetting guide](docs/transit_search.rst) and [API reference](docs/api.rst).
 
 
 ## Model

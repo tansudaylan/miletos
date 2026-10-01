@@ -189,9 +189,9 @@ def vet_transit_candidate(
 def search_tess_target(
     light_curve: pd.DataFrame,
     *,
-    minimum_period_days: float = 0.5,
-    maximum_period_days: float = 20.0,
-    duration_days=(0.04, 0.07, 0.10, 0.14, 0.20),
+    minimum_period_days: float = 0.5,  # [day]
+    maximum_period_days: float = 20.0,  # [day]
+    duration_days=(0.04, 0.07, 0.10, 0.14, 0.20),  # [day]
 ) -> dict:
     """Search one merged target curve with Miletos BLS and return vetting metrics."""
 

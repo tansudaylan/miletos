@@ -33,7 +33,7 @@ def test_read_qlp_fits_normalizes_btjd_and_applies_quality_mask(tmp_path):
     path = tmp_path / "hlsp_qlp_tess_ffi_s0010-0000000260128333_tess_v01_llc.fits"
     _write_qlp_fits(
         path,
-        [2457010.0, 2457010.02, 2457010.04, 2457010.06],
+        [2457010.0, 2457010.02, 2457010.04, 2457010.06],  # [BJD day]
         [100.0, 99.0, 100.0, 100.0],
         [1.0, 1.0, 1.0, 1.0],
         [0, 0, 1, 0],
@@ -49,11 +49,11 @@ def test_read_qlp_fits_normalizes_btjd_and_applies_quality_mask(tmp_path):
 
 def test_merge_removes_duplicate_cadences_and_orders_sectors():
     first = pd.DataFrame({
-        "tic_id": [10, 10], "sector": [1, 1], "time_btjd": [2.0, 1.0],
+        "tic_id": [10, 10], "sector": [1, 1], "time_btjd": [2.0, 1.0],  # [day]
         "flux": [1.0, 1.0], "flux_error": [0.001, 0.001],
     })
     second = pd.DataFrame({
-        "tic_id": [10, 10], "sector": [2, 2], "time_btjd": [2.0, 3.0],
+        "tic_id": [10, 10], "sector": [2, 2], "time_btjd": [2.0, 3.0],  # [day]
         "flux": [1.0, 0.99], "flux_error": [0.001, 0.001],
     })
 
@@ -64,8 +64,8 @@ def test_merge_removes_duplicate_cadences_and_orders_sectors():
 
 
 def test_tess_search_reports_flags_and_inverted_control():
-    time = np.arange(0.0, 30.0, 0.02)
-    period = 3.0
+    time = np.arange(0.0, 30.0, 0.02)  # [day]
+    period = 3.0  # [day]
     phase = (time - 0.4 + period / 2.0) % period - period / 2.0
     flux = np.ones_like(time)
     flux[np.abs(phase) < 0.06] -= 0.01
@@ -76,8 +76,8 @@ def test_tess_search_reports_flags_and_inverted_control():
     })
 
     result = search_tess_target(
-        curve, minimum_period_days=2.5, maximum_period_days=3.5,
-        duration_days=[0.10, 0.12, 0.14],
+        curve, minimum_period_days=2.5, maximum_period_days=3.5,  # [day]
+        duration_days=[0.10, 0.12, 0.14],  # [day]
     )
 
     assert result["period_days"] == pytest.approx(period, abs=0.02)
@@ -87,14 +87,14 @@ def test_tess_search_reports_flags_and_inverted_control():
 
 
 def test_injection_recovery_is_reproducible_and_uses_observed_noise():
-    time = np.arange(0.0, 30.0, 0.02)
+    time = np.arange(0.0, 30.0, 0.02)  # [day]
     curve = pd.DataFrame({
         "time_btjd": time,
         "flux": 1.0 + np.random.default_rng(4).normal(0.0, 0.001, time.size),
         "flux_error": np.full(time.size, 0.001),
     })
-    first = injection_recovery(curve, [3.0], [0.01], 0.10, trials=3, seed=12)
-    second = injection_recovery(curve, [3.0], [0.01], 0.10, trials=3, seed=12)
+    first = injection_recovery(curve, [3.0], [0.01], 0.10, trials=3, seed=12)  # [day]
+    second = injection_recovery(curve, [3.0], [0.01], 0.10, trials=3, seed=12)  # [day]
 
     pd.testing.assert_frame_equal(first, second)
     assert first.loc[0, "recoveries"] >= 2
@@ -137,7 +137,7 @@ def test_occurrence_requires_complete_parent_sample_and_uses_pergamon():
         "sample_is_parent_population": [True, True],
     })
     injections = pd.DataFrame({
-        "tic_id": [1, 1, 2, 2], "period_days": [3.0, 10.0] * 2,
+        "tic_id": [1, 1, 2, 2], "period_days": [3.0, 10.0] * 2,  # [day]
         "depth": [0.001, 0.001] * 2, "completeness": [0.8, 0.8, 0.5, 0.5],
     })
 

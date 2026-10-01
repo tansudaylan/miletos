@@ -23,8 +23,9 @@ from .tess_transit_survey import (
 from .paths import get_data_path, get_repository_path
 
 
-def prepare_toi_target_list(path: str | Path, *, minimum_tmag: float = 10.5,
-                            maximum_tmag: float = 13.5, sector: int = 10) -> pd.DataFrame:
+def prepare_toi_target_list(path: str | Path, *, minimum_tmag: float = 10.5,  # [mag]
+                            maximum_tmag: float = 13.5,  # [mag]
+                            sector: int = 10) -> pd.DataFrame:
     """Select unique QLP-bright TOI targets observed in one requested sector."""
 
     path = Path(path)
@@ -107,14 +108,14 @@ def analyze_tess_target_catalog(
             result.update(candidate)
             result["detection"] = candidate["disposition"] == "candidate"
             if injection_trials > 0:
-                periods = np.array([3.0, 10.0])
+                periods = np.array([3.0, 10.0])  # [day]
                 periods = periods[periods <= baseline / 3.0]
                 if periods.size:
                     recovery = injection_recovery(
                         light_curve,
                         periods,
                         [0.0003, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02],
-                        duration_days=0.1,
+                        duration_days=0.1,  # [day]
                         trials=injection_trials,
                         seed=seed + target_index,
                     )
@@ -144,13 +145,17 @@ def estimate_survey_occurrence(
 
     if "sample_is_parent_population" not in results or not results["sample_is_parent_population"].astype(bool).all():
         raise ValueError("Occurrence rates require a declared complete parent target population")
-    searched = results[results["searched"].astype(bool)].copy()
-    if searched.empty:
-        raise ValueError("No searched targets are available for occurrence estimation")
+    if results.empty or not results["searched"].astype(bool).all():
+        raise ValueError("Every parent-sample target must have a usable QLP search")
+    searched = results.copy()
     if injections.empty:
         raise ValueError("Injection-recovery results are required for occurrence estimation")
     injections = injections.copy()
     grid = pd.MultiIndex.from_frame(injections[["period_days", "depth"]].drop_duplicates())
+    for tic_id, group in injections.groupby("tic_id"):
+        target_grid = pd.MultiIndex.from_frame(group[["period_days", "depth"]].drop_duplicates())
+        if len(target_grid) != len(grid) or not target_grid.isin(grid).all():
+            raise ValueError(f"TIC {tic_id} does not cover the complete injection grid")
     if injection_grid_weights is None:
         weights = pd.Series(1.0 / len(grid), index=grid)
     else:
@@ -164,9 +169,8 @@ def estimate_survey_occurrence(
     ).to_numpy()
     per_target = injections.groupby("tic_id")["weighted_completeness"].sum()
     searched["detection_efficiency"] = searched["tic_id"].map(per_target)
-    searched = searched.dropna(subset=["detection_efficiency"])
-    if searched.empty:
-        raise ValueError("No searched targets have measured injection-recovery efficiency")
+    if searched["detection_efficiency"].isna().any():
+        raise ValueError("Every parent-sample target needs measured injection efficiency")
     try:
         import pergamon
     except ImportError as error:
@@ -207,9 +211,21 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
     with plt.rc_context({"font.size": 10, "axes.edgecolor": "black", "axes.facecolor": "white",
                          "figure.facecolor": "white"}):
         figure, axis = plt.subplots(figsize=(6.8, 4.6), constrained_layout=True)
-        counts = [len(results), int(results["searched"].sum()), int(results["detection"].sum())]
-        axis.bar(["Catalog targets", "QLP searched", "Candidates"], counts,
-                 color=["#8A8F98", "#007C78", "#A51C30"])
+        searched = results[results["searched"].astype(bool)]
+        counts = [
+            len(results),
+            int(results["searched"].sum()),
+            int(searched["period_days"].notna().sum()) if "period_days" in searched else 0,
+            int((searched["depth_snr"] >= 7.0).sum()) if "depth_snr" in searched else 0,
+            int(results["detection"].sum()),
+        ]
+        bars = axis.bar(
+            ["Input\ntargets", "QLP\navailable", "BLS peak\ncomputed", "BLS SNR\n>= 7", "Vetted\ncandidates"],
+            counts,
+            color=["#8A8F98", "#007C78", "#64818A", "#D18B00", "#A51C30"],
+        )
+        axis.bar_label(bars, labels=[str(count) for count in counts], padding=3)
+        axis.set_ylim(0.0, max(counts, default=0) * 1.25 + 0.1)
         axis.set_ylabel("Number of targets")
         axis.grid(False)
         paths["search_yield"] = output_directory / "tess_transit_search_yield.png"
@@ -240,15 +256,28 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
         searched = results[results["searched"].astype(bool)]
         if not searched.empty and "inverted_depth_snr" in searched:
             figure, axis = plt.subplots(figsize=(6.8, 4.6), constrained_layout=True)
-            axis.hist(searched["inverted_depth_snr"].dropna(), bins=20, color="#64818A",
-                      alpha=0.85, label="Inverted-light-curve control")
-            axis.axvline(7.0, color="#A51C30", linestyle="--", label="Nominal 7-sigma threshold")
-            axis.set(xlabel="Maximum inverted-signal depth SNR", ylabel="Number of targets")
-            axis.grid(False)
-            axis.legend(frameon=True, fancybox=True, framealpha=1.0)
-            paths["false_alarm_control"] = output_directory / "tess_transit_false_alarm_control.png"
-            print(f"Writing to {paths['false_alarm_control']}...")
-            figure.savefig(paths["false_alarm_control"], dpi=300, bbox_inches="tight")
+            positive_snr = searched["depth_snr"].to_numpy(dtype=float)
+            inverted_snr = searched["inverted_depth_snr"].to_numpy(dtype=float)
+            finite = np.isfinite(positive_snr) & np.isfinite(inverted_snr)
+            if finite.any():
+                limit = max(7.0, float(np.max(np.r_[positive_snr[finite], inverted_snr[finite]])) * 1.1)
+                axis.scatter(positive_snr[finite], inverted_snr[finite], s=28, alpha=0.8,
+                             color="#007C78", edgecolor="black", linewidth=0.3,
+                             label="Observed targets")
+                axis.plot([0.0, limit], [0.0, limit], color="#555555", linestyle="--",
+                          label="Equal positive and inverted SNR")
+                axis.axhline(7.0, color="#A51C30", linestyle=":", linewidth=1.0)
+                axis.axvline(7.0, color="#A51C30", linestyle=":", linewidth=1.0)
+                axis.set(xlim=(0.0, limit), ylim=(0.0, limit),
+                         xlabel="Highest positive-flux BLS depth SNR",
+                         ylabel="Highest inverted-flux BLS depth SNR")
+                axis.text(0.03, 0.96, "Above diagonal: inverted control is stronger",
+                          transform=axis.transAxes, ha="left", va="top")
+                axis.grid(False)
+                axis.legend(frameon=True, fancybox=True, framealpha=1.0)
+                paths["false_alarm_control"] = output_directory / "tess_transit_false_alarm_control.png"
+                print(f"Writing to {paths['false_alarm_control']}...")
+                figure.savefig(paths["false_alarm_control"], dpi=300, bbox_inches="tight")
             plt.close(figure)
 
         if not searched.empty and "tmag" in searched:
@@ -270,11 +299,21 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
             plt.close(figure)
 
         if not searched.empty and "reference_disposition" in searched:
-            reference = searched["reference_disposition"].fillna("Unknown").value_counts()
+            comparison = results.copy()
+            comparison["reference_disposition"] = comparison["reference_disposition"].fillna("Unknown")
+            comparison["disposition"] = comparison["disposition"].fillna("No QLP product")
+            table = pd.crosstab(comparison["reference_disposition"], comparison["disposition"])
+            order = [name for name in ("candidate", "review", "No QLP product") if name in table]
             figure, axis = plt.subplots(figsize=(7.2, 4.6), constrained_layout=True)
-            axis.bar(reference.index.astype(str), reference.values, color="#007C78")
-            axis.set_ylabel("Searched targets")
-            axis.tick_params(axis="x", labelrotation=30)
+            table[order].plot.bar(
+                ax=axis,
+                color={"candidate": "#007C78", "review": "#D18B00", "No QLP product": "#8A8F98"},
+                width=0.75,
+            )
+            axis.set_ylabel("Number of targets")
+            axis.set_xlabel("Archived TESS disposition")
+            axis.tick_params(axis="x", labelrotation=0)
+            axis.legend(title="Miletos triage", frameon=True, fancybox=True, framealpha=1.0)
             axis.grid(False)
             paths["toi_comparison"] = output_directory / "tess_transit_toi_comparison.png"
             print(f"Writing to {paths['toi_comparison']}...")

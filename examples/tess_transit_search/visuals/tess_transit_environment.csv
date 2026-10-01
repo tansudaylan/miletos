@@ -1,0 +1,9 @@
+package,available,kind
+numpy,True,required
+pandas,True,required
+astropy,True,required
+astroquery,True,required
+miletos,True,required
+lightkurve,False,optional
+pergamon,True,optional
+pcat,True,optional

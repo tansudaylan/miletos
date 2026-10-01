@@ -1,0 +1,153 @@
+{
+  "created_at_utc": "2026-10-01T23:06:09.887678+00:00",
+  "python": "3.11.8 | packaged by conda-forge | (main, Feb 16 2024, 20:49:36) [Clang 16.0.6 ]",
+  "miletos_repository": "/Users/tdaylan/Documents/work/git/miletos",
+  "tic_id": 260128333,
+  "sector": 10,
+  "package_versions": {
+    "numpy": "2.4.6",
+    "pandas": "2.2.3",
+    "astropy": "8.0.0",
+    "astroquery": "0.4.11",
+    "miletos": "0.1",
+    "pergamon": null,
+    "lightkurve": null
+  },
+  "environment_checks": [
+    {
+      "package": "numpy",
+      "available": true,
+      "kind": "required"
+    },
+    {
+      "package": "pandas",
+      "available": true,
+      "kind": "required"
+    },
+    {
+      "package": "astropy",
+      "available": true,
+      "kind": "required"
+    },
+    {
+      "package": "astroquery",
+      "available": true,
+      "kind": "required"
+    },
+    {
+      "package": "miletos",
+      "available": true,
+      "kind": "required"
+    },
+    {
+      "package": "lightkurve",
+      "available": false,
+      "kind": "optional"
+    },
+    {
+      "package": "pergamon",
+      "available": true,
+      "kind": "optional"
+    },
+    {
+      "package": "pcat",
+      "available": true,
+      "kind": "optional"
+    }
+  ],
+  "mast_observations": [
+    {
+      "intentType": "science",
+      "obs_collection": "HLSP",
+      "provenance_name": "QLP",
+      "instrument_name": "Photometer",
+      "project": "TESS",
+      "filters": "TESS",
+      "wave_region": "Optical",
+      "target_name": "260128333",
+      "target_classification": NaN,
+      "obs_id": "hlsp_qlp_tess_ffi_s0010-0000000260128333_tess_v01_llc",
+      "s_ra": 92.1331996217,
+      "s_dec": -59.5411333817,
+      "dataproduct_type": "timeseries",
+      "proposal_pi": "Chelsea X. Huang",
+      "calib_level": 4,
+      "t_min": 58568.9484712,
+      "t_max": 58595.15648173,
+      "t_exptime": 1800.0,
+      "wavelength_region": "Optical",
+      "em_min": 600.0,
+      "em_max": 1000.0,
+      "obs_title": NaN,
+      "t_obs_release": 59230.65846061,
+      "proposal_id": "N/A",
+      "proposal_type": NaN,
+      "sequence_number": 10,
+      "s_region": "CIRCLE ICRS 92.13319962 -59.54113338 0.00111111",
+      "jpegURL": NaN,
+      "dataURL": "mast:HLSP/qlp/s0010/0000/0002/6012/8333/hlsp_qlp_tess_ffi_s0010-0000000260128333_tess_v01_llc.fits",
+      "dataRights": "PUBLIC",
+      "mtFlag": false,
+      "srcDen": NaN,
+      "obsid": "51233934",
+      "objID": "95175536",
+      "wave_min": 600.0,
+      "wave_max": 1000.0
+    }
+  ],
+  "mast_qlp_fits_products": [
+    {
+      "productFilename": "hlsp_qlp_tess_ffi_s0010-0000000260128333_tess_v01_llc.fits"
+    }
+  ],
+  "test_summary": [
+    {
+      "repository": "Miletos transit survey",
+      "path": "/Users/tdaylan/Documents/work/git/miletos",
+      "returncode": 0,
+      "summary": "\u001b[33m\u001b[32m7 passed\u001b[0m, \u001b[33m\u001b[1m1 warning\u001b[0m\u001b[33m in 4.24s\u001b[0m\u001b[0m",
+      "failure_diagnostics": ""
+    },
+    {
+      "repository": "Pergamon occurrence",
+      "path": "/Users/tdaylan/Documents/work/git/pergamon",
+      "returncode": 0,
+      "summary": "\u001b[33m\u001b[32m9 passed\u001b[0m, \u001b[33m\u001b[1m1 warning\u001b[0m\u001b[33m in 4.30s\u001b[0m\u001b[0m",
+      "failure_diagnostics": ""
+    }
+  ],
+  "synthetic_search": {
+    "period_days": 2.997798413555646,
+    "transit_time_days": 0.41000000000000003,
+    "duration_days": 0.1,
+    "depth": 0.010019999075194541,
+    "depth_uncertainty": 0.00014383899044561525,
+    "depth_snr": 69.66121664336242,
+    "odd_even_snr": 0.6270282183253373,
+    "secondary_depth": -0.0001650388327947283,
+    "secondary_snr": -1.1670007782826517,
+    "inverted_depth_snr": 7.168734498713723,
+    "below_snr_threshold": false,
+    "odd_even_mismatch": false,
+    "secondary_eclipse": false,
+    "inverted_signal": true,
+    "disposition": "review"
+  },
+  "real_search": {
+    "period_days": 7.354890050433719,
+    "transit_time_days": 1577.125290492163,
+    "duration_days": 0.14,
+    "depth": 0.0014283810531652008,
+    "depth_uncertainty": 0.00021091260947685294,
+    "depth_snr": 6.772383390012353,
+    "odd_even_snr": NaN,
+    "secondary_depth": -0.00015640066751609893,
+    "secondary_snr": -1.0331651199074645,
+    "inverted_depth_snr": 8.336485113998846,
+    "below_snr_threshold": true,
+    "odd_even_mismatch": false,
+    "secondary_eclipse": false,
+    "inverted_signal": true,
+    "disposition": "review"
+  }
+}

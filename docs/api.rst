@@ -2,7 +2,7 @@ API reference
 =============
 
 TESS QLP survey tools
---------------------
+----------------------
 
 .. automodule:: miletos.tess_transit_survey
    :members:
