@@ -2,13 +2,14 @@
 """Reproduce the TESS phase-curve analysis of WASP-121 b by Daylan et al. (2021b)."""
 
 import argparse
+from tdpy.cli import add_plot_arguments
 
 from miletos import daylan2021b
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--typefileplot', choices=('png', 'pdf'), default='png')
+    add_plot_arguments(parser)
     parser.add_argument(
         '--prepare-only',
         action='store_true',

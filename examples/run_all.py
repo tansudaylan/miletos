@@ -4,6 +4,7 @@
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 import ast
 import os
 from pathlib import Path
@@ -50,7 +51,7 @@ def get_catalog_invocations():
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--typefileplot', choices=('png', 'pdf'), default='png')
+    add_plot_arguments(parser)
     parser.add_argument('--quick', action='store_true', help='Run only the four deterministic CI examples.')
     parser.add_argument('--list', action='store_true', help='List every catalog invocation without running it.')
     return parser.parse_args()

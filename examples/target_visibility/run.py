@@ -1,4 +1,5 @@
 import argparse
+from tdpy.cli import add_plot_arguments
 
 from miletos.diagnostics import run_target_visibility_diagnostic
 from miletos.paths import get_repository_path
@@ -44,7 +45,7 @@ def parse_arguments():
     parser.add_argument('--observatory', choices=OBSERVATORIES, default='TUG')
     parser.add_argument('--night', default='2022-07-13 00:00:00')
     parser.add_argument('--year-start', default='2022-01-01 00:00:00')
-    parser.add_argument('--typefileplot', choices=('png', 'pdf'), default='png')
+    add_plot_arguments(parser)
     return parser.parse_args()
 
 

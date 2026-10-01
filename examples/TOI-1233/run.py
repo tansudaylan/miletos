@@ -4,6 +4,7 @@
 from tdpy.verbosity import print
 
 import argparse
+from tdpy.cli import add_plot_arguments
 
 from miletos import daylan2021a
 from miletos.toi1233 import run_toi1233_observation
@@ -16,7 +17,7 @@ def parse_arguments():
         choices=('PlanetarySystem', 'PlanetarySystemWithTTVs'),
         default='PlanetarySystemWithTTVs',
     )
-    parser.add_argument('--typefileplot', choices=('png', 'pdf'), default='png')
+    add_plot_arguments(parser)
     parser.add_argument('--reproduce-daylan2021a', action='store_true',
                         help='Reproduce the four-planet TESS transit analysis of Daylan et al. (2021a) with PCAT.')
     parser.add_argument('--reuse', action='store_true', help='Replot a saved PCAT posterior instead of sampling.')

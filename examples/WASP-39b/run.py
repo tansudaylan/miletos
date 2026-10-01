@@ -1,5 +1,6 @@
 from tdpy.verbosity import print
 import argparse
+from tdpy.cli import add_plot_arguments
 
 from miletos.ers import run_wasp39_ers_g395h_reproduction
 
@@ -12,7 +13,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Reproduce the published WASP-39b JWST ERS G395H analysis.',
     )
-    parser.add_argument('--typefileplot', choices=('png', 'pdf'), default='png')
+    add_plot_arguments(parser)
     parser.add_argument(
         '--refresh-data',
         action='store_true',
