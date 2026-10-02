@@ -25,7 +25,7 @@ from astropy.coordinates import SkyCoord
 
 import pickle
     
-import celerite
+import celerite2
 
 from functools import partial
 
@@ -41,6 +41,7 @@ from .cache import read_cached_output
 from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, initialize_tser_containers, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
+from .visualization import select_primary_transit_window
 from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, save_miletos_figure, setp_dictmodl_sample
 import nicomedia
 import ephesos
@@ -696,7 +697,10 @@ def setp_gpro(gdat, dictparainpt, strgmodl):
     
     ## construct the kernel object
     if gmod.typemodlblinshap == 'GaussianProcess':
-        dictobjtkern['Baseline'] = celerite.terms.Matern32Term(log_sigma=np.log(dictparainpt['sigmgprobase']*1e-3), log_rho=np.log(dictparainpt['rhoogprobase']))
+        dictobjtkern['Baseline'] = celerite2.terms.Matern32Term(
+            sigma=dictparainpt['sigmgprobase'] * 1e-3,
+            rho=dictparainpt['rhoogprobase'],
+        )
     
     k = 0
     for name, valu in dictobjtkern.items():
@@ -710,7 +714,7 @@ def setp_gpro(gdat, dictparainpt, strgmodl):
     
     ## construct the GP model object
     for name in dictobjtkern:
-        dictobjtgpro[name] = celerite.GP(dictobjtkern[name])
+        dictobjtgpro[name] = celerite2.GaussianProcess(dictobjtkern[name])
     
     return dictobjtkern, dictobjtgpro
 
@@ -1066,7 +1070,7 @@ def plot_pser_mile( \
                         print('Warning! Phase curve (%s) is empty, possibly due to being a zoom-in!' % strgarry)
 
                     if gdat.boolwritplan:
-                        axis.text(0.9, 0.9, r'\textbf{%s}' % gdat.liststrgcomp[j], \
+                        axis.text(0.9, 0.9, gdat.liststrgcomp[j], fontweight='bold', \
                                             color=gdat.listcolrcomp[j], va='center', ha='center', transform=axis.transAxes)
                     axis.set_ylabel(gdat.listlabltser[b])
                     axis.set_xlabel('Phase')
@@ -1115,7 +1119,7 @@ def plot_pser_mile( \
                                                                                                                             color='b', zorder=3)
                         if gdat.boolwritplan:
                             axis.text(0.9, 0.1, \
-                                            r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], va='center', ha='center', transform=axis.transAxes)
+                                            gdat.liststrgcomp[j], fontweight='bold', color=gdat.listcolrcomp[j], va='center', ha='center', transform=axis.transAxes)
                         axis.set_ylabel(gdat.listlabltser[b])
                         axis.set_xlabel('Time [%s]' % lablunittime)
                         axis.set_title(titl)
@@ -1143,7 +1147,7 @@ def plot_pser_mile( \
                             axis[jj].plot(arrypcurbind[b][p][j][:, gdat.indxenerclip, 0], \
                                                 arrypcurbind[b][p][j][:, gdat.indxenerclip, 1], color=gdat.listcolrcomp[j], marker='o', ls='', ms=1)
                         if gdat.boolwritplan:
-                            axis[jj].text(0.97, 0.8, r'\textbf{%s}' % gdat.liststrgcomp[j], transform=axis[jj].transAxes, \
+                            axis[jj].text(0.97, 0.8, gdat.liststrgcomp[j], fontweight='bold', transform=axis[jj].transAxes, \
                                                                                                 color=gdat.listcolrcomp[j], va='center', ha='center')
                     axis[0].set_ylabel(gdat.listlabltser[b])
                     axis[0].set_xlim(-0.5, 0.5)
@@ -2205,7 +2209,7 @@ def plot_popl(gdat, strgpdfn):
     for valu in listhighlight:
         axis.axvspan(valu['xposlowr'], valu['xposuppr'], alpha=0.5, color=valu['colr'])
         axis.axvline(valu['xposmedi'], color=valu['colr'], ls='--', label=valu['labl'])
-        axis.text(valu['textx'], valu['texty'], r'\textbf{%s}' % valu['labl'], color=valu['colr'], va='center', ha='center', transform=axis.transAxes)
+        axis.text(valu['textx'], valu['texty'], valu['labl'], fontweight='bold', color=valu['colr'], va='center', ha='center', transform=axis.transAxes)
     
     _, colrdraw = tdpy.plot_background_colors(gdat.typeplotback)
     
@@ -2646,7 +2650,7 @@ def plot_popl(gdat, strgpdfn):
                                         else:
                                             axis.axvline(valu['xdat'], color=valu['color'], lw=valu['lw'], ls=valu['ls'], zorder=valu['zorder'])
                                 for valu in dicttrgt['text']:
-                                    axis.text(valu['xdat'], valu['ydat'], valu['text'], color=valu['color'], va='center', ha='center', transform=axis.transAxes)
+                                    axis.text(valu['xdat'], valu['ydat'], valu['text'], color=valu['color'], fontweight=valu.get('fontweight', 'normal'), va='center', ha='center', transform=axis.transAxes)
                                 
                                 # include text
                                 if strgtext == 'text':
@@ -2812,7 +2816,7 @@ def plot_tser_mile_core(gdat, strgarry, b, p, y=None, boolcolrtran=True, boolfla
                             ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.9
 
                         # draw the planet letter
-                        axis.text(time, ypostemp, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], va='center', ha='center')
+                        axis.text(time, ypostemp, gdat.liststrgcomp[j], fontweight='bold', color=gdat.listcolrcomp[j], va='center', ha='center')
                         listtimetext.append(time)
 
         if boolchun:
@@ -2895,7 +2899,7 @@ def plot_tser_mile_core(gdat, strgarry, b, p, y=None, boolcolrtran=True, boolfla
                                 ypostemp = ylim[0] + (ylim[1] - ylim[0]) * 0.9
 
                             # draw the planet letter
-                            axis.text(time, ypostemp, r'\textbf{%s}' % gdat.liststrgcomp[j], color=gdat.listcolrcomp[j], va='center', ha='center')
+                            axis.text(time, ypostemp, gdat.liststrgcomp[j], fontweight='bold', color=gdat.listcolrcomp[j], va='center', ha='center')
                             listtimetext.append(time)
             
             if boolchun:
@@ -6014,14 +6018,23 @@ def bdtr_tser( \
         if typebdtr == 'GaussianProcess':
             # fit a Gaussian Process (GP) model to the data as baseline
             ## construct the kernel object
-            objtkern = celerite.terms.Matern32Term(log_sigma=np.log(np.std(4. * lcurregi[indxtimeregioutt[i]])), log_rho=np.log(timescalbdtr))
+            kernel_sigma = max(
+                float(np.std(4. * lcurregi[indxtimeregioutt[i]])),
+                np.finfo(float).eps,
+            )
+            objtkern = celerite2.terms.Matern32Term(
+                sigma=kernel_sigma,
+                rho=timescalbdtr,
+            )
             print('sigma for GP')
             print(np.std(lcurregi[indxtimeregioutt[i]]))
             print('rho for GP [days]')
             print(timescalbdtr)
 
             ## construct the GP model object
-            objtgpro = celerite.GP(objtkern, mean=np.mean(lcurregi[indxtimeregioutt[i]]))
+            objtgpro = celerite2.GaussianProcess(
+                objtkern, mean=np.mean(lcurregi[indxtimeregioutt[i]])
+            )
             
             # compute the covariance matrix
             objtgpro.compute(timeregi[indxtimeregioutt[i]], yerr=stdvlcurregi[indxtimeregioutt[i]])
@@ -10510,10 +10523,11 @@ def init( \
                 gdat.epocmask = gdat.fitt.prio.meanpara.epocmtracomp
                 gdat.fitt.duramask = 2. * gdat.fitt.prio.meanpara.duratrantotlcomp
     
-    if (gdat.boolsrchoutlperi or gdat.boolsrchboxsperi) and gdat.fitt.prio.numbcomp > 0:
-       gdat.fitt.prio.meanpara.rratcomp = [[] for pk in gdat.indxband]
-       if gdat.boolanlsbandmerg:
-           for pk in gdat.indxband:
+    if ((gdat.boolsrchoutlperi or gdat.boolsrchboxsperi)
+            and gdat.fitt.prio.numbcomp is not None):
+        gdat.fitt.prio.meanpara.rratcomp = [[] for pk in gdat.indxband]
+        if gdat.boolanlsbandmerg:
+            for pk in gdat.indxband:
                 gdat.fitt.prio.meanpara.rratcomp[pk] = np.sqrt(1e-3 * gdat.fitt.prio.meanpara.depttrancomp)
     
     print('gdat.fitt.prio.numbcomp')
@@ -10657,12 +10671,14 @@ def init( \
                     for j in range(len(gdat.dictboxsperioutp['epoc'])):
                         gdat.listdictdvrp[j+1].append({'path': gdat.dictboxsperioutp['listpathplot%s' % name][j], 'limt':[0., 0.9 - g * 0.1, 0.5, 0.1]})
     
-    if gdat.booldiag and gdat.fitt.boolmodlcomp:
-        if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
-            print('')
-            print('')
-            print('')
-            raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
+        if (gdat.booldiag and gdat.fitt.boolmodlcomp
+                and hasattr(gdat.fitt.prio.meanpara, 'rratcomp')
+                and gdat.fitt.prio.numbcomp is not None):
+            if gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp):
+                print('')
+                print('')
+                print('')
+                raise Exception('gdat.numbband != len(gdat.fitt.prio.meanpara.rratcomp)')
 
     gdat.dictmileoutp['numbcompprio'] = gdat.fitt.prio.numbcomp
     
@@ -10702,6 +10718,9 @@ def init( \
                     if gdat.boolplot:
                         gdat.listdictdvrp[0].append({'path': gdat.dictlspeoutp['pathplot'], 'limt':[0., 0.8, 0.5, 0.1]})
         
+    if not hasattr(gdat.fitt.prio.meanpara, 'rratcomp'):
+        gdat.fitt.prio.meanpara.rratcomp = [np.array([]) for pk in gdat.indxband]
+
     if not gdat.fitt.boolmodlcomp:
         gdat.fitt.prio.numbcomp = 0
         gdat.fitt.prio.indxcomp = np.array([], dtype=int)
@@ -10974,94 +10993,27 @@ def init( \
     #    plt.savefig(path)
     #    plt.close()
         
-    # calculate the visibility of the target
     if gdat.boolcalcvisi:
-        
+        if gdat.strgtimeobvtyear is None:
+            raise ValueError('strgtimeobvtyear is required for visibility calculations')
         if gdat.listdelttimeobvtyear is None:
-            gdat.listdelttimeobvtyear = np.linspace(0., 365., 10000)
-
-        massairr = tdpy.calc_visitarg(gdat.rasctarg, gdat.decltarg, gdat.latiobvt, gdat.longobvt, gdat.strgtimeobvtyear, gdat.listdelttimeobvtyear, gdat.heigobvt)
-
-        gdat.dictmileoutp['massairr'] = massairr
-
-        # alt-az coordinate object for the Sun
-        #objtcoorsunnalazyear = astropy.coordinates.get_sun(objttimeyear)
-        #objtcoorsunnalazyear = objtcoorsunnalazyear.transform_to(objtframobvtyear)
-            
-        # quantities during a given night
+            gdat.listdelttimeobvtyear = np.linspace(0., 365., 10000)  # [day]
+        gdat.dictmileoutp['massairr'] = tdpy.calc_visitarg(
+            gdat.rasctarg, gdat.decltarg, gdat.latiobvt, gdat.longobvt,
+            gdat.strgtimeobvtyear, gdat.listdelttimeobvtyear, gdat.heigobvt,
+        )
         if gdat.strgtimeobvtnigh is not None:
-            objttimenigh = astropy.time.Time(astropy.time.Time(gdat.strgtimeobvtnigh).jd, format='jd', location=objtlocaobvt)
-            objttimenighcent = astropy.time.Time(int(objttimenigh.jd), format='jd', location=objtlocaobvt)
-            objttimenighcen1 = astropy.time.Time(int(objttimenigh.jd + 1), format='jd', location=objtlocaobvt)
-            objttimenigh = objttimenighcent + (12. + timedelt - gdat.offstimeobvt) * astropy.units.hour
-        
-            # frame object for the observatory during the selected night
-            objtframobvtnigh = astropy.coordinates.AltAz(obstime=objttimenigh, location=objtlocaobvt)
-        
-            # alt-az coordinate object for the Sun
-            objtcoorsunnalaznigh = astropy.coordinates.get_sun(objttimenigh).transform_to(objtframobvtnigh)
-            # alt-az coordinate object for the Moon
-            objtcoormoonalaznigh = astropy.coordinates.get_moon(objttimenigh).transform_to(objtframobvtnigh)
-            # alt-az coordinate object for the target
-            objtcoorplanalaznigh = astropy.coordinates.SkyCoord(ra=gdat.rasctarg, dec=gdat.decltarg, frame='icrs', unit='deg').transform_to(objtframobvtnigh)
-        
-            # air mass of the target during the night
-            massairr = objtcoorplanalaznigh.secz
-        
-            for j in gmod.indxcomp:
-                indx = retr_indxtimetran(timeyear, gdat.fitt.prio.meanpara.epocmtracomp[j], gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j])
-                
-                import operator
-                import itertools
-                for k, g in itertools.groupby(enumerate(list(indx)), lambda ix : ix[0] - ix[1]):
-                    print(map(operator.itemgetter(1), g))
-            
-            labltime = 'Local time to Midnight [hour]'
-            print('%s, Air mass' % labltime)
-            for ll in range(len(massairr)):
-                print('%6g %6.3g' % (timedelt[ll], massairr[ll]))
-
-            
-    # plot visibility of the target
-    if gdat.boolplotvisi:
-        strgtitl = '%s, %s/%s' % (gdat.labltarg, objttimenighcent.iso[:10], objttimenighcen1.iso[:10])
-
-        # plot air mass
-        figr, axis = plt.subplots(figsize=(8, 4))
-        
-        indx = np.where(np.isfinite(massairr) & (massairr > 0))[0]
-        plt.plot(timedelt[indx], massairr[indx])
-        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -0*astropy.units.deg, color='0.5', zorder=0)
-        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -18*astropy.units.deg, color='k', zorder=0)
-        axis.fill_between(timedelt, 0, 90, (massairr > 2.) | (massairr < 1.), color='r', alpha=0.3, zorder=0)
-        axis.set_xlabel(labltime)
-        axis.set_ylabel('Airmass')
-        limtxdat = [np.amin(timedelt), np.amax(timedelt)]
-        axis.set_title(strgtitl)
-        axis.set_xlim(limtxdat)
-        axis.set_ylim([1., 2.])
-        path = gdat.pathvisutarg + 'airmass_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
-        print('Writing to %s...' % path)
-        plt.savefig(path)
-        
-        # plot altitude
-        figr, axis = plt.subplots(figsize=(8, 4))
-        axis.plot(timedelt, objtcoorsunnalaznigh.alt, color='orange', label='Sun')
-        axis.plot(timedelt, objtcoormoonalaznigh.alt, color='gray', label='Moon')
-        axis.plot(timedelt, objtcoorplanalaznigh.alt, color='blue', label=gdat.labltarg)
-        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -0*astropy.units.deg, color='0.5', zorder=0)
-        axis.fill_between(timedelt, 0, 90, objtcoorsunnalaznigh.alt < -18*astropy.units.deg, color='k', zorder=0)
-        axis.fill_between(timedelt, 0, 90, (massairr > 2.) | (massairr < 1.), color='r', alpha=0.3, zorder=0)
-        axis.legend(loc='upper left')
-        plt.ylim([0, 90])
-        axis.set_title(strgtitl)
-        axis.set_xlim(limtxdat)
-        axis.set_xlabel(labltime)
-        axis.set_ylabel('Altitude [deg]')
-        
-        path = gdat.pathvisutarg + 'altitude_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
-        print('Writing to %s...' % path)
-        plt.savefig(path)
+            visibility = tdpy.analyze_target_visibility(
+                gdat.rasctarg, gdat.decltarg, gdat.latiobvt, gdat.longobvt,
+                gdat.heigobvt or 0., gdat.offstimeobvt,
+                gdat.strgtimeobvtnigh, gdat.strgtimeobvtyear,
+            )
+            gdat.dictmileoutp['visibility'] = visibility
+            if gdat.boolplotvisi:
+                path = gdat.pathvisutarg + 'visibility_%s.%s' % (gdat.strgtarg, gdat.typefileplot)
+                tdpy.plot_target_visibility(visibility, path, gdat.labltarg, 'Observatory')
+        elif gdat.boolplotvisi:
+            raise ValueError('strgtimeobvtnigh is required to plot target visibility')
 
     ### bin the light curve
     #gdat.delttimebind = 1. # [days]
@@ -11205,7 +11157,7 @@ def init( \
                     if strgarrypcur == 'DetrendedPrimaryCentered':
                         limt = [-0.5, 0.5]
                     if strgarrypcur == 'DetrendedPrimaryCenteredZoom':
-                        limt = [-0.5 * objtpara.dcyctrantotlcomp[j], 0.5 * objtpara.dcyctrantotlcomp[j]]
+                        limt = [-2.0 * objtpara.dcyctrantotlcomp[j], 2.0 * objtpara.dcyctrantotlcomp[j]]
                     if strgarrypcur == 'DetrendedSecondaryCenteredZoom':
                         limt = [0.5 - 0.5 * objtpara.dcyctrantotlcomp[j], 0.5 + 0.5 * objtpara.dcyctrantotlcomp[j]]
                     if strgarrypcur == 'DetrendedQuadratureCentered':
@@ -11230,7 +11182,7 @@ def init( \
                             print('')
                             raise Exception('arrypcur[DetrendedPrimaryCentered][b][p][j].ndim > 3')
                         
-                        indx = np.where(abs(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j][:, 0, 0] - 0.5) < objtpara.dcyctrantotlcomp[j] / 2.)[0]
+                        indx = select_primary_transit_window(gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j][:, 0, 0], 4.0 * objtpara.dcyctrantotlcomp[j])
                         gmod.arrypcur['DetrendedPrimaryCenteredZoom'][b][p][j] = gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j][indx, :, :]
 
                         gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \

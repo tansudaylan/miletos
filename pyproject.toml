@@ -22,7 +22,7 @@ dependencies = [
   "astroquery",
   "astropy",
   "batman-package",
-  "celerite",
+  "celerite2",
   "ephesos",
   "gputil",
   "h5py",

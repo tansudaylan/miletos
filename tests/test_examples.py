@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import runpy
 
 import matplotlib.image as mpimg
 import pytest
@@ -13,19 +14,15 @@ REPOSITORY_PATH = Path(__file__).parents[1]
 EXAMPLE_PATHS = [REPOSITORY_PATH / 'examples' / 'run_all.py']
 EXAMPLE_PATHS.extend(sorted((REPOSITORY_PATH / 'examples').glob('*/run.py')))
 EXPECTED_NOTEBOOKS = {
-    Path('examples/TOI-1233/Daylan2021.ipynb'): 'fit_daylan2021a_transits(',
+    Path('examples/TOI-1233/Daylan2021.ipynb'): 'run_toi1233_observation(',
     Path('examples/TOI-1233/JointPhotometryRadialVelocity.ipynb'):
         'run_toi1233_observation(',
     Path('examples/WASP-39b/WASP39ERS.ipynb'):
         'run_wasp39_ers_g395h_reproduction(',
     Path('examples/WASP-121b/Daylan2021b.ipynb'):
         'run_daylan2021b_reproduction(',
-    Path('examples/catalog/ConfigurationCatalog.ipynb'):
-        'configurations[configuration_name](',
     Path('examples/simulated_transit/SimulatedTransit.ipynb'):
         'run_simulated_transit_diagnostic(',
-    Path('examples/target_visibility/TargetVisibility.ipynb'):
-        'run_target_visibility_diagnostic(',
     Path('examples/tess_transit_search/TESS_Transit_Search.ipynb'):
         'search_tess_target(',
 }
@@ -74,6 +71,17 @@ def test_example_notebooks_use_miletos_apis():
         assert (imported_modules - allowed_imports).isdisjoint(
             {'matplotlib', 'numpy', 'pandas', 'scipy'}
         )
+
+
+def test_daylan_target_notebook_uses_supported_observational_pipeline():
+    path = REPOSITORY_PATH / 'examples' / 'TOI-1233' / 'Daylan2021.ipynb'
+    print(f'Reading from {path}...')
+    notebook = json.loads(path.read_text())
+    source = '\n'.join(''.join(cell['source']) for cell in notebook['cells'] if cell['cell_type'] == 'code')
+
+    assert 'run_toi1233_observation(' in source
+    assert 'fit_daylan2021a_transits(' not in source
+    assert 'from pcat' not in source
 
 
 @pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)
@@ -145,14 +153,12 @@ def test_all_examples_run_and_produce_plots(tmp_path):
     assert 'reduced chi-squared = 1.10' in completed.stdout
     expected_names = (
         'examples/simulated_transit/visuals/simulated_transit_diagnostic.png',
-        'examples/target_visibility/visuals/target_visibility_toi-1233.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_white_light.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_detector_motion.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_spectroscopic_detrending.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_corrected_light_curve_map.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_light_curve_precision.png',
-        'examples/catalog/visuals/example_catalog_transit.png',
     )
     for name in expected_names:
         output_path = tmp_path / name
@@ -163,7 +169,7 @@ def test_all_examples_run_and_produce_plots(tmp_path):
         assert image[..., :3].min() < 0.8
 
 
-def test_run_all_lists_every_catalog_configuration():
+def test_run_all_lists_observational_targets():
     completed = subprocess.run(
         [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py'), '--list'],
         cwd=REPOSITORY_PATH,
@@ -173,14 +179,37 @@ def test_run_all_lists_every_catalog_configuration():
         check=False,
     )
 
-    tree = __import__('ast').parse(
-        (REPOSITORY_PATH / 'examples' / 'catalog' / 'run.py').read_text()
-    )
-    expected = {
-        node.name for node in tree.body
-        if isinstance(node, __import__('ast').FunctionDef) and node.name.startswith('cnfg_')
-    }
-    listed = {line.split()[0] for line in completed.stdout.splitlines()}
+    listed = completed.stdout.splitlines()
     assert completed.returncode == 0, completed.stderr
-    assert listed == expected
-    assert len(completed.stdout.splitlines()) == 45
+    assert listed == [
+        'TOI-1233/run.py',
+        'WASP-121b/run.py',
+        'WD1856b/run.py',
+        'TRAPPIST-1/run.py',
+    ]
+
+
+@pytest.mark.parametrize(
+    ('script_name', 'target', 'model'),
+    [
+        ('WD1856b', 'WD 1856+534', 'PlanetarySystem'),
+        ('TRAPPIST-1', 'TRAPPIST-1', 'PlanetarySystemWithTTVs'),
+    ],
+)
+def test_observational_examples_use_tess_without_fitting(monkeypatch, script_name, target, model):
+    import miletos
+
+    arguments = []
+    script = REPOSITORY_PATH / 'examples' / script_name / 'run.py'
+    namespace = runpy.run_path(str(script))
+    monkeypatch.setattr(miletos, 'init', lambda **kwargs: arguments.append(kwargs))
+    monkeypatch.setattr(sys, 'argv', [str(script), '--typefileplot', 'pdf'])
+
+    assert namespace['main']() == 0
+    assert len(arguments) == 1
+    assert arguments[0]['strgmast'] == target
+    assert arguments[0]['listlablinst'] == [['TESS'], []]
+    assert arguments[0]['liststrgtypedata'] == [['obsd'], []]
+    assert arguments[0]['dictfitt']['typemodl'] == model
+    assert arguments[0]['boolfitt'] is False
+    assert arguments[0]['typefileplot'] == 'pdf'

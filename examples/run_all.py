@@ -5,10 +5,8 @@ from tdpy.verbosity import print
 
 import argparse
 from tdpy.cli import add_plot_arguments
-import ast
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 
@@ -20,40 +18,23 @@ QUICK_EXAMPLES = (
         'examples/simulated_transit/visuals/simulated_transit_diagnostic',
     ),
     (
-        'target_visibility/run.py',
-        'examples/target_visibility/visuals/target_visibility_toi-1233',
-    ),
-    (
         'WASP-39b/run.py',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum',
     ),
-    ('catalog/run.py', 'examples/catalog/visuals/example_catalog_transit'),
 )
-CATALOG_ARGUMENTS = {
-    'cnfg_WASP': (('18',), ('46',)),
-    'cnfg_TOI_lists': (('MuSCAT2',), ('GUHJS2',)),
-}
-PLOT_PATH_PATTERN = re.compile(r'(?:Writing|Reading) to (.+\.(?:png|pdf))\.\.\.$')
-
-
-def get_catalog_invocations():
-    tree = ast.parse((REPOSITORY_PATH / 'examples' / 'catalog' / 'run.py').read_text())
-    names = sorted(
-        node.name for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name.startswith('cnfg_')
-    )
-    invocations = []
-    for name in names:
-        for arguments in CATALOG_ARGUMENTS.get(name, ((),)):
-            invocations.append((name, arguments))
-    return invocations
+OBSERVATIONAL_EXAMPLES = (
+    'TOI-1233/run.py',
+    'WASP-121b/run.py',
+    'WD1856b/run.py',
+    'TRAPPIST-1/run.py',
+)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     add_plot_arguments(parser)
-    parser.add_argument('--quick', action='store_true', help='Run only the four deterministic CI examples.')
-    parser.add_argument('--list', action='store_true', help='List every catalog invocation without running it.')
+    parser.add_argument('--quick', action='store_true', help='Run only the two CI examples.')
+    parser.add_argument('--list', action='store_true', help='List the observational target examples without running them.')
     return parser.parse_args()
 
 
@@ -75,10 +56,9 @@ def run_command(command, environment):
 
 def main():
     arguments = parse_arguments()
-    catalog_invocations = get_catalog_invocations()
     if arguments.list:
-        for name, values in catalog_invocations:
-            print(' '.join((name, *values)))
+        for script_name in OBSERVATIONAL_EXAMPLES:
+            print(script_name)
         return 0
 
     environment = os.environ.copy()
@@ -91,29 +71,17 @@ def main():
             print(f'Removing cached example output {output_path}...')
             output_path.unlink()
         command = [sys.executable, str(REPOSITORY_PATH / 'examples' / script_name)]
-        if script_name == 'catalog/run.py':
-            command.extend(['cnfg_simulated_transit_diagnostic', arguments.typefileplot])
-        else:
-            command.extend(['--typefileplot', arguments.typefileplot])
+        command.extend(['--typefileplot', arguments.typefileplot])
         run_command(command, environment)
         if not output_path.is_file() or output_path.stat().st_size == 0:
             raise RuntimeError(f'Example did not produce a plot at {output_path}')
         print(f'Verified {output_path}...')
 
     if not arguments.quick:
-        for name, values in catalog_invocations:
-            command = [
-                sys.executable,
-                str(REPOSITORY_PATH / 'examples' / 'catalog' / 'run.py'),
-                name,
-                *values,
-            ]
-            print(f"Running {' '.join((name, *values))}...")
-            output = run_command(command, environment)
-            plot_paths = [Path(match.group(1)) for line in output.splitlines() if (match := PLOT_PATH_PATTERN.search(line))]
-            if not any(path.is_file() and path.stat().st_size > 0 for path in plot_paths):
-                raise RuntimeError(f'{name} did not report an existing plot')
-            print(f'Verified {name} ({len(plot_paths)} plot references)...')
+        for script_name in OBSERVATIONAL_EXAMPLES:
+            command = [sys.executable, str(REPOSITORY_PATH / 'examples' / script_name)]
+            command.extend(['--typefileplot', arguments.typefileplot])
+            run_command(command, environment)
 
     return 0
 

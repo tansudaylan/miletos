@@ -7,6 +7,7 @@ import pytest
 
 import numpy as np
 
+from miletos.visualization import select_primary_transit_window
 from miletos.visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_modl_fine_series, setp_dictmodl_sample
 from miletos.visualization import retr_lablinst_part, retr_lablcnfg_part, retr_summary_extn, retr_summary_title, save_miletos_figure
 import miletos.visualization as vismod
@@ -754,6 +755,12 @@ def test_build_feature_pair_guides():
     assert dictguide_none == {'xlim': None, 'curves': [], 'labels': []}
 
 
+def test_select_primary_transit_window():
+    phase = np.array([-0.49, -0.02, -0.01, 0.0, 0.01, 0.02, 0.49])
+    assert np.array_equal(select_primary_transit_window(phase, 0.04), [2, 3, 4])
+    assert np.array_equal(select_primary_transit_window(phase, 0.16), [1, 2, 3, 4, 5])
+
+
 def test_build_feature_pair_target_render_plan():
     gdat = DummyGdat()
     gdat.dicterrr = {
@@ -772,7 +779,8 @@ def test_build_feature_pair_target_render_plan():
     assert dictplan_comp['draw'][0]['kind'] == 'errorbar'
     assert dictplan_comp['draw'][0]['color'] == 'r'
     assert len(dictplan_comp['text']) == 2
-    assert dictplan_comp['text'][0]['text'] == r'\textbf{b}'
+    assert dictplan_comp['text'][0]['text'] == 'b'
+    assert dictplan_comp['text'][0]['fontweight'] == 'bold'
 
     dictplan_star = build_feature_pair_target_render_plan(gdat, gmod, 'foo', 'massstar')
     assert len(dictplan_star['draw']) == 1

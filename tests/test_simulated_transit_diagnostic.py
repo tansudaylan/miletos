@@ -17,6 +17,10 @@ def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys):
     assert result.time_days.shape == result.observed_flux.shape
     assert result.time_days.size > 3_000
     assert result.binned_phase.size == 65
+    assert np.any((-0.08 < result.binned_phase) & (result.binned_phase < 0))
+    assert np.any((0 < result.binned_phase) & (result.binned_phase < 0.08))
+    assert np.any((result.phase < 0) & (result.folded_model_flux < 0.999))
+    assert np.any((result.phase > 0) & (result.folded_model_flux < 0.999))
     assert np.isfinite(result.binned_flux).all()
     assert 5_000 < 1e6 * (1.0 - result.model_flux.min()) < 10_000
     assert abs(np.median(result.detrended_flux) - 1.0) < 100e-6

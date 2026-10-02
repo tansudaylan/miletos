@@ -1292,6 +1292,12 @@ def build_feature_pair_guides(dictpopl, strgxaxi, strgyaxi):
     return dictguide
 
 
+def select_primary_transit_window(folded_phase, phase_duration):
+    """Return points around the phase-zero transit, not the half-orbit secondary."""
+
+    return np.flatnonzero(np.abs(folded_phase) < 0.5 * phase_duration)
+
+
 def build_feature_pair_target_render_plan(gdat, gmod, strgxaxi, strgyaxi):
     """Return drawing commands for target overlays in one population feature-pair panel."""
 
@@ -1410,8 +1416,9 @@ def build_feature_pair_target_render_plan(gdat, gmod, strgxaxi, strgyaxi):
             listtext.append({
                 'xdat': 0.85,
                 'ydat': 0.9 - j * 0.08,
-                'text': r'\textbf{%s}' % gdat.liststrgcomp[j],
+                'text': gdat.liststrgcomp[j],
                 'color': gdat.listcolrcomp[j],
+                'fontweight': 'bold',
                 'transform': 'axes',
             })
 

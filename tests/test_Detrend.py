@@ -1,6 +1,7 @@
 import os
 
 import miletos
+from miletos.main import bdtr_tser
 import numpy as np
 
 
@@ -69,4 +70,25 @@ def test_detrend_demo_writes_file(tmp_path):
     assert paths
     assert all(os.path.exists(path) for path in paths)
     assert os.path.exists(os.path.join(str(tmp_path), 'TimeSeries_raw.png'))
+
+
+def test_gaussian_process_detrending_handles_absolute_bjd_times():
+    time = np.linspace(2459000.0, 2459027.0, 720)  # [BJD day]
+    uncertainty = np.full(time.size, 0.001)
+    phase = (time - time[0])
+    flux = 1.0 + 0.01 * np.sin(2.0 * np.pi * phase / 8.0)
+    flux += np.random.default_rng(4).normal(0.0, uncertainty[0], time.size)
+
+    detrended = bdtr_tser(
+        time,
+        flux,
+        uncertainty,
+        boolbrekregi=False,
+        typebdtr='GaussianProcess',
+        timescalbdtr=0.5,  # [day]
+        typeverb=0,
+    )[0]
+
+    assert detrended.shape == flux.shape
+    assert np.isfinite(detrended).all()
 
