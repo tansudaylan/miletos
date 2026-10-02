@@ -27,9 +27,9 @@ def test_repository_path_is_required(monkeypatch):
 
 
 def test_retr_tsecpathlocl_reads_cached_sector_table(monkeypatch, tmp_path):
-    monkeypatch.setenv('TESS_DATA_PATH', str(tmp_path))
+    monkeypatch.setenv('MILETOS_PATH', str(tmp_path))
 
-    pathdir = tmp_path / 'data' / 'lcur' / 'tsec'
+    pathdir = tmp_path / 'data' / 'tess' / 'lcur' / 'tsec'
     pathdir.mkdir(parents=True)
     pathfile = pathdir / 'tsec_spoc_0000000123456789.csv'
     pathfile.write_text('5,/tmp/sector05.fits\n12,/tmp/sector12.fits\n', encoding='utf-8')
@@ -60,7 +60,7 @@ def test_setp_target_paths_and_input_check():
 
 def test_path_input_check_precedes_default_base_path(monkeypatch, tmp_path):
     monkeypatch.setenv('MILETOS_PATH', str(tmp_path / 'miletos'))
-    monkeypatch.setenv('LYGOS_DATA_PATH', str(tmp_path / 'lygos'))
+    monkeypatch.setenv('LYGOS_PATH', str(tmp_path / 'lygos'))
 
     for values in (
         (None, None, None, None),
@@ -84,12 +84,12 @@ def test_path_input_check_precedes_default_base_path(monkeypatch, tmp_path):
 
 def test_setp_mast_path(monkeypatch, tmp_path):
     gdat = DummyGdat()
-    monkeypatch.setenv('MAST_DATA_PATH', str(tmp_path / 'mast-cache'))
+    monkeypatch.setenv('MILETOS_PATH', str(tmp_path / 'miletos'))
 
     setp_mast_path(gdat)
 
     assert gdat.pathdatamast.endswith('/')
-    assert 'mast-cache' in gdat.pathdatamast
+    assert gdat.pathdatamast == str(tmp_path / 'miletos' / 'data' / 'cache' / 'mast') + '/'
 
 
 def test_setp_feature_paths():

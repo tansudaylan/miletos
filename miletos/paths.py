@@ -19,22 +19,23 @@ get_visuals_path = _REPOSITORY_PATHS.get_visuals_path
 def retr_tsecpathlocl(tici, typeverb=1):
     """Return local SPOC-sector availability for a TESS target."""
 
-    pathbase = os.path.join(tdpy.retr_pathbase('tess'), 'data', 'lcur')
-    path = os.path.join(pathbase, 'tsec', 'tsec_spoc_%016d.csv' % tici)
+    pathbase = get_data_path() / 'tess'
+    path = pathbase / 'lcur' / 'tsec' / ('tsec_spoc_%016d.csv' % tici)
     if not os.path.exists(path):
         listtsecsele = np.arange(1, 60)
         listpath = []
         listtsec = []
         strgtagg = '*-%016d-*.fits' % tici
         for tsec in listtsecsele:
-            pathtemp = os.path.join(pathbase, 'sector-%02d' % tsec) + '/'
+            pathtemp = pathbase / ('sector-%02d' % tsec)
             listpathtemp = fnmatch.filter(os.listdir(pathtemp), strgtagg)
 
             if len(listpathtemp) > 0:
-                listpath.append(pathtemp + listpathtemp[0])
+                listpath.append(os.path.join(pathtemp, listpathtemp[0]))
                 listtsec.append(tsec)
 
         listtsec = np.array(listtsec).astype(int)
+        path.parent.mkdir(parents=True, exist_ok=True)
         print('Writing to %s...' % path)
         with open(path, 'w') as objtfile:
             for k in range(len(listpath)):
@@ -60,7 +61,7 @@ def setp_base_paths(gdat):
     gdat.pathbasemile = os.path.join(str(get_repository_path()), '')
     if gdat.pathbase is None:
         gdat.pathbase = os.path.join(str(get_data_path()), '')
-    gdat.pathbaselygo = tdpy.retr_pathbase('lygos')
+    gdat.pathbaselygo = str(RepositoryPaths('LYGOS_PATH').get_data_path()) + os.sep
 
 
 def chec_path_input(gdat):
@@ -118,7 +119,8 @@ def setp_target_paths(gdat):
 def setp_mast_path(gdat):
     """Populate the MAST download/cache directory on the runtime state."""
 
-    gdat.pathdatamast = tdpy.retr_pathbase('mast')
+    gdat.pathdatamast = str(get_data_path() / 'cache' / 'mast') + os.sep
+    os.makedirs(gdat.pathdatamast, exist_ok=True)
 
 
 def setp_feature_paths(gdat):
