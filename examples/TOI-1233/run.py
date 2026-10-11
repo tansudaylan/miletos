@@ -6,7 +6,10 @@ from tdpy.verbosity import print
 import argparse
 from tdpy.cli import add_plot_arguments
 
-from miletos import daylan2021a
+from miletos.daylan2021a import (
+    fit_daylan2021a_transits,
+    plot_daylan2021a_transits,
+)
 from miletos.toi1233 import run_toi1233_observation
 
 
@@ -27,9 +30,9 @@ def parse_arguments():
 def main():
     arguments = parse_arguments()
     if arguments.reproduce_daylan2021a:
-        samples, radi, state = daylan2021a.fit_daylan2021a_transits(
+        samples, radi, state = fit_daylan2021a_transits(
             numbchan=4, numbsamp=150000, numbburn=250000, boolreus=arguments.reuse)
-        daylan2021a.plot_daylan2021a_transits(samples, radi, state, typefileplot=arguments.typefileplot)
+        plot_daylan2021a_transits(samples, radi, state, typefileplot=arguments.typefileplot)
         return 0
     result = run_toi1233_observation(
         typemodl=arguments.model,

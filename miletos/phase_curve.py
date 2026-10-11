@@ -30,7 +30,12 @@ def retr_tess_response():
         with urlopen(TESS_RESPONSE_URL, timeout=60) as response:
             path.write_bytes(response.read())
     print(f'Reading from {path}...')
-    table = np.loadtxt(path, delimiter=',', comments='#')
+    with path.open() as input_file:
+        rows = [
+            line for line in input_file
+            if line.strip() and not line.lstrip().startswith('#')
+        ]
+    table = np.loadtxt(rows, delimiter=',')
     return 1e-9 * table[:, 0], table[:, 1]
 
 

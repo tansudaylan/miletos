@@ -1,7 +1,19 @@
 import numpy as np
 import pytest
 
+from miletos import phase_curve
 from miletos.phase_curve import retr_band_planck, retr_brightness_temperature, retr_rflx_pcur
+
+
+def test_tess_response_skips_whitespace_only_header_lines(tmp_path, monkeypatch):
+    response_path = tmp_path / 'tess-response-function-v2.0.csv'
+    response_path.write_text('# Header\n \t\n# Wavelength, response\n300,0\n302,1\n')
+    monkeypatch.setattr(phase_curve, 'get_data_path', lambda: tmp_path)
+
+    wavelength, response = phase_curve.retr_tess_response()
+
+    assert wavelength == pytest.approx([300e-9, 302e-9])
+    assert response == pytest.approx([0.0, 1.0])
 
 
 def test_phase_curve_model_has_the_dayside_flux_at_eclipse_and_the_transit_depth():

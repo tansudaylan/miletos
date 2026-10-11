@@ -58,6 +58,8 @@ Each script can also be run separately:
 ```bash
 python examples/simulated_transit/run.py
 python examples/TOI-1233/run.py
+python examples/TOI-1233/run.py --reproduce-daylan2021a --reuse
+python examples/WASP-121b/run.py --reuse
 python examples/WASP-121b/run.py --prepare-only
 python examples/WD1856b/run.py
 python examples/TRAPPIST-1/run.py
@@ -101,9 +103,9 @@ python examples/TOI-1233/run.py
 
 The default run writes the transit-timing-variation figures to `examples/TOI-1233/PlanetarySystemWithTTVs/visuals/`. Run `python examples/TOI-1233/run.py --model PlanetarySystem` to produce the standard planetary-system alternative. Observational inputs remain under `$MILETOS_PATH/data/TOI-1233/`.
 
-The [Daylan 2021 target notebook](examples/TOI-1233/Daylan2021.ipynb) calls `run_toi1233_observation` directly. It analyzes the local Sector 10 TESS photometry and later PFS velocities with the current Miletos five-planet configuration, then displays its phase-folded TESS transits for planets b--e. It requires the observational files under `$MILETOS_PATH/data/TOI-1233/data/`. The published [four-planet fit](https://doi.org/10.3847/1538-3881/abd73e) used allesfitter and a different data/model scope; this notebook does not claim to recreate that posterior.
+The [Daylan 2021a notebook](examples/TOI-1233/Daylan2021.ipynb) reproduces the paper's four-planet TESS fit with the cached PCAT posterior when available. It reports posterior radii and periods alongside the published values, then displays the phase-folded transits, parameter comparison, and radius posterior. Run `python examples/TOI-1233/run.py --reproduce-daylan2021a --reuse` to regenerate those figures without resampling. Omit `--reuse` to run four chains with 250,000 burn-in and 150,000 retained samples per chain. The result is a Miletos/PCAT reproduction using the published transit data and published comparison values, not the original allesfitter implementation.
 
-The WASP-121 b notebook analyzes the real SPOC PDC-SAP light curve from TESS Sector 7 with Miletos' emitting-companion model. It displays pipeline-generated raw and phase-folded products and, in its default full mode, fit products. Its scope is the observed TESS phase curve reported by Daylan et al. (2021b), DOI `10.3847/1538-3881/abd8d2`; it does not repeat the paper's external atmospheric retrieval. Use `python examples/WASP-121b/run.py --prepare-only` to retrieve and plot the observations without fitting.
+The [Daylan 2021b notebook](examples/WASP-121b/Daylan2021b.ipynb) reproduces the TESS Sector 7 phase-curve fit with Miletos and PCAT. It reports dayside and nightside brightness temperatures, phase offset, and fitted fluxes next to the published values, and displays the light-curve fit, phase curve, posterior, and temperature comparison. Run `python examples/WASP-121b/run.py --reuse` to regenerate the fit figures from the saved posterior, or omit `--reuse` for four chains with 100,000 burn-in and 100,000 retained samples per chain. This reproduces the photometric phase-curve analysis, not the paper's external atmospheric retrieval.
 
 The [WD 1856 b](examples/WD1856b/run.py) and [TRAPPIST-1](examples/TRAPPIST-1/run.py) examples inspect observed TESS light curves with Miletos, without fitting by default. These observational examples require access to the corresponding public TESS products; WD 1856 b also requests orbital priors from the NASA Exoplanet Archive. The broad configuration catalog is maintained separately as a private `tdgu` project.
 

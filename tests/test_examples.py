@@ -14,7 +14,7 @@ REPOSITORY_PATH = Path(__file__).parents[1]
 EXAMPLE_PATHS = [REPOSITORY_PATH / 'examples' / 'run_all.py']
 EXAMPLE_PATHS.extend(sorted((REPOSITORY_PATH / 'examples').glob('*/run.py')))
 EXPECTED_NOTEBOOKS = {
-    Path('examples/TOI-1233/Daylan2021.ipynb'): 'run_toi1233_observation(',
+    Path('examples/TOI-1233/Daylan2021.ipynb'): 'fit_daylan2021a_transits(',
     Path('examples/TOI-1233/JointPhotometryRadialVelocity.ipynb'):
         'run_toi1233_observation(',
     Path('examples/WASP-39b/WASP39ERS.ipynb'):
@@ -73,15 +73,47 @@ def test_example_notebooks_use_miletos_apis():
         )
 
 
-def test_daylan_target_notebook_uses_supported_observational_pipeline():
+def test_daylan_target_notebook_reproduces_published_posterior():
     path = REPOSITORY_PATH / 'examples' / 'TOI-1233' / 'Daylan2021.ipynb'
     print(f'Reading from {path}...')
     notebook = json.loads(path.read_text())
     source = '\n'.join(''.join(cell['source']) for cell in notebook['cells'] if cell['cell_type'] == 'code')
 
-    assert 'run_toi1233_observation(' in source
-    assert 'fit_daylan2021a_transits(' not in source
+    assert 'fit_daylan2021a_transits(' in source
+    assert 'retr_summary_daylan2021a(' in source
+    assert 'plot_daylan2021a_transits(' in source
+    assert 'run_toi1233_observation(' not in source
     assert 'from pcat' not in source
+
+
+def test_daylan2021a_summary_reports_published_planet_values():
+    import numpy as np
+
+    from miletos.daylan2021a import NAMEPLAN, PERI_PUBL, RADI_PUBL, retr_summary_daylan2021a
+
+    samples = np.zeros((16, 22))
+    for index, period in enumerate(PERI_PUBL):
+        samples[:, 5 * index + 1] = period
+    radii = np.tile(RADI_PUBL[:, 0], (samples.shape[0], 1))
+
+    summary = retr_summary_daylan2021a(samples, radii)
+
+    assert len(summary) == len(NAMEPLAN)
+    assert all('published' in line for line in summary)
+    assert all(f'{period:.5f}' in line for period in PERI_PUBL)
+
+
+def test_daylan2021b_notebook_runs_and_summarizes_phase_curve_reproduction():
+    path = REPOSITORY_PATH / 'examples' / 'WASP-121b' / 'Daylan2021b.ipynb'
+    print(f'Reading from {path}...')
+    notebook = json.loads(path.read_text())
+    source = '\n'.join(''.join(cell['source']) for cell in notebook['cells'] if cell['cell_type'] == 'code')
+
+    assert 'fit_daylan2021b_phase_curve(' in source
+    assert 'retr_summary_daylan2021b(' in source
+    assert "daylan2021b_phase_curve.png" in source
+    assert "daylan2021b_brightness_temperatures.png" in source
+    assert 'run_posterior_sampling = False' not in source
 
 
 @pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)

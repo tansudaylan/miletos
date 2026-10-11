@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from miletos import daylan2021b
@@ -30,3 +31,16 @@ def test_daylan2021b_rejects_unknown_figure_format(monkeypatch):
 
     with pytest.raises(ValueError, match="typefileplot must be 'png' or 'pdf'"):
         daylan2021b.run_daylan2021b_reproduction(typefileplot='svg')
+
+
+def test_daylan2021b_summary_reports_published_temperatures():
+    samples = np.zeros((16, len(daylan2021b.NAMES)))
+    temperatures = {
+        'day': np.full(16, 3010.0),
+        'night': np.full(16, 2000.0),
+    }
+
+    summary = daylan2021b.retr_summary_daylan2021b(samples, temperatures)
+
+    assert any('published 3012' in line for line in summary)
+    assert any('published 2022' in line for line in summary)
