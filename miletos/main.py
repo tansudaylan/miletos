@@ -4093,6 +4093,8 @@ def exec_lspe( \
              ):
     '''
     Calculate the LS periodogram of a time-series.
+
+    Return the peak period and power together with the full frequency and power arrays.
     '''
     
     if maxmfreq is not None and factnyqt is not None:
@@ -4149,6 +4151,7 @@ def exec_lspe( \
         arry = np.loadtxt(pathcsvv, delimiter=',')
         peri = arry[:, 0]
         powr = arry[:, 1]
+        freq = 1. / peri
     
     #listindxperipeak, _ = scipy.signal.find_peaks(powr)
     #indxperimpow = listindxperipeak[0]
@@ -4198,6 +4201,8 @@ def exec_lspe( \
 
     dictlspeoutp['perimpow'] = perimpow
     dictlspeoutp['powrmpow'] = powrmpow
+    dictlspeoutp['freq'] = freq
+    dictlspeoutp['powr'] = powr
     
     return dictlspeoutp
 
