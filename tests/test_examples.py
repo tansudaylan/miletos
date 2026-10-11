@@ -100,7 +100,10 @@ def test_daylan2021a_summary_reports_published_planet_values():
 
     assert len(summary) == len(NAMEPLAN)
     assert all('published' in line for line in summary)
-    assert all(f'{period:.5f}' in line for period in PERI_PUBL)
+    assert all(
+        f'{period:.5f}' in line
+        for period, line in zip(PERI_PUBL, summary)
+    )
 
 
 def test_daylan2021b_notebook_runs_and_summarizes_phase_curve_reproduction():
