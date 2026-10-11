@@ -3,6 +3,7 @@ import os
 import types
 import warnings
 
+import matplotlib.pyplot as plt
 import pytest
 
 import numpy as np
@@ -21,7 +22,7 @@ def test_save_miletos_figure_forwards_output_settings(monkeypatch):
     gdat = DummyGdat()
     gdat.typefileplot = 'pdf'
     gdat.typeplotback = 'dark'
-    figure = object()
+    figure, _ = plt.subplots()
     calls = {}
 
     def fake_save_figure(*args, **kwargs):
@@ -41,6 +42,26 @@ def test_save_miletos_figure_forwards_output_settings(monkeypatch):
         'close_figure': True,
         'dpi': 150,
     }
+    plt.close(figure)
+
+
+def test_save_miletos_figure_normalizes_latex_bold_labels(monkeypatch):
+    gdat = DummyGdat()
+    figure, axis = plt.subplots()
+    label = axis.text(0.5, 0.5, r'\textbf{planet b}')
+    captured = {}
+
+    def fake_save_figure(figure_to_save, path, **kwargs):
+        captured['text'] = label.get_text()
+        captured['fontweight'] = label.get_fontweight()
+        return path
+
+    monkeypatch.setattr(vismod.tdpy, 'save_figure', fake_save_figure)
+
+    save_miletos_figure(gdat, figure, 'figure.png')
+
+    assert captured == {'text': 'planet b', 'fontweight': 'bold'}
+    plt.close(figure)
 
 
 def test_visualization_module_reloads_without_invalid_escape_warnings():
@@ -114,6 +135,27 @@ def test_retr_compmodl_style_returns_expected_pairs():
     assert retr_compmodl_style('Transit') == ('Transit', 'r')
     assert retr_compmodl_style('StarFlaring') == ('Flares', 'g')
     assert retr_compmodl_style('excs') == ('Excess', 'olive')
+
+
+def test_raw_time_series_plot_forwards_transit_highlights(monkeypatch):
+    from types import SimpleNamespace
+
+    import miletos.main as mainmod
+
+    calls = []
+    monkeypatch.setattr(
+        mainmod,
+        'plot_tser_mile_core',
+        lambda *args, **kwargs: calls.append(kwargs['boolcolrtran']),
+    )
+    gdat = SimpleNamespace(
+        numbchun=[[1]],
+        fitt=SimpleNamespace(prio=SimpleNamespace(numbcomp=1)),
+    )
+
+    mainmod.plot_tser_mile(gdat, 0, 0, 0, 'Raw', boolcolrtran=True)
+
+    assert calls == [True]
 
 
 def test_setp_dictmodl_sample_sets_plot_metadata():

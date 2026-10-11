@@ -53,7 +53,6 @@ def run_example(typefileplot="png", burn_samples=1000, retained_samples=2000, se
         retained_samples=retained_samples,
         burn_samples=burn_samples,
         seed=seed,
-        pathbase=get_repository_path(),
         typeverb=0,
         booladaptstdp=False,
     )

@@ -101,3 +101,30 @@ def test_srch_boxsperi_astropy_uses_the_miletos_bls_api(tmp_path, monkeypatch):
     assert result["dura"][0] == pytest.approx(2.4)
     assert result["ampl"][0] == pytest.approx(10.0)
     assert result["s2nr"][0] == pytest.approx(40.0)
+
+
+def test_animate_box_least_squares_search_writes_gif(tmp_path):
+    from PIL import Image
+
+    time_days = np.arange(300, dtype=float) * 0.02
+    phase_days = (time_days - 0.4 + 1.2) % 2.4 - 1.2
+    flux = 1.0 - 0.01 * (np.abs(phase_days) < 0.08)
+    flux += np.random.default_rng(2).normal(0.0, 0.001, time_days.size)
+    data = np.column_stack((time_days, flux, np.full(time_days.size, 0.001)))
+    path = tmp_path / "bls_scan.gif"
+
+    result = miletos.animate_box_least_squares_search(
+        {"Sector 3": data},
+        path,
+        minimum_period_days=1.5,
+        maximum_period_days=3.0,
+        duration_days=[0.08, 0.12],
+        number_of_periods=8,
+        maximum_points=300,
+        frames_per_second=4,
+    )
+
+    assert result["path"] == path
+    assert result["summary"]["Sector 3"]["period_days"] == pytest.approx(2.36, abs=0.15)
+    with Image.open(path) as image:
+        assert image.n_frames == 8

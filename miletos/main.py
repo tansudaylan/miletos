@@ -41,6 +41,13 @@ from .cache import read_cached_output
 from .output import build_alle_settings_defaults, ensure_alle_final_plots, ensure_alle_initial_plot, ensure_alle_mcmc_run, initialize_tser_containers, load_alle_object, load_alle_variant, reset_alle_phase_curve_median, setp_alle_base_detrended, setp_alle_sampling_meta, write_alle_data_csvs, write_alle_params, write_alle_params_star, write_alle_settings, write_cluster_output_csv, write_population_rank_csv, write_post_pcur_command_csv, write_post_pcur_table_csv, write_quad_bindtotl_csv, write_target_output_csv, writ_filealle
 from .paths import chec_path_input, ensr_gdat_paths, retr_tsecpathlocl, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
 from .report import setp_dvrp_output
+from .sanity import (
+    check_model_flux_sanity,
+    check_phase_fold_sanity,
+    check_time_series_sanity,
+    check_transit_parameter_sanity,
+)
+from .simulation import generate_ultrasat_time_series
 from .visualization import select_primary_transit_window
 from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, save_miletos_figure, setp_dictmodl_sample
 import nicomedia
@@ -595,6 +602,18 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
                 raise Exception('')
 
             dictlistmodl['Total'][0][p] = sgnl + dictlistmodl['Baseline'][0][p] - 1.
+
+    if gdat.boolsanity:
+        for p in gdat.indxinst[0]:
+            for name in ('Baseline', 'Total'):
+                model_flux = dictlistmodl[name][0][p]
+                if len(model_flux) > 0:
+                    check_model_flux_sanity(
+                        model_flux,
+                        time[0][p],
+                        label=f'{name} {gdat.liststrginst[0][p]} flux',
+                        boolsanity=True,
+                    )
     if gdat.booldiag:
         for name in dictlistmodl.keys():
             for b in gdat.indxdatatser:
@@ -1043,7 +1062,7 @@ def plot_pser_mile( \
                 path = gdat.pathvisutarg + 'PhaseCurve_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgcomp[j], \
                                                                                             strgarry, gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                 gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0., 0.3, 0.5, 0.1]})
-                if not os.path.exists(path):
+                if gdat.boolwritover or not os.path.exists(path):
                     # phase on the horizontal axis
                     figr, axis = plt.subplots(1, 1, figsize=gdat.figrsizeydob)
                     if b == 0:
@@ -1090,7 +1109,7 @@ def plot_pser_mile( \
                     path = gdat.pathvisutarg + 'RelativeFlux_PhaseFolded_%s_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], gdat.liststrgcomp[j], \
                                                                                     strgarry, gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                     gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.5, 0.2, 0.5, 0.1]})
-                    if not os.path.exists(path):
+                    if gdat.boolwritover or not os.path.exists(path):
                         figr, axis = plt.subplots(1, 1, figsize=gdat.figrsize)
                         if b == 0:
                             yerr = None
@@ -1136,7 +1155,7 @@ def plot_pser_mile( \
                 path = gdat.pathvisutarg + 'PhaseCurve_All_%s_%s_%s_%s.%s' % (gdat.liststrginst[b][p], strgarry, \
                                                                                 gdat.strgtarg, gdat.typepriocomp, gdat.typefileplot)
                 #gdat.listdictdvrp[j+1].append({'path': path, 'limt':[0.4, 0.05, 0.5, 0.1]})
-                if not os.path.exists(path):
+                if gdat.boolwritover or not os.path.exists(path):
                     figr, axis = plt.subplots(gmod.numbcomp, 1, figsize=gdat.figrsizeydob, sharex=True)
                     if gmod.numbcomp == 1:
                         axis = [axis]
@@ -2778,7 +2797,7 @@ def plot_tser_mile_core(gdat, strgarry, b, p, y=None, boolcolrtran=True, boolfla
             limt = [0., 0.5, 0.5, 0.1]
         gdat.listdictdvrp[0].append({'path': path, 'limt':limt})
         
-    if not os.path.exists(path):
+    if gdat.boolwritover or not os.path.exists(path):
             
         figr, axis = plt.subplots(figsize=gdat.figrsizeydobskin)
         
@@ -2947,11 +2966,12 @@ def retr_tsertitl(gdat, b, p, y=None):
 def plot_tser_mile(gdat, b, p, y, strgarry, boolcolrtran=False, booltoge=True, boolflar=False):
     
     # plot each chunk
-    plot_tser_mile_core(gdat, strgarry, b, p, y, boolcolrtran=False, boolflar=boolflar)
+    boolcolortran_raw = boolcolrtran and strgarry == 'Raw'
+    plot_tser_mile_core(gdat, strgarry, b, p, y, boolcolrtran=boolcolortran_raw, boolflar=boolflar)
     
     # plot all chunks together if there is more than one chunk
     if y == 0 and gdat.numbchun[b][p] > 1 and booltoge:
-        plot_tser_mile_core(gdat, strgarry, b, p, boolcolrtran=False, boolflar=boolflar)
+        plot_tser_mile_core(gdat, strgarry, b, p, boolcolrtran=boolcolortran_raw, boolflar=boolflar)
     
     # highlight times in-transit
     if strgarry != 'Raw' and gdat.fitt.prio.numbcomp is not None:
@@ -4541,6 +4561,7 @@ def srch_boxsperi(arry, \
               ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
               booldiag=True, \
 
+             # Boolean flag for opt-in physical and structural sanity checks
               # Boolean flag to force rerun and overwrite previous data and plots 
               boolover=True, \
 
@@ -7054,6 +7075,9 @@ def init( \
          
          ## type of SPOC light curve: 'PDC', 'SAP'
          typedataspoc='PDC', \
+
+         ## CHEOPS photometric aperture returned by DACE
+         cheopsaperture='default', \
                   
          # type of data for each data kind, instrument, and chunk
          ## 'simutargsynt': simulated data on a synthetic target
@@ -7116,6 +7140,9 @@ def init( \
             
          # dictionary of system magnitudes
          dictmagtsyst=dict(), \
+
+         # per-instrument observing configuration for synthetic time series
+         dictsimu=None, \
 
          # model
          # type of inference
@@ -7291,6 +7318,7 @@ def init( \
          # Boolean flag to diagnose the code using potentially computationally-expensive sanity checks, which may slow down the execution
          ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
          booldiag=True, \
+         boolsanity=False, \
          
          # type of plot background
          typeplotback='black', \
@@ -7315,6 +7343,18 @@ def init( \
     for attr, valu in dictinpt.items():
         if '__' not in attr and attr != 'gdat':
             setattr(gdat, attr, valu)
+
+    if gdat.dictsimu is None:
+        gdat.dictsimu = {}
+    if not isinstance(gdat.dictsimu, dict):
+        raise TypeError('dictsimu must map instrument names to simulation settings.')
+    for name in ('radistar', 'massstar', 'tmptstar'):
+        if not hasattr(gdat, name) or getattr(gdat, name) is None:
+            value = gdat.dicttrue.get(name) if isinstance(gdat.dicttrue, dict) else None
+            setattr(gdat, name, value)
+    for name in ('stdvradistar', 'stdvmassstar', 'stdvtmptstar'):
+        if not hasattr(gdat, name):
+            setattr(gdat, name, 0.0)
 
     # measure initial time
     gdat.timeinit = modutime.time()
@@ -7522,6 +7562,8 @@ def init( \
     ## Boolean flag to query MAST
     gdat.boolretrlcurmast = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
     gdat.boolretrlcurmastanyy = False
+    gdat.boolretrlcurcheops = [[False for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.boolretrlcurcheopsanyy = False
     
     # Boolean flag to indicate all data is simulated
     gdat.boolsimutotl = True
@@ -7541,6 +7583,9 @@ def init( \
                                                                                                         and gdat.boolutilcadehigh and gdat.typelcurtpxftess != 'lygos':
                     gdat.boolretrlcurmast[b][p] = True
                     gdat.boolretrlcurmastanyy = True
+                if gdat.liststrginst[b][p] == 'CHEOPS' and gdat.liststrgtypedata[b][p] in {'obsd', 'simutargpartfprt', 'simutargpartinje'}:
+                    gdat.boolretrlcurcheops[b][p] = True
+                    gdat.boolretrlcurcheopsanyy = True
                 if gdat.liststrginst[b][p] == 'ZTF':
                     gdat.boolretrlcurzwtf = True
     
@@ -8036,6 +8081,32 @@ def init( \
         
             print('List of TESS sectors for which FFI data are available via TESSCut:')
             print(gdat.listtsectcut)
+
+    gdat.listcheopsfilekey = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    gdat.listcheopslcur = [[[] for p in gdat.indxinst[b]] for b in gdat.indxdatatser]
+    if gdat.boolretrlcurcheopsanyy:
+        if gdat.boolexecoffl:
+            raise RuntimeError('CHEOPS DACE retrieval requires an internet connection.')
+        from .cheops import retrieve_cheops_light_curves
+
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                if not gdat.boolretrlcurcheops[b][p]:
+                    continue
+                arguments = dict(aperture=gdat.cheopsaperture, quality_filter=gdat.boolmaskqual)
+                if gdat.rasctarg is not None and gdat.decltarg is not None:
+                    arguments.update(ra_deg=gdat.rasctarg, dec_deg=gdat.decltarg)
+                elif gdat.ticitarg is not None:
+                    arguments['target'] = gdat.ticitarg
+                elif gdat.strgmast is not None:
+                    arguments['target'] = gdat.strgmast
+                elif gdat.toiitarg is not None:
+                    arguments['target'] = 'TOI %s' % gdat.toiitarg
+                else:
+                    raise ValueError('CHEOPS retrieval requires a target name, TIC ID, or coordinates.')
+                visits = retrieve_cheops_light_curves(**arguments)
+                gdat.listcheopsfilekey[b][p] = list(visits)
+                gdat.listcheopslcur[b][p] = list(visits.values())
         
     if gdat.boolretrlcurmastanyy and gdat.boolexecoffl and not gdat.boolsimutotl:
         print('')
@@ -8759,6 +8830,10 @@ def init( \
                 gdat.listipnt[b][p] = gdat.listtsec
                 if gdat.listtsec.size > 0:
                     gdat.numbdatagood += 1
+            elif gdat.boolretrlcurcheops[b][p]:
+                gdat.listipnt[b][p] = np.arange(len(gdat.listcheopslcur[b][p]), dtype=int)
+                if len(gdat.listipnt[b][p]) > 0:
+                    gdat.numbdatagood += 1
             elif gdat.liststrgtypedata[b][p] == 'simutargsynt' or gdat.liststrgtypedata[b][p] == 'simutargpartsynt':
                 gdat.listipnt[b][p] = np.array([0])
                 gdat.numbdatagood += 1
@@ -8854,6 +8929,7 @@ def init( \
                 gdat.dicttrue[namepara+'comp'] = gdat.dictnico['dictpopl']['comp']['compstar_SyntheticPopulation_All'][namepara + 'comp'][0]
     
     # determine whether the NASA Exoplanet Archive Composite PS catalog will be read for the target
+    gdat.dictexartarg = None
     gdat.boolexar = False
     if gdat.typepriocomp in {None, 'exar'} and gdat.typetarg != 'synt' and gdat.typetarg != 'inptdata':
         gdat.boolexar = True
@@ -8882,6 +8958,7 @@ def init( \
             raise Exception('Prior was forced to be NAE but the target is not in the NEA.')
 
     # determine whether to read TOI catalog
+    gdat.dicttoiitarg = None
     gdat.boolexof = gdat.boolplotpopl or (gdat.boolsimusome or gdat.boolmodl) and gdat.boolexar and gdat.dictexartarg is None
     
     # read TOI catalog from ExoFOP
@@ -9116,63 +9193,81 @@ def init( \
             print('gdat.strgmast')
             print(gdat.strgmast)
         
-        if not gdat.booltargsynt and not gdat.boolexecoffl and gdat.strgmast is not None and not gdat.boolsrchmastdone:
-            listdictticinear = astroquery.mast.Catalogs.query_object(gdat.strgmast, catalog='TIC', radius=gdat.strgradi)
+        if not gdat.booltargsynt and not gdat.boolexecoffl and not gdat.boolsrchmastdone:
+            objtcoords = None
+            if gdat.strgmast is not None:
+                listdictticinear = astroquery.mast.Catalogs.query_object(
+                    gdat.strgmast, catalog='TIC', radius=gdat.strgradi
+                )
+            elif gdat.rasctarg is not None and gdat.decltarg is not None:
+                objtcoords = SkyCoord(
+                    ra=gdat.rasctarg * astropy.units.deg,
+                    dec=gdat.decltarg * astropy.units.deg,
+                )
+                listdictticinear = astroquery.mast.Catalogs.query_region(
+                    objtcoords,
+                    radius=gdat.maxmradisrchmast * astropy.units.arcsec,
+                    catalog='TIC',
+                )
+            elif gdat.ticitarg is not None:
+                listdictticinear = astroquery.mast.Catalogs.query_criteria(
+                    catalog='TIC', ID=gdat.ticitarg
+                )
+            else:
+                listdictticinear = None
             gdat.boolsrchmastdone = True
-            if listdictticinear[0]['dstArcSec'] > 0.1:
+            if listdictticinear is not None:
+                if len(listdictticinear) == 0:
+                    raise ValueError('No TIC target was found at the supplied target identifier or coordinates.')
+                rowticinear = listdictticinear[0]
+                if objtcoords is not None:
+                    coordscatl = SkyCoord(
+                        ra=listdictticinear['ra'] * astropy.units.deg,
+                        dec=listdictticinear['dec'] * astropy.units.deg,
+                    )
+                    rowticinear = listdictticinear[np.argmin(objtcoords.separation(coordscatl).arcsec)]
+                if 'dstArcSec' in listdictticinear.colnames and rowticinear['dstArcSec'] > 0.1:
+                    if gdat.typeverb > 0:
+                        print('The nearest source is more than 0.1 arcsec away from the target!')
+
                 if gdat.typeverb > 0:
-                    print('The nearest source is more than 0.1 arcsec away from the target!')
-            
-            if gdat.typeverb > 0:
-                print('Found the target on MAST!')
-            
-            gdat.rascstar = listdictticinear[0]['ra']
-            gdat.declstar = listdictticinear[0]['dec']
-            gdat.stdvrascstar = 0.
-            gdat.stdvdeclstar = 0.
-            if gdat.radistar is None:
-                
-                if gdat.typeverb > 0:
-                    print('Setting the stellar radius from the TIC.')
-                
-                gdat.radistar = listdictticinear[0]['rad']
-                gdat.stdvradistar = listdictticinear[0]['e_rad']
-                
-                if gdat.typeverb > 0:
-                    if not np.isfinite(gdat.radistar):
+                    print('Found the target on MAST!')
+
+                gdat.rascstar = rowticinear['ra']
+                gdat.declstar = rowticinear['dec']
+                gdat.stdvrascstar = 0.
+                gdat.stdvdeclstar = 0.
+                if gdat.radistar is None:
+                    if gdat.typeverb > 0:
+                        print('Setting the stellar radius from the TIC.')
+                    gdat.radistar = rowticinear['rad']
+                    gdat.stdvradistar = rowticinear['e_rad']
+                    if gdat.typeverb > 0 and not np.isfinite(gdat.radistar):
                         print('Warning! TIC stellar radius is not finite.')
-                    if not np.isfinite(gdat.radistar):
-                        print('Warning! TIC stellar radius uncertainty is not finite.')
-            if gdat.massstar is None:
-                
-                if gdat.typeverb > 0:
-                    print('Setting the stellar mass from the TIC.')
-                
-                gdat.massstar = listdictticinear[0]['mass']
-                gdat.stdvmassstar = listdictticinear[0]['e_mass']
-                
-                if gdat.typeverb > 0:
-                    if not np.isfinite(gdat.massstar):
+                if gdat.massstar is None:
+                    if gdat.typeverb > 0:
+                        print('Setting the stellar mass from the TIC.')
+                    gdat.massstar = rowticinear['mass']
+                    gdat.stdvmassstar = rowticinear['e_mass']
+                    if gdat.typeverb > 0 and not np.isfinite(gdat.massstar):
                         print('Warning! TIC stellar mass is not finite.')
-                    if not np.isfinite(gdat.stdvmassstar):
+                    if gdat.typeverb > 0 and not np.isfinite(gdat.stdvmassstar):
                         print('Warning! TIC stellar mass uncertainty is not finite.')
-            if gdat.tmptstar is None:
-                
-                if gdat.typeverb > 0:
-                    print('Setting the stellar temperature from the TIC.')
-                
-                gdat.tmptstar = listdictticinear[0]['Teff']
-                gdat.stdvtmptstar = listdictticinear[0]['e_Teff']
+                if gdat.tmptstar is None:
+                    if gdat.typeverb > 0:
+                        print('Setting the stellar temperature from the TIC.')
+                    gdat.tmptstar = rowticinear['Teff']
+                gdat.stdvtmptstar = rowticinear['e_Teff']
                 
                 if gdat.typeverb > 0:
                     if not np.isfinite(gdat.tmptstar):
                         print('Warning! TIC stellar temperature is not finite.')
                     if not np.isfinite(gdat.tmptstar):
                         print('Warning! TIC stellar temperature uncertainty is not finite.')
-            gdat.jmagsyst = listdictticinear[0]['Jmag']
-            gdat.hmagsyst = listdictticinear[0]['Hmag']
-            gdat.kmagsyst = listdictticinear[0]['Kmag']
-            gdat.vmagsyst = listdictticinear[0]['Vmag']
+                gdat.jmagsyst = rowticinear['Jmag']
+                gdat.hmagsyst = rowticinear['Hmag']
+                gdat.kmagsyst = rowticinear['Kmag']
+                gdat.vmagsyst = rowticinear['Vmag']
     
     # transfer literature values to model priors
     #for namepara in ['peri', 'epocmtra', 'cosi', 'rsma', 'rrat']:
@@ -9311,6 +9406,10 @@ def init( \
                 for o in range(len(gdat.listipnt[b][p])):
                     indxspoc = np.where(gdat.listipnt[b][p][o] == gdat.listtsecspoc)[0][0]
                     gdat.listarrytser['Raw'][b][p][o] = gdat.listarrylcurmast[p][indxspoc]
+
+            if gdat.boolretrlcurcheops[b][p]:
+                for o, light_curve in enumerate(gdat.listcheopslcur[b][p]):
+                    gdat.listarrytser['Raw'][b][p][o] = light_curve[:, None, :]
             
             ## TESS and Kepler data via lygos
             if gdat.booltesskepl and gdat.booltargpartanyy and (gdat.typelcurtpxftess == 'lygos' or gdat.typelcurtpxftess == 'SPOC_first') and len(gdat.listtseclygo) > 0:
@@ -9351,12 +9450,13 @@ def init( \
                             lengobsv = 1.
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p] == 'ULTRASAT':
-                            # ULTRASAT short cadence will be five minutes
-                            gdat.true.cade[b][p] = 300. # [seconds]
-                            gdat.true.timeexpo[b][p] = 0.8 * gdat.true.cade[b][p]
-                            delttime = gdat.true.cade[b][p] / 3600. / 24. # [day]
-                            lengobsv = 1.
-                            gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
+                            dictsimuinst = gdat.dictsimu.get('ULTRASAT', {})
+                            if not isinstance(dictsimuinst, dict):
+                                raise TypeError("dictsimu['ULTRASAT'] must be a dictionary.")
+                            time, cadence, timeexpo = generate_ultrasat_time_series(**dictsimuinst)
+                            gdat.true.cade[b][p] = cadence
+                            gdat.true.timeexpo[b][p] = timeexpo
+                            gdat.true.listtime[b][p][y] = time
                         elif gdat.liststrginst[b][p] == 'JWST':
                             gdat.true.listtime[b][p][y] = 2462000. + np.arange(0., lengobsv, delttime)
                         elif gdat.liststrginst[b][p].startswith('LSST'):
@@ -9811,6 +9911,16 @@ def init( \
                         summgene(indxbadd)
                         raise Exception('not np.isfinite(gdat.listarrytser[raww][b][p]).all()')
                 
+    if gdat.boolsanity:
+        for b in gdat.indxdatatser:
+            for p in gdat.indxinst[b]:
+                for y in gdat.indxchun[b][p]:
+                    check_time_series_sanity(
+                        gdat.listarrytser['Raw'][b][p][y],
+                        boolsanity=True,
+                        label=f'{gdat.liststrginst[b][p]} chunk {y}',
+                    )
+
     # make white light curve
     if gdat.numbener[p] > 1:
         
@@ -9849,10 +9959,16 @@ def init( \
     if gdat.boolmodl and gdat.fitt.boolmodlpsys and (gdat.typepriocomp == 'inpt' or gdat.typepriocomp == 'exar' or gdat.typepriocomp == 'exof'):
         retr_timetran(gdat, 'Raw')
     
+    if gdat.boolmodl:
+        numbcompoutp = gdat.fitt.prio.numbcomp
+    elif gdat.boolsimusome:
+        numbcompoutp = getattr(gdat.true, 'numbcomp', 0)
+    else:
+        numbcompoutp = 0
     if gdat.liststrgcomp is None:
-        gdat.liststrgcomp = nicomedia.retr_liststrgcomp(gdat.fitt.prio.numbcomp)
+        gdat.liststrgcomp = nicomedia.retr_liststrgcomp(numbcompoutp)
     if gdat.listcolrcomp is None:
-        gdat.listcolrcomp = nicomedia.retr_listcolrcomp(gdat.fitt.prio.numbcomp)
+        gdat.listcolrcomp = nicomedia.retr_listcolrcomp(numbcompoutp)
     
     # sampling rate (cadence)
     ## temporal
@@ -10789,6 +10905,25 @@ def init( \
                 raise Exception('gdat.fitt.prio.numbcomp is None')
         
         gdat.esincompprio = np.zeros(gdat.fitt.prio.numbcomp)
+
+    if gdat.boolsanity and all(value is not None for value in (
+        gdat.fitt.prio.meanpara.pericomp,
+        gdat.fitt.prio.meanpara.epocmtracomp,
+        gdat.fitt.prio.meanpara.rsmacomp,
+        gdat.fitt.prio.meanpara.cosicomp,
+        gdat.fitt.prio.meanpara.duratrantotlcomp,
+    )):
+        check_transit_parameter_sanity(
+            gdat.fitt.prio.meanpara.pericomp,
+            gdat.fitt.prio.meanpara.epocmtracomp,
+            gdat.fitt.prio.meanpara.rsmacomp,
+            gdat.fitt.prio.meanpara.cosicomp,
+            gdat.fitt.prio.meanpara.duratrantotlcomp,
+            gdat.ecoscompprio,
+            gdat.esincompprio,
+            boolsanity=True,
+        )
+
     if gdat.rvelsemaprio is None:
         gdat.rvelsemaprio = np.zeros(gdat.fitt.prio.numbcomp)
     
@@ -11180,6 +11315,13 @@ def init( \
                         
                         gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                                      objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.)
+                        if gdat.boolsanity:
+                            check_phase_fold_sanity(
+                                gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j],
+                                phase_center=0.0,
+                                label=f'primary fold {gdat.liststrgcomp[j]}',
+                                boolsanity=True,
+                            )
                         
                         if gmod.arrypcur['DetrendedPrimaryCentered'][b][p][j].ndim > 3:
                             print('')
@@ -11192,9 +11334,23 @@ def init( \
 
                         gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                                                 objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.5)
+                        if gdat.boolsanity:
+                            check_phase_fold_sanity(
+                                gmod.arrypcur['DetrendedSecondaryCenteredZoom'][b][p][j],
+                                phase_center=0.5,
+                                label=f'secondary fold {gdat.liststrgcomp[j]}',
+                                boolsanity=True,
+                            )
                         
                         gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p], \
                                                                                       objtpara.epocmtracomp[j], objtpara.pericomp[j], phascntr=0.25)
+                        if gdat.boolsanity:
+                            check_phase_fold_sanity(
+                                gmod.arrypcur['DetrendedQuadratureCentered'][b][p][j],
+                                phase_center=0.25,
+                                label=f'quadrature fold {gdat.liststrgcomp[j]}',
+                                boolsanity=True,
+                            )
                         
                         if gdat.typepriocomp != 'outlperi':
                             gmod.arrypcur['DetrendedQuadratureCenteredMasked'][b][p][j] = fold_tser(gdat.arrytser['Detrended'][b][p][gdat.listindxtimeoutt[j][b][p], :, :], \

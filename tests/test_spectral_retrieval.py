@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from miletos.retrieval import sample_nirspec_retrieval
+from miletos.retrieval import _spectral_log_likelihood, sample_nirspec_retrieval
 
 
 def hdo_injection_model(parameters, wavelength_microns):
@@ -12,6 +12,24 @@ def hdo_injection_model(parameters, wavelength_microns):
         -0.5 * ((wavelength_microns - 4.12) / 0.035) ** 2
     )
     return 20000.0 + depth_offset_ppm + water_feature + hdo_feature
+
+
+def test_spectral_likelihood_rejects_model_specific_invalid_states():
+    class InvalidAtmosphereError(Exception):
+        pass
+
+    def invalid_model(parameters, wavelength_microns):
+        raise InvalidAtmosphereError
+
+    state = {
+        "forward_model": invalid_model,
+        "wavelength_microns": np.array([4.0, 4.1]),
+        "observed_depth_ppm": np.array([20000.0, 20010.0]),
+        "covariance_cholesky": np.eye(2),
+        "model_error_types": (InvalidAtmosphereError,),
+    }
+
+    assert _spectral_log_likelihood(np.array([0.0]), state) == -np.inf
 
 
 def test_nirspec_hdo_parameter_is_sampled_through_pcat(tmp_path):

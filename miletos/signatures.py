@@ -26,7 +26,7 @@ def compute_photometric_signatures(
 def derive_compact_object_features(
     stellar_radius_solar, period_days, companion_mass_solar, stellar_mass_solar
 ) -> dict[str, np.ndarray]:
-    """Return modeled self-lensing, transit duration, orbital scale, and Schwarzschild radius."""
+    """Return Ephesos photometric amplitudes and derived orbital features."""
 
     period_days, stellar_radius_solar, companion_mass_solar, stellar_mass_solar = (
         np.atleast_1d(value)
@@ -58,6 +58,8 @@ def derive_compact_object_features(
     )  # [hour]
     schwarzschild_radius_solar = 4.24e-6 * companion_mass_solar  # [R_Sun]
     return {
+        "amplbeammodl": np.atleast_1d(signatures["beaming"]),
+        "ampellimodl": np.atleast_1d(signatures["ellipsoidal"]),
         "amplslenmodl": np.atleast_1d(signatures["self_lensing"]),
         "duratrantotlmodl": np.atleast_1d(duration_hours),
         "smaxmodl": np.atleast_1d(semimajor_axis_solar),

@@ -11,6 +11,7 @@ from miletos.tess_transit_survey import (
     read_qlp_light_curve,
     search_tess_target,
 )
+import miletos.tess_transit_survey as tess_transit_survey
 from miletos.tess_transit_search import (
     analyze_tess_target_catalog,
     estimate_survey_occurrence,
@@ -18,11 +19,11 @@ from miletos.tess_transit_search import (
 )
 
 
-def _write_qlp_fits(path: Path, time, flux, uncertainty, quality=None):
+def _write_qlp_fits(path: Path, time, flux, uncertainty, quality=None, flux_name="KSPSAP_FLUX"):
     columns = [
         fits.Column(name="TIME", format="D", array=np.asarray(time)),
-        fits.Column(name="KSPSAP_FLUX", format="D", array=np.asarray(flux)),
-        fits.Column(name="KSPSAP_FLUX_ERR", format="D", array=np.asarray(uncertainty)),
+        fits.Column(name=flux_name, format="D", array=np.asarray(flux)),
+        fits.Column(name=f"{flux_name}_ERR", format="D", array=np.asarray(uncertainty)),
     ]
     if quality is not None:
         columns.append(fits.Column(name="QUALITY", format="J", array=np.asarray(quality)))
@@ -45,6 +46,23 @@ def test_read_qlp_fits_normalizes_btjd_and_applies_quality_mask(tmp_path):
     assert curve["sector"].unique().tolist() == [10]
     np.testing.assert_allclose(curve["time_btjd"], [10.0, 10.02, 10.06])
     assert curve["flux"].median() == 1.0
+
+
+def test_read_qlp_fits_uses_matching_detrended_flux_error_pair(tmp_path):
+    path = tmp_path / "hlsp_qlp_tess_ffi_s0062-0000000038455598_tess_v01_llc.fits"
+    _write_qlp_fits(
+        path,
+        [62.0, 62.02, 62.04],
+        [10.0, 9.9, 10.1],
+        [0.1, 0.1, 0.1],
+        flux_name="DET_FLUX",
+    )
+
+    curve = read_qlp_light_curve(path)
+
+    assert curve["sector"].unique().tolist() == [62]
+    np.testing.assert_allclose(curve["flux"], [1.0, 0.99, 1.01])
+    np.testing.assert_allclose(curve["flux_error"], [0.01, 0.01, 0.01])
 
 
 def test_merge_removes_duplicate_cadences_and_orders_sectors():
@@ -100,6 +118,43 @@ def test_injection_recovery_is_reproducible_and_uses_observed_noise():
     assert first.loc[0, "recoveries"] >= 2
 
 
+def test_injection_recovery_requires_the_full_vetter_to_pass(monkeypatch):
+    time = np.arange(0.0, 30.0, 0.1)  # [day]
+    curve = pd.DataFrame({
+        "time_btjd": time,
+        "flux": np.ones_like(time),
+        "flux_error": np.full(time.size, 0.001),
+    })
+    search_intervals = []
+
+    def fake_search(time_days, flux, uncertainty, *, duration_days,
+                    minimum_period_days, maximum_period_days):
+        search_intervals.append((minimum_period_days, maximum_period_days))
+        return {
+            "period_days": 3.0,
+            "transit_time_days": 0.0,
+            "duration_days": 0.1,
+            "depth": 0.01,
+            "depth_uncertainty": 0.001,
+            "depth_snr": 10.0,
+        }
+
+    def flag_for_review(light_curve, candidate, *, snr_threshold, check_inverted_control):
+        assert not check_inverted_control
+        return {**candidate, "disposition": "review"}
+
+    monkeypatch.setattr(tess_transit_survey, "search_box_least_squares", fake_search)
+    monkeypatch.setattr(tess_transit_survey, "vet_transit_candidate", flag_for_review)
+
+    recovery = injection_recovery(curve, [3.0], [0.01], 0.1, trials=1, seed=2)
+
+    assert recovery.loc[0, "recoveries"] == 0
+    assert recovery.loc[0, "period_matched"] == 1
+    assert recovery.loc[0, "snr_matched"] == 1
+    assert recovery.loc[0, "passed_vetter"] == 0
+    assert search_intervals == [(0.5, pytest.approx(29.9 / 3.0))]
+
+
 def test_prepare_toi_list_applies_sector_and_qlp_magnitude_limits(tmp_path):
     path = tmp_path / "toi.csv"
     pd.DataFrame({
@@ -135,6 +190,7 @@ def test_occurrence_requires_complete_parent_sample_and_uses_pergamon():
     results = pd.DataFrame({
         "tic_id": [1, 2], "searched": [True, True], "detection": [True, False],
         "sample_is_parent_population": [True, True],
+        "inverted_control_disposition": ["review", "review"],
     })
     injections = pd.DataFrame({
         "tic_id": [1, 1, 2, 2], "period_days": [3.0, 10.0] * 2,  # [day]

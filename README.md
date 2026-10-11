@@ -1,16 +1,23 @@
 # Miletos
 
 ## Purpose
-Miletos is a time-series analysis and forward-modeling pipeline for astrophysical systems. It is designed to interpret time-domain photometry and related observations by combining detrending, period searches, diagnostics, and Bayesian forward modeling.
+Miletos takes time-domain observations through detrending, period searches, and Bayesian forward modeling. The aim is to connect the measured flux, velocities, or spectra to the astrophysical model we want to test.
 
 ## Research use
 
-Miletos provides maintained observational workflows for systems from our papers. In [Daylan et al. (2021a)](https://doi.org/10.3847/1538-3881/abd73e), we report the discovery and characterization of four transiting planets around HD 108236 (TOI-1233). In [Daylan et al. (2021b)](https://doi.org/10.3847/1538-3881/abd8d2), we analyze the TESS phase curve of WASP-121 b. The published fits in both papers used **allesfitter**. The Miletos notebooks below analyze observations of those targets with the maintained pipeline.
 
-We also used Miletos to vet results in several TESS exoplanet-discovery papers, including the three-planet [TOI-270 discovery](https://doi.org/10.1038/s41550-019-0845-5), the three-planet [HD 191939 (TOI-1339) discovery](https://doi.org/10.3847/1538-3881/aba0b5), and the [TESS Faint Star Search of 1,617 TOIs](https://doi.org/10.3847/1538-4365/ac5688).
+Miletos has been used in research associated with both Daylan et al. (2021a) and Daylan et al. (2021b), and to vet results in other TESS discovery papers on which I was a main co-author. The papers and the corresponding Miletos work are:
+
+- [Daylan et al. (2021a): four transiting planets around HD 108236 (TOI-1233)](https://doi.org/10.3847/1538-3881/abd73e). The Miletos workflow analyzes the same TESS system; the published posterior fit in the paper used **allesfitter**.
+- [Daylan et al. (2021b): the TESS phase curve of WASP-121 b](https://doi.org/10.3847/1538-3881/abd8d2). Miletos provides a maintained analysis of the same phase-curve data; the published fit used **allesfitter**.
+- [Günther et al.: the three-planet TOI-270 discovery](https://doi.org/10.1038/s41550-019-0845-5). Miletos was used to vet the discovery results.
+- [Badenas-Agusti et al.: three transiting sub-Neptunes around HD 191939 (TOI-1339)](https://doi.org/10.3847/1538-3881/aba0b5). Miletos was used as an additional vetting and analysis tool for this TESS discovery.
+- [Kunimoto et al. (2022): the TESS Faint-star Search and 1,617 TOIs](https://doi.org/10.3847/1538-4365/ac5688). Miletos was used to vet and inspect results from this QLP-based search.
+
+These examples span planet discovery, phase-curve analysis, and candidate vetting. The maintained notebooks below make the Miletos analyses reproducible; they do not replace the original papers' published fits or claim that Miletos was the primary fitting package where another package was used.
 
 ## Scope
-Miletos detrends observational time series, searches for periodic signals, phase-folds and bins measurements with uncertainty propagation, fits forward models, and generates diagnostic plots and summary products.
+Miletos detrends observational time series, searches for periodic signals, phase-folds and bins measurements with uncertainty propagation, fits forward models, and produces plots and summary products.
 
 ## Installation
 
@@ -23,7 +30,7 @@ export MILETOS_PATH=/path/to/miletos
 `MILETOS_PATH` identifies the repository root. Runtime inputs belong under `$MILETOS_PATH/data/` and generated pipeline outputs belong under `$MILETOS_PATH/visuals/`. Both directories are ignored by Git. Miletos does not use a separate data-path environment variable.
 
 ## Minimal usage
-Set `MILETOS_PATH` to the repository root and run the deterministic diagnostic:
+Set `MILETOS_PATH` to the repository root and run the deterministic simulated-transit example:
 
 ```bash
 python examples/simulated_transit/run.py --typefileplot png
@@ -64,6 +71,7 @@ python examples/WASP-121b/run.py --prepare-only
 python examples/WD1856b/run.py
 python examples/TRAPPIST-1/run.py
 python examples/WASP-39b/run.py
+python examples/TOI-1233/search_single_repeating_origami.py
 python examples/tess_transit_search/run_pilot.py
 ```
 
@@ -77,11 +85,22 @@ example workflow:
 - [JWST ERS analysis of WASP-39b](examples/WASP-39b/WASP39ERS.ipynb)
 - [TESS QLP transit-search pilot](examples/tess_transit_search/TESS_Transit_Search.ipynb)
 
-Each notebook delegates data access, analysis, and plotting to a reusable Miletos
-entry point. The notebooks configure workflows, report returned quantities, and
-display Miletos-generated figures without duplicating pipeline calculations.
+The notebooks document how to run each workflow and display Miletos-generated
+figures. The WASP-39b notebook also records the upstream JWST calibration steps
+and a synthetic multi-instrument data example; it distinguishes those documented
+steps from Miletos's current implemented analysis.
 
-The simulated transit calculation is deterministic and runs without network access. Generic target visibility is maintained in [TDpy's visibility example](https://github.com/tansudaylan/tdpy/tree/master/examples/target_visibility). The WASP-39b analysis downloads the public Alderson et al. (2023) NIRSpec G395H products from Zenodo and visualizes the published light-curve reduction sequence. The six figures show detector-level white-light curves, measured detector motion, raw spectroscopic flux with its systematics model, corrected flux with its transit model and residuals, all 349 corrected wavelength channels, residual and photon-noise precision, and the final 344-bin weighted transmission spectrum with its best-fit ATMO model. Data are cached under `$MILETOS_PATH/data/WASP-39/ERS_G395H_Alderson2023/`, while figures are written under `examples/WASP-39b/visuals/`. The source dataset is DOI 10.5281/zenodo.7185300 and the associated Nature article is DOI 10.1038/s41586-022-05591-3.
+### TOI-1233 single, repeating, and exomoon searches
+
+Run `python examples/TOI-1233/search_single_repeating_origami.py` to search the cached TESS PDCSAP Sector 10 and 11 light curves. The example uses Miletos BLS to find repeating transit trains, masks their predicted windows, and ranks isolated single-event dips with a weighted box search. It then applies Kipping's [Transit Origami method](https://doi.org/10.1093/mnras/stab2013) to planet b using the saved transit-time-variation (TTV) posterior and scans the moon-to-planet mass ratio.
+
+The run recovers repeating signals near the published periods of planets e, d, c, and b, with two, two, seven, and ten usable events, respectively. No isolated-event peak exceeds the example's SNR 7 screening level. These local-box scores rank events and are not calibrated false-alarm probabilities. The best planet-b TTV sinusoid has $\Delta\mathrm{BIC}=-2.52$ after accounting for the searched TTV period, so the TTV prerequisite for ORIGAMI is unsupported. The highest mass-ratio-grid score is exploratory and is not evidence for an exomoon. The analysis writes its tables and figures under `examples/TOI-1233/visuals/transit_search/`.
+
+![TOI-1233 Sector 10 and 11 repeating-transit and isolated-event search results](examples/TOI-1233/visuals/transit_search/single_and_repeating_transit_search.png)
+
+![Planet-b TTV fit and exploratory Transit Origami mass-ratio scan](examples/TOI-1233/visuals/transit_search/planet_b_transit_origami.png)
+
+The simulated transit calculation is deterministic and runs without network access. Generic target visibility is maintained in [TDpy's visibility example](https://github.com/tansudaylan/tdpy/tree/master/examples/target_visibility). The WASP-39b notebook documents the NIRSpec PRISM, NIRSpec G395H, and NIRCam F322W2/GRISMR MAST products, the JWST calibration handoff, and seeded synthetic spectrum generation. The maintained observational reproduction downloads the published Alderson et al. (2023) NIRSpec G395H products from Zenodo and visualizes the reduction sequence. Its six figures show detector-level white-light curves, measured detector motion, raw spectroscopic flux with its systematics model, corrected flux with its transit model and residuals, all 349 corrected wavelength channels, residual and photon-noise precision, and the final 344-bin weighted transmission spectrum with its best-fit ATMO model. Data are cached under `$MILETOS_PATH/data/WASP-39/ERS_G395H_Alderson2023/`, while figures are written under `examples/WASP-39b/visuals/`. The source dataset is DOI 10.5281/zenodo.7185300 and the associated Nature article is DOI 10.1038/s41586-022-05591-3.
 
 ## Observational results
 
@@ -129,15 +148,39 @@ The [WD 1856 b](examples/WD1856b/run.py) and [TRAPPIST-1](examples/TRAPPIST-1/ru
 ## Input Data
 The input time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
 
+### ULTRASAT synthetic light curves
+`miletos.simulate_ultrasat_light_curve` accepts any callable or array-valued relative-flux model and returns columns of JD, noisy relative flux, and flux uncertainty. For example:
+
+```python
+import numpy as np
+import miletos
+
+data = miletos.simulate_ultrasat_light_curve(
+    lambda time: 1.0 + 0.01 * np.sin(2.0 * np.pi * (time - time[0])),
+    magnitude=18.0,
+    start_jd=2463000.0,
+    duration_days=3.0,
+    seed=7,
+)
+```
+
+The default cadence is 300 seconds with a 240-second exposure; both can be overridden. The uncertainty uses Nicomedia's ULTRASAT magnitude-dependent noise model. To generate data inside `miletos.init`, use `listlablinst=[['ULTRASAT'], []]`, `liststrgtypedata=[['simutargpartsynt'], []]`, and `dictsimu={'ULTRASAT': {'start_jd': 2463000.0, 'duration_days': 3.0, 'cadence_seconds': 300.0, 'exposure_seconds': 240.0}}` with a target identifier or coordinates and its source model in `dicttrue`. For systems without NASA Exoplanet Archive priors, set `typepriocomp='inpt'` and provide the companion-prior arrays.
+
 
 ## Data gathering
 Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Kepler, HST, and JWST).
+
+CHEOPS public light curves are retrieved through the optional DACE client. Install `miletos[cheops]`, then call `miletos.retrieve_cheops_light_curves("WASP-8")` or pass `ra_deg` and `dec_deg` to resolve the nearest CHEOPS target. The function returns one normalized `[BJD, flux, flux uncertainty]` array per visit, keyed by DACE `file_key`; its default quality filter follows the standard CHEOPS event-flag limits. To retrieve directly in `miletos.init`, set `listlablinst=[['CHEOPS'], []]`, `liststrgtypedata=[['obsd'], []]`, and provide `strgmast`, `ticitarg`, or coordinates. Set `cheopsaperture` to select the DACE photometric aperture. Public data do not require a DACE API key. Private data require DACE credentials.
 
 
 ## Analyses
 Miletos performs preliminary analyses such as detrending, phase-folding, producing Lomb-Scargle periodograms (via Astropy), and performing Box Least Squares (BLS) searches. The outcomes are plotted, written to disk, and returned to the user. They are also used as priors for subsequent generative modeling of the data.
 
+For additional physical and structural checks of raw time series, companion orbital parameters, photometric model fluxes, and phase-folded products, pass `boolsanity=True` to `miletos.init`. These checks are off by default and leave the existing `booldiag` behavior unchanged.
+
 For direct BLS searches, `miletos.search_box_least_squares(...)` accepts strictly increasing `time_days`, `flux`, matching positive `flux_uncertainty`, a grid of trial `duration_days`, and minimum and maximum periods. It returns the highest-SNR period, transit time, duration, depth, depth uncertainty, and the full Astropy periodogram.
+
+To animate a BLS scan, call `miletos.animate_box_least_squares_search` with a mapping from labels to `[time, flux, uncertainty]` arrays, period bounds, trial durations, and a GIF output path. The animation shows each light curve's growing BLS score curve alongside its best-so-far folded box model.
 
 ### TESS QLP transit search and vetting
 
@@ -149,15 +192,17 @@ Prepare a CSV with `tic_id` and `sector` columns, plus optional `tmag`, `toi`, `
 python -m miletos.tess_transit_search --catalog path/to/targets.csv
 ```
 
-The pipeline writes target results, injection recoveries, and separate search-yield, completeness, inverted-signal-control, TESS-magnitude, and TOI-disposition figures. Downloaded FITS products are cached under `$MILETOS_PATH/data/tess_transit_survey/`. Use `--offline --data-directory PATH` to rerun from a retained cache. `--maximum-targets` limits a development run, and `--injection-trials` controls the randomized epochs per injected period-depth cell.
+The pipeline writes target results, injection recoveries, and separate search-yield, completeness, inverted-signal-control, TESS-magnitude, and TOI-disposition figures. The inverted null is searched over the same period-duration grid as the observed flux. Injection recovery reruns the full search and odd-even/secondary vetter; it does not apply an inverted-data veto to injected transits, because that would turn each injected dimming into a positive event by construction. Downloaded FITS products are cached under `$MILETOS_PATH/data/tess_transit_survey/`. Use `--offline --data-directory PATH` to rerun from a retained cache. `--maximum-targets` limits a development run, and `--injection-trials` controls randomized epochs per injected period-depth cell.
 
-The observed pilot analyzes TOI 1338.01 (TIC 260128333), Sector 10, with archived TESS magnitude 11.4881. The QLP curve contains 950 quality-screened cadences over 24.916 days. The strongest BLS box is at 7.3549 days, with depth 1.428 ppt and SNR 6.77. The inverted light curve has a stronger 8.34-SNR box, so this signal is retained for review rather than classified as a planet candidate. For 3-day, 0.1-day-duration injections, recovery above 7 SNR is 0/8 at 0.3 and 0.5 ppt, 7/8 at 1 ppt, and 8/8 at 2 ppt or deeper. These single-target results validate the workflow and do not measure a survey detection rate or population completeness.
+The observed pilot analyzes TOI 1338.01 (TIC 260128333), Sector 10, with archived TESS magnitude 11.4881. The QLP curve contains 950 quality-screened cadences over 24.916 days. The strongest positive-flux BLS box is at 7.3549 days, with depth 1.428 ppt and SNR 6.77; the full-grid inverted control peaks at SNR 8.56 and the target remains for review. In the retrospective Sector 10 validation of 49 known TOIs, 48 have QLP searches, 17 pass the initial screen, and 31 remain for review. Twenty-three of 48 inverted controls also pass the other triage metrics. This is a control-pass fraction, not a false-discovery rate. For 3-day, 0.1-day-duration injections into the pilot curve, full-search and vetter recovery is 0/8 at 0.3 and 0.5 ppt, 6/8 at 1 ppt, and 8/8 at depths of 2 ppt and greater. The one-target intervals are wide; these results do not measure survey completeness or a planet detection rate.
 
 | Observed search and phase fold | Pilot injection completeness |
 |---|---|
 | ![QLP light curve and BLS candidate phase fold for TOI 1338.01, flagged for review by its stronger inverted-light-curve control](examples/tess_transit_search/visuals/toi1338_sector10_candidate.png) | ![Single-target injection recovery for 3-day box transits in TIC 260128333](examples/tess_transit_search/visuals/tess_transit_completeness.png) |
 
-The TESS Faint-star Search reported 1,617 TOIs from Primary Mission QLP search results (Kunimoto et al. 2022). Miletos's `prepare_toi_target_list` helper selects sector- and magnitude-limited TOI validation subsets from an ExoFOP table. The Sector 10 validation uses the archived 2020-09-16 ExoFOP snapshot and selects 50 TOI entries on 49 unique TICs with TESS magnitudes 10.5--13.5. The cached QLP run retrieves light curves for 48 targets, passes 17 through initial triage, and retains 31 for manual review. These are retrospective workflow-comparison counts, not precision, recall, false-discovery, or completeness estimates because the sample is conditioned on prior TOI identification. Run `python examples/tess_transit_search/run_toi_validation.py` to reproduce from cached products, or add `--download` to retrieve missing products. This TOI-only subset cannot serve as an occurrence-rate denominator. The batch occurrence interface calls Pergamon only when every row explicitly identifies a complete parent target population and injection efficiencies are available. By default, efficiencies are averaged uniformly over the discrete injected period-depth grid; provide `injection_grid_weights` when another population distribution is appropriate. See the [TESS search and vetting guide](docs/transit_search.rst) and [API reference](docs/api.rst).
+The TESS Faint-star Search reported 1,617 TOIs from 14,849,252 Primary Mission stars searched by QLP (Kunimoto et al. 2022). These published counts provide context, not a common-denominator comparison with the Miletos TOI validation. The helper `prepare_toi_target_list` selects sector- and magnitude-limited validation subsets from an ExoFOP table. The Sector 10 validation uses the archived 2020-09-16 snapshot and selects 50 TOI entries on 49 unique TICs with TESS magnitudes 10.5--13.5. Run `python examples/tess_transit_search/run_toi_validation.py` to reproduce from cached products, or add `--download` to retrieve missing products. Because this subset is conditioned on previous TOI identification, it cannot be used for an occurrence-rate estimate. Miletos passes completeness and inverted-control information to Pergamon only when every row belongs to a declared complete parent population, every target has a usable search, and the injection grid is complete. The equal-weight injection grid is an explicit modeling assumption; provide `injection_grid_weights` for a different occurrence domain. The random QLP parent-sample builder in `examples/tess_transit_search/run_sector10_survey.py` is experimental and has not yet produced a validated survey sample at scale. See the [TESS search and vetting guide](docs/transit_search.rst) and [API reference](docs/api.rst).
+
+The [TIC 38455598.1 exocomet-candidate example](examples/TIC38455598_exocomet/run.py) runs QLP FaintStar BLS vetting across Sectors 8, 35, 62, 89, and 99, fits a linear ephemeris to the recurrent Sector 8, 62, and 89 events, and compares Ephesos opaque-disk and trailing dust-tail models. Run it with `MILETOS_PATH` set to this repository and `--offline` to use cached QLP files. The dust-tail model is phenomenological and does not establish an exocomet detection.
 
 
 ## Model
@@ -184,14 +229,34 @@ Forward-model evaluations dominate the runtime and can use just-in-time compilat
 
 ### JWST Early Release Science (ERS)
 
-Miletos's functionality has been significantly enhanced as part of the JWST Early Release Science (ERS) effort in order to provide the JWST exoplanet research community with a fast and robust analysis and modeling tool for time-series data from NIRSpec and NIRISS. Used in this mode, Miletos first performs a fit of the white light curve on a given target, obtaining the posterior on the system parameters. Then, it uses these posteriors as priors to the system parameters in subsequent fits to data at each wavelength. Note that Miletos does not perform Stage 1 or 2 reductions, which can be separately performed by the JWST pipeline. The functionality of Miletos is focused on the accurate modeling of the resulting spectral light curves.
+Miletos analyzes extracted JWST time-series spectra. Its general MAST path selects public CALJWST Level 3 `x1dints` products; the implemented G395H handling keeps NRS1 and NRS2 wavelength solutions separate. Miletos does not run Detector1, Spec2, or TSO3 and is not a substitute for the JWST calibration pipeline. The example below documents the full upstream reduction and identifies which instrument-specific steps still need validation before treating PRISM or NIRCam products as a maintained Miletos reduction.
 
-When fitting spectral light curves over a wavelength interval, an important consideration is the modeling of limb darkening and how it changes with wavelength. In NIRSpec, the marginalization provided by Miletos is more important in modeling Prism data compard to NIRSpec 395H with a smaller wavelength coverage. 
+When fitting spectral light curves over a wavelength interval, limb darkening and its wavelength dependence must be accounted for. This is particularly important for broad-coverage PRISM data.
 
 
 ### JWST ERS Observations of WASP-39b
 
-Run the observational reproduction with:
+The [WASP-39b example notebook](examples/WASP-39b/WASP39ERS.ipynb) documents the public ERS transit visits and the complete data path. MAST lists these Stage 3 spectroscopic products:
+
+| Mode | MAST observation ID | Configuration | Products |
+|---|---|---|---|
+| NIRCam grism | `jw01366-o002_t001_nircam_f322w2-grismr-subgrism256` | F322W2 / GRISMR / SUBGRISM256 | `_x1dints.fits`, `_whtlt.ecsv` |
+| NIRSpec G395H | `jw01366-o003_t001_nirspec_f290lp-g395h-s1600a1-sub2048` | F290LP / G395H / S1600A1 | `_x1dints.fits`, `_whtlt.ecsv` |
+| NIRSpec PRISM | `jw01366-o004_t001_nirspec_clear-prism-s1600a1-sub512` | CLEAR / PRISM / S1600A1 | `_x1dints.fits`, `_whtlt.ecsv` |
+
+For a reduction from raw exposures:
+
+1. Query MAST for WASP-39 and proposal 1366. Confirm the visit, exposure segments, and product names. Download all `*_uncal.fits` exposures and preserve the association and visit metadata.
+2. Pin a JWST pipeline release and CRDS context. Configure `CRDS_PATH`, `CRDS_SERVER_URL`, and `CRDS_CONTEXT` and record their values with the reduction products.
+3. Run Detector1 on each uncalibrated integration file. It applies detector-level corrections and ramp fitting and produces TSO `*_rateints.fits` products.
+4. Run Spec2 on each `rateints` product with the same pipeline and CRDS context. Inspect data-quality flags, unstable or saturated integrations, background subtraction, trace limits, wavelength solutions, and residual detector systematics. The outputs are calibrated integrations, commonly named `*_calints.fits`.
+5. Create a TSO3 Level 3 association for each visit containing its calibrated integration segments, then run TSO3. For these spectroscopic visits, inspect the resulting `*_x1dints.fits` and `*_whtlt.ecsv` products, timestamps, wavelength arrays, flux units, uncertainties, DQ values, and segment boundaries.
+6. Apply instrument-specific checks before extraction or fitting. For PRISM, inspect the broad trace and wavelength-range edges. For G395H, retain NRS1 and NRS2 separately, inspect their overlap and detector gap, and combine only after checking their wavelength solutions and residuals. For NIRCam F322W2/GRISMR, inspect the grism trace, background, 1/f residuals, and contamination or order behavior.
+7. Pass extracted time-series spectra into Miletos for quality filtering and light-curve analysis. The G395H reader has detector-specific NRS1/NRS2 handling. Although the general MAST code reads `x1dints`, PRISM and NIRCam product handling should be validated against the exact files and instrument configuration; this example does not claim a maintained raw-to-spectrum reduction for those modes. Preserve instrument labels and wavelength-bin covariance for joint atmospheric interpretation.
+
+The notebook's final cell demonstrates reproducible synthetic data on separate PRISM, G395H, and NIRCam wavelength grids. Its broad water-like bands and narrow HDO-like feature are toy assumptions, and its seeded noise levels are illustrative rather than calibrated instrument noise. These synthetic values are not observed WASP-39b data. For a covariance-aware PCAT injection/recovery, see [`examples/nirspec_isotope_retrieval/run.py`](examples/nirspec_isotope_retrieval/run.py).
+
+Run the maintained published-product G395H reproduction with:
 
 ```bash
 python examples/WASP-39b/run.py --typefileplot png
@@ -222,7 +287,7 @@ chain, log_probability = sample_nirspec_retrieval(
 )
 ```
 
-The forward model is responsible for isotope-specific opacity data and spectral binning; Miletos supplies the covariance-aware Gaussian likelihood and PCAT sampling. The self-contained HDO injection-recovery example is synthetic and is not an observational deuterium detection. The published WASP-39b ERS spectrum is available through `miletos.ers.analyze_wasp39_ers_g395h()` as a real NIRSpec data source for an isotope-aware forward model.
+The forward model is responsible for isotope-specific opacity data and spectral binning; Miletos supplies the covariance-aware Gaussian likelihood and PCAT sampling. Domain-specific exceptions for unphysical model states can be passed through `model_error_types` and are treated as rejected proposals. The self-contained HDO injection-recovery example is synthetic and is not an observational deuterium detection. The published WASP-39b ERS spectrum is available through `miletos.ers.analyze_wasp39_ers_g395h()` as a real NIRSpec data source for an isotope-aware forward model.
 
 Run the synthetic injection-recovery example with:
 

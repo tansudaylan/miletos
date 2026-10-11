@@ -24,10 +24,15 @@ def test_miletos_derives_compact_object_features():
     features = miletos.derive_compact_object_features(1.0, 10.0, 5.0, 1.0)
 
     assert set(features) == {
+        "amplbeammodl",
+        "ampellimodl",
         "amplslenmodl",
         "duratrantotlmodl",
         "smaxmodl",
         "radischw",
     }
     assert all(np.isfinite(values).all() for values in features.values())
+    signatures = miletos.compute_photometric_signatures(10.0, 5.0)
+    np.testing.assert_allclose(features["amplbeammodl"], [signatures["beaming"]])
+    np.testing.assert_allclose(features["ampellimodl"], [signatures["ellipsoidal"]])
     np.testing.assert_allclose(features["amplslenmodl"], [3.015272], rtol=1e-6)

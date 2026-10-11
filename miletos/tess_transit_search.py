@@ -11,6 +11,7 @@ matplotlib.use("agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.special import logsumexp
 from tdpy.verbosity import print
 
 from .tess_transit_survey import (
@@ -147,6 +148,8 @@ def estimate_survey_occurrence(
         raise ValueError("Occurrence rates require a declared complete parent target population")
     if results.empty or not results["searched"].astype(bool).all():
         raise ValueError("Every parent-sample target must have a usable QLP search")
+    if "inverted_control_disposition" not in results:
+        raise ValueError("Occurrence estimates require matched inverted-control vetting")
     searched = results.copy()
     if injections.empty:
         raise ValueError("Injection-recovery results are required for occurrence estimation")
@@ -177,14 +180,27 @@ def estimate_survey_occurrence(
         raise ImportError("Install Pergamon to calculate occurrence rates") from error
     detections = searched["detection"].astype(int).to_numpy()
     efficiencies = searched["detection_efficiency"].to_numpy(dtype=float)
-    occurrence = pergamon.estimate_occurrence_rate(detections, efficiencies)
+    inverted_detections = searched["inverted_control_disposition"].eq("candidate").to_numpy()
+    false_alarm_count = int(inverted_detections.sum())
+    false_alarm_alpha = false_alarm_count + 0.5
+    false_alarm_beta = len(searched) - false_alarm_count + 0.5
+    false_positive_probability = false_alarm_alpha / (false_alarm_alpha + false_alarm_beta)
+    occurrence = pergamon.estimate_occurrence_rate(
+        detections, efficiencies, false_positive_probability
+    )
     from pergamon import log_likelihood_occurrence_rate
 
-    occurrence_grid = np.linspace(0.0, 1.0, 10001)
-    log_probability = np.array([
-        log_likelihood_occurrence_rate(rate, detections, efficiencies)
-        for rate in occurrence_grid
+    occurrence_grid = np.linspace(0.0, 1.0, 5001)
+    false_positive_draws = np.random.default_rng(20261011).beta(
+        false_alarm_alpha, false_alarm_beta, size=512
+    )
+    log_probability_draws = np.array([
+        log_likelihood_occurrence_rate(
+            occurrence_grid, detections, efficiencies, false_positive_draw
+        )
+        for false_positive_draw in false_positive_draws
     ])
+    log_probability = logsumexp(log_probability_draws, axis=0) - np.log(len(false_positive_draws))
     probability = np.exp(log_probability - np.max(log_probability))
     probability /= np.trapz(probability, occurrence_grid)
     cumulative = np.concatenate(([0.0], np.cumsum(
@@ -194,6 +210,11 @@ def estimate_survey_occurrence(
     return {
         "searched_targets": int(len(searched)),
         "detections": int(searched["detection"].sum()),
+        "inverted_control_candidates": false_alarm_count,
+        "false_positive_probability_mean": float(false_positive_probability),
+        "false_positive_probability_68_percent_interval": [
+            float(value) for value in np.quantile(false_positive_draws, [0.16, 0.84])
+        ],
         "maximum_likelihood_occurrence_fraction": occurrence,
         "uniform_prior_posterior_median": float(credible_interval[1]),
         "uniform_prior_68_percent_interval": credible_interval[[0, 2]].tolist(),
@@ -254,10 +275,14 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
             plt.close(figure)
 
         searched = results[results["searched"].astype(bool)]
-        if not searched.empty and "inverted_depth_snr" in searched:
+        inverted_column = (
+            "inverted_control_depth_snr"
+            if "inverted_control_depth_snr" in searched else "inverted_depth_snr"
+        )
+        if not searched.empty and inverted_column in searched:
             figure, axis = plt.subplots(figsize=(6.8, 4.6), constrained_layout=True)
             positive_snr = searched["depth_snr"].to_numpy(dtype=float)
-            inverted_snr = searched["inverted_depth_snr"].to_numpy(dtype=float)
+            inverted_snr = searched[inverted_column].to_numpy(dtype=float)
             finite = np.isfinite(positive_snr) & np.isfinite(inverted_snr)
             if finite.any():
                 limit = max(7.0, float(np.max(np.r_[positive_snr[finite], inverted_snr[finite]])) * 1.1)

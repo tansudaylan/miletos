@@ -38,6 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 photometry = ["lygos"]
+cheops = ["dace-query>=3.0"]
 
 [tool.setuptools.packages.find]
 include = ["miletos*"]

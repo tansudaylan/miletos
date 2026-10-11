@@ -198,7 +198,7 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
         capsize=1.5,
         label="Miletos phase bins",
     )
-    axes[2].set_xlim(-0.08, 0.08)
+    axes[2].set_xlim(-0.5, 0.5)
     axes[2].set_xlabel("Orbital phase")
     axes[2].set_ylabel("Relative flux [ppm]")
     axes[2].set_title(f"Output: phase-folded transit, period = {result.period_days:.1f} day")

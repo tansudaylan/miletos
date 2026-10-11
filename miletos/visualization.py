@@ -1,17 +1,34 @@
 import os
+import re
 from contextlib import contextmanager
 from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.text import Text
 import numpy as np
 import tdpy
+
+
+_LATEX_BOLD_LABEL = re.compile(r'\\textbf\{([^{}]*)\}')
+
+
+def normalize_miletos_figure_text(figure):
+    """Convert LaTeX bold wrappers to Matplotlib text styling before saving."""
+
+    for artist in figure.findobj(match=Text):
+        original = artist.get_text()
+        normalized = _LATEX_BOLD_LABEL.sub(r'\1', original)
+        if normalized != original:
+            artist.set_text(normalized)
+            artist.set_fontweight('bold')
 
 
 def save_miletos_figure(gdat, figure, path, **kwargs):
     """Write and close a figure using the active Miletos output settings."""
     typefileplot = getattr(gdat, 'typefileplot', Path(path).suffix.removeprefix('.') or 'png')
     typeplotback = getattr(gdat, 'typeplotback', 'norm')
+    normalize_miletos_figure_text(figure)
     return tdpy.save_figure(
         figure,
         path,

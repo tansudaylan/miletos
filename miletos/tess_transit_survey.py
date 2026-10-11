@@ -32,12 +32,21 @@ def read_qlp_light_curve(path: str | Path) -> pd.DataFrame:
         if table_hdu is None:
             raise ValueError("QLP FITS file has no binary table")
         names = {name.upper(): name for name in table_hdu.data.names}
-        flux_name = next((names[name] for name in ("KSPSAP_FLUX", "SAP_FLUX") if name in names), None)
-        if "TIME" not in names or flux_name is None:
-            raise ValueError("QLP FITS table needs TIME and SAP flux columns")
-        error_name = names.get(f"{flux_name.upper()}_ERR")
-        if error_name is None:
-            raise ValueError(f"QLP FITS table is missing {flux_name}_ERR")
+        flux_error_pair = next(
+            (
+                (names[flux_column], names[error_column])
+                for flux_column, error_column in (
+                    ("KSPSAP_FLUX", "KSPSAP_FLUX_ERR"),
+                    ("DET_FLUX", "DET_FLUX_ERR"),
+                    ("SAP_FLUX", "SAP_FLUX_ERR"),
+                )
+                if flux_column in names and error_column in names
+            ),
+            None,
+        )
+        if "TIME" not in names or flux_error_pair is None:
+            raise ValueError("QLP FITS table needs TIME and a matching flux/error pair")
+        flux_name, error_name = flux_error_pair
         time = np.asarray(table_hdu.data[names["TIME"]], dtype=float)
         flux = np.asarray(table_hdu.data[flux_name], dtype=float)
         uncertainty = np.asarray(table_hdu.data[error_name], dtype=float)
@@ -126,6 +135,7 @@ def vet_transit_candidate(
     odd_even_threshold: float = 3.0,
     secondary_threshold: float = 5.0,
     inverted_threshold: float = 7.0,
+    check_inverted_control: bool = True,
 ) -> dict[str, float | bool | str]:
     """Measure odd-even, secondary-event, and inverted-curve warning metrics."""
 
@@ -160,27 +170,31 @@ def vet_transit_candidate(
         if np.isfinite(secondary_error) and secondary_error > 0.0 else np.nan
     )
 
-    inverse = search_box_least_squares(
-        time,
-        2.0 - flux,
-        uncertainty,
-        duration_days=[duration],
-        minimum_period_days=max(0.2, 0.8 * period),
-        maximum_period_days=1.2 * period,
-    )
+    if check_inverted_control:
+        inverse = search_box_least_squares(
+            time,
+            2.0 - flux,
+            uncertainty,
+            duration_days=[duration],
+            minimum_period_days=max(0.2, 0.8 * period),
+            maximum_period_days=1.2 * period,
+        )
+        inverted_depth_snr = float(inverse["depth_snr"])
+    else:
+        inverted_depth_snr = np.nan
     signal_to_noise = float(candidate["depth_snr"])
     flags = {
         "below_snr_threshold": signal_to_noise < snr_threshold,
         "odd_even_mismatch": bool(np.isfinite(odd_even_snr) and odd_even_snr >= odd_even_threshold),
         "secondary_eclipse": bool(np.isfinite(secondary_snr) and secondary_snr >= secondary_threshold),
-        "inverted_signal": float(inverse["depth_snr"]) >= inverted_threshold,
+        "inverted_signal": check_inverted_control and inverted_depth_snr >= inverted_threshold,
     }
     return {
         **candidate,
         "odd_even_snr": float(odd_even_snr),
         "secondary_depth": float(secondary_depth),
         "secondary_snr": float(secondary_snr),
-        "inverted_depth_snr": float(inverse["depth_snr"]),
+        "inverted_depth_snr": inverted_depth_snr,
         **flags,
         "disposition": "review" if any(flags.values()) else "candidate",
     }
@@ -207,7 +221,29 @@ def search_tess_target(
         key: candidate[key]
         for key in ("period_days", "transit_time_days", "duration_days", "depth", "depth_uncertainty", "depth_snr")
     }
-    return vet_transit_candidate(light_curve, summary)
+    vetted = vet_transit_candidate(light_curve, summary)
+
+    inverted_curve = light_curve.copy()
+    inverted_curve["flux"] = 2.0 - inverted_curve["flux"].to_numpy(dtype=float)
+    inverted_candidate = search_box_least_squares(
+        inverted_curve["time_btjd"].to_numpy(dtype=float),
+        inverted_curve["flux"].to_numpy(dtype=float),
+        inverted_curve["flux_error"].to_numpy(dtype=float),
+        duration_days=duration_days,
+        minimum_period_days=minimum_period_days,
+        maximum_period_days=maximum_period_days,
+    )
+    inverted_vetted = vet_transit_candidate(
+        inverted_curve,
+        inverted_candidate,
+        check_inverted_control=False,
+    )
+    return {
+        **vetted,
+        "inverted_control_period_days": float(inverted_candidate["period_days"]),
+        "inverted_control_depth_snr": float(inverted_candidate["depth_snr"]),
+        "inverted_control_disposition": str(inverted_vetted["disposition"]),
+    }
 
 
 def injection_recovery(
@@ -220,8 +256,11 @@ def injection_recovery(
     seed: int = 0,
     period_tolerance: float = 0.01,
     minimum_depth_snr: float = 7.0,
+    minimum_period_days: float = 0.5,
+    maximum_period_days: float | None = None,
+    search_duration_days=(0.04, 0.07, 0.10, 0.14, 0.20),  # [day]
 ) -> pd.DataFrame:
-    """Measure period-matched, threshold-significant recovery in observed data."""
+    """Measure period-matched recovery after the full BLS search and vetter."""
 
     periods = np.asarray(periods_days, dtype=float)
     depths = np.asarray(depths, dtype=float)
@@ -232,6 +271,14 @@ def injection_recovery(
     time = light_curve["time_btjd"].to_numpy(dtype=float)
     base_flux = light_curve["flux"].to_numpy(dtype=float)
     uncertainty = light_curve["flux_error"].to_numpy(dtype=float)
+    if maximum_period_days is None:
+        maximum_period_days = min(20.0, (time[-1] - time[0]) / 3.0)
+    if maximum_period_days <= minimum_period_days:
+        raise ValueError("maximum_period_days must exceed minimum_period_days")
+    if np.any((periods < minimum_period_days) | (periods > maximum_period_days)):
+        raise ValueError("injected periods must be inside the searched period interval")
+    if not search_duration_days or np.any(np.asarray(search_duration_days) <= 0.0):
+        raise ValueError("search_duration_days must contain positive durations")
     random = np.random.default_rng(seed)
     rows = []
     for period in periods:
@@ -239,28 +286,45 @@ def injection_recovery(
             raise ValueError("each injected period must have at least three transits in the baseline")
         for depth in depths:
             recovered = 0
+            period_matched = 0
+            snr_matched = 0
+            vetted = 0
             for _ in range(trials):
                 epoch = random.uniform(time[0], time[0] + period)
                 phase = (time - epoch + 0.5 * period) % period - 0.5 * period
                 injected_flux = base_flux.copy()
                 injected_flux[np.abs(phase) < 0.5 * duration_days] *= 1.0 - depth
+                injected_curve = light_curve.copy()
+                injected_curve["flux"] = injected_flux
                 result = search_box_least_squares(
                     time,
                     injected_flux,
                     uncertainty,
-                    duration_days=[duration_days],
-                    minimum_period_days=0.9 * period,
-                    maximum_period_days=1.1 * period,
+                    duration_days=search_duration_days,
+                    minimum_period_days=minimum_period_days,
+                    maximum_period_days=maximum_period_days,
                 )
-                recovered += (
-                    abs(result["period_days"] / period - 1.0) <= period_tolerance
-                    and result["depth_snr"] >= minimum_depth_snr
+                vetting = vet_transit_candidate(
+                    injected_curve,
+                    result,
+                    snr_threshold=minimum_depth_snr,
+                    check_inverted_control=False,
                 )
+                period_match = abs(result["period_days"] / period - 1.0) <= period_tolerance
+                snr_match = result["depth_snr"] >= minimum_depth_snr
+                vetting_pass = vetting["disposition"] == "candidate"
+                period_matched += period_match
+                snr_matched += period_match and snr_match
+                vetted += period_match and snr_match and vetting_pass
+                recovered += period_match and snr_match and vetting_pass
             rows.append({
                 "period_days": float(period),
                 "depth": float(depth),
                 "duration_days": float(duration_days),
                 "trials": trials,
+                "period_matched": period_matched,
+                "snr_matched": snr_matched,
+                "passed_vetter": vetted,
                 "recoveries": recovered,
                 "completeness": recovered / trials,
                 "minimum_depth_snr": minimum_depth_snr,

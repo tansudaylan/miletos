@@ -48,9 +48,10 @@ def test_toi1233_adapter_passes_shared_plot_configuration(monkeypatch, tmp_path)
         lambda **kwargs: captured.update(kwargs) or {'strgtarg': 'TOI-1233'},
     )
 
-    result = toi1233.analyze_toi1233(typefileplot='pdf')
+    result = toi1233.analyze_toi1233(typefileplot='pdf', boolwritover=True)
 
     assert result == {'strgtarg': 'TOI-1233'}
     assert captured['typefileplot'] == 'pdf'
     assert captured['typeplotback'] == 'white'
+    assert captured['boolwritover'] is True
     assert Path(captured['pathtarg']) == tmp_path / 'examples' / 'TOI-1233'

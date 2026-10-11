@@ -8,12 +8,13 @@ import numpy as np
 
 def _spectral_log_likelihood(parameters, state):
     """Evaluate a covariance-aware Gaussian likelihood for a binned spectrum."""
+    model_error_types = (ArithmeticError, ValueError) + state["model_error_types"]
     try:
         model_depth_ppm = np.asarray(
             state["forward_model"](np.asarray(parameters, dtype=float), state["wavelength_microns"]),
             dtype=float,
         )
-    except (ArithmeticError, ValueError):
+    except model_error_types:
         return -np.inf
     if model_depth_ppm.shape != state["observed_depth_ppm"].shape:
         raise ValueError("forward_model must return one transit depth per wavelength bin")
@@ -38,6 +39,7 @@ def sample_nirspec_retrieval(
     *,
     prior_means: Sequence[float] | None = None,
     prior_stdvs: Sequence[float] | None = None,
+    model_error_types: Sequence[type[Exception]] = (),
     chain_count: int = 4,
     retained_samples: int = 10000,
     burn_samples: int = 10000,
@@ -120,12 +122,19 @@ def sample_nirspec_retrieval(
         raise ValueError("chain_count and retained_samples must be positive; burn_samples cannot be negative")
     if not callable(forward_model):
         raise TypeError("forward_model must be callable")
+    model_error_types = tuple(model_error_types)
+    if not all(
+        isinstance(error_type, type) and issubclass(error_type, Exception)
+        for error_type in model_error_types
+    ):
+        raise ValueError("model_error_types must contain exception classes")
 
     state = {
         "wavelength_microns": wavelength_microns,
         "observed_depth_ppm": observed_depth_ppm,
         "covariance_cholesky": covariance_cholesky,
         "forward_model": forward_model,
+        "model_error_types": model_error_types,
     }
     options = {
         "boolmakeplot": False,

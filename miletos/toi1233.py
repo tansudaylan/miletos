@@ -35,6 +35,7 @@ def _load_toi1233_time_series() -> dict[str, list]:
 def analyze_toi1233(
     typemodl: str = 'PlanetarySystemWithTTVs',
     typefileplot: str = 'png',
+    boolwritover: bool = False,
 ) -> dict:
     """Run the standard Miletos time-series analysis for TOI-1233."""
 
@@ -59,6 +60,7 @@ def analyze_toi1233(
         boolfitt=False,
         typepriocomp='exar',
         boolplotpopl=False,
+        boolwritover=boolwritover,
         typefileplot=typefileplot,
         typeplotback='white',
     )
@@ -67,6 +69,7 @@ def analyze_toi1233(
 def run_toi1233_observation(
     typemodl: str = 'PlanetarySystemWithTTVs',
     typefileplot: str = 'png',
+    boolwritover: bool = False,
 ) -> dict:
     """Analyze and plot TOI-1233 through the shared observational pipeline."""
 
@@ -82,6 +85,7 @@ def run_toi1233_observation(
         analysis_kwargs={
             'typemodl': typemodl,
             'typefileplot': typefileplot,
+            'boolwritover': boolwritover,
         },
         output_path=output_path,
         typefileplot=typefileplot,
