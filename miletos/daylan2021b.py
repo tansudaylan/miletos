@@ -5,26 +5,69 @@ import os
 from pathlib import Path
 
 import numpy as np
+from scipy.interpolate import LSQUnivariateSpline
 
 from . import main
 from .paths import get_repository_path
 
 
-def _load_cached_sector7(example_path: Path):
-    """Return the cached TESS Sector 7 PDCSAP light curve as a Miletos input cube, or None."""
-    path = example_path / 'data' / 'TESS_PDCSAP_FLUX_Sector07.csv'
+SAP_TIME_OFFSET = 2457000.0  # [day], offset used in cached SPOC SAP timestamps
+SPLINE_KNOT_SPACING_DAYS = 1.5  # [day]
+SPLINE_EVENT_MASK_HALF_WIDTH_DAYS = 0.10  # [day]
+
+
+def _read_sector7_sap(example_path: Path):
+    """Return cached SPOC SAP time [BJD], flux, and uncertainty, or None."""
+    path = example_path / 'data' / 'TESS_SAP_FLUX_Sector07.csv'
     if not path.exists():
         return None
     print(f'Reading from {path}...')
     photometry = np.loadtxt(path, delimiter=',')
     photometry = photometry[np.isfinite(photometry).all(axis=1)]
+    if np.median(photometry[:, 0]) > 4.0e6:
+        photometry[:, 0] -= SAP_TIME_OFFSET
+    return photometry
+
+
+def _load_cached_sector7(example_path: Path):
+    """Return the cached SAP light curve as a Miletos input cube, or None."""
+    photometry = _read_sector7_sap(example_path)
+    if photometry is None:
+        return None
     return {'Raw': [[[photometry[:, None, :]]], []]}
+
+
+def _detrend_sector7_sap(time, flux, stdv):
+    """Divide out transit-masked, orbit-wise cubic splines fitted to SAP flux."""
+    phase = np.mod(time - EPOC_LITE + 0.5 * PERI_LITE, PERI_LITE) - 0.5 * PERI_LITE
+    out_of_event = (
+        (np.abs(phase) > SPLINE_EVENT_MASK_HALF_WIDTH_DAYS)
+        & (np.abs(np.abs(phase) - 0.5 * PERI_LITE) > SPLINE_EVENT_MASK_HALF_WIDTH_DAYS)
+    )
+    boundaries = np.r_[0, np.flatnonzero(np.diff(time) > 1.0) + 1, time.size]
+    baseline = np.ones_like(flux)
+    for lower, upper in zip(boundaries[:-1], boundaries[1:]):
+        time_orbit = time[lower:upper]
+        flux_orbit = flux[lower:upper]
+        stdv_orbit = stdv[lower:upper]
+        mask = out_of_event[lower:upper]
+        knots = np.arange(
+            time_orbit.min() + SPLINE_KNOT_SPACING_DAYS,
+            time_orbit.max() - SPLINE_KNOT_SPACING_DAYS,
+            SPLINE_KNOT_SPACING_DAYS,
+        )
+        knots = knots[(knots > time_orbit[mask].min()) & (knots < time_orbit[mask].max())]
+        spline = LSQUnivariateSpline(
+            time_orbit[mask], flux_orbit[mask], knots, w=1.0 / stdv_orbit[mask], k=3
+        )
+        baseline[lower:upper] = spline(time_orbit)
+    return flux / baseline, stdv / baseline
 
 
 def run_daylan2021b_reproduction(typefileplot: str = 'png', fit: bool = True) -> dict:
     """Analyze the public TESS Sector 7 light curve with Miletos.
 
-    A cached Sector 7 light curve is analyzed offline; otherwise Miletos retrieves it from MAST.
+    Cached Sector 7 SAP photometry is analyzed offline; otherwise Miletos retrieves the target data.
     """
     if typefileplot not in {'png', 'pdf'}:
         raise ValueError("typefileplot must be 'png' or 'pdf'")
@@ -46,7 +89,12 @@ def run_daylan2021b_reproduction(typefileplot: str = 'png', fit: bool = True) ->
         typeverb=0,
         listlablinst=[['TESS'], []],
         boolbdtr=[[False], []],
-        typepriocomp='exar',
+        typepriocomp='inpt',
+        rratcompprio=[RRAT_PUBL],
+        rsmacompprio=[RSMA_PUBL],
+        epocmtracompprio=[EPOC_PUBL],
+        pericompprio=[PERI_PUBL],
+        cosicompprio=[COSI_PUBL],
         dictfitt={'typemodl': 'PlanetarySystemEmittingCompanion'},
         pathtarg=os.path.join(str(example_path), ''),
         **source,
@@ -59,8 +107,16 @@ PERI_LITE = 1.2749255  # [day]
 STDV_PERI_LITE = 2.5e-6  # [day]
 TMPT_STAR = 6460.  # [K], Delrez et al. (2016)
 STDV_TMPT_STAR = 140.  # [K]
+EPOC_PUBL = 2458504.748003  # [BJD], nominal epoch from Daylan et al. (2021b)
+PERI_PUBL = 1.274928  # [day]
+RRAT_PUBL = 0.12488
+RSMA_PUBL = 0.2722
+COSI_PUBL = 0.0825
 # dayside and nightside TESS brightness temperatures of Daylan et al. (2021b): median, lower, upper [K]
 PUBLISHED_TEMPERATURES = {'day': (3012., 42., 40.), 'night': (2022., 602., 254.)}
+PUBLISHED_MODULATION_PPM = (418., 34.)  # [ppm], nominal single-component fit
+PUBLISHED_NIGHTSIDE_FLUX_PPM = (65., 37., 40.)  # median, lower, upper [ppm]
+PUBLISHED_PHASE_SHIFT_DAYS = (-0.022, 0.014)  # median and uncertainty [day]
 NAMES = ('epoc', 'peri', 'rratcomp', 'rsmacomp', 'cosicomp', 'qlmdk1', 'qlmdk2', 'fluxday', 'fluxnight', 'phasoffs',
          'amplelli')
 LABELS = ('$T_0$ [BJD]', '$P$ [day]', '$R_p/R_\\star$', '$(R_\\star+R_p)/a$', '$\\cos i$', '$q_1$', '$q_2$',
@@ -72,11 +128,13 @@ def retr_lcur_sector7(example_path, cadebins=10.):
 
     cadebins is the bin width [minute].
     """
-    path = example_path / 'data' / 'TESS_PDCSAP_FLUX_Sector07.csv'
-    print(f'Reading from {path}...')
-    time, flux, stdv = np.loadtxt(path, delimiter=',', unpack=True)
+    photometry = _read_sector7_sap(example_path)
+    if photometry is None:
+        raise FileNotFoundError('The cached TESS Sector 7 SAP light curve is required for phase-curve sampling.')
+    time, flux, stdv = photometry.T
     boolgood = np.isfinite(time) & np.isfinite(flux) & np.isfinite(stdv)
     time, flux, stdv = time[boolgood], flux[boolgood], stdv[boolgood]
+    flux, stdv = _detrend_sector7_sap(time, flux, stdv)
     indxbins = np.floor((time - time[0]) / (cadebins / 1440.)).astype(int)
     _, indxinve, numb = np.unique(indxbins, return_inverse=True, return_counts=True)
     # keep bins with most of their 2-minute exposures
@@ -141,7 +199,7 @@ def fit_daylan2021b_phase_curve(numbchan=4, numbsamp=2000, numbburn=10000, seed=
     time, flux, stdv, indxorbt = retr_lcur_sector7(example_path)
     state = dict(time=time, flux=flux, stdv=stdv, matrblin=retr_matrblin(time, indxorbt),
                  listjitt=np.geomspace(1e-6, 1e-3, 12), timeexpo=10. / 1440.)
-    path = example_path / 'data' / 'daylan2021b_phase_curve_posterior.npz'
+    path = example_path / 'data' / 'daylan2021b_phase_curve_sap_posterior.npz'
     if boolreus and path.exists():
         print(f'Reading from {path}...')
         arry = np.load(path)
@@ -178,6 +236,26 @@ def retr_summary_daylan2021b(samples, tmpt):
     for name in ('fluxday', 'fluxnight', 'phasoffs', 'amplelli', 'rratcomp'):
         lowr, medi, uppr = np.percentile(samples[:, NAMES.index(name)], [16., 50., 84.])
         lines.append(f'{LABELS[NAMES.index(name)]}: {medi:.4g} (+{uppr - medi:.2g} / -{medi - lowr:.2g})')
+    modulation = samples[:, NAMES.index('fluxday')] - samples[:, NAMES.index('fluxnight')]
+    lowr, medi, uppr = np.percentile(modulation, [16., 50., 84.])
+    lines.append(
+        f'Planetary modulation amplitude: {medi:.0f} (+{uppr - medi:.0f} / '
+        f'-{medi - lowr:.0f}) ppm, published {PUBLISHED_MODULATION_PPM[0]:.0f} '
+        f'+/- {PUBLISHED_MODULATION_PPM[1]:.0f} ppm'
+    )
+    lowr, medi, uppr = np.percentile(samples[:, NAMES.index('fluxnight')], [16., 50., 84.])
+    published_night, published_lower, published_upper = PUBLISHED_NIGHTSIDE_FLUX_PPM
+    lines.append(
+        f'Nightside flux: {medi:.0f} (+{uppr - medi:.0f} / -{medi - lowr:.0f}) ppm, '
+        f'published {published_night:.0f} (+{published_upper:.0f} / -{published_lower:.0f}) ppm'
+    )
+    phase_shift_degrees = np.rad2deg(PUBLISHED_PHASE_SHIFT_DAYS[0] * 2. * np.pi / PERI_LITE)
+    phase_shift_uncertainty_degrees = np.rad2deg(PUBLISHED_PHASE_SHIFT_DAYS[1] * 2. * np.pi / PERI_LITE)
+    lowr, medi, uppr = np.percentile(samples[:, NAMES.index('phasoffs')], [16., 50., 84.])
+    lines.append(
+        f'Phase offset: {medi:.1f} (+{uppr - medi:.1f} / -{medi - lowr:.1f}) deg, '
+        f'published {phase_shift_degrees:.1f} +/- {phase_shift_uncertainty_degrees:.1f} deg'
+    )
     for name, (medipubl, lowrpubl, upprpubl) in PUBLISHED_TEMPERATURES.items():
         lowr, medi, uppr = np.percentile(tmpt[name][tmpt[name] > 0.], [16., 50., 84.])
         lines.append(f'{name}side brightness temperature: {medi:.0f} (+{uppr - medi:.0f} / -{medi - lowr:.0f}) K, '
@@ -247,7 +325,7 @@ def plot_daylan2021b_phase_curve(samples, tmpt, state, typefileplot='png'):
 
     with miletos_plot_context():
         # brightness temperatures against the published values
-        figure, axes = plt.subplots(1, 2, figsize=(7.1, 2.8))
+        figure, axes = plt.subplots(1, 2, figsize=(8.2, 3.4))
         for axis, name, labl in zip(axes, ('day', 'night'), ('Dayside', 'Nightside')):
             valu = tmpt[name][tmpt[name] > 0.]
             axis.hist(valu, bins=40, density=True, histtype='stepfilled', color='#A51C30', alpha=0.6,
@@ -256,10 +334,11 @@ def plot_daylan2021b_phase_curve(samples, tmpt, state, typefileplot='png'):
             axis.axvspan(medipubl - lowrpubl, medipubl + upprpubl, color='0.5', alpha=0.4,
                          label='Daylan et al. (2021b)')
             axis.axvline(medipubl, color='black', lw=1.)
-            axis.set_xlabel(f'{labl} TESS brightness temperature [K]')
+            axis.set_xlabel(f'{labl} TESS brightness\ntemperature [K]')
             axis.set_yticks([])
             if name == 'night':
                 axis.text(0.03, 0.95, '%.0f%% of samples have\nnonpositive flux' %
                           (100. * np.mean(tmpt[name] <= 0.)), transform=axis.transAxes, va='top')
         axes[0].legend(loc='upper left')
+        figure.subplots_adjust(left=0.08, right=0.98, bottom=0.26, top=0.94, wspace=0.32)
         save(figure, 'brightness_temperatures')

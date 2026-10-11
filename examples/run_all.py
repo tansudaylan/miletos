@@ -14,6 +14,10 @@ import sys
 REPOSITORY_PATH = Path(__file__).parents[1]
 QUICK_EXAMPLES = (
     (
+        'nirspec_isotope_retrieval/run.py',
+        'examples/nirspec_isotope_retrieval/visuals/nirspec_isotope_injection_recovery',
+    ),
+    (
         'simulated_transit/run.py',
         'examples/simulated_transit/visuals/simulated_transit_diagnostic',
     ),
@@ -33,7 +37,7 @@ OBSERVATIONAL_EXAMPLES = (
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     add_plot_arguments(parser)
-    parser.add_argument('--quick', action='store_true', help='Run only the two CI examples.')
+    parser.add_argument('--quick', action='store_true', help='Run the self-contained CI examples.')
     parser.add_argument('--list', action='store_true', help='List the observational target examples without running them.')
     return parser.parse_args()
 

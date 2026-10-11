@@ -38,7 +38,7 @@ def example_id(path):
 def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
-    assert len(EXAMPLE_PATHS) == 7
+    assert len(EXAMPLE_PATHS) == 8
 
 
 def test_example_notebooks_use_miletos_apis():
@@ -119,6 +119,28 @@ def test_daylan2021b_notebook_runs_and_summarizes_phase_curve_reproduction():
     assert 'run_posterior_sampling = False' not in source
 
 
+def test_published_reproduction_figures_are_linked_from_readme():
+    figures = (
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_white_light.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_detector_motion.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_spectroscopic_detrending.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_light_curve_precision.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_corrected_light_curve_map.png',
+        'examples/TOI-1233/visuals/daylan2021a_published_comparison.png',
+        'examples/TOI-1233/visuals/daylan2021a_phase_folded_transits.png',
+        'examples/WASP-121b/visuals/daylan2021b_phase_curve.png',
+        'examples/WASP-121b/visuals/daylan2021b_brightness_temperatures.png',
+    )
+    readme = (REPOSITORY_PATH / 'README.md').read_text()
+
+    for relative_path in figures:
+        figure_path = REPOSITORY_PATH / relative_path
+        assert figure_path.is_file(), relative_path
+        assert figure_path.stat().st_size > 1000, relative_path
+        assert relative_path in readme, relative_path
+
+
 @pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)
 def test_example_cli_help(example_path):
     environment = os.environ.copy()
@@ -188,6 +210,7 @@ def test_all_examples_run_and_produce_plots(tmp_path):
     assert 'reduced chi-squared = 1.10' in completed.stdout
     expected_names = (
         'examples/simulated_transit/visuals/simulated_transit_diagnostic.png',
+        'examples/nirspec_isotope_retrieval/visuals/nirspec_isotope_injection_recovery.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_white_light.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_detector_motion.png',

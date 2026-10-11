@@ -170,7 +170,7 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
 
     with miletos_plot_context():
         # phase-folded transits of each planet with the other planets removed
-        figure, axes = plt.subplots(1, len(NAMEPLAN), figsize=(7.1, 2.6), sharey=True)
+        figure, axes = plt.subplots(1, len(NAMEPLAN), figsize=(9.2, 2.8), sharey=True)
         for p, (axis, plan) in enumerate(zip(axes, NAMEPLAN)):
             epoc, peri = medi[5 * p], medi[5 * p + 1]
             othr = medi.copy()
@@ -193,11 +193,12 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
                 modl.append(retr_modl(solo, draw[5 * p] + offsfine / 24.) - 1.)
             axis.fill_between(offsfine, *1e6 * np.percentile(modl, [16., 84.], 0), color=colors[p], alpha=0.5, lw=0)
             axis.plot(offsfine, 1e6 * np.median(modl, 0), color=colors[p], lw=1.)
-            axis.set_title(f'HD 108236 {plan}, P = {peri:.3f} day')
-            axis.set_xlabel('Time from mid-transit [hour]')
+            axis.set_title(f'{plan}: P = {peri:.3f} d', fontsize=9)
+            axis.tick_params(labelsize=8)
         axes[0].set_ylim(-1600., 800.)
         axes[0].set_ylabel('Relative flux [ppm]')
-        figure.subplots_adjust(wspace=0.05)
+        figure.supxlabel('Time from mid-transit [hour]')
+        figure.subplots_adjust(left=0.09, right=0.99, bottom=0.20, top=0.87, wspace=0.05)
         save(figure, 'phase_folded_transits')
 
         # radii and periods against the published values
