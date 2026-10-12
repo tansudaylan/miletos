@@ -147,6 +147,7 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
     import matplotlib.pyplot as plt
     from pcat.plotting import plot_grid
     from .visualization import miletos_plot_context
+    from .visualization import plot_binned_light_curve
 
     path_visu = get_repository_path() / 'examples' / 'TOI-1233' / 'visuals'
     path_visu.mkdir(parents=True, exist_ok=True)
@@ -166,7 +167,8 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
     modlmedi = retr_modl(medi, time, state['timeexpo'])
     matrdesi = modlmedi[:, None] * state['matrblin']
     coef = np.linalg.lstsq(matrdesi / stdv[:, None], flux / stdv, rcond=None)[0]
-    detr = flux / (state['matrblin'] @ coef)
+    baseline = state['matrblin'] @ coef
+    detr = flux / baseline
 
     with miletos_plot_context():
         # phase-folded transits of each planet with the other planets removed
@@ -181,8 +183,25 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
             axis.plot(offs[indx], 1e6 * (resi[indx] - 1.), '.', ms=1, color='0.7')
             binsoffs = np.linspace(-6., 6., 49)
             indxbins = np.digitize(offs[indx], binsoffs) - 1
-            meanbins = [np.mean(resi[indx][indxbins == k]) for k in range(48)]
-            axis.plot(0.5 * (binsoffs[1:] + binsoffs[:-1]), 1e6 * (np.array(meanbins) - 1.), 'o', ms=2.5, color='black')
+            meanbins = np.array([
+                np.mean(resi[indx][indxbins == k])
+                if np.any(indxbins == k) else np.nan
+                for k in range(48)
+            ])
+            stdvbins = np.array([
+                np.sqrt(np.sum((stdv[indx][indxbins == k] / baseline[indx][indxbins == k]) ** 2))
+                / np.count_nonzero(indxbins == k)
+                if np.any(indxbins == k) else np.nan
+                for k in range(48)
+            ])
+            plot_binned_light_curve(
+                axis,
+                0.5 * (binsoffs[1:] + binsoffs[:-1]),
+                1e6 * (meanbins - 1.),
+                1e6 * stdvbins,
+                ms=2.5,
+                color='black',
+            )
             offsfine = np.linspace(-6., 6., 400)
             modl = []
             for draw in draws:

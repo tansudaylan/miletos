@@ -71,6 +71,19 @@ def miletos_plot_context():
         yield
 
 
+def plot_binned_light_curve(axis, xdat, ydat, yerr, **kwargs):
+    """Plot binned light-curve measurements as unconnected points with errors."""
+
+    return axis.errorbar(
+        xdat,
+        ydat,
+        yerr=yerr,
+        fmt='o',
+        linestyle='none',
+        **kwargs,
+    )
+
+
 def plot_wasp39_ers_white_light_curves(result, output_path: Path) -> Path:
     """Plot the detector-level white-light curves in Alderson et al. Figure 1a."""
 

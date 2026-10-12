@@ -81,6 +81,8 @@ example workflow:
 - [Simulated transit](examples/simulated_transit/SimulatedTransit.ipynb)
 - [Joint TESS and PFS analysis of TOI-1233](examples/TOI-1233/JointPhotometryRadialVelocity.ipynb)
 - [TOI-1233 transits in the context of Daylan et al. (2021a)](examples/TOI-1233/Daylan2021.ipynb)
+- [TOI-1233 published-prior setup from Daylan et al. (2021a)](examples/TOI-1233/Daylan2021%202.ipynb)
+- [TOI-1233 published-prior setup from Daylan et al. (2021a)](examples/TOI-1233/Daylan2021%202.ipynb)
 - [Daylan et al. (2021b) TESS phase curve of WASP-121 b](examples/WASP-121b/Daylan2021b.ipynb)
 - [JWST ERS analysis of WASP-39b](examples/WASP-39b/WASP39ERS.ipynb)
 - [TESS QLP transit-search pilot](examples/tess_transit_search/TESS_Transit_Search.ipynb)

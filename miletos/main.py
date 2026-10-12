@@ -35,6 +35,7 @@ import matplotlib.pyplot as plt
 import tdpy
 from pcat import plot_grid, plot_population_grid
 from pcat.fixed import sample_allesfitter_pcat, sample_posterior
+from tdpy import fold_tser, retr_albg, retr_lcurmodl_flarsing, retr_rvel
 from tdpy.paths import make_directory
 from tdpy.util import summgene
 from .cache import read_cached_output
@@ -49,7 +50,7 @@ from .sanity import (
 )
 from .simulation import generate_ultrasat_time_series
 from .visualization import select_primary_transit_window
-from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, save_miletos_figure, setp_dictmodl_sample
+from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_light_curve, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, save_miletos_figure, setp_dictmodl_sample
 import nicomedia
 import ephesos
 
@@ -140,23 +141,7 @@ def retr_timetran(gdat, nametser):
             gdat.listindxtran = retr_indxtran(gdat.listtimeconc, gdat.fitt.prio.meanpara.epocmtracomp[j], \
                                                             gdat.fitt.prio.meanpara.pericomp[j], gdat.fitt.prio.meanpara.duratrantotlcomp[j])
             gdat.numbtran[j] = len(gdat.listindxtran)
-    
-    # indices of times outside the transit for each companion
-    # probably to be deleted since gdat.listindxtimeoutt is the same as gdat.listindxtimeoutt?
-    #for b in gdat.indxdatatser:
-    #    for p in gdat.indxinst[b]:
-    #        for j in gdat.fitt.prio.indxcomp:
-    #            listindxtimetemp = []
-    #            for jj in gdat.fitt.prio.indxcomp:
-    #                if jj != j:
-    #                    listindxtimetemp.append(gdat.listindxtimetran[jj][b][p][0])
-    #            if len(listindxtimetemp) > 0:
-    #                listindxtimetemp = np.concatenate(listindxtimetemp)
-    #                listindxtimetemp = np.unique(listindxtimetemp)
-    #            else:
-    #                listindxtimetemp = np.array([])
-    #            gdat.listindxtimeoutt[j][b][p] = np.setdiff1d(np.arange(gdat.arrytser[nametser][b][p].shape[0]), listindxtimetemp)
-                
+
     # ingress and egress times
     if gdat.fitt.typemodl == 'psysdisktran':
         gdat.fracineg = np.zeros(2)
@@ -2601,11 +2586,7 @@ def plot_popl(gdat, strgpdfn):
                 
                 if not check_feature_pair_selected(strgxaxi, strgyaxi, liststrgfeatpairplot):
                     continue
-                 
-                # to be deleted
-                #for strgfeat, valu in dictpopl.items():
-                    #dicttempmerg[strgfeat] = np.concatenate([dictpopl[strgfeat][indxcompfilt[strgcuttmain]], gdat.dicterrr[strgfeat][0, :]])
-                
+
                 for strgcutt in liststrgcutt:
                     
                     # merge population with the target
@@ -2754,7 +2735,17 @@ def bdtr_wrap(gdat, b, p, y, epocmask, perimask, duramask, strgintp, strgoutp, s
 
 
 def plot_tser_mile_core(gdat, strgarry, b, p, y=None, boolcolrtran=True, boolflar=False):
-    
+    prior = getattr(getattr(gdat, 'fitt', None), 'prio', None)
+    boolcolrtran = boolcolrtran and (
+        prior is not None
+        and hasattr(prior, 'indxcomp')
+        and len(prior.indxcomp) > 0
+        and hasattr(prior, 'meanpara')
+        and hasattr(gdat, 'listindxtimetran')
+        and hasattr(gdat, 'listcolrcomp')
+        and hasattr(gdat, 'numbcyclcolrplot')
+        and (y is None or hasattr(gdat, 'listindxtimetranchun'))
+    )
     boolchun = y is not None
     
     if not boolchun and gdat.numbchun[b][p] == 1:
@@ -5877,26 +5868,6 @@ def retr_timeedge(time, lcur, timebrekregi, \
     return timeedge
 
 
-def retr_lliknegagpro(listparagpro, lcur, objtgpro):
-    '''
-    Compute the negative loglikelihood of the GP model
-    '''
-    
-    objtgpro.set_parameter_vector(listparagpro)
-    
-    return -objtgpro.log_likelihood(lcur)
-
-
-def retr_gradlliknegagpro(listparagpro, lcur, objtgpro):
-    '''
-    Compute the gradient of the negative loglikelihood of the GP model
-    '''
-    
-    objtgpro.set_parameter_vector(listparagpro)
-    
-    return -objtgpro.grad_log_likelihood(lcur)[1]
-
-
 def bdtr_tser( \
               # times in days at which the time-series data have been collected
               time, \
@@ -6402,7 +6373,14 @@ def plot_tser( \
     
     # binned data
     if timedatabind is not None:
-        axis.errorbar(timedatabind, tserdatabind, yerr=tserdatastdvbind, color='k', ls='', marker='o', ms=2)
+        plot_binned_light_curve(
+            axis,
+            timedatabind,
+            tserdatabind,
+            tserdatastdvbind,
+            color='k',
+            ms=2,
+        )
     
         if tserdatabind.ndim != 1:
             print('')
@@ -6612,42 +6590,7 @@ def plot_tser( \
         return None
 
 
-
-def fold_tser(arry, epoc, peri, boolxdattime=False, boolsort=True, phascntr=0.5, booldiag=True):
-    
-    if arry.ndim == 3:
-        time = arry[:, 0, 0]
-    elif arry.ndim == 2:
-        time = arry[:, 0]
-    else:
-        print('')
-        print('')
-        print('')
-        print('arry')
-        summgene(arry)
-        raise Exception('arry should be two or three dimensional.')
-
-    arryfold = np.empty_like(arry)
-    
-    phasinit = ((time - epoc) % peri) / peri
-    phasdiff = 0.5 - phascntr
-    xdat = (phasinit + phasdiff) % 1. - phasdiff
-    
-    if boolxdattime:
-        xdat *= peri
-    
-    if arry.ndim == 3:
-        arryfold[:, 0, 0] = xdat
-    else:
-        arryfold[:, 0] = xdat
-
-    arryfold[:, ..., 1:3] = arry[:, ..., 1:3]
-    
-    if boolsort:
-        indx = np.argsort(xdat)
-        arryfold = arryfold[indx, :]
-    
-    return arryfold
+# fold_tser is imported from tdpy and re-exported here for backward compatibility.
 
 
 def read_tesskplr_fold(pathfold, pathfoldsave, boolmaskqual=True, typeinst='TESS', strgtypelcur='PDCSAP_FLUX', boolnorm=None, liststrgtypelcursave=None):
@@ -9632,13 +9575,7 @@ def init( \
                 timeflar = tdpy.icdf_self(np.random.rand(), gdat.minmtimeconc[0], gdat.maxmtimeconc[0]) 
                 tdpy.setp_para_defa(gdat, 'true', 'timeflar%04d' % k, timeflar)
                 tdpy.setp_para_defa(gdat, 'true', 'tsclflar%04d' % k, 1.) # [1 hour]
-        
-        # probably to be deleted
-        #if gdat.booldiag:
-        #    if gdat.true.typemodl == 'CompactObjectStellarCompanion' or gdat.true.typemodl == 'PlanetarySystem' or gdat.true.typemodl == 'PlanetarySystemEmittingCompanion' or gdat.true.typemodl == 'PlanetarySystemWithTTVs':
-        #        if not hasattr(gdat.true, 'epocmtracomp'):
-        #            raise Exception('not hasattr(gdat.true, epocmtracomp')
-        
+
         # copy nominal parameters to the true parameters
         if (gdat.true.boolmodlpsys or gdat.true.typemodl == 'CompactObjectStellarCompanion') and not (gdat.boolsrchboxsperi or gdat.boolsrchoutlperi):
             for namepara in ['rrat', 'peri', 'epocmtra', 'rsma', 'cosi']:
@@ -9761,16 +9698,6 @@ def init( \
             gdat.numbenermodl = 1
             gdat.numbeneriter = gdat.numbener[p]
 
-        # to be deleted
-        #if gdat.true.boolmodlcomp and not gdat.booltargsynt:
-        #    for j in range(gdat.true.epocmtracomp.size):
-        #        for name in gdat.true.listnameparacomp[j]:
-        #            if name == 'rrat':
-        #                compprio = getattr(gdat, '%scompprio' % name)[p][j]
-        #            else:
-        #                compprio = getattr(gdat, '%scompprio' % name)[j]
-        #            setattr(gdat.true, '%scom%d' % (name, j), compprio)
-        
         dictparainpt = dict()
         for namepara in gdat.true.listnameparafull:
             dictparainpt[namepara] = getattr(gdat.true, namepara)

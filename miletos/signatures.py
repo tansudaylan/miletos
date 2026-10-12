@@ -2,25 +2,10 @@
 
 import numpy as np
 import ephesos
-import nicomedia
+import tdpy
 
 
-def compute_photometric_signatures(
-    period_days,
-    companion_mass_solar,
-    stellar_radius_solar=1.0,  # [R_Sun]
-    stellar_mass_solar=1.0,  # [M_Sun]
-    stellar_density_cgs=1.41,  # [g cm^-3]
-) -> dict[str, np.ndarray]:
-    """Return photometric amplitudes calculated by Ephesos, in ppt."""
-
-    return ephesos.evaluate_compact_object_signatures(
-        period_days,
-        companion_mass_solar,
-        stellar_radius_solar=stellar_radius_solar,
-        stellar_mass_solar=stellar_mass_solar,
-        stellar_density_cgs=stellar_density_cgs,
-    )
+compute_photometric_signatures = ephesos.evaluate_compact_object_signatures
 
 
 def derive_compact_object_features(
@@ -48,10 +33,10 @@ def derive_compact_object_features(
         stellar_radius_solar=stellar_radius_solar,
         stellar_mass_solar=stellar_mass_solar,
     )
-    semimajor_axis_solar = nicomedia.retr_smaxkepl(
+    semimajor_axis_solar = tdpy.retr_smaxkepl(
         period_days, stellar_mass_solar + companion_mass_solar
     ) * 215.0  # [R_Sun]
-    duration_hours = nicomedia.retr_duratrantotl(
+    duration_hours = tdpy.retr_duratrantotl(
         period_days,
         stellar_radius_solar / semimajor_axis_solar,
         np.zeros_like(period_days),

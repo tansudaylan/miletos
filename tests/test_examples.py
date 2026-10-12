@@ -15,6 +15,7 @@ EXAMPLE_PATHS = [REPOSITORY_PATH / 'examples' / 'run_all.py']
 EXAMPLE_PATHS.extend(sorted((REPOSITORY_PATH / 'examples').glob('*/run.py')))
 EXPECTED_NOTEBOOKS = {
     Path('examples/TOI-1233/Daylan2021.ipynb'): 'fit_daylan2021a_transits(',
+    Path('examples/TOI-1233/Daylan2021 2.ipynb'): 'main.init(',
     Path('examples/TOI-1233/JointPhotometryRadialVelocity.ipynb'):
         'run_toi1233_observation(',
     Path('examples/WASP-39b/WASP39ERS.ipynb'):
@@ -28,6 +29,7 @@ EXPECTED_NOTEBOOKS = {
 }
 NOTEBOOK_IMPORT_ALLOWLIST = {
     Path('examples/tess_transit_search/TESS_Transit_Search.ipynb'): {'numpy', 'pandas'},
+    Path('examples/WASP-39b/WASP39ERS.ipynb'): {'matplotlib', 'numpy', 'pandas', 'scipy'},
 }
 
 
@@ -38,7 +40,8 @@ def example_id(path):
 def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
-    assert len(EXAMPLE_PATHS) == 8
+    assert len(EXAMPLE_PATHS) == 9
+    assert len(EXAMPLE_PATHS) == 9
 
 
 def test_example_notebooks_use_miletos_apis():
