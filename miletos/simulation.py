@@ -62,7 +62,7 @@ def simulate_ultrasat_light_curve(
     if np.any(model_flux <= 0.0):
         raise ValueError("relative_flux_model values must be positive.")
 
-    from nicomedia import retr_noisphot
+    from tdpy import retr_noisphot
 
     noise_ppt = float(np.asarray(retr_noisphot(magnitude, 'ULTRASAT')).reshape(-1)[0])
     flux_uncertainty = noise_ppt * 1e-3 * np.sqrt(3600.0 / exposure_seconds)

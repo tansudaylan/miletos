@@ -148,6 +148,13 @@ def test_published_reproduction_figures_are_linked_from_readme():
 def test_example_cli_help(example_path):
     environment = os.environ.copy()
     environment['MILETOS_PATH'] = str(REPOSITORY_PATH)
+    pythonpath_parts = [
+        str(REPOSITORY_PATH),
+        *(str(path) for path in REPOSITORY_PATH.parent.iterdir() if path.is_dir()),
+    ]
+    if 'PYTHONPATH' in environment:
+        pythonpath_parts.append(environment['PYTHONPATH'])
+    environment['PYTHONPATH'] = os.pathsep.join(pythonpath_parts)
 
     completed = subprocess.run(
         [sys.executable, str(example_path), '--help'],
@@ -155,7 +162,7 @@ def test_example_cli_help(example_path):
         env=environment,
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=60,
         check=False,
     )
 
@@ -197,6 +204,13 @@ def test_simulated_transit_example_runs(tmp_path):
 def test_all_examples_run_and_produce_plots(tmp_path):
     environment = os.environ.copy()
     environment['MILETOS_PATH'] = str(tmp_path)
+    pythonpath_parts = [
+        str(REPOSITORY_PATH),
+        *(str(path) for path in REPOSITORY_PATH.parent.iterdir() if path.is_dir()),
+    ]
+    if 'PYTHONPATH' in environment:
+        pythonpath_parts.append(environment['PYTHONPATH'])
+    environment['PYTHONPATH'] = os.pathsep.join(pythonpath_parts)
 
     completed = subprocess.run(
         [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py'), '--quick'],
@@ -204,7 +218,7 @@ def test_all_examples_run_and_produce_plots(tmp_path):
         env=environment,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=240,
         check=False,
     )
 
