@@ -117,8 +117,81 @@ def analyze_simulated_transit(seed: int = 7) -> TransitDiagnostic:
 def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Path:
     """Plot the input, detrending stage, and phase-folded pipeline output."""
 
+    if output_path.suffix == ".html":
+        from bokeh.layouts import column
+        from bokeh.models import HoverTool
+        from bokeh.plotting import figure
+
+        from tdpy.plotting import save_bokeh_html
+
+        panels = (
+            (
+                "Input: simulated 10-minute-cadence photometry",
+                result.time_days,
+                ((1e6 * (result.observed_flux - 1.0), "Simulated measurements", "#64818A", "circle"),
+                 (1e6 * (result.baseline_flux - 1.0), "Spline baseline", "#C23B22", "line")),
+                "Time [day]",
+            ),
+            (
+                "Intermediate: transit-masked spline detrending",
+                result.time_days,
+                ((1e6 * (result.detrended_flux - 1.0), "Detrended measurements", "#64818A", "circle"),
+                 (1e6 * (result.model_flux - 1.0), "Injected Ephesos model", "#C23B22", "line")),
+                "Time [day]",
+            ),
+            (
+                f"Output: phase-folded transit, period = {result.period_days:.1f} day",
+                result.phase,
+                ((1e6 * (result.folded_flux - 1.0), "Folded measurements", "#9AA6A9", "circle"),
+                 (1e6 * (result.folded_model_flux - 1.0), "Injected Ephesos model", "#C23B22", "line")),
+                "Orbital phase",
+            ),
+        )
+        plots = []
+        for index, (title, x_values, series, x_label) in enumerate(panels):
+            plot_options = {
+                "title": title,
+                "width": 780,
+                "height": 300,
+                "sizing_mode": "stretch_width",
+                "tools": "pan,wheel_zoom,box_zoom,reset,save",
+            }
+            if index == 2:
+                plot_options["x_range"] = (-0.5, 0.5)
+            plot = figure(
+                **plot_options,
+            )
+            for y_values, label, color, glyph in series:
+                if glyph == "circle":
+                    plot.scatter(x_values, y_values, size=4, alpha=0.55, color=color,
+                                 legend_label=label)
+                else:
+                    plot.line(x_values, y_values, line_width=1.8, color=color,
+                              legend_label=label)
+            if index == 2:
+                plot.segment(
+                    result.binned_phase,
+                    1e6 * (result.binned_flux - 1.0) - 1e6 * result.binned_uncertainty,
+                    result.binned_phase,
+                    1e6 * (result.binned_flux - 1.0) + 1e6 * result.binned_uncertainty,
+                    color="black",
+                )
+                plot.scatter(result.binned_phase, 1e6 * (result.binned_flux - 1.0),
+                             size=6, color="black", legend_label="Miletos phase bins")
+            plot.xaxis.axis_label = x_label
+            plot.yaxis.axis_label = "Relative flux [ppm]"
+            plot.grid.visible = False
+            plot.legend.location = "bottom_right"
+            plot.add_tools(HoverTool(tooltips=[(x_label, "$x"), ("Relative flux [ppm]", "$y")]))
+            plots.append(plot)
+        return Path(save_bokeh_html(
+            column(*plots, sizing_mode="stretch_width"),
+            output_path,
+            title="Miletos simulated transit analysis",
+        ))
+
     if output_path.suffix not in {".png", ".pdf"}:
-        raise ValueError("output_path must end in .png or .pdf")
+        raise ValueError("output_path must end in .png, .pdf, or .html")
 
     figure, axes = plt.subplots(
         3,

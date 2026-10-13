@@ -40,8 +40,8 @@ def example_id(path):
 def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
-    assert len(EXAMPLE_PATHS) == 9
-    assert len(EXAMPLE_PATHS) == 9
+    assert len(EXAMPLE_PATHS) == 10
+    assert len(EXAMPLE_PATHS) == 10
 
 
 def test_example_notebooks_use_miletos_apis():
@@ -223,6 +223,7 @@ def test_all_examples_run_and_produce_plots(tmp_path):
     assert 'Reproduced 344 published wavelength bins' in completed.stdout
     assert 'reduced chi-squared = 1.10' in completed.stdout
     expected_names = (
+        'examples/stellar_activity/visuals/stellar_activity.png',
         'examples/simulated_transit/visuals/simulated_transit_diagnostic.png',
         'examples/nirspec_isotope_retrieval/visuals/nirspec_isotope_injection_recovery.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum.png',

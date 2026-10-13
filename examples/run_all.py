@@ -14,6 +14,10 @@ import sys
 REPOSITORY_PATH = Path(__file__).parents[1]
 QUICK_EXAMPLES = (
     (
+        'stellar_activity/run.py',
+        'examples/stellar_activity/visuals/stellar_activity',
+    ),
+    (
         'nirspec_isotope_retrieval/run.py',
         'examples/nirspec_isotope_retrieval/visuals/nirspec_isotope_injection_recovery',
     ),

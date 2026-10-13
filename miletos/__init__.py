@@ -27,6 +27,18 @@ def __getattr__(name: str) -> Any:
 		value = getattr(cheops_module, name)
 		globals()[name] = value
 		return value
+	if name in {"parse_spot_flare_parameters", "log_prior_spot_flare",
+					"log_likelihood_spot_flare", "fit_spot_flare_light_curve",
+					"select_observed_variable_stars"}:
+		activity_module = import_module('.stellar_activity', __name__)
+		value = getattr(activity_module, name)
+		globals()[name] = value
+		return value
+	if name == "run_rotation_regression_benchmark":
+		regression_module = import_module('.rotation_regression', __name__)
+		value = getattr(regression_module, name)
+		globals()[name] = value
+		return value
 	main_module = import_module('.main', __name__)
 	if name == 'main':
 		return main_module

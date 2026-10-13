@@ -32,6 +32,18 @@ def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys):
     assert f"Writing to {output_path}..." in capsys.readouterr().out
 
 
+def test_simulated_transit_diagnostic_writes_bokeh_html(tmp_path):
+    import pytest
+
+    pytest.importorskip("bokeh")
+    output_path = tmp_path / "simulated_transit_diagnostic.html"
+    result = run_simulated_transit_diagnostic(output_path)
+
+    assert result.time_days.size > 3_000
+    assert output_path.is_file()
+    assert "Input: simulated" in output_path.read_text(encoding="utf-8")
+
+
 def test_simulated_jwst_diagnostic_remains_supported(tmp_path, capsys):
     output_path = tmp_path / 'simulated_jwst_transit.pdf'
 

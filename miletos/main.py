@@ -51,7 +51,8 @@ from .sanity import (
 from .simulation import generate_ultrasat_time_series
 from .visualization import select_primary_transit_window
 from .visualization import build_abundance_component_specs, build_albg_comparison_data, build_component_sample_dict, build_feature_pair_guides, build_feature_pair_panel_meta, build_feature_pair_population_render_plan, build_feature_pair_target_render_plan, build_helium_comparison_data, build_magnitude_population_plot_data, build_occurrence_highlights, build_occurrence_rate_data, build_pcur_post, build_period_ratio_highlights, build_period_ratio_resonances, build_population_feature_plot_config, build_population_merge_data, build_population_sort_plot_data, build_psii_kdeg_data, build_psii_summary_data, build_ptem_plot_data, build_spec_data_groups, build_spec_model_data, build_total_sample_dict, check_feature_pair_selected, plot_binned_light_curve, plot_binned_rms, plot_work_tser, retr_compmodl_style, retr_pcur_binned_series, retr_pcur_component_overlay, retr_pcur_lablpara, retr_pcur_model_series, retr_pcur_raw_series, retr_pcur_sample_plot_data, retr_resi_series, retr_stdvresi_series, retr_summary_extn, retr_summary_title, save_miletos_figure, setp_dictmodl_sample
-import nicomedia
+from pergamon import catalogs as population_catalogs
+from pergamon import population_synthesis
 import ephesos
 
 """
@@ -81,7 +82,7 @@ def setp_input_companion_priors(gdat):
         setattr(gdat.nomipara, name + 'comp', values[name])
     gdat.nomipara.depttrancomp = 1e3 * values['rrat']**2
     gdat.nomipara.rratcomp = [values['rrat'].copy() for _ in gdat.indxband]
-    gdat.nomipara.duratrantotlcomp = nicomedia.retr_duratrantotl(
+    gdat.nomipara.duratrantotlcomp = tdpy.retr_duratrantotl(
         gdat.nomipara.pericomp,
         gdat.nomipara.rsmacomp,
         gdat.nomipara.cosicomp,
@@ -1269,7 +1270,7 @@ def calc_feat_alle(gdat, strgpdfn):
             print('Calculating predicted masses...')
         
         gdat.dictlist['masscomppred'] = np.full_like(gdat.dictlist['radicomp'], np.nan)
-        gdat.dictlist['masscomppred'] = nicomedia.retr_massfromradi(gdat.dictlist['radicomp'])
+        gdat.dictlist['masscomppred'] = tdpy.retr_massfromradi(gdat.dictlist['radicomp'])
         gdat.dictlist['masscomppred'] = gdat.dictlist['masscomppred']
         
         # mass used for later calculations
@@ -1288,7 +1289,7 @@ def calc_feat_alle(gdat, strgpdfn):
         gdat.dictlist['densplan'] = gdat.dictlist['masscompused'] / gdat.dictlist['radicomp']**3
 
         # escape velocity
-        gdat.dictlist['vesc'] = nicomedia.retr_vesc(gdat.dictlist['masscompused'], gdat.dictlist['radicomp'])
+        gdat.dictlist['vesc'] = tdpy.retr_vesc(gdat.dictlist['masscompused'], gdat.dictlist['radicomp'])
         
         for j in gmod.indxcomp:
             strgratiperi = 'ratiperi_%s' % gdat.liststrgcomp[j]
@@ -1299,11 +1300,11 @@ def calc_feat_alle(gdat, strgpdfn):
     
         gdat.dictlist['depttrancomp'] = 1e3 * gdat.dictlist['rratcomp']**2 # [ppt]
         # TSM
-        gdat.dictlist['tsmm'] = nicomedia.retr_tsmm(gdat.dictlist['radicomp'], gdat.dictlist['tmptplan'], \
+        gdat.dictlist['tsmm'] = tdpy.retr_tsmm(gdat.dictlist['radicomp'], gdat.dictlist['tmptplan'], \
                                                                                     gdat.dictlist['masscompused'], gdat.dictlist['radistar'], gdat.jmagsyst)
         
         # ESM
-        gdat.dictlist['esmm'] = nicomedia.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
+        gdat.dictlist['esmm'] = tdpy.retr_esmm(gdat.dictlist['tmptplan'], gdat.dictlist['tmptstar'], \
                                                                                     gdat.dictlist['radicomp'], gdat.dictlist['radistar'], gdat.kmagsyst)
         
     else:
@@ -1315,10 +1316,10 @@ def calc_feat_alle(gdat, strgpdfn):
     gdat.dictlist['omeg'] = 180. / np.pi * np.mod(np.arctan2(gdat.dictlist['esin'], gdat.dictlist['ecos']), 2 * np.pi)
     gdat.dictlist['rs2a'] = gdat.dictlist['rsmacomp'] / (1. + gdat.dictlist['rratcomp'])
     gdat.dictlist['sinw'] = np.sin(np.pi / 180. * gdat.dictlist['omeg'])
-    gdat.dictlist['imfa'] = nicomedia.retr_imfa(gdat.dictlist['cosicomp'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
+    gdat.dictlist['imfa'] = tdpy.retr_imfa(gdat.dictlist['cosicomp'], gdat.dictlist['rs2a'], gdat.dictlist['ecce'], gdat.dictlist['sinw'])
    
     # RV semi-amplitude
-    gdat.dictlist['rvelsemapred'] = nicomedia.retr_rvelsema(gdat.dictlist['pericomp'], gdat.dictlist['massstar'], \
+    gdat.dictlist['rvelsemapred'] = tdpy.retr_rvelsema(gdat.dictlist['pericomp'], gdat.dictlist['massstar'], \
                                                                         gdat.dictlist['masscomppred'], gdat.dictlist['incl'], gdat.dictlist['ecce'])
     
     ## expected Doppler beaming (DB)
@@ -1332,14 +1333,14 @@ def calc_feat_alle(gdat, strgpdfn):
     coeflidaline = 0.4
     # gravitational darkening coefficient
     coefgrda = 0.2
-    alphelli = nicomedia.retr_alphelli(coeflidaline, coefgrda)
+    alphelli = tdpy.retr_alphelli(coeflidaline, coefgrda)
     gdat.dictlist['deptelli'] = 1e3 * alphelli * gdat.dictlist['masscompused'] * np.sin(gdat.dictlist['incl'] / 180. * np.pi)**2 / \
                                                                   gdat.dictlist['massstar'] * (gdat.dictlist['radistar'] / gdat.dictlist['smax'])**3 # [ppt]
     if gdat.typeverb > 0:
         print('Calculating durations...')
                       
-    gdat.dictlist['duratranfull'] = nicomedia.retr_duratranfull(gdat.dictlist['pericomp'], gdat.dictlist['rsmacomp'], gdat.dictlist['cosicomp'], gdat.dictlist['rratcomp'])
-    gdat.dictlist['duratrantotl'] = nicomedia.retr_duratrantotl(gdat.dictlist['pericomp'], gdat.dictlist['rsmacomp'], gdat.dictlist['cosicomp'])
+    gdat.dictlist['duratranfull'] = tdpy.retr_duratranfull(gdat.dictlist['pericomp'], gdat.dictlist['rsmacomp'], gdat.dictlist['cosicomp'], gdat.dictlist['rratcomp'])
+    gdat.dictlist['duratrantotl'] = tdpy.retr_duratrantotl(gdat.dictlist['pericomp'], gdat.dictlist['rsmacomp'], gdat.dictlist['cosicomp'])
     
     gdat.dictlist['maxmdeptblen'] = 1e3 * (1. - gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 / \
                                                                     (1. + gdat.dictlist['duratranfull'] / gdat.dictlist['duratrantotl'])**2 # [ppt]
@@ -2233,11 +2234,11 @@ def plot_popl(gdat, strgpdfn):
                 dictlistplan[strgfeat][:, k] *= meanvarb
                 
         #### TSM
-        listtsmm = nicomedia.retr_tsmm(dictlistplan['radicomp'], dictlistplan['tmptplan'], dictlistplan['masscomp'], \
+        listtsmm = tdpy.retr_tsmm(dictlistplan['radicomp'], dictlistplan['tmptplan'], dictlistplan['masscomp'], \
                                                                                         dictlistplan['radistar'], dictlistplan['jmagsyst'])
 
         #### ESM
-        listesmm = nicomedia.retr_esmm(dictlistplan['tmptplan'], dictlistplan['tmptstar'], dictlistplan['radicomp'], dictlistplan['radistar'], \
+        listesmm = tdpy.retr_esmm(dictlistplan['tmptplan'], dictlistplan['tmptstar'], dictlistplan['radicomp'], dictlistplan['radistar'], \
                                                                                                                     dictlistplan['kmagsyst'])
         ## augment the 
         dictpopl['stdvtsmm'] = np.std(listtsmm, 0)
@@ -2245,7 +2246,7 @@ def plot_popl(gdat, strgpdfn):
         dictpopl['stdvesmm'] = np.std(listesmm, 0)
         dictpopl['esmm'] = np.nanmedian(listesmm, 0)
         
-        dictpopl['vesc'] = nicomedia.retr_vesc(dictpopl['masscomp'], dictpopl['radicomp'])
+        dictpopl['vesc'] = tdpy.retr_vesc(dictpopl['masscomp'], dictpopl['radicomp'])
         dictpopl['vesc0060'] = dictpopl['vesc'] / 6.
         
         objticrs = astropy.coordinates.SkyCoord(ra=dictpopl['rascstar']*astropy.units.degree, \
@@ -2313,7 +2314,7 @@ def plot_popl(gdat, strgpdfn):
                 if not np.isfinite(listperi).all() or np.where(listperi == 0)[0].size > 0:
                     liststrgstarcomp.append(strgstar)
                     continue
-                intgreso, ratiperi = nicomedia.retr_reso(listperi)
+                intgreso, ratiperi = tdpy.retr_reso(listperi)
                 
                 numbcomp = indxexarstar.size
                 
@@ -2353,7 +2354,7 @@ def plot_popl(gdat, strgpdfn):
         deptwasp0107 = arry[:, 1]
         deptstdvwasp0107 = arry[:, 2]
         
-        dictheli = build_helium_comparison_data(gdat, nicomedia.retr_scalheig)
+        dictheli = build_helium_comparison_data(gdat, tdpy.retr_scalheig)
         for valscen in dictheli['listscenario']:
             if valscen['name'] == 'wasp107':
                 print('WASP-107')
@@ -4797,7 +4798,7 @@ def srch_boxsperi(arry, \
                 epocmtracomp = [dictboxsperioutp['epoc'][j]]
                 radicomp = [dictfact['rsre'] * np.sqrt(dictboxsperioutp['depttrancomp'][j] * 1e-3)]
                 cosicomp = [0]
-                rsmacomp = [nicomedia.retr_rsmacomp(dictboxsperioutp['pericomp'][j], dictboxsperioutp['duracomp'][j], cosicomp[0])]
+                rsmacomp = [tdpy.retr_rsmacomp(dictboxsperioutp['pericomp'][j], dictboxsperioutp['duracomp'][j], cosicomp[0])]
                     
                 for b in indxlevlrebn:
                     ## evaluate model at all resolutions
@@ -5019,7 +5020,7 @@ def srch_boxsperi(arry, \
                     pericomp = [dictboxsperioutp['peri'][j]]
                     epocmtracomp = [dictboxsperioutp['epoc'][j]]
                     cosicomp = [0]
-                    rsmacomp = [nicomedia.retr_rsmacomp(dictboxsperioutp['peri'][j], dictboxsperioutp['dura'][j], cosicomp[0])]
+                    rsmacomp = [tdpy.retr_rsmacomp(dictboxsperioutp['peri'][j], dictboxsperioutp['dura'][j], cosicomp[0])]
                     rratcomp = [np.sqrt(dictboxsperioutp['ampl'][j] * 1e-3)]
                     
                     if booldiag:
@@ -7505,7 +7506,7 @@ def init( \
     
     if gdat.toiitarg is not None or gdat.ticitarg is not None \
                                                                and (gdat.boolmodl and gdat.fitt.boolmodlpsys or gdat.boolsimusome and gdat.true.boolmodlpsys):
-        gdat.dicttoii = nicomedia.retr_dicttoii()
+        gdat.dicttoii = population_catalogs.retr_dicttoii()
 
     if gdat.boolfitt:
         # model
@@ -7525,7 +7526,7 @@ def init( \
         
         # check if this TIC is a TOI
         if gdat.fitt.boolmodlpsys or gdat.boolsimusome and gdat.true.boolmodlpsys:
-            gdat.toiitarg = nicomedia.retr_toiitici(gdat.ticitarg, typeverb=gdat.typeverb)
+            gdat.toiitarg = population_catalogs.retr_toiitici(gdat.ticitarg, typeverb=gdat.typeverb)
 
         gdat.strgmast = 'TIC %d' % gdat.ticitarg
 
@@ -7694,7 +7695,7 @@ def init( \
     
     ## NASA Exoplanet Archive
     if gdat.boolplotpopl:
-        gdat.dictexar = nicomedia.retr_dictexar(strgelem='comp', typeverb=gdat.typeverb)
+        gdat.dictexar = population_catalogs.retr_dictexar(strgelem='comp', typeverb=gdat.typeverb)
     
     if gdat.strgclus is None:
         gdat.pathclus = gdat.pathbase
@@ -7770,7 +7771,7 @@ def init( \
         # determine magnitudes
         if hasattr(gdat.true, 'distsyst') and hasattr(gdat.true, 'tmptstar') and hasattr(gdat.true, 'radistar'):
             
-            dictfluxband, _ = nicomedia.retr_dictfluxband(gdat.dicttrue['tmptstar'], gdat.liststrgband)
+            dictfluxband, _ = tdpy.retr_dictfluxband(gdat.dicttrue['tmptstar'], gdat.liststrgband)
 
     if gdat.strgtarg == '' or gdat.strgtarg is None or gdat.strgtarg == 'None' or len(gdat.strgtarg) == 0:
         raise Exception('')
@@ -8706,7 +8707,7 @@ def init( \
             else:
                 dictnicoinpt = dict()
 
-            gdat.dictnico = nicomedia.retr_dictpoplstarcomp( \
+            gdat.dictnico = population_synthesis.retr_dictpoplstarcomp( \
                                                        numbsyst=1, \
                                                        typesyst=gdat.true.typemodl, \
                                                        typepoplsyst='SyntheticPopulation', \
@@ -8730,7 +8731,7 @@ def init( \
             print('gdat.strgexar')
             print(gdat.strgexar)
             
-        gdat.dictexartarg = nicomedia.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp', typeverb=gdat.typeverb)
+        gdat.dictexartarg = population_catalogs.retr_dictexar(strgexar=gdat.strgexar, strgelem='comp', typeverb=gdat.typeverb)
         
         if gdat.dictexartarg is not None and gdat.dictexartarg['pericomp'][0].size > 20:
             print('gdat.strgmast')
@@ -8750,7 +8751,7 @@ def init( \
     
     # read TOI catalog from ExoFOP
     if gdat.boolexof:
-        gdat.dicttoiitarg = nicomedia.retr_dicttoii(toiitarg=gdat.toiitarg)
+        gdat.dicttoiitarg = population_catalogs.retr_dicttoii(toiitarg=gdat.toiitarg)
         
     if gdat.boolsimusome:
         # type of simulation parameters for companions
@@ -9622,7 +9623,7 @@ def init( \
                                 raise Exception('gdat.listarrytser[raww][b][p][y].shape[0] != gdat.true.listtime[b][p][y].size')
                         
                         # noise per cadence
-                        nois = nicomedia.retr_noisphot(gdat.dictmagtsyst[gdat.liststrginst[b][p]], gdat.liststrginst[b][p]) * np.sqrt(3600. / gdat.true.timeexpo[b][p]) # [ppt]
+                        nois = tdpy.retr_noisphot(gdat.dictmagtsyst[gdat.liststrginst[b][p]], gdat.liststrginst[b][p]) * np.sqrt(3600. / gdat.true.timeexpo[b][p]) # [ppt]
                         
                         gdat.listarrytser['Raw'][b][p][y][:, :, 2] = 1e-3 * nois
                         
@@ -9737,9 +9738,9 @@ def init( \
     else:
         numbcompoutp = 0
     if gdat.liststrgcomp is None:
-        gdat.liststrgcomp = nicomedia.retr_liststrgcomp(numbcompoutp)
+        gdat.liststrgcomp = tdpy.retr_liststrgcomp(numbcompoutp)
     if gdat.listcolrcomp is None:
-        gdat.listcolrcomp = nicomedia.retr_listcolrcomp(numbcompoutp)
+        gdat.listcolrcomp = tdpy.retr_listcolrcomp(numbcompoutp)
     
     # sampling rate (cadence)
     ## temporal
@@ -10639,7 +10640,7 @@ def init( \
                 print(gdat.fitt.prio.meanpara.cosicomp)
                 raise Exception('')
 
-        gdat.fitt.prio.meanpara.duratrantotlcomp = nicomedia.retr_duratrantotl(gdat.fitt.prio.meanpara.pericomp, gdat.fitt.prio.meanpara.rsmacomp, gdat.fitt.prio.meanpara.cosicomp)
+        gdat.fitt.prio.meanpara.duratrantotlcomp = tdpy.retr_duratrantotl(gdat.fitt.prio.meanpara.pericomp, gdat.fitt.prio.meanpara.rsmacomp, gdat.fitt.prio.meanpara.cosicomp)
         if gdat.booldiag:
             if (gdat.fitt.prio.meanpara.duratrantotlcomp == 0).any():
                 print('')

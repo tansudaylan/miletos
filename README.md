@@ -1,7 +1,7 @@
 # Miletos
 
 ## Purpose
-Miletos takes time-domain observations through detrending, period searches, and Bayesian forward modeling. The aim is to connect the measured flux, velocities, or spectra to the astrophysical model we want to test.
+I built Miletos to take time-domain observations through detrending, period searches, and Bayesian forward modeling. The aim is to connect measured flux, velocities, or spectra to the astrophysical model I want to test.
 
 ## Research use
 
@@ -19,6 +19,24 @@ These examples span planet discovery, phase-curve analysis, and candidate vettin
 ## Scope
 Miletos detrends observational time series, searches for periodic signals, phase-folds and bins measurements with uncertainty propagation, fits forward models, and produces plots and summary products.
 
+## Stellar activity analysis
+
+Hattusa's stellar-variability analysis now lives in `miletos.stellar_activity`, using `ephesos.evaluate_spot_flare_model` for every model evaluation. `parse_spot_flare_parameters` reads six stellar entries followed by one block per spot and flare. The stellar entries are the two limb-darkening coefficients, equatorial period [day], inclination [deg], relative period shear, and flux offset. Each spot contributes latitude [deg], longitude [deg], and radius ratio, with optional Gaussian peak time and width [day]. Each flare contributes peak time [day], amplitude, rise time [day], and decay time [day]. The corrected parser also handles zero spots and multiple flares.
+
+`log_likelihood_spot_flare` preserves the independent Gaussian likelihood for supplied flux uncertainties, omitting parameter-independent constants. `log_prior_spot_flare` preserves descending spot-radius ordering. `fit_spot_flare_light_curve` performs a bounded local least-squares fit for specified component counts and supplied initial parameters. It does not sample a posterior or select the number of spots. Spot geometry can be degenerate, and a local fit does not establish a unique stellar surface.
+
+```bash
+python examples/stellar_activity/run.py --typefileplot png
+```
+
+![Seeded synthetic flare data and Miletos fit](examples/stellar_activity/visuals/stellar_activity.png)
+
+The example spans three days with a flare at day 1.5, peak amplitude 0.03, rise time 0.06 day, decay time 0.3 day, and independent Gaussian flux uncertainty 0.0003. It constrains the flux offset and flare parameters. There are no spots, so the curve contains no information about stellar rotation or spot geometry. Models containing spots use Ephesos's native disk integration with the standard installation.
+
+`select_observed_variable_stars` retains the TESS-sector selection from Hattusa's catalog script. It requires a catalog and aligned zero-or-one coverage rows, with columns representing consecutive sectors starting at Sector 1. The default includes Sector 40 and later. It does not perform a positional cross-match or read machine-specific catalog files.
+
+`run_rotation_regression_benchmark` retains the random-forest period experiment under the optional `rotation_ml` extra. It generates explicitly synthetic sinusoidal curves with periods from 1 to 10 days, independent white noise, and ten random sinusoidal noise components. Training and test data receive the same noise prescription, and predictions and errors are returned only for held-out targets. These sampled noise components are a toy construction, not a continuous-time stellar-noise model. The unfinished convolutional-network placeholder was not transferred. The original Hattusa MIT notice is retained in `LICENSE.Hattusa`.
+
 ## Installation
 
 ```bash
@@ -34,7 +52,10 @@ Set `MILETOS_PATH` to the repository root and run the deterministic simulated-tr
 
 ```bash
 python examples/simulated_transit/run.py --typefileplot png
+python examples/simulated_transit/run.py --bokeh
 ```
+
+Install `python -m pip install -e '.[bokeh]'` to write the interactive three-stage transit plot as standalone HTML.
 
 The example injects an Ephesos transit into a deterministic simulated light curve, then uses Miletos to mask the transits during spline detrending, phase-fold the result, and calculate uncertainty-aware phase bins. It writes `examples/simulated_transit/visuals/simulated_transit_diagnostic.png`; use `--typefileplot pdf` for a vector figure.
 
@@ -81,7 +102,6 @@ example workflow:
 - [Simulated transit](examples/simulated_transit/SimulatedTransit.ipynb)
 - [Joint TESS and PFS analysis of TOI-1233](examples/TOI-1233/JointPhotometryRadialVelocity.ipynb)
 - [TOI-1233 transits in the context of Daylan et al. (2021a)](examples/TOI-1233/Daylan2021.ipynb)
-- [TOI-1233 published-prior setup from Daylan et al. (2021a)](examples/TOI-1233/Daylan2021%202.ipynb)
 - [TOI-1233 published-prior setup from Daylan et al. (2021a)](examples/TOI-1233/Daylan2021%202.ipynb)
 - [Daylan et al. (2021b) TESS phase curve of WASP-121 b](examples/WASP-121b/Daylan2021b.ipynb)
 - [JWST ERS analysis of WASP-39b](examples/WASP-39b/WASP39ERS.ipynb)
@@ -140,9 +160,9 @@ python examples/TOI-1233/run.py
 
 The default run writes the transit-timing-variation figures to `examples/TOI-1233/PlanetarySystemWithTTVs/visuals/`. Run `python examples/TOI-1233/run.py --model PlanetarySystem` to produce the standard planetary-system alternative. Observational inputs remain under `$MILETOS_PATH/data/TOI-1233/`.
 
-The [2021a notebook](examples/TOI-1233/Daylan2021.ipynb) reproduces the four-planet TESS fit from our paper with the cached PCAT posterior when available. It reports posterior radii and periods alongside the published values, then displays the phase-folded transits, parameter comparison, and radius posterior. Run `python examples/TOI-1233/run.py --reproduce-daylan2021a --reuse` to regenerate those figures without resampling. Omit `--reuse` to run four chains with 250,000 burn-in and 150,000 retained samples per chain. This is a Miletos/PCAT reproduction using the published transit data and comparison values, not the original allesfitter implementation.
+The [2021a notebook](examples/TOI-1233/Daylan2021.ipynb) reproduces the four-planet TESS fit from the published analysis with the cached PCAT posterior when available. It reports posterior radii and periods alongside the published values, then displays the phase-folded transits, parameter comparison, and radius posterior. Run `python examples/TOI-1233/run.py --reproduce-daylan2021a --reuse` to regenerate those figures without resampling. Omit `--reuse` to run four chains with 250,000 burn-in and 150,000 retained samples per chain. This is a Miletos/PCAT reproduction using the published transit data and comparison values, not the original allesfitter implementation.
 
-The [2021b notebook](examples/WASP-121b/Daylan2021b.ipynb) reproduces the TESS Sector 7 phase-curve fit with Miletos and PCAT. It uses SPOC SAP photometry after transit-masked, orbit-wise cubic-spline detrending. Its summary compares the dayside modulation amplitude, nightside flux, phase shift, and brightness temperatures directly with the published values. The published −0.022-day shift is converted to degrees for comparison with the PCAT phase parameter. The notebook displays the light-curve fit, phase curve, posterior, and temperature comparison. Run `python examples/WASP-121b/run.py --reuse` to regenerate the fit figures from the saved posterior, or omit `--reuse` for four chains with 100,000 burn-in and 100,000 retained samples per chain. This reproduces the photometric phase-curve analysis, not the external atmospheric retrieval in our paper.
+The [2021b notebook](examples/WASP-121b/Daylan2021b.ipynb) reproduces the TESS Sector 7 phase-curve fit with Miletos and PCAT. It uses SPOC SAP photometry after transit-masked, orbit-wise cubic-spline detrending. Its summary compares the dayside modulation amplitude, nightside flux, phase shift, and brightness temperatures directly with the published values. The published −0.022-day shift is converted to degrees for comparison with the PCAT phase parameter. The notebook displays the light-curve fit, phase curve, posterior, and temperature comparison. Run `python examples/WASP-121b/run.py --reuse` to regenerate the fit figures from the saved posterior, or omit `--reuse` for four chains with 100,000 burn-in and 100,000 retained samples per chain. This reproduces the photometric phase-curve analysis, not the external atmospheric retrieval in the published paper.
 
 The [WD 1856 b](examples/WD1856b/run.py) and [TRAPPIST-1](examples/TRAPPIST-1/run.py) examples inspect observed TESS light curves with Miletos, without fitting by default. These observational examples require access to the corresponding public TESS products; WD 1856 b also requests orbital priors from the NASA Exoplanet Archive. The broad configuration catalog is maintained separately as a private `tdgu` project.
 
@@ -166,7 +186,7 @@ data = miletos.simulate_ultrasat_light_curve(
 )
 ```
 
-The default cadence is 300 seconds with a 240-second exposure; both can be overridden. The uncertainty uses Nicomedia's ULTRASAT magnitude-dependent noise model. To generate data inside `miletos.init`, use `listlablinst=[['ULTRASAT'], []]`, `liststrgtypedata=[['simutargpartsynt'], []]`, and `dictsimu={'ULTRASAT': {'start_jd': 2463000.0, 'duration_days': 3.0, 'cadence_seconds': 300.0, 'exposure_seconds': 240.0}}` with a target identifier or coordinates and its source model in `dicttrue`. For systems without NASA Exoplanet Archive priors, set `typepriocomp='inpt'` and provide the companion-prior arrays.
+The default cadence is 300 seconds with a 240-second exposure; both can be overridden. The uncertainty uses TDpy's ULTRASAT magnitude-dependent noise model. To generate data inside `miletos.init`, use `listlablinst=[['ULTRASAT'], []]`, `liststrgtypedata=[['simutargpartsynt'], []]`, and `dictsimu={'ULTRASAT': {'start_jd': 2463000.0, 'duration_days': 3.0, 'cadence_seconds': 300.0, 'exposure_seconds': 240.0}}` with a target identifier or coordinates and its source model in `dicttrue`. For systems without NASA Exoplanet Archive priors, set `typepriocomp='inpt'` and provide the companion-prior arrays.
 
 
 ## Data gathering
@@ -206,15 +226,19 @@ The TESS Faint-star Search reported 1,617 TOIs from 14,849,252 Primary Mission s
 
 The [TIC 38455598.1 exocomet-candidate example](examples/TIC38455598_exocomet/run.py) runs QLP FaintStar BLS vetting across Sectors 8, 35, 62, 89, and 99, fits a linear ephemeris to the recurrent Sector 8, 62, and 89 events, and compares Ephesos opaque-disk and trailing dust-tail models. Run it with `MILETOS_PATH` set to this repository and `--offline` to use cached QLP files. The dust-tail model is phenomenological and does not establish an exocomet detection.
 
+### Rubin Data Preview transit search
+
+`miletos.rubin_transit_search` can query one object's forced photometry from Data Preview 1 or Data Preview 2 through an authenticated Rubin Science Platform TAP service. `prepare_rubin_light_curve()` applies the flux-quality flags, converts visit times to barycentric Julian dates in the TDB time scale, and normalizes each filter by its median flux. `search_rubin_target()` ranks repeating-transit BLS candidates independently by filter and requires at least three observed transits. Its returned candidates are marked `unvetted`. This workflow does not yet provide transit vetting or survey-completeness estimates. The Rubin client is available only inside an authenticated environment with `lsst.rsp` installed.
+
 
 ## Model
-Miletos is inherently a Bayesian framework that takes fair samples from the posterior probability distribution of the forward model. The suite of forward models is obtained via [Ephesos](https://github.com/tansudaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
+Miletos uses Bayesian forward models and PCAT to sample posterior distributions under the configured priors and likelihoods. Sampling adequacy depends on the analysis, so check convergence rather than assuming every run has converged. The suite of forward models is obtained via [Ephesos](https://github.com/tansudaylan/ephesos). These include potentially flaring or spotted stars with stellar, compact, or planetary companions; and exploding stars with companions.
 
 Miletos allows the user to marginalize over the model parameters, including those that characterize limb darkening using an parametrization that is efficient to sample from (Kipping 2013).
 
 
 ### red noise
-Data collected in the real Universe, unlike many of our simulations, contain features that are not drawn from, and hence cannot be explained by, our fitting models. This requires a prescription for modeling unknown components in a way that is minimally degenerate with the signal of interest. Miletos uses Gaussian Processes (GP) as implemented in [celerite](https://github.com/dfm/celerite) (Foreman-Mackey et al. 2017) to model the baseline of the time-series data to account for systematics in the form of red noise.
+Real data, unlike many simulations I run, contain features that my fitting models do not explain. I use Gaussian Processes (GP), as implemented in [celerite](https://github.com/dfm/celerite) (Foreman-Mackey et al. 2017), to model time-series baselines and red-noise systematics with minimal degeneracy against the signal of interest.
 
 
 ### priors

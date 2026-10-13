@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
+from tdpy.numerics import grid_quantiles
 from tdpy.verbosity import print
 
 from .tess_transit_survey import (
@@ -202,11 +203,7 @@ def estimate_survey_occurrence(
     ])
     log_probability = logsumexp(log_probability_draws, axis=0) - np.log(len(false_positive_draws))
     probability = np.exp(log_probability - np.max(log_probability))
-    probability /= np.trapz(probability, occurrence_grid)
-    cumulative = np.concatenate(([0.0], np.cumsum(
-        0.5 * (probability[1:] + probability[:-1]) * np.diff(occurrence_grid)
-    )))
-    credible_interval = np.interp([0.16, 0.5, 0.84], cumulative, occurrence_grid)
+    credible_interval = grid_quantiles(occurrence_grid, probability, [0.16, 0.5, 0.84])
     return {
         "searched_targets": int(len(searched)),
         "detections": int(searched["detection"].sum()),

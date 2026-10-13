@@ -26,19 +26,21 @@ dependencies = [
   "ephesos",
   "gputil",
   "h5py",
-  "nicomedia",
   "numba",
   "numpy",
   "pandas",
   "pcat",
+  "pergamon",
   "scipy",
   "tdpy",
   "tqdm"
 ]
 
 [project.optional-dependencies]
+bokeh = ["bokeh>=3.4"]
 photometry = ["lygos"]
 cheops = ["dace-query>=3.0"]
+rotation_ml = ["scikit-learn"]
 
 [tool.setuptools.packages.find]
 include = ["miletos*"]
