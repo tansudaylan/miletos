@@ -86,12 +86,24 @@ def download_wasp39_ers_products(refresh: bool = False) -> dict[str, Path]:
 
     data_path = get_wasp39_ers_data_path()
     archive_path = data_path / WASP39_ARCHIVE_NAME
+    package_data_archive = (
+        Path(__file__).resolve().parents[1]
+        / "data"
+        / "WASP-39"
+        / "ERS_G395H_Alderson2023"
+        / WASP39_ARCHIVE_NAME
+    )
     if refresh or not archive_path.is_file():
         data_path.mkdir(parents=True, exist_ok=True)
-        print(f"Reading from {WASP39_ARCHIVE_URL}...")
-        print(f"Writing to {archive_path}...")
-        with urlopen(WASP39_ARCHIVE_URL) as response, archive_path.open("wb") as output:
-            shutil.copyfileobj(response, output)
+        if not refresh and package_data_archive.is_file():
+            print(f"Reading from {package_data_archive}...")
+            print(f"Writing to {archive_path}...")
+            shutil.copyfile(package_data_archive, archive_path)
+        else:
+            print(f"Reading from {WASP39_ARCHIVE_URL}...")
+            print(f"Writing to {archive_path}...")
+            with urlopen(WASP39_ARCHIVE_URL) as response, archive_path.open("wb") as output:
+                shutil.copyfileobj(response, output)
 
     product_paths = {
         name: data_path / relative_path for name, relative_path in WASP39_PRODUCTS.items()

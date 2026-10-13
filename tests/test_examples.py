@@ -144,10 +144,10 @@ def test_published_reproduction_figures_are_linked_from_readme():
         assert relative_path in readme, relative_path
 
 
-@pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)
-def test_example_cli_help(example_path):
+def _example_environment(path_override=None):
     environment = os.environ.copy()
-    environment['MILETOS_PATH'] = str(REPOSITORY_PATH)
+    if path_override is not None:
+        environment['MILETOS_PATH'] = str(path_override)
     pythonpath_parts = [
         str(REPOSITORY_PATH),
         *(str(path) for path in REPOSITORY_PATH.parent.iterdir() if path.is_dir()),
@@ -155,6 +155,12 @@ def test_example_cli_help(example_path):
     if 'PYTHONPATH' in environment:
         pythonpath_parts.append(environment['PYTHONPATH'])
     environment['PYTHONPATH'] = os.pathsep.join(pythonpath_parts)
+    return environment
+
+
+@pytest.mark.parametrize('example_path', EXAMPLE_PATHS, ids=example_id)
+def test_example_cli_help(example_path):
+    environment = _example_environment(REPOSITORY_PATH)
 
     completed = subprocess.run(
         [sys.executable, str(example_path), '--help'],
@@ -171,8 +177,7 @@ def test_example_cli_help(example_path):
 
 
 def test_simulated_transit_example_runs(tmp_path):
-    environment = os.environ.copy()
-    environment['MILETOS_PATH'] = str(tmp_path)
+    environment = _example_environment(tmp_path)
 
     completed = subprocess.run(
         [
@@ -202,15 +207,7 @@ def test_simulated_transit_example_runs(tmp_path):
 
 
 def test_all_examples_run_and_produce_plots(tmp_path):
-    environment = os.environ.copy()
-    environment['MILETOS_PATH'] = str(tmp_path)
-    pythonpath_parts = [
-        str(REPOSITORY_PATH),
-        *(str(path) for path in REPOSITORY_PATH.parent.iterdir() if path.is_dir()),
-    ]
-    if 'PYTHONPATH' in environment:
-        pythonpath_parts.append(environment['PYTHONPATH'])
-    environment['PYTHONPATH'] = os.pathsep.join(pythonpath_parts)
+    environment = _example_environment(tmp_path)
 
     completed = subprocess.run(
         [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py'), '--quick'],
@@ -245,14 +242,17 @@ def test_all_examples_run_and_produce_plots(tmp_path):
 
 
 def test_run_all_lists_observational_targets():
+    environment = _example_environment()
     completed = subprocess.run(
         [sys.executable, str(REPOSITORY_PATH / 'examples' / 'run_all.py'), '--list'],
         cwd=REPOSITORY_PATH,
+        env=environment,
         capture_output=True,
         text=True,
         timeout=30,
         check=False,
     )
+
 
     listed = completed.stdout.splitlines()
     assert completed.returncode == 0, completed.stderr

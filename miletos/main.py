@@ -986,34 +986,6 @@ def retr_llik_spec(para, gdat):
     
     return llik
 
-def get_color(color):
-
-    if isinstance(color, tuple) and len(color) == 3: # already a tuple of RGB values
-        return color
-
-    import matplotlib.colors as mplcolors
-    
-    if color == 'r':
-        color = 'red'
-    if color == 'g':
-        color = 'green'
-    if color == 'y':
-        color = 'yellow'
-    if color == 'c':
-        color = 'cyan'
-    if color == 'm':
-        color = 'magenta'
-    if color == 'b':
-        color = 'blue'
-    if color == 'o':
-        color = 'orange'
-    hexcolor = mplcolors.cnames[color]
-
-    hexcolor = hexcolor.lstrip('#')
-    lv = len(hexcolor)
-    
-    return tuple(int(hexcolor[i:i + lv // 3], 16)/255. for i in range(0, lv, lv // 3)) # tuple of rgb values
-
 
 def plot_pser_mile( \
               gdat, \
