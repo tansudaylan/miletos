@@ -1,7 +1,7 @@
 # Miletos
 
 ## Purpose
-I built Miletos to take time-domain observations through detrending, period searches, and Bayesian forward modeling. The aim is to connect measured flux, velocities, or spectra to the astrophysical model I want to test.
+I use Miletos to take time-domain observations through detrending, period searches, and Bayesian forward modeling. A dip, a wobble, or a changing spectrum starts the question. The work is figuring out which model can explain the measurements and which assumptions are doing the heavy lifting.
 
 ## Research use
 
@@ -17,7 +17,7 @@ Miletos has been used in research associated with both Daylan et al. (2021a) and
 These examples span planet discovery, phase-curve analysis, and candidate vetting. The maintained notebooks below make the Miletos analyses reproducible; they do not replace the original papers' published fits or claim that Miletos was the primary fitting package where another package was used.
 
 ## Scope
-Miletos detrends observational time series, searches for periodic signals, phase-folds and bins measurements with uncertainty propagation, fits forward models, and produces plots and summary products.
+The workflow detrends time series, searches for periodic signals, phase-folds and bins measurements with uncertainty propagation, and fits forward models. I keep the plots and intermediate products close to the analysis so I can inspect what happened to the data at each step.
 
 ## Stellar activity analysis
 
@@ -330,22 +330,22 @@ Here is an example usage of Miletos for analyzing the TESS data on an ultra-hot 
 
 ```
 def cnfg_WASP0121():
-    
+
     # a string that will appear as the base of the file names
     strgtarg = 'wasp0121'
-    
-    # a string that will be used to search for data on MAST 
+
+    # a string that will be used to search for data on MAST
     strgmast = 'WASP-121'
-    
+
     # a string for labeling the target in the plots
     labltarg = strgmast
-    
+
     # a string indicating the TOI number for querying initial conditions
     strgtoii = '495.01'
-    
+
     # also do a phase curve analysis
     boolphascurv = True
-    
+
     # call Miletos
     Miletos.main( \
                  strgtarg=strgtarg, \
