@@ -12,6 +12,7 @@ from urllib.request import urlopen
 
 import numpy as np
 from scipy.optimize import brentq
+from tdpy.spectral import blackbody_flux_wavelength
 
 from .paths import get_data_path
 
@@ -42,9 +43,8 @@ def retr_tess_response():
 def retr_band_planck(temperature, wavelength, response):
     """Photon-weighted Planck intensity integrated over a response curve [arbitrary units]."""
     temperature = np.atleast_1d(np.asarray(temperature, dtype=float))
-    exponent = PLANCK * LIGHT_SPEED / (wavelength[None, :] * BOLTZMANN * temperature[:, None])
-    # photon-counting detectors weight the energy intensity by wavelength
-    intensity = wavelength[None, :]**-4 / np.expm1(exponent)
+    surface_flux = blackbody_flux_wavelength(temperature[:, None], wavelength[None, :] * 1e6)
+    intensity = surface_flux * wavelength[None, :] / (2.0 * np.pi * PLANCK * LIGHT_SPEED**2 * 1e-3)
     return np.trapezoid(intensity * response[None, :], wavelength, axis=1)
 
 

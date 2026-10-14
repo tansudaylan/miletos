@@ -81,6 +81,35 @@ def test_merge_removes_duplicate_cadences_and_orders_sectors():
     assert merged["sector"].tolist() == [1, 1, 2]
 
 
+def test_target_search_plot_reuses_shared_orbital_phase(tmp_path, monkeypatch):
+    from importlib import import_module
+    from unittest.mock import Mock
+    import matplotlib.pyplot as plt
+    from tdpy.exoplanet import orbital_phase
+
+    search = import_module("miletos.tess_transit_search")
+    shared_phase = Mock(wraps=orbital_phase)
+    monkeypatch.setattr(search, "orbital_phase", shared_phase)
+    time = np.array([-3.0, -0.1, 0.0, 0.1, 1.5, 3.0])  # [day]
+    curve = pd.DataFrame({
+        "time_btjd": time, "flux": np.ones(time.size),
+        "flux_error": np.full(time.size, 0.001),
+    })
+    candidate = {
+        "period_days": 3.0, "transit_time_days": 0.0, "duration_days": 0.2,  # [day]
+        "depth": 0.01, "depth_snr": 10.0, "disposition": "candidate",
+    }
+    path = search.plot_target_search(curve, candidate, tmp_path / "target.png")
+    shared_phase.assert_called_once()
+    arguments, keywords = shared_phase.call_args
+    np.testing.assert_array_equal(arguments[0], time)
+    assert arguments[1:] == (3.0, 0.0)
+    assert keywords == {"center": 0.0}
+    pixels = plt.imread(path)
+    assert pixels.shape[0] > 100 and pixels.shape[1] > 100
+    assert np.ptp(pixels[..., :3]) > 0.5
+
+
 def test_tess_search_reports_flags_and_inverted_control():
     time = np.arange(0.0, 30.0, 0.02)  # [day]
     period = 3.0  # [day]

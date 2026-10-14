@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
+from tdpy.exoplanet import orbital_phase
 from tdpy.numerics import grid_quantiles
 from tdpy.verbosity import print
 
@@ -355,7 +356,7 @@ def plot_target_search(light_curve: pd.DataFrame, result: dict, output_path: str
     period = float(result["period_days"])
     epoch = float(result["transit_time_days"])
     duration = float(result["duration_days"])
-    phase = ((time - epoch + period / 2.0) % period) / period - 0.5
+    phase = orbital_phase(time, period, epoch, center=0.0)
     order = np.argsort(phase)
     phase_model = np.linspace(-0.5, 0.5, 1000)
     model_flux = np.ones_like(phase_model)
