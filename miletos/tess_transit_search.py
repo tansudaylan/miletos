@@ -11,9 +11,8 @@ matplotlib.use("agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.special import logsumexp
 from tdpy.exoplanet import orbital_phase
-from tdpy.numerics import grid_quantiles
+from tdpy.numerics import grid_quantiles, logmeanexp
 from tdpy.verbosity import print
 
 from .tess_transit_survey import (
@@ -202,7 +201,7 @@ def estimate_survey_occurrence(
         )
         for false_positive_draw in false_positive_draws
     ])
-    log_probability = logsumexp(log_probability_draws, axis=0) - np.log(len(false_positive_draws))
+    log_probability = logmeanexp(log_probability_draws, axis=0)
     probability = np.exp(log_probability - np.max(log_probability))
     credible_interval = grid_quantiles(occurrence_grid, probability, [0.16, 0.5, 0.84])
     return {

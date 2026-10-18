@@ -150,14 +150,9 @@ def retr_lcur_sector7(example_path, cadebins=10.):
 
 def retr_matrblin(time, indxorbt):
     """Quadratic baseline basis per TESS orbit, one set of columns per orbit."""
-    columns = []
-    for k in np.unique(indxorbt):
-        indx = indxorbt == k
-        timescal = np.zeros_like(time)
-        timescal[indx] = (time[indx] - time[indx].mean()) / np.ptp(time[indx])
-        for ordr in range(3):
-            columns.append(np.where(indx, timescal**ordr, 0.))
-    return np.column_stack(columns)
+    from tdpy.numerics import grouped_polynomial_design_matrix
+
+    return grouped_polynomial_design_matrix(time, indxorbt, degree=2, normalize=True)
 
 
 def retr_modl(values, time, timeexpo=None):

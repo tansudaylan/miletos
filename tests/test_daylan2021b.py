@@ -6,6 +6,37 @@ import pytest
 from miletos import daylan2021b
 
 
+@pytest.mark.parametrize("normalized", [False, True])
+def test_reproduction_baselines_reuse_shared_polynomials(monkeypatch, normalized):
+    from unittest.mock import Mock
+    from miletos import daylan2021a
+    from tdpy import numerics
+
+    time = np.array([2458491.0, 2458498.0, 2458491.2, 2458498.7, 2458491.8, 2458499.0])  # [BJD]
+    groups = np.array([7, 2, 7, 2, 7, 2])
+    original_time, original_groups = time.copy(), groups.copy()
+    columns = []
+    for group in np.unique(groups):
+        selected = groups == group
+        if normalized:
+            centered = np.zeros_like(time)
+            centered[selected] = (time[selected] - time[selected].mean()) / np.ptp(time[selected])
+            for power in range(3):
+                columns.append(np.where(selected, centered**power, 0.))
+        else:
+            centered = np.where(selected, time - time[selected].mean(), 0.)
+            columns += [selected.astype(float), centered]
+    shared = Mock(wraps=numerics.grouped_polynomial_design_matrix)
+    monkeypatch.setattr(numerics, 'grouped_polynomial_design_matrix', shared)
+    module = daylan2021b if normalized else daylan2021a
+    matrix = module.retr_matrblin(time, groups)
+    shared.assert_called_once()
+    assert shared.call_args.kwargs == ({'degree': 2, 'normalize': True} if normalized else {})
+    np.testing.assert_array_equal(matrix, np.column_stack(columns))
+    np.testing.assert_array_equal(time, original_time)
+    np.testing.assert_array_equal(groups, original_groups)
+
+
 def test_sector7_sap_loader_corrects_cached_time_offset_and_detrends_orbits(tmp_path):
     example_path = tmp_path / 'examples' / 'WASP-121b'
     data_path = example_path / 'data'

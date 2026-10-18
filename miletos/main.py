@@ -3952,7 +3952,6 @@ def setp_modlbase(gdat, strgmodl, h=None):
                 #    if gmod.typemodllmdkterm == 'quad':
                 #        # add quadratic coefficient
                 #        setp_para(gdat, strgmodl, 'coeflmdkquad%s' % strgener, 0., 0.3, '$u_{2,%d}$' % e)
-                    pass
                 elif gmod.typemodllmdkener == 'line':
                     if gmod.typemodllmdkterm != 'none':
                         setp_para(gdat, strgmodl, 'ratecoeflmdklinr', 0., 1., None)

@@ -61,12 +61,9 @@ def retr_lcur():
 
 def retr_matrblin(time, indxwind):
     """Linear baseline basis with two columns per transit window."""
-    columns = []
-    for k in np.unique(indxwind):
-        indx = indxwind == k
-        timescal = np.where(indx, time - time[indx].mean(), 0.)
-        columns += [indx.astype(float), timescal]
-    return np.column_stack(columns)
+    from tdpy.numerics import grouped_polynomial_design_matrix
+
+    return grouped_polynomial_design_matrix(time, indxwind)
 
 
 def retr_modl(values, time, timeexpo=None):
