@@ -4441,6 +4441,7 @@ def srch_outlperi( \
     return dictoutp
 
 
+@tdpy.themed_plot
 def srch_boxsperi(arry, \
               
               # Boolean flag to search for positive boxes
@@ -4518,7 +4519,7 @@ def srch_boxsperi(arry, \
               typeverb=1, \
               
               # type of plot background
-              typeplotback='black', \
+              typeplotback='white', \
 
               # Boolean flag to turn on diagnostic mode
               ## diagnostic mode is always on by default, which should be turned off during large-scale runs, where speed is a concern
@@ -6015,6 +6016,7 @@ def retr_stdvwind(ydat, sizewind, boolcuttpeak=True):
     return stdv
 
 
+@tdpy.themed_plot
 def plot_tser( \
               
               # path in which the plot will be placed
@@ -6113,7 +6115,7 @@ def plot_tser( \
               typefileplot='png', \
             
               # type of plot background
-              typeplotback='black', \
+              typeplotback='white', \
 
              ):
     '''
@@ -6678,6 +6680,7 @@ def setup1_miletos(gdat):
                 gdat.booldataobsv = False
 
 
+@tdpy.themed_plot
 def init( \
          
          # a label distinguishing the run to be used in the plots
@@ -7108,7 +7111,7 @@ def init( \
          boolsanity=False, \
          
          # type of plot background
-         typeplotback='black', \
+         typeplotback='white', \
 
          # type of verbosity
          ## -1: absolutely no text
@@ -7162,8 +7165,7 @@ def init( \
     if gdat.boolplotvisi is None:
         gdat.boolplotvisi = gdat.boolcalcvisi
     
-    if gdat.typeplotback == 'black':
-        plt.style.use('dark_background')
+    plt.rcParams.update(tdpy.plot_style_parameters(gdat.typeplotback))
         
     # check input arguments
     if not chec_path_input(gdat):

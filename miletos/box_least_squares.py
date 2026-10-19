@@ -5,7 +5,9 @@ from pathlib import Path
 
 import numpy as np
 from astropy.timeseries import BoxLeastSquares
+from tdpy.plotting import apply_plot_theme, themed_plot
 
+@themed_plot
 def animate_box_least_squares_search(
     data_by_label: Mapping[str, np.ndarray],
     output_path,
@@ -163,6 +165,7 @@ def animate_box_least_squares_search(
     )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    apply_plot_theme(figure)
     animation.save(output_path, writer=PillowWriter(fps=frames_per_second), dpi=90)
     plt.close(figure)
 

@@ -1,5 +1,6 @@
 import matplotlib.image as mpimg
 import numpy as np
+import pytest
 
 from miletos.diagnostics import (
     run_simulated_jwst_transit_diagnostic,
@@ -7,10 +8,11 @@ from miletos.diagnostics import (
 )
 
 
-def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys):
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys, typeplotback):
     output_path = tmp_path / "simulated_transit_diagnostic.png"
 
-    result = run_simulated_transit_diagnostic(output_path)
+    result = run_simulated_transit_diagnostic(output_path, typeplotback=typeplotback)
 
     image = mpimg.imread(output_path)
     assert output_path.is_file()
@@ -29,25 +31,39 @@ def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys):
     assert image.shape[0] > 100
     assert image.shape[1] > 100
     assert image[..., :3].min() < 0.8
+    np.testing.assert_array_equal(image[0, 0], (0, 0, 0, 1) if typeplotback == 'dark' else (1, 1, 1, 1))
     assert f"Writing to {output_path}..." in capsys.readouterr().out
 
 
-def test_simulated_transit_diagnostic_writes_bokeh_html(tmp_path):
-    import pytest
-
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+def test_simulated_transit_diagnostic_writes_bokeh_html(tmp_path, monkeypatch, typeplotback):
     pytest.importorskip("bokeh")
+    from bokeh.models import Axis, Plot
+    import tdpy.plotting as plotting
+
+    save = plotting.save_bokeh_html
+
+    def capture_and_save(figure, *args, **kwargs):
+        result = save(figure, *args, **kwargs)
+        background, foreground = plotting.plot_background_colors(typeplotback)
+        assert all(plot.background_fill_color == background for plot in figure.select({'type': Plot}))
+        assert all(axis.major_label_text_color == foreground for axis in figure.select({'type': Axis}))
+        return result
+
+    monkeypatch.setattr(plotting, 'save_bokeh_html', capture_and_save)
     output_path = tmp_path / "simulated_transit_diagnostic.html"
-    result = run_simulated_transit_diagnostic(output_path)
+    result = run_simulated_transit_diagnostic(output_path, typeplotback=typeplotback)
 
     assert result.time_days.size > 3_000
     assert output_path.is_file()
     assert "Input: simulated" in output_path.read_text(encoding="utf-8")
 
 
-def test_simulated_jwst_diagnostic_remains_supported(tmp_path, capsys):
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+def test_simulated_jwst_diagnostic_remains_supported(tmp_path, capsys, typeplotback):
     output_path = tmp_path / 'simulated_jwst_transit.pdf'
 
-    result = run_simulated_jwst_transit_diagnostic(output_path)
+    result = run_simulated_jwst_transit_diagnostic(output_path, typeplotback=typeplotback)
 
     assert output_path.is_file()
     assert output_path.stat().st_size > 1_000

@@ -14,6 +14,7 @@ import pandas as pd
 from tdpy.exoplanet import orbital_phase
 from tdpy.numerics import grid_quantiles, logmeanexp
 from tdpy.verbosity import print
+from tdpy.plotting import configure_plot_style, plot_style, save_plot, themed_plot
 
 from .tess_transit_survey import (
     download_qlp_light_curves,
@@ -219,6 +220,7 @@ def estimate_survey_occurrence(
     }
 
 
+@themed_plot
 def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
                          output_directory: str | Path) -> dict[str, Path]:
     """Write separate figures for search yield, completeness, false alarms, and magnitude."""
@@ -226,8 +228,7 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
     paths = {}
-    with plt.rc_context({"font.size": 10, "axes.edgecolor": "black", "axes.facecolor": "white",
-                         "figure.facecolor": "white"}):
+    with plt.rc_context({"font.size": 10}):
         figure, axis = plt.subplots(figsize=(6.8, 4.6), constrained_layout=True)
         searched = results[results["searched"].astype(bool)]
         counts = [
@@ -248,7 +249,7 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
         axis.grid(False)
         paths["search_yield"] = output_directory / "tess_transit_search_yield.png"
         print(f"Writing to {paths['search_yield']}...")
-        figure.savefig(paths["search_yield"], dpi=300, bbox_inches="tight")
+        save_plot(figure, paths["search_yield"], dpi=300, bbox_inches="tight")
         plt.close(figure)
 
         if not injections.empty:
@@ -268,7 +269,7 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
             axis.grid(False)
             paths["completeness"] = output_directory / "tess_transit_completeness.png"
             print(f"Writing to {paths['completeness']}...")
-            figure.savefig(paths["completeness"], dpi=300, bbox_inches="tight")
+            save_plot(figure, paths["completeness"], dpi=300, bbox_inches="tight")
             plt.close(figure)
 
         searched = results[results["searched"].astype(bool)]
@@ -299,7 +300,7 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
                 axis.legend(frameon=True, fancybox=True, framealpha=1.0)
                 paths["false_alarm_control"] = output_directory / "tess_transit_false_alarm_control.png"
                 print(f"Writing to {paths['false_alarm_control']}...")
-                figure.savefig(paths["false_alarm_control"], dpi=300, bbox_inches="tight")
+                save_plot(figure, paths["false_alarm_control"], dpi=300, bbox_inches="tight")
             plt.close(figure)
 
         if not searched.empty and "tmag" in searched:
@@ -317,7 +318,7 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
             axis.legend(frameon=True, fancybox=True, framealpha=1.0)
             paths["magnitude_yield"] = output_directory / "tess_transit_magnitude_yield.png"
             print(f"Writing to {paths['magnitude_yield']}...")
-            figure.savefig(paths["magnitude_yield"], dpi=300, bbox_inches="tight")
+            save_plot(figure, paths["magnitude_yield"], dpi=300, bbox_inches="tight")
             plt.close(figure)
 
         if not searched.empty and "reference_disposition" in searched:
@@ -339,11 +340,12 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
             axis.grid(False)
             paths["toi_comparison"] = output_directory / "tess_transit_toi_comparison.png"
             print(f"Writing to {paths['toi_comparison']}...")
-            figure.savefig(paths["toi_comparison"], dpi=300, bbox_inches="tight")
+            save_plot(figure, paths["toi_comparison"], dpi=300, bbox_inches="tight")
             plt.close(figure)
     return paths
 
 
+@themed_plot
 def plot_target_search(light_curve: pd.DataFrame, result: dict, output_path: str | Path) -> Path:
     """Plot a single observed search and its phase-folded transit candidate."""
 
@@ -360,8 +362,7 @@ def plot_target_search(light_curve: pd.DataFrame, result: dict, output_path: str
     phase_model = np.linspace(-0.5, 0.5, 1000)
     model_flux = np.ones_like(phase_model)
     model_flux[np.abs(phase_model) < duration / (2.0 * period)] -= float(result["depth"])
-    with plt.rc_context({"font.size": 10, "axes.edgecolor": "black", "axes.facecolor": "white",
-                         "figure.facecolor": "white"}):
+    with plt.rc_context({"font.size": 10}):
         figure, axes = plt.subplots(2, 1, figsize=(7.2, 6.0), constrained_layout=True)
         axes[0].errorbar(time, flux, yerr=error, fmt=".", markersize=2.0,
                          color="#64818A", alpha=0.7, linewidth=0.4)
@@ -377,11 +378,12 @@ def plot_target_search(light_curve: pd.DataFrame, result: dict, output_path: str
         for axis in axes:
             axis.grid(False)
         print(f"Writing to {output_path}...")
-        figure.savefig(output_path, dpi=300, bbox_inches="tight")
+        save_plot(figure, output_path, dpi=300, bbox_inches="tight")
         plt.close(figure)
     return output_path
 
 
+@plot_style()
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", type=Path, required=True,
@@ -394,7 +396,9 @@ def main() -> int:
     parser.add_argument("--injection-trials", type=int, default=3)
     parser.add_argument("--offline", action="store_true",
                         help="use QLP FITS files already under data-directory")
+    parser.add_argument('--typeplotback', choices=('white', 'dark'), default='white')
     arguments = parser.parse_args()
+    configure_plot_style(arguments.typeplotback)
     print(f"Reading from {arguments.catalog}...")
     targets = pd.read_csv(arguments.catalog)
     if arguments.maximum_targets is not None:

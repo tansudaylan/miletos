@@ -38,8 +38,8 @@ It analyzes TOI 1338.01 (TIC 260128333), Sector 10, using the public QLP FITS
 light curve. Its outputs are saved in
 ``examples/tess_transit_search/visuals/``. The pilot is a single-target software
 and vetting demonstration, not a survey-level completeness or occurrence
-measurement. Its illustrative injection grid tests a 0.1 day box duration over
-periods and depths; it is not a planet-population prior.
+measurement. Its illustrative injection grid uses a fixed 0.1-day box duration
+across periods and depths. It assigns no prior to planet populations.
 
 For a retrospective comparison with the archived TOI process, run:
 
@@ -82,11 +82,11 @@ astrophysical validation. Pixel-level localization, centroid shifts, dilution,
 stellar multiplicity, and human follow-up remain necessary for candidate
 validation.
 
-Inverted curves provide a negative-control distribution for instrumental or
-astrophysical signals that resemble transits. This distribution is not by itself
-a calibrated false-discovery rate. A survey false-discovery estimate also needs
-an independently labeled validation sample or an explicit model for how the
-negative control represents the false-alarm population.
+Inverted curves provide a comparison sample of instrumental or astrophysical
+signals that can resemble transits. This sample alone does not estimate a
+false-discovery rate. A survey estimate also needs an independently labeled
+validation sample or a model describing how inverted curves represent false
+alarms.
 
 Completeness and occurrence
 ---------------------------
@@ -94,8 +94,8 @@ Completeness and occurrence
 Miletos injects box-shaped transits at random epochs into the observed flux and
 repeats BLS. A recovery requires both period agreement within the configured
 tolerance and a fitted depth SNR above the stated threshold. Completeness is the
-recovery fraction over injected epochs. The pilot grid uses a 7-SNR threshold;
-larger surveys should increase injection counts and test transit duration,
+recovery fraction over injected epochs. The pilot grid uses a 7-SNR threshold.
+Larger surveys should increase injection counts and test transit duration,
 stellar variability, sector gaps, and the adopted candidate-vetting procedure.
 
 For a complete parent target sample, Miletos can combine per-target recovery
@@ -116,7 +116,7 @@ independent vetting of QLP transit-search results, extending vetting beyond the
 bright-star regime emphasized in early follow-up (Kunimoto et al. 2022). A later
 study showed that inverted TESS light curves contain structured false alarms in
 BLS searches (Kunimoto et al. 2023). Miletos makes these ideas reproducible in a
-single workflow by keeping search outputs, negative controls, injection
-recoveries, and target-list provenance together. QLP users should cite the QLP
+single workflow by keeping search outputs, inverted-curve comparisons,
+injection recoveries, and target-list provenance together. QLP users should cite the QLP
 products and the relevant reduction papers, as well as the Faint-star Search
 when comparing its catalog-level results.

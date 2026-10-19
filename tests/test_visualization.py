@@ -18,6 +18,46 @@ class DummyGdat:
     pass
 
 
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+@pytest.mark.parametrize('inherit', [False, True])
+def test_miletos_style_context_and_save_inherit_theme(tmp_path, typeplotback, inherit):
+    from matplotlib.colors import to_rgba
+    from PIL import Image
+    from tdpy.plotting import plot_background_colors, plot_style
+
+    options = {} if inherit else {'typeplotback': typeplotback}
+    outer_theme = typeplotback if inherit else ('dark' if typeplotback == 'white' else 'white')
+    with plot_style(outer_theme):
+        original = dict(plt.rcParams)
+        with vismod.miletos_plot_context(**options):
+            figure, axis = plt.subplots()
+            axis.plot([0, 1], [1, 0], color='red', label='Data')
+            gdat = DummyGdat()
+            path = save_miletos_figure(gdat, figure, str(tmp_path / 'theme.png'))
+            background, foreground = plot_background_colors(typeplotback)
+            assert figure.get_facecolor() == to_rgba(background)
+            assert axis.xaxis.label.get_color() == foreground
+            with Image.open(path) as image:
+                expected = tuple(int(channel * 255) for channel in to_rgba(background)[:3])
+                assert image.convert('RGB').getpixel((0, 0)) == expected
+        assert dict(plt.rcParams) == original
+
+
+def test_plotting_entrypoints_default_to_white():
+    import inspect
+    import miletos.main as mainmod
+
+    defaults = []
+    for _, function in inspect.getmembers(mainmod, inspect.isfunction):
+        if function.__module__ != mainmod.__name__:
+            continue
+        parameter = inspect.signature(function).parameters.get('typeplotback')
+        if parameter is not None:
+            defaults.append(parameter.default)
+
+    assert defaults == ['white', 'white', 'white']
+
+
 def test_plot_binned_light_curve_uses_unconnected_points_with_errors():
     figure, axis = plt.subplots()
 

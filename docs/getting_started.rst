@@ -45,7 +45,7 @@ individual target guides document their inputs, model choices, and any required
 network access.
 
 Stellar activity analysis
-------------------------
+--------------------------
 
 The Hattusa analysis functions now live in ``miletos.stellar_activity`` and
 call Ephesos for forward predictions. Use ``parse_spot_flare_parameters`` to

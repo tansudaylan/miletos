@@ -81,11 +81,14 @@ def test_merge_removes_duplicate_cadences_and_orders_sectors():
     assert merged["sector"].tolist() == [1, 1, 2]
 
 
-def test_target_search_plot_reuses_shared_orbital_phase(tmp_path, monkeypatch):
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+@pytest.mark.parametrize('inherit', [False, True])
+def test_target_search_plot_reuses_shared_orbital_phase(tmp_path, monkeypatch, typeplotback, inherit):
     from importlib import import_module
     from unittest.mock import Mock
     import matplotlib.pyplot as plt
     from tdpy.exoplanet import orbital_phase
+    from tdpy.plotting import plot_style
 
     search = import_module("miletos.tess_transit_search")
     shared_phase = Mock(wraps=orbital_phase)
@@ -99,7 +102,12 @@ def test_target_search_plot_reuses_shared_orbital_phase(tmp_path, monkeypatch):
         "period_days": 3.0, "transit_time_days": 0.0, "duration_days": 0.2,  # [day]
         "depth": 0.01, "depth_snr": 10.0, "disposition": "candidate",
     }
-    path = search.plot_target_search(curve, candidate, tmp_path / "target.png")
+    options = {} if inherit else {'typeplotback': typeplotback}
+    outer_theme = typeplotback if inherit else ('dark' if typeplotback == 'white' else 'white')
+    with plot_style(outer_theme):
+        original = dict(plt.rcParams)
+        path = search.plot_target_search(curve, candidate, tmp_path / "target.png", **options)
+        assert dict(plt.rcParams) == original
     shared_phase.assert_called_once()
     arguments, keywords = shared_phase.call_args
     np.testing.assert_array_equal(arguments[0], time)
@@ -108,6 +116,48 @@ def test_target_search_plot_reuses_shared_orbital_phase(tmp_path, monkeypatch):
     pixels = plt.imread(path)
     assert pixels.shape[0] > 100 and pixels.shape[1] > 100
     assert np.ptp(pixels[..., :3]) > 0.5
+    np.testing.assert_array_equal(pixels[0, 0], (0, 0, 0, 1) if typeplotback == 'dark' else (1, 1, 1, 1))
+
+
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+@pytest.mark.parametrize('inherit', [False, True])
+def test_survey_products_theme_all_outputs_and_preserve_tables(tmp_path, monkeypatch, typeplotback, inherit):
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import to_rgba
+    from PIL import Image
+    from miletos.tess_transit_search import plot_survey_products
+    from tdpy.plotting import plot_background_colors, plot_style
+
+    results = pd.DataFrame({
+        'searched': [True, True, False], 'period_days': [3.0, 4.0, np.nan],
+        'depth_snr': [12.0, 4.0, np.nan], 'inverted_depth_snr': [2.0, 1.0, np.nan],
+        'detection': [True, False, False], 'tmag': [11.0, 12.0, 13.0],
+        'reference_disposition': ['CP', 'FP', 'PC'], 'disposition': ['candidate', 'review', None],
+    })
+    injections = pd.DataFrame({'period_days': [3.0, 4.0], 'depth': [0.01, 0.02], 'completeness': [0.7, 0.9]})
+    original_results, original_injections = results.copy(deep=True), injections.copy(deep=True)
+    background, foreground = plot_background_colors(typeplotback)
+    save = plt.Figure.savefig
+
+    def capture_and_save(figure, path, **kwargs):
+        assert figure.get_facecolor() == to_rgba(background)
+        assert all(axis.xaxis.label.get_color() == foreground for axis in figure.axes)
+        return save(figure, path, **kwargs)
+
+    monkeypatch.setattr(plt.Figure, 'savefig', capture_and_save)
+    options = {} if inherit else {'typeplotback': typeplotback}
+    outer_theme = typeplotback if inherit else ('dark' if typeplotback == 'white' else 'white')
+    with plot_style(outer_theme):
+        original_settings = dict(plt.rcParams)
+        paths = plot_survey_products(results, injections, tmp_path, **options)
+        assert dict(plt.rcParams) == original_settings
+    assert set(paths) == {'search_yield', 'completeness', 'false_alarm_control', 'magnitude_yield', 'toi_comparison'}
+    for path in paths.values():
+        with Image.open(path) as image:
+            expected = tuple(int(channel * 255) for channel in to_rgba(background)[:3])
+            assert image.convert('RGB').getpixel((0, 0)) == expected
+    pd.testing.assert_frame_equal(results, original_results)
+    pd.testing.assert_frame_equal(injections, original_injections)
 
 
 def test_tess_search_reports_flags_and_inverted_control():

@@ -114,6 +114,7 @@ def analyze_simulated_transit(seed: int = 7) -> TransitDiagnostic:
     )
 
 
+@tdpy.themed_plot
 def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Path:
     """Plot the input, detrending stage, and phase-folded pipeline output."""
 
@@ -174,10 +175,10 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
                     1e6 * (result.binned_flux - 1.0) - 1e6 * result.binned_uncertainty,
                     result.binned_phase,
                     1e6 * (result.binned_flux - 1.0) + 1e6 * result.binned_uncertainty,
-                    color="black",
+                    color=tdpy.plot_background_colors()[1],
                 )
                 plot.scatter(result.binned_phase, 1e6 * (result.binned_flux - 1.0),
-                             size=6, color="black", legend_label="Miletos phase bins")
+                             size=6, color=tdpy.plot_background_colors()[1], legend_label="Miletos phase bins")
             plot.xaxis.axis_label = x_label
             plot.yaxis.axis_label = "Relative flux [ppm]"
             plot.grid.visible = False
@@ -265,7 +266,7 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
         1e6 * (result.binned_flux - 1.0),
         yerr=1e6 * result.binned_uncertainty,
         fmt="o",
-        color="black",
+        color=tdpy.plot_background_colors()[1],
         markersize=3.2,
         linewidth=0.8,
         capsize=1.5,
@@ -291,6 +292,7 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
     )
 
 
+@tdpy.themed_plot
 def run_simulated_transit_diagnostic(output_path: Path) -> TransitDiagnostic:
     """Run the deterministic diagnostic and write its pipeline figure."""
 
@@ -351,6 +353,7 @@ def analyze_simulated_jwst_transit(seed: int = 39) -> SpectroscopicTransitDiagno
     )
 
 
+@tdpy.themed_plot
 def plot_simulated_jwst_transit(
     result: SpectroscopicTransitDiagnostic,
     output_path: Path,
@@ -425,6 +428,7 @@ def plot_simulated_jwst_transit(
     )
 
 
+@tdpy.themed_plot
 def run_simulated_jwst_transit_diagnostic(
     output_path: Path,
 ) -> SpectroscopicTransitDiagnostic:

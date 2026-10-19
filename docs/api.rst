@@ -14,7 +14,7 @@ Transit searches and models
    :members: retr_band_planck, retr_brightness_temperature, retr_rflx_pcur
 
 Stellar activity analysis
-------------------------
+--------------------------
 
 .. automodule:: miletos.stellar_activity
    :members: parse_spot_flare_parameters, log_prior_spot_flare, log_likelihood_spot_flare, fit_spot_flare_light_curve, select_observed_variable_stars

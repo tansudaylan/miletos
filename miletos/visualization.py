@@ -27,7 +27,7 @@ def normalize_miletos_figure_text(figure):
 def save_miletos_figure(gdat, figure, path, **kwargs):
     """Write and close a figure using the active Miletos output settings."""
     typefileplot = getattr(gdat, 'typefileplot', Path(path).suffix.removeprefix('.') or 'png')
-    typeplotback = getattr(gdat, 'typeplotback', 'norm')
+    typeplotback = getattr(gdat, 'typeplotback', None)
     normalize_miletos_figure_text(figure)
     return tdpy.save_figure(
         figure,
@@ -40,37 +40,31 @@ def save_miletos_figure(gdat, figure, path, **kwargs):
 
 
 @contextmanager
-def miletos_plot_context():
+def miletos_plot_context(typeplotback=None):
     """Apply the common Miletos figure style without leaking global state."""
 
     style = {
         'axes.prop_cycle': mpl.cycler(
             color=['#176B87', '#C23B22', '#E09F3E', '#4F772D', '#5D6D6F']
         ),
-        'axes.edgecolor': 'black',
-        'axes.facecolor': 'white',
         'axes.grid': False,
-        'axes.labelcolor': 'black',
         'axes.labelsize': 10.0,
         'axes.spines.right': False,
         'axes.spines.top': False,
         'axes.titlesize': 11.0,
-        'figure.facecolor': 'white',
         'font.family': 'DejaVu Sans',
         'font.size': 10.0,
         'legend.framealpha': 1.0,
         'legend.fancybox': True,
         'lines.linewidth': 1.2,
         'savefig.dpi': 300,
-        'savefig.facecolor': 'white',
-        'text.color': 'black',
-        'xtick.color': 'black',
-        'ytick.color': 'black',
     }
-    with plt.style.context('default'), mpl.rc_context(style):
+    style.update(tdpy.plot_style_parameters(typeplotback))
+    with tdpy.plot_style(typeplotback), plt.style.context('default'), mpl.rc_context(style):
         yield
 
 
+@tdpy.themed_plot
 def plot_binned_light_curve(axis, xdat, ydat, yerr, **kwargs):
     """Plot binned light-curve measurements as unconnected points with errors."""
 
@@ -84,6 +78,7 @@ def plot_binned_light_curve(axis, xdat, ydat, yerr, **kwargs):
     )
 
 
+@tdpy.themed_plot
 def plot_wasp39_ers_white_light_curves(result, output_path: Path) -> Path:
     """Plot the detector-level white-light curves in Alderson et al. Figure 1a."""
 
@@ -121,6 +116,7 @@ def plot_wasp39_ers_white_light_curves(result, output_path: Path) -> Path:
     )
 
 
+@tdpy.themed_plot
 def plot_wasp39_ers_detector_motion(result, output_path: Path) -> Path:
     """Plot the detector shifts tracked during the spectroscopic reduction."""
 
@@ -142,7 +138,7 @@ def plot_wasp39_ers_detector_motion(result, output_path: Path) -> Path:
         linestyle='--',
         label='Cross-dispersion direction',
     )
-    axis.axhline(0.0, color='black', linewidth=0.8)
+    axis.axhline(0.0, color=tdpy.plot_background_colors()[1], linewidth=0.8)
     axis.set_xlabel(f'Time from BJD {time_reference_bjd:.1f} [hour]')
     axis.set_ylabel('Detector shift [pixel]')
     axis.set_title('Measured detector motion used in the spectroscopic reduction')
@@ -160,6 +156,7 @@ def plot_wasp39_ers_detector_motion(result, output_path: Path) -> Path:
     )
 
 
+@tdpy.themed_plot
 def plot_wasp39_ers_spectroscopic_detrending(result, output_path: Path) -> Path:
     """Plot the published model decomposition for representative channels."""
 
@@ -236,7 +233,7 @@ def plot_wasp39_ers_spectroscopic_detrending(result, output_path: Path) -> Path:
             color='#5D6D6F',
             linewidths=0.0,
         )
-        axes[row, 2].axhline(0.0, color='black', linewidth=0.8)
+        axes[row, 2].axhline(0.0, color=tdpy.plot_background_colors()[1], linewidth=0.8)
         axes[row, 0].set_ylabel(f'{wavelength:.2f} micron\nNormalized flux')
         axes[row, 1].set_ylabel('Normalized flux')
         axes[row, 2].set_ylabel('Residual [ppm]')
@@ -261,6 +258,7 @@ def plot_wasp39_ers_spectroscopic_detrending(result, output_path: Path) -> Path:
     )
 
 
+@tdpy.themed_plot
 def plot_wasp39_ers_corrected_light_curve_map(result, output_path: Path) -> Path:
     """Plot all published systematics-corrected spectroscopic light curves."""
 
@@ -299,6 +297,7 @@ def plot_wasp39_ers_corrected_light_curve_map(result, output_path: Path) -> Path
     )
 
 
+@tdpy.themed_plot
 def plot_wasp39_ers_light_curve_precision(result, output_path: Path) -> Path:
     """Compare the published fit residual scatter with the photon-noise limit."""
 
@@ -347,6 +346,7 @@ def plot_wasp39_ers_light_curve_precision(result, output_path: Path) -> Path:
     )
 
 
+@tdpy.themed_plot
 def plot_wasp39_ers_transmission_spectrum(result, output_path: Path) -> Path:
     """Plot the weighted transmission spectrum and best-fit ATMO comparison."""
 
@@ -396,7 +396,7 @@ def plot_wasp39_ers_transmission_spectrum(result, output_path: Path) -> Path:
         capsize=0.0,
         label=rf'Residuals, $\chi^2_\nu={result.reduced_chi_squared:.2f}$',
     )
-    axes[1].axhline(0.0, color='black', linewidth=1.0)
+    axes[1].axhline(0.0, color=tdpy.plot_background_colors()[1], linewidth=1.0)
     axes[1].set_xlabel('Wavelength [micron]')
     axes[1].set_ylabel('Residual [ppm]')
     axes[1].legend(loc='lower right', fancybox=True, framealpha=1.0)
