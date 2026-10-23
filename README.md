@@ -178,7 +178,7 @@ Run the Miletos BLS search and candidate vetter on the cached normalized PDCSAP 
 python examples/TIC266680498/run.py
 ```
 
-The example reads the Sector 3, 30, and 107 CSV products under `$MILETOS_PATH/data/TIC266680498/data/`. It converts their BJD timestamps to BTJD, searches each sector, and writes three figures directly under `examples/TIC266680498/visuals/`. The result table remains under the target's data directory. These inputs are already normalized light curves, not raw detector images; the example makes no new transit-discovery claim.
+The example reads the Sector 3, 30, and 107 CSV products under `$MILETOS_PATH/data/TIC266680498/data/`. It converts their BJD timestamps to BTJD, searches each sector, and writes three figures directly under `examples/TIC266680498/visuals/`. The observed peaks in all three sectors remain classified for review because the configured controls flag them, including the inverted-light-curve check; these BLS peaks are not transit detections. The result table remains under the target's data directory. These inputs are already normalized light curves, not raw detector images; the example makes no new transit-discovery claim.
 
 | Sector 3 | Sector 30 | Sector 107 |
 |---|---|---|
