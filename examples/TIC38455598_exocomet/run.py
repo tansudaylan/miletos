@@ -26,6 +26,8 @@ SECTORS = (8, 35, 62, 89, 99)
 EPHEMERIS_SECTORS = (8, 62, 89)
 STELLAR_MASS_SOLAR = 1.18
 STELLAR_RADIUS_SOLAR = 1.16325
+EXAMPLE_DIRECTORY = Path(__file__).resolve().parent
+DEFAULT_VISUAL_DIRECTORY = EXAMPLE_DIRECTORY / "visuals"
 
 
 def _load_sector_curves(cache_directory):
@@ -43,7 +45,6 @@ def _fold_and_bin(curves, results, period_days, epoch_days, bin_width_days=0.004
     sector_parts = []
     for sector in EPHEMERIS_SECTORS:
         curve = curves[sector]
-        row = results.loc[results["sector"] == sector].iloc[0]
         time = curve["time_btjd"].to_numpy(dtype=float)
         flux = curve["flux"].to_numpy(dtype=float)
         uncertainty = curve["flux_error"].to_numpy(dtype=float)
@@ -104,7 +105,7 @@ def _fit_ephesos_models(phase_days, flux, uncertainty, period_days, stellar_mass
         lambda parameters: (disk_model(parameters) - flux) / uncertainty,
         x0=(0.07, 0.3),
         bounds=((0.005, 0.0), (0.25, 0.95)),
-        loss="soft_l1",
+        loss="linear",
         max_nfev=40,
     )
 
@@ -134,7 +135,7 @@ def _fit_ephesos_models(phase_days, flux, uncertainty, period_days, stellar_mass
             (0.003, 2.0, 0.05, 0.01, 0.5, 0.0),
             (0.2, 30.0, 2.0, 20.0, 20.0, 0.95),
         ),
-        loss="soft_l1",
+        loss="linear",
         max_nfev=60,
     )
     disk_flux = disk_model(disk_fit.x)
@@ -155,10 +156,13 @@ def _fit_ephesos_models(phase_days, flux, uncertainty, period_days, stellar_mass
     }
 
 
-def run_analysis(*, download=True):
+def run_analysis(*, download=True, cache_directory=None):
     root = get_data_path() / f"TIC{TIC_ID}"
-    cache_directory = root / "qlp_cache"
-    visual_directory = root / "visuals"
+    root.mkdir(parents=True, exist_ok=True)
+    cache_directory = (
+        Path(cache_directory) if cache_directory is not None else root / "qlp_cache"
+    )
+    visual_directory = DEFAULT_VISUAL_DIRECTORY
     visual_directory.mkdir(parents=True, exist_ok=True)
     targets = pd.DataFrame([
         {
@@ -256,8 +260,16 @@ def run_analysis(*, download=True):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--offline", action="store_true", help="use QLP products already in the Miletos cache")
+    parser.add_argument(
+        "--cache-directory",
+        type=Path,
+        help="read cached QLP products from this directory",
+    )
     arguments = parser.parse_args()
-    results, summary, visual_directory = run_analysis(download=not arguments.offline)
+    results, summary, visual_directory = run_analysis(
+        download=not arguments.offline,
+        cache_directory=arguments.cache_directory,
+    )
     print(results[["sector", "period_days", "depth", "depth_snr", "disposition"]].to_string(index=False))
     print(pd.Series(summary).to_string())
     print(f"Visuals: {visual_directory}")
