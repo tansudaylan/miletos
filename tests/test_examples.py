@@ -40,8 +40,7 @@ def example_id(path):
 def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
-    assert len(EXAMPLE_PATHS) == 10
-    assert len(EXAMPLE_PATHS) == 10
+    assert len(EXAMPLE_PATHS) == 12
 
 
 def test_example_notebooks_use_miletos_apis():

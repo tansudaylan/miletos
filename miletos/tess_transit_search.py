@@ -346,7 +346,13 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
 
 
 @themed_plot
-def plot_target_search(light_curve: pd.DataFrame, result: dict, output_path: str | Path) -> Path:
+def plot_target_search(
+    light_curve: pd.DataFrame,
+    result: dict,
+    output_path: str | Path,
+    *,
+    data_label: str = "QLP",
+) -> Path:
     """Plot a single observed search and its phase-folded transit candidate."""
 
     output_path = Path(output_path)
@@ -366,7 +372,11 @@ def plot_target_search(light_curve: pd.DataFrame, result: dict, output_path: str
         figure, axes = plt.subplots(2, 1, figsize=(7.2, 6.0), constrained_layout=True)
         axes[0].errorbar(time, flux, yerr=error, fmt=".", markersize=2.0,
                          color="#64818A", alpha=0.7, linewidth=0.4)
-        axes[0].set(xlabel="Time [BTJD day]", ylabel="Normalized flux", title="Observed QLP light curve")
+        axes[0].set(
+            xlabel="Time [BTJD day]",
+            ylabel="Normalized flux",
+            title=f"Observed {data_label} light curve",
+        )
         axes[1].errorbar(phase[order], flux[order], yerr=error[order], fmt=".", markersize=2.0,
                          color="#64818A", alpha=0.45, linewidth=0.4, label="Observed cadences")
         axes[1].plot(phase_model, model_flux, color="#A51C30", linewidth=1.5,

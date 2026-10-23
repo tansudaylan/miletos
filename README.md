@@ -170,6 +170,22 @@ The [WD 1856 b](examples/WD1856b/run.py) and [TRAPPIST-1](examples/TRAPPIST-1/ru
 ## Input Data
 The input time-series data can include photometry, spectroscopy, radial velocity, or astrometry. Examples are time-series data from the Transiting Exoplanet Survey Satellite (TESS) and JWST, Legacy Survey for Space and Time (LSST), radial velocity surveys such as HARPS, PFS, and NEID.
 
+### TIC 266680498 cached TESS search
+
+Run the Miletos BLS search and candidate vetter on the cached normalized PDCSAP photometry:
+
+```bash
+python examples/TIC266680498/run.py
+```
+
+The example reads the Sector 3, 30, and 107 CSV products under `$MILETOS_PATH/data/TIC266680498/data/`. It converts their BJD timestamps to BTJD, searches each sector, and writes three figures directly under `examples/TIC266680498/visuals/`. The result table remains under the target's data directory. These inputs are already normalized light curves, not raw detector images; the example makes no new transit-discovery claim.
+
+| Sector 3 | Sector 30 | Sector 107 |
+|---|---|---|
+| ![Miletos search of cached TIC 266680498 Sector 3 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector03_bls_search.png) | ![Miletos search of cached TIC 266680498 Sector 30 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector30_bls_search.png) | ![Miletos search of cached TIC 266680498 Sector 107 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector107_bls_search.png) |
+
+To also search the multi-year combined baseline, which takes substantially longer, pass `--include-combined`.
+
 ### ULTRASAT synthetic light curves
 `miletos.simulate_ultrasat_light_curve` accepts any callable or array-valued relative-flux model and returns columns of JD, noisy relative flux, and flux uncertainty. For example:
 
@@ -203,6 +219,16 @@ For additional physical and structural checks of raw time series, companion orbi
 For direct BLS searches, `miletos.search_box_least_squares(...)` accepts strictly increasing `time_days`, `flux`, matching positive `flux_uncertainty`, a grid of trial `duration_days`, and minimum and maximum periods. It returns the highest-SNR period, transit time, duration, depth, depth uncertainty, and the full Astropy periodogram.
 
 To animate a BLS scan, call `miletos.animate_box_least_squares_search` with a mapping from labels to `[time, flux, uncertainty]` arrays, period bounds, trial durations, and a GIF output path. The animation shows each light curve's growing BLS score curve alongside its best-so-far folded box model.
+
+The [BLS runtime example](examples/bls_performance/run.py) measures the maintained Miletos search over a seeded, synthetic 27-day light curve with a 3.2-day, 1% box transit and 0.1% independent Gaussian noise. It varies cadence count and Astropy's `frequency_factor`, then writes the measured times and a two-panel figure directly under `examples/bls_performance/visuals/`.
+
+```bash
+python examples/bls_performance/run.py
+```
+
+Use `--cadences` and `--frequency-factors` to choose another benchmark grid. The recorded timings depend on the machine and environment; this synthetic benchmark is not an observational performance guarantee.
+
+![Measured Miletos BLS runtime versus cadence count and frequency factor on seeded synthetic data](examples/bls_performance/visuals/bls_runtime_benchmark.png)
 
 Pass `typeplotback='dark'` to the BLS animation, simulated-transit renderers,
 or WASP-39 figure functions for black backgrounds with white axes. Otherwise
