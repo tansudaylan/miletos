@@ -85,6 +85,7 @@ Each script can also be run separately:
 
 ```bash
 python examples/simulated_transit/run.py
+python examples/compact_object_signatures/run.py
 python examples/TOI-1233/run.py
 python examples/TOI-1233/run.py --reproduce-daylan2021a --reuse
 python examples/WASP-121b/run.py --reuse
@@ -229,6 +230,19 @@ python examples/bls_performance/run.py
 Use `--cadences` and `--frequency-factors` to choose another benchmark grid. The recorded timings depend on the machine and environment; this synthetic benchmark is not an observational performance guarantee.
 
 ![Measured Miletos BLS runtime versus cadence count and frequency factor on seeded synthetic data](examples/bls_performance/visuals/bls_runtime_benchmark.png)
+
+### Compact-object photometric signatures
+
+I route compact-object Doppler-beaming, ellipsoidal-variation, and self-lensing
+amplitudes through Ephesos. The example compares those predictions across
+orbital periods and companion masses for a solar-type source star:
+
+```bash
+python examples/compact_object_signatures/run.py
+python examples/compact_object_signatures/run.py --bokeh
+```
+
+![Ephesos compact-object photometric amplitudes computed through Miletos](examples/compact_object_signatures/visuals/compact_object_signatures.png)
 
 Pass `typeplotback='dark'` to the BLS animation, simulated-transit renderers,
 or WASP-39 figure functions for black backgrounds with white axes. Otherwise

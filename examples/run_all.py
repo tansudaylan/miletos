@@ -14,6 +14,10 @@ import sys
 REPOSITORY_PATH = Path(__file__).parents[1]
 QUICK_EXAMPLES = (
     (
+        'compact_object_signatures/run.py',
+        'examples/compact_object_signatures/visuals/compact_object_signatures',
+    ),
+    (
         'stellar_activity/run.py',
         'examples/stellar_activity/visuals/stellar_activity',
     ),
