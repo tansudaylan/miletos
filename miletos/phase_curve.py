@@ -72,7 +72,9 @@ def retr_rflx_pcur(time, epoc, peri, rratcomp, rsmacomp, cosicomp, coeflmdk, flu
     Transits and eclipses are evaluated analytically with batman (Kreidberg 2015), supersampled
     over the exposure time timeexpo [day] when given.
     """
-    import batman
+    from ._compat import load_batman
+
+    batman = load_batman()
 
     para = batman.TransitParams()
     para.t0, para.per, para.rp = epoc, peri, rratcomp

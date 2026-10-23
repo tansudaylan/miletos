@@ -69,9 +69,10 @@ def retr_matrblin(time, indxwind):
 
 def retr_modl(values, time, timeexpo=None):
     """Relative flux of four transiting planets with a shared quadratic limb darkening."""
-    import batman
+    from ._compat import load_batman
     from tdpy.exoplanet import kipping_to_quadratic_limb_darkening
 
+    batman = load_batman()
     coeflmdk = list(kipping_to_quadratic_limb_darkening(values[-2], values[-1]))
     rflx = np.ones_like(time)
     supersample = {} if timeexpo is None else dict(supersample_factor=3, exp_time=timeexpo)

@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from miletos import phase_curve
+from miletos._compat import load_batman
 from miletos.phase_curve import retr_band_planck, retr_brightness_temperature, retr_rflx_pcur
 
 
@@ -14,6 +15,10 @@ def test_tess_response_skips_whitespace_only_header_lines(tmp_path, monkeypatch)
 
     assert wavelength == pytest.approx([300e-9, 302e-9])
     assert response == pytest.approx([0.0, 1.0])
+
+
+def test_batman_import_uses_setuptools_distutils_compatibility():
+    assert load_batman().__name__ == "batman"
 
 
 def test_phase_curve_model_has_the_dayside_flux_at_eclipse_and_the_transit_depth():

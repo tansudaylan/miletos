@@ -32,6 +32,7 @@ dependencies = [
   "pcat",
   "pergamon",
   "scipy",
+  "setuptools>=68",
   "tdpy",
   "tqdm"
 ]
