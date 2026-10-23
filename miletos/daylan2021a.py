@@ -35,9 +35,10 @@ def retr_names():
 def retr_lcur():
     """Return times [BJD], relative fluxes, uncertainties, and window indices of data near transits."""
     listarry = []
+    data_path = get_data_path()
     for sector in (10, 11):
-        path = get_data_path() / 'TOI-1233' / 'data' / f'RelativeFlux_DataCube_Detrended_TESS_Sector{sector}_2min.csv'
-        print(f'Reading from {path}...')
+        path = data_path / 'TOI-1233' / 'data' / f'RelativeFlux_DataCube_Detrended_TESS_Sector{sector}_2min.csv'
+        print(f'Reading from {path.relative_to(data_path)}...')
         listarry.append(np.loadtxt(path, delimiter=','))
     time, flux, stdv = np.concatenate(listarry).T
     good = np.isfinite(time) & np.isfinite(flux) & np.isfinite(stdv)
@@ -101,9 +102,10 @@ def fit_daylan2021a_transits(numbchan=4, numbsamp=100000, numbburn=100000, seed=
     time, flux, stdv, indxwind = retr_lcur()
     state = dict(time=time, flux=flux, stdv=stdv, matrblin=retr_matrblin(time, indxwind),
                  listjitt=np.geomspace(1e-5, 3e-4, 4), timeexpo=2. / 1440.)
-    path = get_repository_path() / 'examples' / 'TOI-1233' / 'data' / 'daylan2021a_transit_posterior.npz'
+    repository_path = get_repository_path()
+    path = repository_path / 'examples' / 'TOI-1233' / 'data' / 'daylan2021a_transit_posterior.npz'
     if boolreus and path.exists():
-        print(f'Reading from {path}...')
+        print(f'Reading from {path.relative_to(repository_path)}...')
         arry = np.load(path)
         return arry['samples'], arry['radi'], state
     names = retr_names()
@@ -121,7 +123,7 @@ def fit_daylan2021a_transits(numbchan=4, numbsamp=100000, numbburn=100000, seed=
     radistar = rng.normal(RADI_STAR, STDV_RADI_STAR, samples.shape[0])  # [R_sun]
     radi = samples[:, 2:-2:5] * radistar[:, None] * RADI_SUN_EART  # [R_earth]
     path.parent.mkdir(parents=True, exist_ok=True)
-    print(f'Writing to {path}...')
+    print(f'Writing to {path.relative_to(repository_path)}...')
     np.savez(path, samples=samples, chain=chain, radi=radi)
     return samples, radi, state
 
@@ -146,7 +148,8 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
     from .visualization import miletos_plot_context
     from .visualization import plot_binned_light_curve
 
-    path_visu = get_repository_path() / 'examples' / 'TOI-1233' / 'visuals'
+    repository_path = get_repository_path()
+    path_visu = repository_path / 'examples' / 'TOI-1233' / 'visuals'
     path_visu.mkdir(parents=True, exist_ok=True)
     time, flux, stdv = state['time'], state['flux'], state['stdv']
     medi = np.median(samples, 0)
@@ -156,7 +159,7 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
 
     def save(figure, name):
         path = path_visu / f'daylan2021a_{name}.{typefileplot}'
-        print(f'Writing to {path}...')
+        print(f'Writing to {path.relative_to(repository_path)}...')
         figure.savefig(path, dpi=300, bbox_inches='tight')
         plt.close(figure)
 

@@ -85,8 +85,38 @@ def test_daylan_target_notebook_reproduces_published_posterior():
     assert 'fit_daylan2021a_transits(' in source
     assert 'retr_summary_daylan2021a(' in source
     assert 'plot_daylan2021a_transits(' in source
+    assert 'figure_path.relative_to(get_repository_path())' in source
     assert 'run_toi1233_observation(' not in source
     assert 'from pcat' not in source
+
+
+def test_daylan2021a_verbose_file_messages_use_relative_paths(tmp_path, monkeypatch):
+    import numpy as np
+
+    from miletos import daylan2021a
+
+    data_path = tmp_path / 'data'
+    repository_path = tmp_path / 'repository'
+    time = daylan2021a.EPOC_PUBL[0] + np.linspace(-0.2, 0.2, 100)
+    photometry = np.column_stack((time, np.ones(time.size), np.full(time.size, 1e-4)))
+    for sector in (10, 11):
+        path = data_path / 'TOI-1233' / 'data' / f'RelativeFlux_DataCube_Detrended_TESS_Sector{sector}_2min.csv'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        np.savetxt(path, photometry, delimiter=',')
+
+    posterior_path = repository_path / 'examples' / 'TOI-1233' / 'data' / 'daylan2021a_transit_posterior.npz'
+    posterior_path.parent.mkdir(parents=True)
+    np.savez(posterior_path, samples=np.zeros((1, 22)), radi=np.ones((1, 4)))
+    messages = []
+    monkeypatch.setattr(daylan2021a, 'get_data_path', lambda: data_path)
+    monkeypatch.setattr(daylan2021a, 'get_repository_path', lambda: repository_path)
+    monkeypatch.setattr(daylan2021a, 'print', messages.append)
+
+    daylan2021a.fit_daylan2021a_transits(boolreus=True)
+
+    assert len(messages) == 3
+    assert messages[-1] == 'Reading from examples/TOI-1233/data/daylan2021a_transit_posterior.npz...'
+    assert all(str(tmp_path) not in message for message in messages)
 
 
 def test_daylan2021a_summary_reports_published_planet_values():
