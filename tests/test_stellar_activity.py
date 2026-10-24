@@ -86,6 +86,32 @@ def test_likelihood_rejects_nonpositive_uncertainty():
         )
 
 
+@pytest.mark.parametrize('masked_input', [0, 1, 2])
+@pytest.mark.parametrize('entry_point', ['likelihood', 'fit'])
+def test_activity_analysis_rejects_masked_observations_before_model_or_optimizer(monkeypatch, masked_input, entry_point):
+    values = [np.array([0.0, 1.0, 2.0]), np.array([1.0, 99.0, 1.0]), np.full(3, 0.01)]
+    values[masked_input] = np.ma.array(values[masked_input], mask=[False, True, False])
+    parameters = [0.3, 0.3, 10.0, 90.0, 0.0, 0.0]
+    def unexpected(*args, **kwargs):
+        pytest.fail('Masked measurements reached numerical evaluation')
+    monkeypatch.setattr(analysis, 'evaluate_spot_flare_model', unexpected)
+    monkeypatch.setattr(analysis, 'least_squares', unexpected)
+    with pytest.raises(ValueError, match='unmasked'):
+        if entry_point == 'likelihood':
+            analysis.log_likelihood_spot_flare(parameters, *values, number_spots=0)
+        else:
+            analysis.fit_spot_flare_light_curve(*values, parameters, number_spots=0,
+                                               bounds=([-1] * 6, [20] * 6))
+
+
+def test_activity_analysis_keeps_unmasked_array_containers_supported():
+    values = [np.arange(3.0), np.ones(3), np.full(3, 0.01)]
+    expected = analysis._time_series(*values)
+    actual = analysis._time_series(*(np.ma.array(value, mask=False) for value in values))
+    for result, original in zip(actual, expected):
+        np.testing.assert_array_equal(result, original)
+
+
 def test_variable_star_selection_uses_sector_40_inclusively():
     import pandas as pd
 

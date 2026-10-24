@@ -25,6 +25,11 @@ Hattusa's stellar-variability analysis now lives in `miletos.stellar_activity`, 
 
 `log_likelihood_spot_flare` preserves the independent Gaussian likelihood for supplied flux uncertainties, omitting parameter-independent constants. `log_prior_spot_flare` preserves descending spot-radius ordering. `fit_spot_flare_light_curve` performs a bounded local least-squares fit for specified component counts and supplied initial parameters. It does not sample a posterior or select the number of spots. Spot geometry can be degenerate, and a local fit does not establish a unique stellar surface.
 
+Time, flux, and uncertainty inputs must be finite, nonempty, equally sized vectors
+with positive uncertainties. Masked observations are rejected before array
+conversion so a masked backing value cannot silently enter the fit or likelihood.
+Containers with no masked entries remain supported.
+
 ```bash
 python examples/stellar_activity/run.py --typefileplot png
 ```
@@ -36,6 +41,23 @@ The example spans three days with a flare at day 1.5, peak amplitude 0.03, rise 
 `select_observed_variable_stars` retains the TESS-sector selection from Hattusa's catalog script. It requires a catalog and aligned zero-or-one coverage rows, with columns representing consecutive sectors starting at Sector 1. The default includes Sector 40 and later. It does not perform a positional cross-match or read machine-specific catalog files.
 
 `run_rotation_regression_benchmark` retains the random-forest period experiment under the optional `rotation_ml` extra. It generates explicitly synthetic sinusoidal curves with periods from 1 to 10 days, independent white noise, and ten random sinusoidal noise components. Training and test data receive the same noise prescription, and predictions and errors are returned only for held-out targets. These sampled noise components are a toy construction, not a continuous-time stellar-noise model. The unfinished convolutional-network placeholder was not transferred. The original Hattusa MIT notice is retained in `LICENSE.Hattusa`.
+
+## Mauve data status
+
+Mauve observes stellar UV-visible spectrophotometry over 200-700 nm. Blue Skies
+Space distributes selected commissioning observations as FITS files with calibration
+information and CALSPEC comparisons through Stardrive. The preview requires an
+account. The mission and preview descriptions are at `https://bssl.space/mauve/`
+and `https://bssl.space/mauve/preview-data/`.
+
+Miletos currently has no validated Mauve FITS reader, calibrated time-series
+example, or instrument-response model. Its generic activity fitter can consume
+a separately prepared relative-flux series with supplied uncertainties, but that
+fit does not validate wavelength calibration, spectral integration, data-quality
+selection, or error covariance. The synthetic activity example above makes no
+Mauve cadence, sensitivity, or precision claim. A real-observation Mauve example
+remains unavailable here because no calibrated FITS products and release schema
+have been supplied or independently inspected.
 
 ## Installation
 

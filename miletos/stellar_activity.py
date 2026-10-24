@@ -60,6 +60,8 @@ def log_prior_spot_flare(parameters, *, number_spots, number_flares=0, evolving_
 
 
 def _time_series(time_days, relative_flux, flux_uncertainty):
+    if any(np.ma.is_masked(value) for value in (time_days, relative_flux, flux_uncertainty)):
+        raise ValueError("Time, flux, and uncertainty must be unmasked vectors")
     arrays = tuple(np.asarray(value, dtype=float)
                    for value in (time_days, relative_flux, flux_uncertainty))
     if any(array.ndim != 1 or array.size == 0 or not np.isfinite(array).all() for array in arrays):
