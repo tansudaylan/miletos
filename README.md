@@ -69,6 +69,10 @@ export MILETOS_PATH=/path/to/miletos
 
 `MILETOS_PATH` identifies the repository root. Runtime inputs belong under `$MILETOS_PATH/data/` and generated pipeline outputs belong under `$MILETOS_PATH/visuals/`. Both directories are ignored by Git. Miletos does not use a separate data-path environment variable.
 
+Run `python -m pytest -q` from the checkout to execute the tests. The project
+uses pytest's importlib mode by default, so test files can share basenames with
+files in another checkout when their test directories are run together.
+
 ## Minimal usage
 Set `MILETOS_PATH` to the repository root and run the deterministic simulated-transit example:
 
