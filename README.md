@@ -239,6 +239,23 @@ Given a target, Miletos searches for time-series data using MAST (e.g., TESS, Ke
 
 CHEOPS public light curves are retrieved through the optional DACE client. Install `miletos[cheops]`, then call `miletos.retrieve_cheops_light_curves("WASP-8")` or pass `ra_deg` and `dec_deg` to resolve the nearest CHEOPS target. The function returns one normalized `[BJD, flux, flux uncertainty]` array per visit, keyed by DACE `file_key`. Its default quality filter follows the standard CHEOPS event-flag limits. To retrieve directly in `miletos.init`, set `listlablinst=[['CHEOPS'], []]`, `liststrgtypedata=[['obsd'], []]`, and provide `strgmast`, `ticitarg`, or coordinates. Set `cheopsaperture` to select the DACE photometric aperture. Public data do not require a DACE API key. Private data require DACE credentials.
 
+On October 25, 2026, the three public selectors below each returned the same
+eight WASP-189 visits and 13,886 usable cadences with DACE client 3.0.2.
+Visit times were strictly increasing, uncertainties finite and positive, and
+the arrays agreed exactly across selectors. Normalization sets each visit's
+median flux to one. Instrumental detrending and astrophysical fitting remain
+separate steps.
+
+```python
+import miletos
+
+by_name = miletos.retrieve_cheops_light_curves("WASP-189")
+by_tic = miletos.retrieve_cheops_light_curves(157910432)
+by_position = miletos.retrieve_cheops_light_curves(
+    ra_deg=225.686732, dec_deg=-3.0314874,
+)
+```
+
 
 ## Analyses
 Miletos performs preliminary analyses such as detrending, phase-folding, producing Lomb-Scargle periodograms (via Astropy), and performing Box Least Squares (BLS) searches. The outcomes are plotted, written to disk, and returned to the user. They are also used as priors for subsequent generative modeling of the data.
@@ -263,7 +280,15 @@ Use `--cadences` and `--frequency-factors` to choose another benchmark grid. Tim
 
 I route compact-object Doppler-beaming, ellipsoidal-variation, and self-lensing
 amplitudes through Ephesos. The example compares those predictions across
-orbital periods and companion masses for a solar-type source star:
+orbital periods and companion masses for a solar-type source star.
+
+`derive_compact_object_features` passes a density consistent with the supplied
+stellar mass and radius to Ephesos, using the same 1.41 g cm^-3 solar
+normalization as the amplitude prescription. Masked, nonfinite, or nonpositive inputs are
+rejected before computing that density. These values are model predictions;
+obtaining measured amplitudes requires fitting a light curve.
+
+Run the example with
 
 ```bash
 python examples/compact_object_signatures/run.py

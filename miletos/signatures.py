@@ -13,6 +13,10 @@ def derive_compact_object_features(
 ) -> dict[str, np.ndarray]:
     """Return Ephesos photometric amplitudes and derived orbital features."""
 
+    if any(np.ma.is_masked(value) for value in (
+        stellar_radius_solar, period_days, companion_mass_solar, stellar_mass_solar
+    )):
+        raise ValueError("Compact-object inputs must contain measured values")
     period_days, stellar_radius_solar, companion_mass_solar, stellar_mass_solar = (
         np.atleast_1d(value)
         for value in np.broadcast_arrays(
@@ -27,11 +31,16 @@ def derive_compact_object_features(
             )
         )
     )
+    if any(not np.isfinite(value).all() or np.any(value <= 0.0) for value in (
+        period_days, stellar_radius_solar, companion_mass_solar, stellar_mass_solar
+    )):
+        raise ValueError("Compact-object inputs must be finite and positive")
     signatures = compute_photometric_signatures(
         period_days,
         companion_mass_solar,
         stellar_radius_solar=stellar_radius_solar,
         stellar_mass_solar=stellar_mass_solar,
+        stellar_density_cgs=1.41 * stellar_mass_solar / stellar_radius_solar**3,  # [g cm^-3]
     )
     semimajor_axis_solar = tdpy.retr_smaxkepl(
         period_days, stellar_mass_solar + companion_mass_solar
