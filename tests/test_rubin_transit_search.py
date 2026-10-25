@@ -31,10 +31,13 @@ class _Job:
 
 
 class _Service:
-    def __init__(self, result, visit_columns=None):
+    def __init__(self, result, visit_columns=None, forced_columns=None):
         self.result = result
         self.queries = []
         self.job = _Job(result)
+        self.forced_columns = forced_columns or [
+            "objectId", "visit", "psfFlux", "psfFluxErr", "psfFlux_flag"
+        ]
         self.visit_columns = visit_columns or [
             "visitId", "expMidptMJD", "obsStartMJD", "expTime", "band"
         ]
@@ -42,7 +45,7 @@ class _Service:
     def search(self, query):
         self.queries.append(query)
         if "ForcedSource" in query:
-            columns = ["objectId", "visit", "psfFlux", "psfFluxErr", "psfFlux_flag"]
+            columns = self.forced_columns
         else:
             columns = self.visit_columns
         return pd.DataFrame({"column_name": columns})
@@ -77,6 +80,19 @@ def test_query_builds_midpoint_from_visit_start_and_exposure_when_needed():
     query_rubin_forced_photometry(service, "edp2", 42)
 
     assert "(v.observationStartMJD + v.exposureTime / 172800.0) AS time_mjd" in service.queries[-1]
+
+
+def test_query_allows_release_schema_without_optional_flux_flag():
+    rows = pd.DataFrame({"object_id": [42], "visit_id": [7], "band": ["r"]})
+    service = _Service(
+        rows,
+        forced_columns=["objectId", "visit", "psfFlux", "psfFluxErr"],
+    )
+
+    result = query_rubin_forced_photometry(service, "dp1", 42)
+
+    assert result.equals(rows)
+    assert "psf_flux_flag" not in service.queries[-1]
 
 
 def test_prepare_converts_tai_midpoints_and_normalizes_each_band():

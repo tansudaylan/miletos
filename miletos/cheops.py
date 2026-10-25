@@ -14,6 +14,8 @@ def _as_column(data: Mapping, name: str, *, required: bool = True, default=None)
         if required:
             raise ValueError(f"DACE CHEOPS response is missing {name!r}.")
         return np.full(len(data.get("file_key", [])), default)
+    if np.ma.is_masked(data[name]):
+        raise ValueError(f"DACE CHEOPS column {name!r} contains masked observations.")
     return np.asarray(data[name])
 
 
@@ -131,7 +133,7 @@ def retrieve_cheops_light_curves(
             ("photom_event_cosmic_flag", 2),
         ):
             if column in data:
-                flag = np.asarray(data[column], dtype=float)
+                flag = _as_column(data, column).astype(float)
                 if flag.shape != time.shape:
                     raise ValueError(f"DACE CHEOPS quality column {column!r} has the wrong length.")
                 good &= np.isfinite(flag) & (flag <= maximum)

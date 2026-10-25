@@ -389,7 +389,7 @@ def retr_dictmodl_mile(gdat, time, dictparainpt, strgmodl):
             for j in gmod.indxcomp:
                 masscomp[j] = dictparainpt['masscom%d' % j]
             massstar = dictparainpt['massstar']
-            radistar = dictparainpt['massstar']
+            radistar = dictparainpt['radistar']
         else:
             masscomp = None
             massstar = None

@@ -83,10 +83,10 @@ The random forest is trained on synthetic sinusoidal curves. Both subsets use
 the same noise prescription, and returned predictions concern held-out targets.
 No convolutional-network implementation or observational performance is claimed.
 
-Sanity checks
--------------
+Input checks
+------------
 
 ``miletos.init`` accepts ``boolsanity=True`` to check loaded time series,
 companion orbital parameters, photometric model fluxes, and phase-folded arrays.
 The additional checks are disabled by default. The existing ``booldiag`` option
-controls Miletos's earlier structural and execution diagnostics independently.
+selects Miletos's earlier structural and execution messages independently.

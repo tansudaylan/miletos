@@ -104,7 +104,7 @@ def query_rubin_forced_photometry(service, release: str, object_id: int) -> pd.D
     forced_visit = _column(forced, forced_table, "visit", "visitId")
     flux = _column(forced, forced_table, "psfFlux")
     flux_error = _column(forced, forced_table, "psfFluxErr")
-    flux_flag = _column(forced, forced_table, "psfFlux_flag")
+    flux_flag = forced.get("psfflux_flag")
     visit_id = _column(visits, visit_table, "visitId", "visit")
     band = _column(visits, visit_table, "band")
 

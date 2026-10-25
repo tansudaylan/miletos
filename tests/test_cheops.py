@@ -78,6 +78,28 @@ def test_retrieve_cheops_light_curves_resolves_nearest_coordinate_target(monkeyp
     assert set(curves) == {"visit-a"}
 
 
+@pytest.mark.parametrize("column", [
+    "obj_date_bjd_vect", "photom_flux_vect", "photom_flux_vect_err",
+    "photom_event_saa_flag",
+])
+def test_retrieve_cheops_rejects_masked_archive_observations(monkeypatch, column):
+    _install_fake_dace(monkeypatch)
+    data = _dace_data()
+    data[column] = np.ma.array(data[column], mask=[True] + [False] * 7)
+    monkeypatch.setattr(sys.modules[__name__], "_dace_data", lambda: data)
+
+    with pytest.raises(ValueError, match="masked observations"):
+        miletos.retrieve_cheops_light_curves(42)
+
+
+def test_cheops_column_accepts_unmasked_container():
+    from miletos.cheops import _as_column
+
+    values = np.arange(3)
+    result = _as_column({"flux": np.ma.array(values, mask=False)}, "flux")
+    np.testing.assert_array_equal(result, values)
+
+
 @pytest.mark.parametrize(
     "arguments",
     [
