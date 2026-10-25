@@ -81,7 +81,7 @@ TESS-sector coverage flags. For the optional toy period-regression experiment:
 
 The random forest is trained on synthetic sinusoidal curves. Both subsets use
 the same noise prescription, and returned predictions concern held-out targets.
-No convolutional-network implementation or observational performance is claimed.
+Its scores describe this synthetic sample.
 
 Input checks
 ------------

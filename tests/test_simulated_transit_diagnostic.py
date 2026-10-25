@@ -9,7 +9,22 @@ from miletos.diagnostics import (
 
 
 @pytest.mark.parametrize('typeplotback', ['white', 'dark'])
-def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys, typeplotback):
+def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys, monkeypatch, typeplotback):
+    import tdpy
+
+    save = tdpy.save_figure
+    captured = []
+
+    def check_folded_panel(figure, *args, **kwargs):
+        axis = figure.axes[2]
+        assert axis.get_xlim() == (-0.5, 0.5)
+        measured, model = axis.lines[:2]
+        assert np.min(measured.get_xdata()) < 0 < np.max(measured.get_xdata())
+        assert np.min(model.get_xdata()) < 0 < np.max(model.get_xdata())
+        captured.append((np.array(model.get_xdata()), np.array(model.get_ydata())))
+        return save(figure, *args, **kwargs)
+
+    monkeypatch.setattr(tdpy, "save_figure", check_folded_panel)
     output_path = tmp_path / "simulated_transit_diagnostic.png"
 
     result = run_simulated_transit_diagnostic(output_path, typeplotback=typeplotback)
@@ -18,6 +33,8 @@ def test_simulated_transit_diagnostic_writes_pipeline_figure(tmp_path, capsys, t
     assert output_path.is_file()
     assert result.time_days.shape == result.observed_flux.shape
     assert result.time_days.size > 3_000
+    np.testing.assert_array_equal(captured[0][0], result.phase)
+    np.testing.assert_array_equal(captured[0][1], 1e6 * (result.folded_model_flux - 1.0))
     assert result.binned_phase.size == 65
     assert result.phase.min() <= -0.49
     assert result.phase.max() >= 0.49

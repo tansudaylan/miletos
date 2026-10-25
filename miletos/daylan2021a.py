@@ -8,7 +8,11 @@ ratios and the stellar radius of the paper.
 
 from tdpy.verbosity import print
 
+import hashlib
+from importlib.metadata import version
+import json
 import numpy as np
+from pathlib import Path
 
 from .paths import get_data_path, get_repository_path
 
@@ -93,10 +97,31 @@ def retr_llik(values, state):
     return retr_llik_rvelmarg(state['flux'], state['stdv'], modl[:, None] * state['matrblin'], state['listjitt'])
 
 
+def _posterior_identity(state, numbchan, numbsamp, numbburn, seed):
+    from pcat import fixed, main, radial_velocity
+    from tdpy import numerics
+    from . import _compat
+
+    digest = hashlib.sha256()
+    for name in sorted(state):
+        array = np.ascontiguousarray(state[name])
+        digest.update(name.encode())
+        digest.update(str((array.shape, array.dtype.str)).encode())
+        digest.update(array.tobytes())
+    for module in (fixed, main, radial_velocity, numerics, _compat):
+        print(f"Reading from {module.__name__.replace('.', '/')}.py...")
+        digest.update(Path(module.__file__).read_bytes())
+    print('Reading from miletos/daylan2021a.py...')
+    digest.update(Path(__file__).read_bytes())
+    digest.update(json.dumps([numbchan, numbsamp, numbburn, seed, np.__version__,
+                              version('scipy'), version('batman-package')]).encode())
+    return digest.hexdigest()
+
+
 def fit_daylan2021a_transits(numbchan=4, numbsamp=100000, numbburn=100000, seed=0, boolreus=False):
     """Sample the four-planet posterior with PCAT; return samples, radii [R_earth], and the data state.
 
-    With boolreus, a previously saved posterior is returned instead of sampling again.
+    With boolreus, reuse requires matching data, model sources and sampler settings.
     """
     from pcat.fixed import sample_fixed_chains
 
@@ -104,11 +129,19 @@ def fit_daylan2021a_transits(numbchan=4, numbsamp=100000, numbburn=100000, seed=
     state = dict(time=time, flux=flux, stdv=stdv, matrblin=retr_matrblin(time, indxwind),
                  listjitt=np.geomspace(1e-5, 3e-4, 4), timeexpo=2. / 1440.)
     repository_path = get_repository_path()
-    path = repository_path / 'examples' / 'TOI-1233' / 'data' / 'daylan2021a_transit_posterior.npz'
+    identity = _posterior_identity(state, numbchan, numbsamp, numbburn, seed)
+    legacy_path = repository_path / 'examples' / 'TOI-1233' / 'data' / 'daylan2021a_transit_posterior.npz'
+    path = legacy_path.with_name(f'{legacy_path.stem}_{identity}.npz')
     if boolreus and path.exists():
         print(f'Reading from {path.relative_to(repository_path)}...')
-        arry = np.load(path)
-        return arry['samples'], arry['radi'], state
+        with np.load(path, allow_pickle=False) as arry:
+            if str(arry['input_sha256']) != identity:
+                raise ValueError('Posterior cache identity does not match its inputs')
+            return arry['samples'], arry['radi'], state
+    if boolreus and legacy_path.exists():
+        raise ValueError('Legacy posterior lacks verified input provenance; regenerate with boolreus=False')
+    if path.exists():
+        raise FileExistsError('An identical posterior run already exists; reuse it or choose a new seed')
     names = retr_names()
     minima, maxima, initial = [], [], []
     for epoc, peri, rrat in zip(EPOC_PUBL, PERI_PUBL, RRAT_PUBL):
@@ -123,9 +156,11 @@ def fit_daylan2021a_transits(numbchan=4, numbsamp=100000, numbburn=100000, seed=
     rng = np.random.default_rng(seed)
     radistar = rng.normal(RADI_STAR, STDV_RADI_STAR, samples.shape[0])  # [R_sun]
     radi = samples[:, 2:-2:5] * radistar[:, None] * RADI_SUN_EART  # [R_earth]
+    if _posterior_identity(state, numbchan, numbsamp, numbburn, seed) != identity:
+        raise RuntimeError('Likelihood inputs or model sources changed during sampling')
     path.parent.mkdir(parents=True, exist_ok=True)
     print(f'Writing to {path.relative_to(repository_path)}...')
-    np.savez(path, samples=samples, chain=chain, radi=radi)
+    np.savez(path, samples=samples, chain=chain, radi=radi, input_sha256=identity)
     return samples, radi, state
 
 

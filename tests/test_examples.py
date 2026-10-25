@@ -62,6 +62,16 @@ def test_example_notebooks_use_miletos_apis():
 
         source = '\n'.join('\n'.join(cell['source']) for cell in code_cells)
         tree = ast.parse(source)
+        assert "/Users/" not in json.dumps(notebook)
+        assert "/home/" not in json.dumps(notebook)
+        assert not any(
+            isinstance(node, ast.Assert) and any(
+                isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                and call.func.attr in {"is_file", "exists"}
+                for call in ast.walk(node.test)
+            )
+            for node in ast.walk(tree)
+        ), f"Public notebook contains an output-existence assertion: {relative_path}"
         imported_modules = {
             node.names[0].name.split('.')[0]
             for node in ast.walk(tree)
@@ -103,19 +113,38 @@ def test_daylan2021a_verbose_file_messages_use_relative_paths(tmp_path, monkeypa
         path.parent.mkdir(parents=True, exist_ok=True)
         np.savetxt(path, photometry, delimiter=',')
 
-    posterior_path = repository_path / 'examples' / 'TOI-1233' / 'data' / 'daylan2021a_transit_posterior.npz'
-    posterior_path.parent.mkdir(parents=True)
-    np.savez(posterior_path, samples=np.zeros((1, 22)), radi=np.ones((1, 4)))
     messages = []
     monkeypatch.setattr(daylan2021a, 'get_data_path', lambda: data_path)
     monkeypatch.setattr(daylan2021a, 'get_repository_path', lambda: repository_path)
     monkeypatch.setattr(daylan2021a, 'print', messages.append)
+    actual_time, flux, stdv, windows = daylan2021a.retr_lcur()
+    state = dict(time=actual_time, flux=flux, stdv=stdv,
+                 matrblin=daylan2021a.retr_matrblin(actual_time, windows),
+                 listjitt=np.geomspace(1e-5, 3e-4, 4), timeexpo=2. / 1440.)
+    identity = daylan2021a._posterior_identity(state, 4, 100000, 100000, 0)
+    posterior_path = repository_path / 'examples' / 'TOI-1233' / 'data' / f'daylan2021a_transit_posterior_{identity}.npz'
+    posterior_path.parent.mkdir(parents=True)
+    np.savez(posterior_path, samples=np.zeros((1, 22)), radi=np.ones((1, 4)), input_sha256=identity)
+    altered_state = dict(state, flux=state['flux'].copy())
+    altered_state['flux'][0] += 1e-4
+    assert daylan2021a._posterior_identity(altered_state, 4, 100000, 100000, 0) != identity
+    assert daylan2021a._posterior_identity(state, 4, 100001, 100000, 0) != identity
+    messages.clear()
 
     daylan2021a.fit_daylan2021a_transits(boolreus=True)
 
-    assert len(messages) == 3
-    assert messages[-1] == 'Reading from examples/TOI-1233/data/daylan2021a_transit_posterior.npz...'
+    assert len(messages) == 9
+    assert messages[-1] == f'Reading from examples/TOI-1233/data/{posterior_path.name}...'
     assert all(str(tmp_path) not in message for message in messages)
+    legacy_path = posterior_path.with_name('daylan2021a_transit_posterior.npz')
+    legacy_path.write_bytes(b'preserved legacy posterior')
+    from pcat import fixed
+    monkeypatch.setattr(fixed, 'sample_fixed_chains', lambda *args, **kwargs: pytest.fail(
+        'Unverified legacy reuse must fail before sampling'))
+    with pytest.raises(ValueError, match='Legacy posterior'):
+        daylan2021a.fit_daylan2021a_transits(seed=1, boolreus=True)
+    assert legacy_path.read_bytes() == b'preserved legacy posterior'
+    assert posterior_path.is_file()
 
 
 def test_daylan2021a_summary_reports_published_planet_values():

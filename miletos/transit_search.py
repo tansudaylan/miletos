@@ -250,7 +250,8 @@ def search_transit_origami(
     For each trial satellite-to-planet mass ratio, the moon timing is predicted by
     ``TTV_moon = -TTV_planet / mass_ratio``. Planet transit windows and optional
     contaminating transit intervals are excluded before the weighted box-vs-flat
-    comparison. This is a screening statistic, not a photodynamic validation.
+    comparison. The statistic compares weighted box and flat models in the
+    predicted moon windows. It does not model the planet-moon dynamics.
     """
 
     time_days, flux, flux_uncertainty = _validate_curve(time_days, flux, flux_uncertainty)

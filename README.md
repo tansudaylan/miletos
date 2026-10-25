@@ -52,14 +52,11 @@ information and CALSPEC comparisons through Stardrive. The preview requires an
 account. The mission and preview descriptions are at `https://bssl.space/mauve/`
 and `https://bssl.space/mauve/preview-data/`.
 
-Miletos currently has no validated Mauve FITS reader, calibrated time-series
-example, or instrument-response model. Its generic activity fitter can consume
-a separately prepared relative-flux series with supplied uncertainties, but that
-fit does not validate wavelength calibration, spectral integration, data-quality
-selection, or error covariance. The synthetic activity example above makes no
-Mauve cadence, sensitivity, or precision claim. A real-observation Mauve example
-remains unavailable here because no calibrated FITS products and release schema
-have been supplied or independently inspected.
+Miletos can fit a prepared relative-flux series with supplied uncertainties.
+The repository has no Mauve FITS reader or instrument-response model, so the
+synthetic activity example says nothing about Mauve cadence or precision. A
+real-data example needs the product schema and its wavelength, quality, and
+uncertainty conventions.
 
 ## Installation
 
@@ -124,6 +121,14 @@ python examples/WASP-39b/run.py
 python examples/TOI-1233/search_single_repeating_origami.py
 python examples/tess_transit_search/run_pilot.py
 ```
+
+The TOI-1233 four-planet fitter keys its posterior cache to the observed
+likelihood arrays, model sources, NumPy/SciPy/Batman versions, and sampler
+settings. `--reuse` accepts a matching cache. Older caches without this
+provenance remain preserved and raise an explicit error. Use
+`fit_daylan2021a_transits(..., boolreus=False)` for a fresh fit. The historical
+gallery predates this cache format, so current-code comparisons require a new
+full posterior.
 
 The equivalent Jupyter notebooks provide interactive access to every maintained
 example workflow:
@@ -285,8 +290,8 @@ orbital periods and companion masses for a solar-type source star.
 `derive_compact_object_features` passes a density consistent with the supplied
 stellar mass and radius to Ephesos, using the same 1.41 g cm^-3 solar
 normalization as the amplitude prescription. Masked, nonfinite, or nonpositive inputs are
-rejected before computing that density. These values are model predictions;
-obtaining measured amplitudes requires fitting a light curve.
+rejected before computing that density. These are model predictions. Measured
+amplitudes require fitting observed light curves.
 
 Run the example with
 
