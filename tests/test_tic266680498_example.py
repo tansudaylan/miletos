@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 
 import numpy as np
@@ -36,9 +37,23 @@ def test_cached_pdcsap_bjd_is_converted_to_btjd_without_dropping_rows(tmp_path):
     assert curve["sector"].tolist() == [3, 3, 3]
 
 
+@pytest.mark.parametrize("rows", [
+    "2457001,1,0.001,4\n2457002,2,0.001,4\n2457003,3,0.001,4\n",
+    "2457001,1,0\n2457002,1,0.001\n2457003,1,0.001\n",
+    "2457001,1,0.001\n2457002,nan,0.001\n2457003,1,0.001\n",
+    "2457001,1,0.001\n2457001,1,0.001\n2457003,1,0.001\n",
+])
+def test_malformed_cached_photometry_is_rejected(tmp_path, rows):
+    path = tmp_path / "sector.csv"
+    path.write_text(rows, encoding="utf-8")
+    with pytest.raises(ValueError):
+        EXAMPLE.read_cached_sector_light_curve(path, 3)
+
+
 @pytest.mark.parametrize("include_combined", [False, True])
+@pytest.mark.parametrize("mutate_source", [False, True])
 def test_run_analysis_uses_miletos_search_for_each_sector_and_optional_combined_curve(
-    tmp_path, monkeypatch, include_combined
+    tmp_path, monkeypatch, include_combined, mutate_source
 ):
     data_directory = tmp_path / "data"
     output_directory = tmp_path / "visuals"
@@ -59,6 +74,9 @@ def test_run_analysis_uses_miletos_search_for_each_sector_and_optional_combined_
 
     def fake_search(light_curve, **kwargs):
         searched.append((light_curve.copy(), kwargs))
+        if mutate_source and len(searched) == 1:
+            source = data_directory / f"TESS_PDCSAP_FLUX_Sector{EXAMPLE.SECTORS[0]:02d}.csv"
+            source.write_text(source.read_text() + "\n", encoding="utf-8")
         return {
             "period_days": 2.0,
             "transit_time_days": 1.1,
@@ -80,10 +98,18 @@ def test_run_analysis_uses_miletos_search_for_each_sector_and_optional_combined_
         lambda light_curve, result, path, **kwargs: plotted.append((Path(path), kwargs)),
     )
 
+    if mutate_source:
+        with pytest.raises(RuntimeError, match="changed during analysis"):
+            EXAMPLE.run_analysis(data_directory=data_directory, output_directory=output_directory,
+                                 include_combined=include_combined, time_tag="20261025_220000")
+        assert not list(data_directory.parent.glob("*miletos_bls_results*"))
+        return
+
     results = EXAMPLE.run_analysis(
         data_directory=data_directory,
         output_directory=output_directory,
         include_combined=include_combined,
+        time_tag="20261025_220000",
     )
 
     expected_count = len(EXAMPLE.SECTORS) + int(include_combined)
@@ -93,16 +119,25 @@ def test_run_analysis_uses_miletos_search_for_each_sector_and_optional_combined_
     assert all(call[1]["data_label"] == EXAMPLE.DATA_LABEL for call in plotted)
     assert searched[0][1]["minimum_period_days"] == EXAMPLE.MINIMUM_PERIOD_DAYS
     expected_plot_names = [
-        f"tic266680498_sector{sector:02d}_bls_search.png"
+        f"tic266680498_sector{sector:02d}_bls_search_20261025_220000.png"
         for sector in EXAMPLE.SECTORS
     ]
     if include_combined:
-        expected_plot_names.append("tic266680498_combined_bls_search.png")
+        expected_plot_names.append("tic266680498_combined_bls_search_20261025_220000.png")
     assert sorted(path.name for path, _ in plotted) == sorted(expected_plot_names)
-    result_path = data_directory.parent / "tic266680498_miletos_bls_results.csv"
+    result_path = data_directory.parent / "tic266680498_miletos_bls_results_20261025_220000.csv"
     assert result_path.is_file()
     saved = pd.read_csv(result_path)
     assert len(saved) == expected_count
+    manifest = json.loads(result_path.with_suffix(".json").read_text())
+    assert len(manifest["input_sha256"]) == len(EXAMPLE.SECTORS)
+    assert manifest["include_combined"] is include_combined
+    original = result_path.read_bytes()
+    with pytest.raises(FileExistsError):
+        EXAMPLE.run_analysis(data_directory=data_directory, output_directory=output_directory,
+                             include_combined=include_combined, time_tag="20261025_220000")
+    assert result_path.read_bytes() == original
+    assert len(searched) == expected_count
 
 
 def test_target_search_plot_labels_cached_pdcsap_as_its_source(tmp_path, monkeypatch):

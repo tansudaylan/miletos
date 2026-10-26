@@ -212,11 +212,13 @@ Run the Miletos BLS search and candidate vetter on the cached normalized PDCSAP 
 python examples/TIC266680498/run.py
 ```
 
-The example reads the Sector 3, 30, and 107 CSV products under `$MILETOS_PATH/data/TIC266680498/data/`. It converts their BJD timestamps to BTJD, searches each sector, and writes three figures directly under `examples/TIC266680498/visuals/`. The inverted-light-curve null test flags each observed peak, so they remain unconfirmed candidates for review. The result table remains under the target's data directory. These inputs are normalized light curves, and the example makes no new transit-discovery claim from raw detector data.
+The example reads the Sector 3, 30, and 107 CSV products under `$MILETOS_PATH/data/TIC266680498/data/`. It converts their BJD timestamps to BTJD, searches each sector, and writes three figures directly under `examples/TIC266680498/visuals/`. Figure names and the result table now include a UTC timestamp. A JSON record beside the result table preserves the three input SHA-256 hashes and search settings. `--time-tag YYYYMMDD_HHMMSS` selects an explicit tag, and an existing output causes the run to stop before searching. Earlier figures and tables are preserved.
+
+The October 26, 2026 UTC run searched 42,798 observed cadences. Its strongest per-sector periods were 5.98, 6.62, and 7.68 days. The inverted-light-curve check flagged all three peaks, and Sector 30 also showed an odd/even mismatch. Every result remains classified for review. These inputs are cached normalized PDCSAP light curves. The example performs their search and vetting, with raw-pixel extraction outside this workflow.
 
 | Sector 3 | Sector 30 | Sector 107 |
 |---|---|---|
-| ![Miletos search of cached TIC 266680498 Sector 3 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector03_bls_search.png) | ![Miletos search of cached TIC 266680498 Sector 30 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector30_bls_search.png) | ![Miletos search of cached TIC 266680498 Sector 107 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector107_bls_search.png) |
+| ![Miletos search of cached TIC 266680498 Sector 3 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector03_bls_search_20261026_012721.png) | ![Miletos search of cached TIC 266680498 Sector 30 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector30_bls_search_20261026_012721.png) | ![Miletos search of cached TIC 266680498 Sector 107 PDCSAP photometry](examples/TIC266680498/visuals/tic266680498_sector107_bls_search_20261026_012721.png) |
 
 To also search the multi-year combined baseline, which takes substantially longer, pass `--include-combined`.
 

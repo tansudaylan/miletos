@@ -2,7 +2,11 @@
 """Search cached TESS photometry of TIC 266680498 with Miletos BLS vetting."""
 
 import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
 from pathlib import Path
+import re
 
 import numpy as np
 import pandas as pd
@@ -33,7 +37,6 @@ def read_cached_sector_light_curve(path: str | Path, sector: int) -> pd.DataFram
         path,
         comment="#",
         header=None,
-        names=("bjd", "flux", "flux_error"),
     )
     values = table.to_numpy(dtype=float)
     if values.ndim != 2 or values.shape[1] != 3 or values.shape[0] < 3:
@@ -79,17 +82,37 @@ def run_analysis(
     typefileplot: str = "png",
     typeplotback: str = "white",
     include_combined: bool = False,
+    time_tag: str | None = None,
 ) -> pd.DataFrame:
     """Search each cached sector and the combined observations with Miletos."""
 
     data_directory = Path(data_directory or get_data_path() / f"TIC{TIC_ID}" / "data")
     output_directory = Path(output_directory)
+    if typefileplot not in ("png", "pdf"):
+        raise ValueError("typefileplot must be png or pdf")
+    time_tag = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") if time_tag is None else time_tag
+    if not isinstance(time_tag, str) or not re.fullmatch(r"[0-9]{8}_[0-9]{6}", time_tag):
+        raise ValueError("time_tag must use YYYYMMDD_HHMMSS")
+    datetime.strptime(time_tag, "%Y%m%d_%H%M%S")
+    labels = [f"sector{sector:02d}" for sector in SECTORS]
+    if include_combined:
+        labels.append("combined")
+    plot_paths = {label: output_directory / f"tic{TIC_ID}_{label}_bls_search_{time_tag}.{typefileplot}"
+                  for label in labels}
+    results_path = data_directory.parent / f"tic{TIC_ID}_miletos_bls_results_{time_tag}.csv"
+    sources_path = results_path.with_suffix(".json")
+    for path in (*plot_paths.values(), results_path, sources_path):
+        if path.exists():
+            raise FileExistsError(path.name)
     output_directory.mkdir(parents=True, exist_ok=True)
     curves = {}
+    source_hashes = {}
     rows = []
     with plot_style(typeplotback):
         for sector in SECTORS:
             input_path = data_directory / f"TESS_PDCSAP_FLUX_Sector{sector:02d}.csv"
+            print(f"Reading from {input_path}...")
+            source_hashes[input_path.name] = hashlib.sha256(input_path.read_bytes()).hexdigest()
             curve = read_cached_sector_light_curve(input_path, sector)
             curves[sector] = curve
             result = _search_curve(curve)
@@ -97,8 +120,7 @@ def run_analysis(
             plot_target_search(
                 curve,
                 result,
-                output_directory
-                / f"tic{TIC_ID}_sector{sector:02d}_bls_search.{typefileplot}",
+                plot_paths[f"sector{sector:02d}"],
                 data_label=DATA_LABEL,
             )
 
@@ -111,14 +133,26 @@ def run_analysis(
             plot_target_search(
                 combined,
                 combined_result,
-                output_directory / f"tic{TIC_ID}_combined_bls_search.{typefileplot}",
+                plot_paths["combined"],
                 data_label=DATA_LABEL,
             )
 
     results = pd.DataFrame(rows)
-    results_path = data_directory.parent / f"tic{TIC_ID}_miletos_bls_results.csv"
+    for name, expected in source_hashes.items():
+        print(f"Reading from {data_directory / name}...")
+        if hashlib.sha256((data_directory / name).read_bytes()).hexdigest() != expected:
+            raise RuntimeError("Input photometry changed during analysis")
     print(f"Writing to {results_path}...")
-    results.to_csv(results_path, index=False)
+    results.to_csv(results_path, index=False, mode="x")
+    print(f"Writing to {sources_path}...")
+    with sources_path.open("x", encoding="utf-8") as stream:
+        json.dump({"tic_id": TIC_ID, "time_tag_utc": time_tag, "data_label": DATA_LABEL,
+                   "input_sha256": source_hashes, "minimum_period_days": MINIMUM_PERIOD_DAYS,
+                   "maximum_period_days": MAXIMUM_PERIOD_DAYS, "duration_days": DURATION_DAYS,
+                   "per_sector_maximum_period": "min(maximum_period_days, baseline_days / 3)",
+                   "include_combined": include_combined,
+                   "plot_files": [path.name for path in plot_paths.values()]}, stream, indent=2)
+        stream.write("\n")
     return results
 
 
@@ -132,6 +166,7 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--data-directory", type=Path)
     parser.add_argument("--output-directory", type=Path, default=VISUAL_DIRECTORY)
+    parser.add_argument("--time-tag", help="UTC output tag in YYYYMMDD_HHMMSS format")
     parser.add_argument(
         "--include-combined",
         action="store_true",
@@ -144,6 +179,7 @@ def main(argv=None) -> int:
         typefileplot=arguments.typefileplot,
         typeplotback=arguments.typeplotback,
         include_combined=arguments.include_combined,
+        time_tag=arguments.time_tag,
     )
     print(results[["sector", "period_days", "depth", "depth_snr", "disposition"]].to_string(index=False))
     return 0
