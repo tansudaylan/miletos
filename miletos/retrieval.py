@@ -4,16 +4,28 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import numpy as np
+from tdpy.numerics import has_masked_or_complex_values
+
+
+def _marginalized_light_curve_log_likelihood(model_function, values, state):
+    """Evaluate a model against flux after marginalizing baseline and jitter."""
+    from pcat.radial_velocity import retr_llik_rvelmarg
+
+    model = model_function(values, state["time"], state["timeexpo"])
+    design = model[:, None] * state["matrblin"]
+    return retr_llik_rvelmarg(state["flux"], state["stdv"], design, state["listjitt"])
 
 
 def _spectral_log_likelihood(parameters, state):
     """Evaluate a covariance-aware Gaussian likelihood for a binned spectrum."""
     model_error_types = (ArithmeticError, ValueError) + state["model_error_types"]
     try:
-        model_depth_ppm = np.asarray(
-            state["forward_model"](np.asarray(parameters, dtype=float), state["wavelength_microns"]),
-            dtype=float,
+        model_depth_ppm = state["forward_model"](
+            np.asarray(parameters, dtype=float), state["wavelength_microns"],
         )
+        if has_masked_or_complex_values(model_depth_ppm):
+            return -np.inf
+        model_depth_ppm = np.asarray(model_depth_ppm, dtype=float)
     except model_error_types:
         return -np.inf
     if model_depth_ppm.shape != state["observed_depth_ppm"].shape:
@@ -63,6 +75,19 @@ def sample_nirspec_retrieval(
     """
     from pcat.fixed import sample_fixed_chains
 
+    for name, values in (
+        ("wavelength_microns", wavelength_microns),
+        ("observed_depth_ppm", observed_depth_ppm),
+        ("covariance_ppm2", covariance_ppm2),
+        ("prior_minima", prior_minima),
+        ("prior_maxima", prior_maxima),
+        ("initial_values", initial_values),
+        ("proposal_scales", proposal_scales),
+        ("prior_means", prior_means),
+        ("prior_stdvs", prior_stdvs),
+    ):
+        if has_masked_or_complex_values(values):
+            raise ValueError(f"{name} must contain unmasked real values")
     wavelength_microns = np.asarray(wavelength_microns, dtype=float)
     observed_depth_ppm = np.asarray(observed_depth_ppm, dtype=float)
     covariance_ppm2 = np.asarray(covariance_ppm2, dtype=float)
@@ -137,6 +162,7 @@ def sample_nirspec_retrieval(
         "model_error_types": model_error_types,
     }
     options = {
+        "proposal_scales": proposal_scales,
         "boolmakeplot": False,
         "boolmakeplotinit": False,
         "boolmakeplotfram": False,

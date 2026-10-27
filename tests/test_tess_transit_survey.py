@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 import numpy as np
 import pandas as pd
@@ -6,6 +7,7 @@ import pytest
 from astropy.io import fits
 
 from miletos.tess_transit_survey import (
+    download_qlp_light_curves,
     injection_recovery,
     merge_qlp_light_curves,
     read_qlp_light_curve,
@@ -17,6 +19,63 @@ from miletos.tess_transit_search import (
     estimate_survey_occurrence,
     prepare_toi_target_list,
 )
+
+
+@pytest.mark.parametrize('verbosity', [None, '0', '1'])
+def test_qlp_download_progress_obeys_tdpy_verbosity(monkeypatch, tmp_path, capsys, verbosity):
+    from astropy.table import Table
+
+    product = tmp_path / 'hlsp_qlp_tess_ffi_s0030-0000000380907942_tess_v01_llc.fits'
+    product.write_bytes(b'Retained test product')
+    calls = []
+    previous_level = tess_transit_survey.astroquery_log.level
+    monkeypatch.setattr(tess_transit_survey.Observations, 'query_criteria',
+                        lambda **kwargs: Table({'obsid': [1]}))
+    monkeypatch.setattr(tess_transit_survey.Observations, 'get_product_list',
+                        lambda observations: Table({'productFilename': [product.name]}))
+
+    def download(products, **kwargs):
+        expected_level = previous_level if verbosity == '1' else max(previous_level, logging.WARNING)
+        assert tess_transit_survey.astroquery_log.level == expected_level
+        assert tess_transit_survey.astroquery_log.isEnabledFor(logging.WARNING) == (previous_level <= logging.WARNING)
+        calls.append(kwargs)
+        return Table({'Local Path': [str(product)]})
+
+    monkeypatch.setattr(tess_transit_survey.Observations, 'download_products', download)
+    if verbosity is None:
+        monkeypatch.delenv('TDPY_VERBOSITY', raising=False)
+    else:
+        monkeypatch.setenv('TDPY_VERBOSITY', verbosity)
+
+    result = download_qlp_light_curves([380907942], [30], tmp_path)
+
+    assert result == [product]
+    assert calls == [{'download_dir': str(tmp_path), 'verbose': verbosity == '1'}]
+    assert tess_transit_survey.astroquery_log.level == previous_level
+    output = capsys.readouterr().out
+    if verbosity == '1':
+        assert f'Writing to {tmp_path}...' in output
+    else:
+        assert output == ''
+
+
+def test_qlp_download_failure_restores_logger_and_propagates(monkeypatch, tmp_path):
+    from astropy.table import Table
+
+    previous_level = tess_transit_survey.astroquery_log.level
+    monkeypatch.setenv('TDPY_VERBOSITY', '0')
+    monkeypatch.setattr(tess_transit_survey.Observations, 'query_criteria',
+                        lambda **kwargs: Table({'obsid': [1]}))
+    monkeypatch.setattr(tess_transit_survey.Observations, 'get_product_list',
+                        lambda observations: Table({'productFilename': ['example_llc.fits']}))
+
+    def fail_download(products, **kwargs):
+        raise RuntimeError('Download failed')
+
+    monkeypatch.setattr(tess_transit_survey.Observations, 'download_products', fail_download)
+    with pytest.raises(RuntimeError, match='Download failed'):
+        download_qlp_light_curves([380907942], [30], tmp_path)
+    assert tess_transit_survey.astroquery_log.level == previous_level
 
 
 def _write_qlp_fits(path: Path, time, flux, uncertainty, quality=None, flux_name="KSPSAP_FLUX"):
@@ -265,7 +324,8 @@ def test_offline_survey_retains_targets_without_qlp_products(tmp_path):
     assert injections.empty
 
 
-def test_occurrence_requires_complete_parent_sample_and_uses_pergamon():
+@pytest.fixture
+def occurrence_tables():
     results = pd.DataFrame({
         "tic_id": [1, 2], "searched": [True, True], "detection": [True, False],
         "sample_is_parent_population": [True, True],
@@ -275,6 +335,11 @@ def test_occurrence_requires_complete_parent_sample_and_uses_pergamon():
         "tic_id": [1, 1, 2, 2], "period_days": [3.0, 10.0] * 2,  # [day]
         "depth": [0.001, 0.001] * 2, "completeness": [0.8, 0.8, 0.5, 0.5],
     })
+    return results, injections
+
+
+def test_occurrence_requires_complete_parent_sample_and_uses_pergamon(occurrence_tables):
+    results, injections = occurrence_tables
 
     with pytest.raises(ValueError, match="complete parent"):
         estimate_survey_occurrence(results.drop(columns="sample_is_parent_population"), injections)
@@ -284,3 +349,96 @@ def test_occurrence_requires_complete_parent_sample_and_uses_pergamon():
     assert summary["detections"] == 1
     assert 0.0 <= summary["uniform_prior_posterior_median"] <= 1.0
     assert len(summary["uniform_prior_68_percent_interval"]) == 2
+
+
+@pytest.mark.parametrize("column", ["sample_is_parent_population", "searched", "detection"])
+@pytest.mark.parametrize("invalid", ["False", np.nan, 0.9, 2, 1j])
+def test_occurrence_rejects_invalid_flags_before_pergamon(monkeypatch, occurrence_tables, column, invalid):
+    from unittest.mock import Mock
+    import pergamon
+
+    results, injections = occurrence_tables
+    results[column] = [invalid, True]
+    original_results = results.copy(deep=True)
+    original_injections = injections.copy(deep=True)
+    estimator = Mock(side_effect=AssertionError("Invalid flags reached occurrence inference"))
+    monkeypatch.setattr(pergamon, "estimate_occurrence_rate", estimator)
+
+    with pytest.raises(ValueError, match=f"{column}.*Boolean or binary"):
+        estimate_survey_occurrence(results, injections)
+
+    estimator.assert_not_called()
+    pd.testing.assert_frame_equal(results, original_results)
+    pd.testing.assert_frame_equal(injections, original_injections)
+
+
+@pytest.mark.parametrize("dtype", [bool, int, float])
+def test_occurrence_preserves_valid_binary_flags_and_inputs(occurrence_tables, dtype):
+    results, injections = occurrence_tables
+    expected = estimate_survey_occurrence(results, injections)
+    for column in ("sample_is_parent_population", "searched", "detection"):
+        results[column] = results[column].astype(dtype)
+    original_results = results.copy(deep=True)
+    original_injections = injections.copy(deep=True)
+
+    actual = estimate_survey_occurrence(results, injections)
+
+    assert actual == expected
+    pd.testing.assert_frame_equal(results, original_results)
+    pd.testing.assert_frame_equal(injections, original_injections)
+
+
+@pytest.mark.parametrize("kind", [
+    "missing_completeness", "infinite_completeness", "negative_completeness",
+    "above_one_completeness", "complex_completeness", "duplicate_target",
+    "duplicate_injection", "unmatched_injection_target", "missing_injection_target",
+])
+def test_occurrence_rejects_incomplete_or_duplicate_bookkeeping(monkeypatch, occurrence_tables, kind):
+    from unittest.mock import Mock
+    import pergamon
+
+    results, injections = occurrence_tables
+    if kind.endswith("completeness"):
+        invalid = {
+            "missing_completeness": np.nan, "infinite_completeness": np.inf,
+            "negative_completeness": -0.1, "above_one_completeness": 1.1,
+            "complex_completeness": 0.8 + 1j,
+        }[kind]
+        if kind == "complex_completeness":
+            injections["completeness"] = injections["completeness"].astype(complex)
+        injections.loc[1, "completeness"] = invalid
+    elif kind == "duplicate_target":
+        results = pd.concat([results, results.iloc[[0]]], ignore_index=True)
+    elif kind == "duplicate_injection":
+        injections = pd.concat([injections, injections.iloc[[2]]], ignore_index=True)
+    elif kind == "unmatched_injection_target":
+        injections.loc[injections["tic_id"] == 2, "tic_id"] = 3
+    else:
+        injections = injections[injections["tic_id"] == 1].copy()
+    original_results = results.copy(deep=True)
+    original_injections = injections.copy(deep=True)
+    estimator = Mock(side_effect=AssertionError("Invalid survey records reached occurrence inference"))
+    monkeypatch.setattr(pergamon, "estimate_occurrence_rate", estimator)
+
+    with pytest.raises(ValueError):
+        estimate_survey_occurrence(results, injections)
+
+    estimator.assert_not_called()
+    pd.testing.assert_frame_equal(results, original_results)
+    pd.testing.assert_frame_equal(injections, original_injections)
+
+
+@pytest.mark.parametrize("invalid", [None, np.nan, "", "Candidate", "unvetted"])
+def test_occurrence_requires_valid_native_inverted_control_labels(monkeypatch, occurrence_tables, invalid):
+    from unittest.mock import Mock
+    import pergamon
+
+    results, injections = occurrence_tables
+    results["inverted_control_disposition"] = [invalid, "review"]
+    estimator = Mock(side_effect=AssertionError("Unknown inverted controls reached inference"))
+    monkeypatch.setattr(pergamon, "estimate_occurrence_rate", estimator)
+
+    with pytest.raises(ValueError, match="inverted_control_disposition"):
+        estimate_survey_occurrence(results, injections)
+
+    estimator.assert_not_called()

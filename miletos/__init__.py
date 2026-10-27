@@ -27,6 +27,11 @@ def __getattr__(name: str) -> Any:
 		value = getattr(cheops_module, name)
 		globals()[name] = value
 		return value
+	if name == "light_curve_from_image_stack":
+		photometry_module = import_module('.photometry', __name__)
+		value = getattr(photometry_module, name)
+		globals()[name] = value
+		return value
 	if name in {"parse_spot_flare_parameters", "log_prior_spot_flare",
 					"log_likelihood_spot_flare", "fit_spot_flare_light_curve",
 					"select_observed_variable_stars"}:

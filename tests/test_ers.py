@@ -126,6 +126,25 @@ def test_wasp39_renderers_theme_synthetic_arrays_without_modification(tmp_path, 
     def capture_and_save(figure, path, **kwargs):
         assert figure.get_facecolor() == to_rgba(background)
         assert all(axis.xaxis.label.get_color() == foreground for axis in figure.axes)
+        if name in ('plot_wasp39_ers_detector_motion', 'plot_wasp39_ers_light_curve_precision'):
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+            canvas = FigureCanvasAgg(figure)
+            canvas.draw()
+            legend, = figure.legends
+            assert legend.get_title().get_text() == 'Alderson et al. (2023)'
+            bounds = legend.get_window_extent(canvas.get_renderer())
+            assert not bounds.overlaps(figure.axes[0].bbox)
+            assert not bounds.overlaps(figure.axes[0].title.get_window_extent(canvas.get_renderer()))
+        if name == 'plot_wasp39_ers_detector_motion':
+            axis = figure.axes[0]
+            assert axis.get_ylabel() == 'Published motion regressor'
+            for line, values, label in zip(axis.lines[:2],
+                    (result.detector_shift_x_pixels, result.detector_shift_y_pixels),
+                    ('Archive shift_x', 'Archive shift_y')):
+                assert line.get_linestyle() == 'None'
+                assert line.get_label() == label
+                np.testing.assert_array_equal(line.get_ydata(), values)
         return save(figure, path, **kwargs)
 
     monkeypatch.setattr(plt.Figure, 'savefig', capture_and_save)

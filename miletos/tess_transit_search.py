@@ -14,7 +14,7 @@ import pandas as pd
 from tdpy.exoplanet import orbital_phase
 from tdpy.numerics import grid_quantiles, logmeanexp
 from tdpy.verbosity import print
-from tdpy.plotting import configure_plot_style, plot_style, save_plot, themed_plot
+from tdpy.plotting import configure_plot_style, plot_style, preserve_text_color, save_plot, themed_plot
 
 from .tess_transit_survey import (
     download_qlp_light_curves,
@@ -143,19 +143,47 @@ def estimate_survey_occurrence(
     The weights are indexed by the injection ``(period_days, depth)`` grid. Equal
     weights are used when omitted, corresponding to a uniform discrete planet
     distribution over that grid. This assumption must be appropriate for the
-    occurrence domain being reported.
+    occurrence domain being reported. Each TIC must appear once, with one
+    completeness value per injection grid cell and a native inverted-control
+    disposition of ``candidate`` or ``review``. Flags must be Boolean or binary.
     """
 
-    if "sample_is_parent_population" not in results or not results["sample_is_parent_population"].astype(bool).all():
+    if "sample_is_parent_population" not in results:
+        raise ValueError("Occurrence rates require a declared complete parent target population")
+    for column in ("sample_is_parent_population", "searched", "detection"):
+        if (column not in results or np.iscomplexobj(results[column].to_numpy())
+                or not results[column].isin([False, True]).all()):
+            raise ValueError(f"{column} must contain only Boolean or binary 0/1 flags")
+    if not results["sample_is_parent_population"].astype(bool).all():
         raise ValueError("Occurrence rates require a declared complete parent target population")
     if results.empty or not results["searched"].astype(bool).all():
         raise ValueError("Every parent-sample target must have a usable QLP search")
     if "inverted_control_disposition" not in results:
         raise ValueError("Occurrence estimates require matched inverted-control vetting")
+    if not results["inverted_control_disposition"].isin(["candidate", "review"]).all():
+        raise ValueError("inverted_control_disposition must contain candidate or review labels")
+    if ("tic_id" not in results or results["tic_id"].isna().any()
+            or results["tic_id"].duplicated().any()):
+        raise ValueError("Occurrence results must contain one unique row per TIC target")
     searched = results.copy()
     if injections.empty:
         raise ValueError("Injection-recovery results are required for occurrence estimation")
     injections = injections.copy()
+    required_injections = {"tic_id", "period_days", "depth", "completeness"}
+    if not required_injections.issubset(injections):
+        raise ValueError("Injection results must include TIC, period, depth and completeness")
+    if (injections["tic_id"].isna().any()
+            or not injections["tic_id"].isin(searched["tic_id"]).all()
+            or not searched["tic_id"].isin(injections["tic_id"]).all()):
+        raise ValueError("Injection TIC targets must match the parent target sample")
+    if injections.duplicated(["tic_id", "period_days", "depth"]).any():
+        raise ValueError("Injection results must contain one row per TIC and injection grid cell")
+    if np.iscomplexobj(injections["completeness"].to_numpy()):
+        raise ValueError("Injection completeness must be finite real fractions between zero and one")
+    completeness = injections["completeness"].to_numpy(dtype=float)
+    if not np.isfinite(completeness).all() or np.any((completeness < 0.0) | (completeness > 1.0)):
+        raise ValueError("Injection completeness must be finite real fractions between zero and one")
+    injections["completeness"] = completeness
     grid = pd.MultiIndex.from_frame(injections[["period_days", "depth"]].drop_duplicates())
     for tic_id, group in injections.groupby("tic_id"):
         target_grid = pd.MultiIndex.from_frame(group[["period_days", "depth"]].drop_duplicates())
@@ -263,8 +291,10 @@ def plot_survey_products(results: pd.DataFrame, injections: pd.DataFrame,
             axis.set_xlabel("Injected orbital period [day]")
             axis.set_ylabel("Injected transit depth [ppt]")
             for row, column in np.ndindex(matrix.shape):
-                axis.text(column, row, f"{matrix.iloc[row, column]:.0%}",
-                          ha="center", va="center", color="white" if matrix.iloc[row, column] < 0.5 else "black")
+                preserve_text_color(axis.text(
+                    column, row, f"{matrix.iloc[row, column]:.0%}",
+                    ha="center", va="center", color="white" if matrix.iloc[row, column] < 0.5 else "black",
+                ))
             figure.colorbar(image, ax=axis, label="Recovery fraction")
             axis.grid(False)
             paths["completeness"] = output_directory / "tess_transit_completeness.png"

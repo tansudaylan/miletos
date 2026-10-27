@@ -58,6 +58,17 @@ def test_compact_object_features_reject_masked_physical_inputs(masked_index):
         miletos.derive_compact_object_features(*arguments)
 
 
+@pytest.mark.parametrize("index", range(4))
+@pytest.mark.parametrize("imaginary", [0.0, 1.0])
+def test_compact_object_features_reject_complex_physical_arrays(index, imaginary):
+    arguments = [1.0, 10.0, 5.0, 1.0]
+    arguments[index] = np.array([arguments[index] + imaginary * 1j])
+    original = arguments[index].copy()
+    with pytest.raises(ValueError, match="real"):
+        miletos.derive_compact_object_features(*arguments)
+    np.testing.assert_array_equal(arguments[index], original)
+
+
 @pytest.mark.parametrize("index,value", [(0, 0.0), (0, np.nan), (1, -1.0), (2, np.inf), (3, 0.0)])
 def test_compact_object_features_reject_invalid_inputs_before_density_calculation(index, value):
     arguments = [1.0, 10.0, 5.0, 1.0]

@@ -7,6 +7,42 @@ import numpy as np
 from .box_least_squares import search_box_least_squares
 
 
+def transit_mask(time, period, t0, duration, *, include_edges=False):
+    """Select periodic transit windows, interpreting numeric inputs as days.
+
+    Astropy Time uses Julian dates and Quantities are converted to days.
+    Albus excludes the boundaries, whereas repeating-transit searches include
+    them. Both conventions are retained through ``include_edges``.
+    """
+    from astropy.time import Time
+    from astropy import units
+
+    if isinstance(time, Time):
+        time = np.array(time.jd, dtype=float)
+    elif hasattr(time, 'to_value'):
+        time = np.array(time.to_value(units.day), dtype=float)
+    else:
+        time = np.array(time, dtype=float)
+    period = period.to_value(units.day) if hasattr(period, 'to_value') else float(period)
+    if isinstance(t0, Time):
+        t0 = t0.jd
+    elif hasattr(t0, 'to_value'):
+        t0 = t0.to_value(units.day)
+    else:
+        t0 = float(t0)
+    duration = duration.to_value(units.day) if hasattr(duration, 'to_value') else float(duration)
+    if not np.all(np.isfinite(period)) or np.any(period <= 0):
+        raise ValueError('Transit periods must be finite and positive')
+    if not np.all(np.isfinite(t0)):
+        raise ValueError('Transit epochs must be finite')
+    if not np.all(np.isfinite(duration)) or np.any(duration < 0):
+        raise ValueError('Transit durations must be finite and nonnegative')
+    phase = ((time - t0 + 0.5 * period) % period) - 0.5 * period
+    if include_edges:
+        return np.abs(phase) <= 0.5 * duration
+    return np.abs(phase) < 0.5 * duration
+
+
 def _validate_curve(time_days, flux, flux_uncertainty):
     time_days = np.asarray(time_days, dtype=float)
     flux = np.asarray(flux, dtype=float)
@@ -55,7 +91,7 @@ def search_repeating_transits(
         epoch = float(result["transit_time_days"])
         duration = float(result["duration_days"])
         phase = np.remainder(time_days - epoch + 0.5 * period, period) - 0.5 * period
-        in_transit = available & (np.abs(phase) <= 0.5 * duration)
+        in_transit = available & transit_mask(time_days, period, epoch, duration, include_edges=True)
         event_numbers = np.rint((time_days[in_transit] - epoch) / period).astype(int)
         event_count = int(np.unique(event_numbers).size)
         if result["depth_snr"] < minimum_depth_snr or event_count < minimum_transits:

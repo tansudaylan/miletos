@@ -2,7 +2,6 @@
 """Plot compact-object photometric amplitudes computed by Ephesos through Miletos."""
 
 import argparse
-import os
 from pathlib import Path
 
 import matplotlib
@@ -15,6 +14,7 @@ from tdpy.cli import add_plot_arguments
 from tdpy.plotting import save_plot, themed_plot
 from tdpy.verbosity import print
 
+from miletos.paths import get_example_visuals_path
 from miletos.signatures import compute_photometric_signatures
 
 
@@ -24,13 +24,6 @@ PANEL_TITLES = {
     "self_lensing": "Self-lensing",
 }
 COLORS = ("#1B6CA8", "#D18B00", "#2E7D32")
-
-
-def _visual_directory() -> Path:
-    """Resolve the example output path under the configured Miletos root."""
-
-    repository_path = Path(os.environ.get("MILETOS_PATH", Path(__file__).parents[2]))
-    return repository_path / "examples" / "compact_object_signatures" / "visuals"
 
 
 @themed_plot
@@ -126,7 +119,11 @@ def run_example(
         fontweight="bold",
     )
 
-    output_path = Path(output_path or _visual_directory() / "compact_object_signatures.png")
+    output_path = Path(
+        output_path
+        or get_example_visuals_path("compact_object_signatures")
+        / "compact_object_signatures.png"
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Writing to {output_path}...")
     save_plot(figure, output_path, dpi=300 if output_path.suffix == ".png" else None,
@@ -145,7 +142,10 @@ def main(argv=None) -> int:
     add_plot_arguments(parser)
     parser.add_argument("--typeplotback", choices=("white", "dark"), default="white")
     parser.add_argument("--bokeh", action="store_true", help="also write interactive HTML")
-    parser.add_argument("--output-directory", type=Path, default=_visual_directory())
+    parser.add_argument(
+        "--output-directory", type=Path,
+        default=get_example_visuals_path("compact_object_signatures"),
+    )
     arguments = parser.parse_args(argv)
     output_path = arguments.output_directory / f"compact_object_signatures.{arguments.typefileplot}"
     html_path = arguments.output_directory / "compact_object_signatures.html" if arguments.bokeh else None

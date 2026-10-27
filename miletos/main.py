@@ -33,6 +33,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import tdpy
+from tdpy.numerics import has_masked_or_complex_values
 from pcat import plot_grid, plot_population_grid
 from pcat.fixed import sample_allesfitter_pcat, sample_posterior
 from tdpy import fold_tser, retr_albg, retr_lcurmodl_flarsing, retr_rvel
@@ -73,7 +74,14 @@ def setp_input_companion_priors(gdat):
         value = getattr(gdat, name + 'compprio')
         if value is None:
             raise ValueError("typepriocomp='inpt' requires %scompprio." % name)
-        values[name] = np.asarray(value, dtype=float)
+        if has_masked_or_complex_values(value):
+            raise ValueError('%scompprio must contain unmasked real values.' % name)
+        value_array = np.asarray(value, dtype=float)
+        if value_array.ndim != 1:
+            raise ValueError('%scompprio must be one-dimensional.' % name)
+        if not np.isfinite(value_array).all():
+            raise ValueError('%scompprio must contain finite values.' % name)
+        values[name] = value_array
 
     if len({value.size for value in values.values()}) != 1:
         raise ValueError('Input companion-prior arrays must have equal lengths.')

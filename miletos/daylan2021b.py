@@ -9,6 +9,7 @@ from scipy.interpolate import LSQUnivariateSpline
 
 from . import main
 from .paths import get_repository_path
+from .retrieval import _marginalized_light_curve_log_likelihood
 
 
 SAP_TIME_OFFSET = 2457000.0  # [day], offset used in cached SPOC SAP timestamps
@@ -168,10 +169,7 @@ def retr_modl(values, time, timeexpo=None):
 
 def retr_llik(values, state):
     """Log-likelihood marginalized over the per-orbit multiplicative baselines and white-noise jitter."""
-    from pcat.radial_velocity import retr_llik_rvelmarg
-
-    modl = retr_modl(values, state['time'], state['timeexpo'])
-    return retr_llik_rvelmarg(state['flux'], state['stdv'], modl[:, None] * state['matrblin'], state['listjitt'])
+    return _marginalized_light_curve_log_likelihood(retr_modl, values, state)
 
 
 def retr_blin(values, state):

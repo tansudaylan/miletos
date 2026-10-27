@@ -45,7 +45,12 @@ WASP39_PRODUCTS = {
 
 @dataclass(frozen=True)
 class WASP39ERSResult:
-    """Published NIRSpec G395H observations and their ATMO model comparison."""
+    """Published NIRSpec G395H observations and their ATMO model comparison.
+
+    Detector-motion arrays retain the archive's shift_x/shift_y values. Their
+    compatibility field names end in ``_pixels``, but the source product has
+    no declared units and does not establish that they are physical pixels.
+    """
 
     wavelength_microns: np.ndarray
     bin_half_width_microns: np.ndarray

@@ -58,14 +58,38 @@ def test_plotting_entrypoints_default_to_white():
     assert defaults == ['white', 'white', 'white']
 
 
-def test_plot_binned_light_curve_uses_unconnected_points_with_errors():
+@pytest.mark.parametrize('typeplotback', ['white', 'dark'])
+@pytest.mark.parametrize('color', [None, '#A51417'])
+def test_plot_binned_light_curve_uses_unconnected_points_with_errors(typeplotback, color):
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.colors import to_rgba
+
     figure, axis = plt.subplots()
+    positions = np.array([0., 1.])
+    measurements = np.array([1., 2.])
+    errors = np.array([0.1, 0.2])
+    original = [values.copy() for values in (positions, measurements, errors)]
+    options = {} if color is None else {'color': color}
 
-    plotted = plot_binned_light_curve(axis, [0, 1], [1, 2], [0.1, 0.2])
+    plotted = plot_binned_light_curve(
+        axis, positions, measurements, errors, typeplotback=typeplotback, **options,
+    )
 
+    FigureCanvasAgg(figure).draw()
     assert plotted.lines[0].get_marker() == 'o'
     assert plotted.lines[0].get_linestyle() == 'None'
     assert len(plotted.lines[2]) == 1
+    expected_color = color or ('black' if typeplotback == 'white' else 'white')
+    assert to_rgba(plotted.lines[0].get_color()) == to_rgba(expected_color)
+    np.testing.assert_array_equal(plotted.lines[0].get_xdata(), positions)
+    np.testing.assert_array_equal(plotted.lines[0].get_ydata(), measurements)
+    expected_segments = np.stack((
+        np.column_stack((positions, measurements - errors)),
+        np.column_stack((positions, measurements + errors)),
+    ), axis=1)
+    np.testing.assert_array_equal(plotted.lines[2][0].get_segments(), expected_segments)
+    for values, expected in zip((positions, measurements, errors), original):
+        np.testing.assert_array_equal(values, expected)
     plt.close(figure)
 
 

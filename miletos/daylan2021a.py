@@ -15,6 +15,7 @@ import numpy as np
 from pathlib import Path
 
 from .paths import get_data_path, get_repository_path
+from .retrieval import _marginalized_light_curve_log_likelihood
 
 NAMEPLAN = ('b', 'c', 'd', 'e')
 # published ephemerides and radius ratios, used to center the priors
@@ -91,10 +92,7 @@ def retr_modl(values, time, timeexpo=None):
 
 def retr_llik(values, state):
     """Log-likelihood marginalized over per-window linear baselines and white-noise jitter."""
-    from pcat.radial_velocity import retr_llik_rvelmarg
-
-    modl = retr_modl(values, state['time'], state['timeexpo'])
-    return retr_llik_rvelmarg(state['flux'], state['stdv'], modl[:, None] * state['matrblin'], state['listjitt'])
+    return _marginalized_light_curve_log_likelihood(retr_modl, values, state)
 
 
 def _posterior_identity(state, numbchan, numbsamp, numbburn, seed):
@@ -248,7 +246,7 @@ def plot_daylan2021a_transits(samples, radi, state, typefileplot='png'):
                 modl.append(retr_modl(solo, draw[5 * p] + offsfine / 24.) - 1.)
             axis.fill_between(offsfine, *1e6 * np.percentile(modl, [16., 84.], 0), color=colors[p], alpha=0.5, lw=0)
             axis.plot(offsfine, 1e6 * np.median(modl, 0), color=colors[p], lw=1.)
-            axis.set_title(f'{plan}: P = {peri:.3f} d', fontsize=9)
+            axis.set_title(f'{plan}, P = {peri:.3f} d', fontsize=9)
             axis.tick_params(labelsize=8)
         axes[0].set_ylim(-1600., 800.)
         axes[0].set_ylabel('Relative flux [ppm]')

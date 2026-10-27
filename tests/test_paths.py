@@ -1,6 +1,19 @@
+from pathlib import Path
+
 import miletos
 import pytest
-from miletos.paths import chec_path_input, get_data_path, get_repository_path, get_visuals_path, setp_alle_path, setp_base_paths, setp_feature_paths, setp_mast_path, setp_target_paths
+from miletos.paths import (
+    chec_path_input,
+    get_data_path,
+    get_example_visuals_path,
+    get_repository_path,
+    get_visuals_path,
+    setp_alle_path,
+    setp_base_paths,
+    setp_feature_paths,
+    setp_mast_path,
+    setp_target_paths,
+)
 
 
 class DummyGdat:
@@ -24,6 +37,23 @@ def test_repository_path_is_required(monkeypatch):
 
     with pytest.raises(EnvironmentError, match='MILETOS_PATH'):
         get_repository_path()
+
+
+def test_example_visuals_path_uses_repository_override(monkeypatch, tmp_path):
+    monkeypatch.setenv('MILETOS_PATH', str(tmp_path))
+
+    assert get_example_visuals_path('stellar_activity') == (
+        tmp_path / 'examples' / 'stellar_activity' / 'visuals'
+    )
+
+
+def test_example_visuals_path_defaults_to_checkout(monkeypatch):
+    monkeypatch.delenv('MILETOS_PATH', raising=False)
+    repository_path = Path(__file__).resolve().parents[1]
+
+    assert get_example_visuals_path('compact_object_signatures') == (
+        repository_path / 'examples' / 'compact_object_signatures' / 'visuals'
+    )
 
 
 def test_retr_tsecpathlocl_reads_cached_sector_table(monkeypatch, tmp_path):

@@ -2,13 +2,13 @@
 """Fit a seeded synthetic flare light curve with Miletos and Ephesos."""
 
 from pathlib import Path
-import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from ephesos import evaluate_spot_flare_model
 from miletos import fit_spot_flare_light_curve, parse_spot_flare_parameters
+from miletos.paths import get_example_visuals_path
 from tdpy.cli import parse_plot_arguments
 from tdpy.verbosity import print
 
@@ -53,8 +53,7 @@ def run_example(output_path):
 
 def main():
     arguments = parse_plot_arguments(description=__doc__)
-    repository_path = Path(os.environ.get("MILETOS_PATH", Path(__file__).parents[2]))
-    output_path = repository_path / "examples" / "stellar_activity" / "visuals"
+    output_path = get_example_visuals_path("stellar_activity")
     run_example(output_path / f"stellar_activity.{arguments.typefileplot}")
     return 0
 

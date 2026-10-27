@@ -4,6 +4,7 @@
 from tdpy.verbosity import print
 
 import argparse
+from datetime import datetime, timezone
 from tdpy.cli import add_plot_arguments
 import os
 from pathlib import Path
@@ -78,12 +79,20 @@ def main():
     output_root = Path(environment['MILETOS_PATH'])
 
     for script_name, output_stem in QUICK_EXAMPLES:
+        time_tag = None
+        if script_name == 'nirspec_isotope_retrieval/run.py':
+            time_tag = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+            output_stem += f'_{time_tag}'
         output_path = output_root / f'{output_stem}.{arguments.typefileplot}'
         if output_path.exists():
+            if time_tag is not None:
+                raise FileExistsError(output_path.name)
             print(f'Removing cached example output {output_path}...')
             output_path.unlink()
         command = [sys.executable, str(REPOSITORY_PATH / 'examples' / script_name)]
         command.extend(['--typefileplot', arguments.typefileplot])
+        if time_tag is not None:
+            command.extend(['--time-tag', time_tag])
         run_command(command, environment)
         if not output_path.is_file() or output_path.stat().st_size == 0:
             raise RuntimeError(f'Example did not produce a plot at {output_path}')

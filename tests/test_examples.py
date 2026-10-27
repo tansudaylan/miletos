@@ -7,6 +7,7 @@ import sys
 import runpy
 
 import matplotlib.image as mpimg
+import numpy as np
 import pytest
 
 
@@ -40,7 +41,7 @@ def example_id(path):
 def test_each_example_owns_subfolder():
     root_scripts = set((REPOSITORY_PATH / 'examples').glob('*.py'))
     assert root_scripts == {REPOSITORY_PATH / 'examples' / 'run_all.py'}
-    assert len(EXAMPLE_PATHS) == 13
+    assert len(EXAMPLE_PATHS) == 14
 
 
 def test_example_notebooks_use_miletos_apis():
@@ -184,9 +185,9 @@ def test_published_reproduction_figures_are_linked_from_readme():
     figures = (
         'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_white_light.png',
-        'examples/WASP-39b/visuals/wasp39_ers_g395h_detector_motion.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_detector_motion_20261026_131124.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_spectroscopic_detrending.png',
-        'examples/WASP-39b/visuals/wasp39_ers_g395h_light_curve_precision.png',
+        'examples/WASP-39b/visuals/wasp39_ers_g395h_light_curve_precision_20261026_131124.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_corrected_light_curve_map.png',
         'examples/TOI-1233/visuals/daylan2021a_published_comparison.png',
         'examples/TOI-1233/visuals/daylan2021a_phase_folded_transits.png',
@@ -284,7 +285,7 @@ def test_all_examples_run_and_produce_plots(tmp_path):
         'examples/compact_object_signatures/visuals/compact_object_signatures.png',
         'examples/stellar_activity/visuals/stellar_activity.png',
         'examples/simulated_transit/visuals/simulated_transit_diagnostic.png',
-        'examples/nirspec_isotope_retrieval/visuals/nirspec_isotope_injection_recovery.png',
+        'examples/nirspec_isotope_retrieval/visuals/nirspec_isotope_injection_recovery_*.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_transmission_spectrum.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_white_light.png',
         'examples/WASP-39b/visuals/wasp39_ers_g395h_detector_motion.png',
@@ -293,12 +294,22 @@ def test_all_examples_run_and_produce_plots(tmp_path):
         'examples/WASP-39b/visuals/wasp39_ers_g395h_light_curve_precision.png',
     )
     for name in expected_names:
-        output_path = tmp_path / name
+        output_path, = tmp_path.glob(name)
         image = mpimg.imread(output_path)
         assert output_path.is_file()
         assert image.shape[0] > 100
         assert image.shape[1] > 100
         assert image[..., :3].min() < 0.8
+    posterior_path, = (tmp_path / 'data/nirspec_isotope_retrieval').glob('posterior_*.npz')
+    with np.load(posterior_path, allow_pickle=False) as posterior:
+        assert posterior['samples'].shape == (2000, 2)
+        assert posterior['observed_depth_ppm'].shape == (96,)
+        assert posterior['covariance_ppm2'].shape == (96, 96)
+        assert np.isfinite(posterior['log_probability']).all()
+    metadata = json.loads(posterior_path.with_suffix('.json').read_text())
+    assert metadata['seed'] == 188
+    assert metadata['retained_samples'] == 2000
+    assert metadata['data_kind'].startswith('Explicitly synthetic')
 
 
 def test_run_all_lists_observational_targets():

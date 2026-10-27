@@ -1,6 +1,7 @@
 from tdpy.verbosity import print
 import fnmatch
 import os
+from pathlib import Path
 
 import numpy as np
 
@@ -9,11 +10,18 @@ from tdpy.paths import RepositoryPaths
 
 
 PATH_ENV_VAR = "MILETOS_PATH"
+DEFAULT_REPOSITORY_PATH = Path(__file__).resolve().parents[1]
 _REPOSITORY_PATHS = RepositoryPaths(PATH_ENV_VAR)
 
 get_repository_path = _REPOSITORY_PATHS.get_repository_path
 get_data_path = _REPOSITORY_PATHS.get_data_path
 get_visuals_path = _REPOSITORY_PATHS.get_visuals_path
+
+
+def get_example_visuals_path(example_name: str) -> Path:
+    """Return an example's visuals directory under the configured Miletos root."""
+    repository_path = Path(os.environ.get(PATH_ENV_VAR, DEFAULT_REPOSITORY_PATH))
+    return repository_path / "examples" / example_name / "visuals"
 
 
 def retr_tsecpathlocl(tici, typeverb=1):

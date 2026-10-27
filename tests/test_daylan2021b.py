@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from miletos import daylan2021b
+from miletos import daylan2021a, daylan2021b
 
 
 @pytest.mark.parametrize("normalized", [False, True])
@@ -35,6 +35,38 @@ def test_reproduction_baselines_reuse_shared_polynomials(monkeypatch, normalized
     np.testing.assert_array_equal(matrix, np.column_stack(columns))
     np.testing.assert_array_equal(time, original_time)
     np.testing.assert_array_equal(groups, original_groups)
+
+
+@pytest.mark.parametrize("module", [daylan2021a, daylan2021b])
+def test_reproduction_likelihoods_share_baseline_marginalization(monkeypatch, module):
+    from pcat import radial_velocity
+
+    values = np.array([0.2, 0.3])
+    model = np.array([0.9, 1.1])
+    state = {
+        "time": np.array([1.0, 2.0]),
+        "timeexpo": 0.01,
+        "flux": np.array([1.0, 1.2]),
+        "stdv": np.array([0.1, 0.2]),
+        "matrblin": np.array([[1.0, 0.1], [1.0, -0.1]]),
+        "listjitt": [0.0, 0.01],
+    }
+    expected = object()
+    calls = []
+    monkeypatch.setattr(module, "retr_modl", lambda *arguments: model)
+
+    def fake_likelihood(*arguments):
+        calls.append(arguments)
+        return expected
+
+    monkeypatch.setattr(radial_velocity, "retr_llik_rvelmarg", fake_likelihood)
+
+    assert module.retr_llik(values, state) is expected
+    assert len(calls) == 1
+    np.testing.assert_array_equal(calls[0][0], state["flux"])
+    np.testing.assert_array_equal(calls[0][1], state["stdv"])
+    np.testing.assert_array_equal(calls[0][2], model[:, None] * state["matrblin"])
+    assert calls[0][3] is state["listjitt"]
 
 
 def test_sector7_sap_loader_corrects_cached_time_offset_and_detrends_orbits(tmp_path):

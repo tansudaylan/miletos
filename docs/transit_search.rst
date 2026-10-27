@@ -55,14 +55,14 @@ retrieve missing curves from MAST. The current run retrieves 48 curves, passes
 selected from previously identified TOIs, these counts compare workflows and
 do not measure precision, recall, completeness, or occurrence.
 
-.. figure:: ../examples/tess_transit_search/visuals/toi1338_sector10_candidate.png
+.. figure:: ../examples/tess_transit_search/visuals/tess_toi1338_sector10_target_search_20261026_055259.png
    :alt: Observed Sector 10 QLP light curve and folded BLS review signal
    :width: 100%
 
    The strongest positive-flux BLS event is weaker than the inverted-light-curve
    control and is retained for review.
 
-.. figure:: ../examples/tess_transit_search/visuals/tess_transit_completeness.png
+.. figure:: ../examples/tess_transit_search/visuals/tess_toi1338_sector10_completeness_20261026_055259.png
    :alt: Injection recovery versus transit depth for the observed pilot target
    :width: 100%
 
@@ -88,12 +88,87 @@ false-discovery rate. A survey estimate also needs an independently labeled
 validation sample or a model describing how inverted curves represent false
 alarms.
 
+Native Albus-compatible analysis
+--------------------------------
+
+Miletos does not depend on Lightkurve. Normal workflows use NumPy, Astropy,
+and Astroquery. ``miletos.light_curve.LightCurve`` stores time, measured flux,
+and uncertainties. It supports column access, selection, normalization,
+Astropy sigma clipping, folding, and binning with independent-error propagation.
+Missing uncertainties remain missing.
+
+``miletos.photometry.prepare_light_curve_collection`` accepts measured array
+columns. It removes NaNs, normalizes each curve and its uncertainties, removes
+outliers, stitches sectors, and subtracts a 501-sample median filter. Its
+``injection`` option centers the flux on zero rather than one. Normalized
+errors are retained. The previously unused flatten calculation is omitted.
+
+``miletos.box_least_squares.fixed_grid_box_least_squares`` returns an Astropy
+BLS result using Albus's 2,048 logarithmic trial periods from 1 to 10 days
+and duration trials equal to one percent of those periods. It retains the
+likelihood objective and best-fit attributes used by Albus. Missing errors
+disable weighting for the entire fit, matching the historical convention.
+Native fit failures propagate. ``search_box_least_squares`` retains its
+separate automatic grid and SNR objective.
+
+``select_lightkurve_bls_candidates`` in the same module returns the raw-power
+maximum followed by up to three median-detrended peaks outside the inclusive
+0.8--1.2 period interval around each previously selected peak. The first power
+remains raw and subsequent powers are detrended, matching the Albus convention.
+Returned indices align each candidate with its fitted epoch and duration.
+
+``miletos.transit_search.transit_mask`` converts Astropy time quantities to
+days and absolute ``Time`` objects to Julian dates. Numeric inputs must share
+a day-based origin. Transit boundaries are excluded by default, as in Albus.
+``include_edges=True`` retains Miletos's inclusive repeating-search convention.
+Periods must be finite and positive, epochs finite, and durations finite and
+nonnegative. Zero duration returns an empty mask with the default convention.
+
+``preprocess_tess_light_curve`` in ``miletos.photometry`` retrieves TESS
+light-curve FITS products directly through MAST. The native reader supports
+SPOC and QLP flux columns and applies the default TESS quality bitmask.
+Failed or empty downloads return ``None``. Query and FITS parsing failures
+propagate. Retrieved absolute times use BJD in the TDB scale.
+``lightkurve_bls_results`` and ``fold_lightkurve`` in
+``miletos.box_least_squares`` provide Albus-compatible periodogram and folded
+plots, including binned curves, fitted candidate ephemerides, white and dark
+themes, and the existing return conventions.
+
+Older Lightkurve-named functions remain compatibility names for native
+operations. They neither import Lightkurve nor call its curve methods.
+The BLS and light-curve return types are now native Astropy/Miletos objects.
+
+Lightkurve is imported only by the explicit comparison function
+``miletos.benchmarks.compare_lightkurve_bls``. Install Lightkurve separately
+to run that benchmark. It compares both implementations on identical data
+and trial grids and reports their results and elapsed times. Normal imports,
+preprocessing, searches, folds, and injections work with Lightkurve unavailable.
+
+``miletos.transit_metrics`` contains the shared depth, shape, scatter, SNR,
+fitted-parameter extraction, and quantile-depth measurements. The simple SNR
+divides mean depth by out-of-transit population scatter without a sample-count
+factor. The shape statistic retains Albus's flux thresholds over the supplied
+time span. The quantile estimator uses period-normalized phase and reports
+its clipped baseline scatter and quantile-weighted support count. None of
+these measurements replaces the fitted BLS depth SNR.
+
+``miletos.simulation`` provides the shared bounded ``sample_power_law``,
+``generate_batman_light_curve``, ``inject_batman_transit``, and
+``minimum_transit_inclination`` functions. Sampling retains NumPy's global
+random stream. The BATMAN model retains the original Albus circular,
+uniform-disk assumptions and zero-duration placeholder, with no exposure
+integration. Radii are solar radii, stellar mass is solar masses, time is
+days, inclination is degrees, and optional semimajor axis is meters.
+``semimajor_axis_from_period`` takes solar masses, while
+``semimajor_axis_from_mass_kg`` retains the archived Albus kilogram convention.
+
 Completeness and occurrence
 ---------------------------
 
 Miletos injects box-shaped transits at random epochs into the observed flux and
-repeats BLS. A recovery requires both period agreement within the configured
-tolerance and a fitted depth SNR above the stated threshold. Completeness is the
+repeats BLS. A recovery requires period agreement within the configured
+tolerance, a fitted depth SNR above the stated threshold, and passing the
+odd-even and secondary-event vetting. Completeness is the
 recovery fraction over injected epochs. The pilot grid uses a 7-SNR threshold.
 Larger surveys should increase injection counts and test transit duration,
 stellar variability, sector gaps, and the adopted candidate-vetting procedure.
@@ -107,6 +182,15 @@ Supply ``injection_grid_weights`` when the scientific occurrence domain requires
 another distribution. The estimate applies only to that stated domain and to
 systems satisfying the at-most-one-event Bernoulli model in Pergamon. TOI-only
 catalogs must not be used as the denominator.
+
+Occurrence tables must contain one row per unique TIC. Multiple sectors need
+a justified combined per-target selection model rather than repeated target
+counts. The parent-population, searched, and detection flags accept only
+Boolean or numeric 0/1 values. Each target needs exactly one finite completeness
+fraction between zero and one per period-depth cell. Injection target identifiers
+must match the parent sample, and inverted-control dispositions must be
+``candidate`` or ``review``. Missing values, duplicate records, and unknown
+control labels are rejected before inference.
 
 Scientific context
 ------------------

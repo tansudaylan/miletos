@@ -1,13 +1,15 @@
 """TESS QLP light-curve search, vetting, and injection-recovery tools."""
 
 from pathlib import Path
+import logging
 import re
 
 import numpy as np
 import pandas as pd
 from astropy.io import fits
 from astroquery.mast import Observations
-from tdpy.verbosity import print
+from astroquery import log as astroquery_log
+from tdpy.verbosity import print, retr_boolverb
 
 from .box_least_squares import search_box_least_squares
 from .paths import get_data_path
@@ -16,8 +18,13 @@ from .paths import get_data_path
 _QLP_NAME = re.compile(r"s(?P<sector>\d{4})-(?P<tic>\d{16})_tess_v\d+_llc\.fits$")
 
 
-def read_qlp_light_curve(path: str | Path) -> pd.DataFrame:
-    """Read one public QLP FITS light curve as normalized BTJD flux."""
+def read_qlp_light_curve(path: str | Path, *, include_aperture_flux: bool = False) -> pd.DataFrame:
+    """Read one public QLP FITS light curve as normalized BTJD flux.
+
+    ``include_aperture_flux`` adds independently normalized SAP_FLUX on the
+    same retained cadences without changing the default flux/error pair.
+    It does not assign the detrended uncertainty to aperture measurements.
+    """
 
     path = Path(path)
     print(f"Reading from {path}...")
@@ -50,6 +57,11 @@ def read_qlp_light_curve(path: str | Path) -> pd.DataFrame:
         time = np.asarray(table_hdu.data[names["TIME"]], dtype=float)
         flux = np.asarray(table_hdu.data[flux_name], dtype=float)
         uncertainty = np.asarray(table_hdu.data[error_name], dtype=float)
+        aperture_flux = None
+        if include_aperture_flux:
+            if 'SAP_FLUX' not in names:
+                raise ValueError('QLP FITS table has no aperture SAP_FLUX column')
+            aperture_flux = np.asarray(table_hdu.data[names['SAP_FLUX']], dtype=float)
         quality_name = names.get("QUALITY", names.get("QFLAG"))
         quality = np.zeros(time.size, dtype=int) if quality_name is None else np.asarray(
             table_hdu.data[quality_name]
@@ -71,13 +83,20 @@ def read_qlp_light_curve(path: str | Path) -> pd.DataFrame:
     median_flux = float(np.nanmedian(flux))
     if not np.isfinite(median_flux) or median_flux <= 0.0:
         raise ValueError("QLP flux must have a positive finite median")
-    return pd.DataFrame({
+    result = pd.DataFrame({
         "tic_id": int(match.group("tic")),
         "sector": int(match.group("sector")),
         "time_btjd": time,
         "flux": flux / median_flux,
         "flux_error": uncertainty / median_flux,
     })
+    if aperture_flux is not None:
+        aperture_flux = aperture_flux[valid][order][unique]
+        aperture_median = float(np.nanmedian(aperture_flux))
+        if not np.isfinite(aperture_median) or aperture_median <= 0.0:
+            raise ValueError('QLP aperture flux must have a positive finite median')
+        result['aperture_flux'] = aperture_flux / aperture_median
+    return result
 
 
 def download_qlp_light_curves(
@@ -108,8 +127,17 @@ def download_qlp_light_curves(
     ]
     if len(fits_products) == 0:
         return []
-    print(f"Writing MAST downloads under {cache_directory}...")
-    manifest = Observations.download_products(fits_products, download_dir=str(cache_directory))
+    print(f"Writing to {cache_directory}...")
+    verbose = retr_boolverb()
+    previous_log_level = astroquery_log.level
+    try:
+        if not verbose:
+            astroquery_log.setLevel(max(previous_log_level, logging.WARNING))
+        manifest = Observations.download_products(
+            fits_products, download_dir=str(cache_directory), verbose=verbose,
+        )
+    finally:
+        astroquery_log.setLevel(previous_log_level)
     if manifest is None or len(manifest) == 0:
         return []
     return [Path(path) for path in manifest["Local Path"] if path and Path(path).is_file()]

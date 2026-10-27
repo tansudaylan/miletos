@@ -73,7 +73,7 @@ def test_simulated_transit_diagnostic_writes_bokeh_html(tmp_path, monkeypatch, t
 
     assert result.time_days.size > 3_000
     assert output_path.is_file()
-    assert "Input: simulated" in output_path.read_text(encoding="utf-8")
+    assert "Input, simulated" in output_path.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize('typeplotback', ['white', 'dark'])

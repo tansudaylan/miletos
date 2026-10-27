@@ -68,6 +68,7 @@ def miletos_plot_context(typeplotback=None):
 def plot_binned_light_curve(axis, xdat, ydat, yerr, **kwargs):
     """Plot binned light-curve measurements as unconnected points with errors."""
 
+    kwargs.setdefault('color', tdpy.plot_background_colors()[1])
     return axis.errorbar(
         xdat,
         ydat,
@@ -127,25 +128,28 @@ def plot_wasp39_ers_detector_motion(result, output_path: Path) -> Path:
         time_hours,
         result.detector_shift_x_pixels,
         color='#176B87',
-        linewidth=1.2,
-        label='Dispersion direction',
+        linestyle='none',
+        marker='o',
+        markersize=2.5,
+        label='Archive shift_x',
     )
     axis.plot(
         time_hours,
         result.detector_shift_y_pixels,
         color='#C23B22',
-        linewidth=1.2,
-        linestyle='--',
-        label='Cross-dispersion direction',
+        linestyle='none',
+        marker='x',
+        markersize=3.0,
+        label='Archive shift_y',
     )
     axis.axhline(0.0, color=tdpy.plot_background_colors()[1], linewidth=0.8)
     axis.set_xlabel(f'Time from BJD {time_reference_bjd:.1f} [hour]')
-    axis.set_ylabel('Detector shift [pixel]')
-    axis.set_title('Measured detector motion used in the spectroscopic reduction')
+    axis.set_ylabel('Published motion regressor')
+    axis.set_title('Published detector-motion vectors')
     axis.grid(False)
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    axis.legend(fancybox=True, framealpha=1.0)
+    figure.legend(loc='outside upper right', title='Alderson et al. (2023)', fancybox=True, framealpha=1.0)
     return Path(
         tdpy.save_figure(
             figure,
@@ -335,7 +339,7 @@ def plot_wasp39_ers_light_curve_precision(result, output_path: Path) -> Path:
     axis.grid(False)
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    axis.legend(fancybox=True, framealpha=1.0)
+    figure.legend(loc='outside upper right', title='Alderson et al. (2023)', fancybox=True, framealpha=1.0)
     return Path(
         tdpy.save_figure(
             figure,

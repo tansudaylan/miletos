@@ -127,21 +127,21 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
 
         panels = (
             (
-                "Input: simulated 10-minute-cadence photometry",
+                "Input, simulated 10-minute-cadence photometry",
                 result.time_days,
                 ((1e6 * (result.observed_flux - 1.0), "Simulated measurements", "#64818A", "circle"),
                  (1e6 * (result.baseline_flux - 1.0), "Spline baseline", "#C23B22", "line")),
                 "Time [day]",
             ),
             (
-                "Intermediate: transit-masked spline detrending",
+                "Intermediate, transit-masked spline detrending",
                 result.time_days,
                 ((1e6 * (result.detrended_flux - 1.0), "Detrended measurements", "#64818A", "circle"),
                  (1e6 * (result.model_flux - 1.0), "Injected Ephesos model", "#C23B22", "line")),
                 "Time [day]",
             ),
             (
-                f"Output: phase-folded transit, period = {result.period_days:.1f} day",
+                f"Output, phase-folded transit, period = {result.period_days:.1f} day",
                 result.phase,
                 ((1e6 * (result.folded_flux - 1.0), "Folded measurements", "#9AA6A9", "circle"),
                  (1e6 * (result.folded_model_flux - 1.0), "Injected Ephesos model", "#C23B22", "line")),
@@ -224,7 +224,7 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
         label="Spline baseline",
     )
     axes[0].set_ylabel("Relative flux [ppm]")
-    axes[0].set_title("Input: simulated 10-minute-cadence photometry")
+    axes[0].set_title("Input, simulated 10-minute-cadence photometry")
 
     axes[1].plot(
         result.time_days,
@@ -243,7 +243,7 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
         label="Injected Ephesos model",
     )
     axes[1].set_ylabel("Relative flux [ppm]")
-    axes[1].set_title("Intermediate: transit-masked spline detrending")
+    axes[1].set_title("Intermediate, transit-masked spline detrending")
 
     axes[2].plot(
         result.phase,
@@ -275,7 +275,7 @@ def plot_transit_diagnostic(result: TransitDiagnostic, output_path: Path) -> Pat
     axes[2].set_xlim(-0.5, 0.5)
     axes[2].set_xlabel("Orbital phase")
     axes[2].set_ylabel("Relative flux [ppm]")
-    axes[2].set_title(f"Output: phase-folded transit, period = {result.period_days:.1f} day")
+    axes[2].set_title(f"Output, phase-folded transit, period = {result.period_days:.1f} day")
 
     for axis in axes[:2]:
         axis.set_xlabel("Time [day]")

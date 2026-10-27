@@ -6,7 +6,23 @@ from miletos.transit_search import (
     search_repeating_transits,
     search_single_transit_events,
     search_transit_origami,
+    transit_mask,
 )
+
+
+@pytest.mark.parametrize('include_edges', [False, True])
+def test_transit_mask_preserves_day_conversion_and_boundary_convention(include_edges):
+    from astropy import units
+    from astropy.time import Time
+
+    offsets = np.array([0., 0.125, 0.25, 0.5, 0.75, 0.875, 1.]) * units.day
+    epoch = Time('2026-10-26', scale='tdb')
+    expected = [True, True, include_edges, False, include_edges, True, True]
+    for time, origin in ((offsets.to(units.s), 0 * units.hour), (epoch + offsets, epoch)):
+        np.testing.assert_array_equal(
+            transit_mask(time, 24 * units.hour, origin, 12 * units.hour, include_edges=include_edges),
+            expected,
+        )
 
 
 def test_single_transit_search_recovers_an_isolated_box():
